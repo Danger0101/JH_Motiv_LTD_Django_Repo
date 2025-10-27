@@ -1,0 +1,17 @@
+
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Your Cart</h1>
+
+    <div id="cart-item-list" hx-get="{% url 'cart:cart_detail' %}" hx-trigger="load, cart-updated from:body" hx-swap="innerHTML">
+        {% include 'cart/partials/cart_item_list.html' %}
+    </div>
+
+    <div>
+        <p>Subtotal: ${{ summary.subtotal }}</p>
+        <p>Tax: ${{ summary.tax }}</p>
+        <p>Shipping: ${{ summary.shipping }}</p>
+        <h3>Total: ${{ summary.total }}</h3>
+    </div>
+{% endblock %}

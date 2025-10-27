@@ -1,0 +1,4 @@
+
+<span hx-get="{% url 'cart:cart_summary_fragment' %}" hx-trigger="load, cart-updated from:body" hx-swap="outerHTML">
+    Cart: {{ summary.item_count }} item(s)
+</span>

@@ -1,0 +1,12 @@
+
+{% for item in cart.items.all %}
+    <div>
+        <p>{{ item.variant.product.name }} ({{ item.variant.name }})</p>
+        <p>Price: ${{ item.variant.price }}</p>
+        <form hx-post="{% url 'cart:update_cart_item' item.id %}" hx-target="#cart-item-list" hx-swap="innerHTML">
+            {% csrf_token %}
+            <input type="number" name="quantity" value="{{ item.quantity }}" min="0">
+            <button type="submit">Update</button>
+        </form>
+    </div>
+{% endfor %}
