@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JH Motiv LTD</title>
+    <meta name="htmx-config" content='{"historyCacheSize": 0}'>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    {% load unicorn %}
+    {% unicorn_scripts %}
+    <meta name="csrf-token" content="{{ csrf_token }}">
+</head>
+<body>
+    <div id="content">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>
