@@ -1,3 +1,5 @@
 from django.contrib import admin
+from .models import CoachingSession, CoachCalendarCredentials
 
-# Register your models here.
+admin.site.register(CoachingSession)
+admin.site.register(CoachCalendarCredentials)
