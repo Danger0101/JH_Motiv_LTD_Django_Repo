@@ -159,3 +159,24 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# REQUIRED for email or username login
+ACCOUNT_AUTHENTICATION_METHOD = "username_email"
+
+# REQUIRED for non-case-sensitive username login
+ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_USERNAME_MIN_LENGTH = 3 # Set a reasonable minimum length
+ACCOUNT_USERNAME_MAX_LENGTH = 150 # Standard maximum length
+ACCOUNT_ADAPTER = 'core.adapter.AccountAdapter' # <-- NEW: Points to custom adapter (see step 2)
+ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username' 
+
+# For non-case-sensitive email login (optional, but good practice)
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_VERIFICATION = "mandatory" # Highly recommended for compliance
+ACCOUNT_LOGIN_ATTEMPTS_LIMIT = 5
+
+ACCOUNT_FORMS = {
+    'login': 'accounts.forms.CustomLoginForm',
+    'signup': 'accounts.forms.CustomSignupForm',
+}

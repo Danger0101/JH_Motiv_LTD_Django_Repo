@@ -10,7 +10,8 @@ from .tos_data import TOS_DATA
 from .refund_policy_data import REFUND_POLICY_DATA
 from .shipping_policy_data import SHIPPING_POLICY_DATA
 from .about_data import ABOUT_DATA
-from dreamers.models import DreamerProfile # From the new app
+from dreamers.models import DreamerProfile
+from team.models import TeamMember
 
 # ==============================================================================
 # 1. FUNCTION-BASED VIEWS (Data-Driven Pages)
@@ -21,16 +22,20 @@ def home(request):
     return render(request, 'core/home.html')
 
 def about_page(request): 
-    """Renders the About page, fetching dynamic Dreamer data."""
-    
-    # Fetches all dreamer profiles, pre-fetching their associated channel links
+    """Renders the About page, fetching dynamic Dreamer and Team data."""
+
+    # 1. Fetch Dreamers
     dreamers = DreamerProfile.objects.prefetch_related('channels').all()
-    
+
+    # 2. Fetch Active Team Members
+    team_members = TeamMember.objects.filter(is_active=True).all()
+
     context = {
         'about_data': ABOUT_DATA,
-        'dreamer_profiles': dreamers, 
+        'dreamer_profiles': dreamers,
+        'team_members': team_members,
     }
-    
+
     return render(request, 'core/about.html', context)
 
 def faqs_page(request): 

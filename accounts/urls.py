@@ -1,8 +1,10 @@
-
 from django.urls import path, include
-from . import views
+from .views import ProfileView # Only need the specific view
 
 urlpatterns = [
-    path('profile/', views.ProfileView.as_view(), name='account_profile'),
+    # 1. Include all the core allauth paths (login, logout, signup, etc.)
     path('', include('allauth.urls')),
+    
+    # 2. Add your custom profile page path, which requires login
+    path('profile/', ProfileView.as_view(), name='account_profile'),
 ]
