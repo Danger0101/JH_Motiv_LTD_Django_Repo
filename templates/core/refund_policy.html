@@ -1,10 +1,92 @@
-{% extends 'base.html' %}
-
-{% block title %}Refund Policy{% endblock %}
+{% extends 'base.html' %} {% block title %}Refund Policy{% endblock %}
 
 {% block content %}
-<div class="prose max-w-none">
-    <h1>Refund Policy</h1>
-    <p>This is the refund policy page. Content will be added here soon.</p>
+<div class="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+  <div class="text-center mb-10">
+    <h1 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+      Refund & Cancellation Policy
+    </h1>
+    <p class="mt-4 text-lg text-gray-500">
+      Governing purchases and program enrollment.
+    </p>
+  </div>
+
+  <div x-data="{ activePolicy: 'retail' }" class="mt-12">
+    <div
+      class="flex justify-center border-b border-gray-200 mb-8"
+      role="tablist"
+      aria-label="Refund Policy Versions"
+    >
+      <button
+        @click="activePolicy = 'retail'"
+        :class="{ 'border-blue-500 text-blue-600': activePolicy === 'retail', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activePolicy !== 'retail' }"
+        class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-base focus:outline-none"
+        id="retail-refund-tab"
+        role="tab"
+        aria-controls="retail-refund-panel"
+        :aria-selected="activePolicy === 'retail'"
+      >
+        Retail & Products
+      </button>
+      <button
+        @click="activePolicy = 'coaching'"
+        :class="{ 'border-blue-500 text-blue-600': activePolicy === 'coaching', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activePolicy !== 'coaching' }"
+        class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-base focus:outline-none"
+        id="coaching-refund-tab"
+        role="tab"
+        aria-controls="coaching-refund-panel"
+        :aria-selected="activePolicy === 'coaching'"
+      >
+        Coaching Programs
+      </button>
+    </div>
+
+    <div class="bg-white shadow-lg rounded-lg p-6 lg:p-10">
+      <div
+        x-show="activePolicy === 'retail'"
+        role="tabpanel"
+        id="retail-refund-panel"
+        aria-labelledby="retail-refund-tab"
+      >
+        <h2 class="text-2xl font-bold mb-4">{{ refund_data.retail.title }}</h2>
+        <p class="text-sm text-gray-600 mb-8">
+          Effective Date: {{ refund_data.retail.effective_date }}
+        </p>
+
+        {% for section in refund_data.retail.sections %}
+        <section class="mb-8">
+          <h3 class="text-xl font-semibold mb-3">{{ section.heading }}</h3>
+          <div class="text-gray-700 leading-relaxed space-y-4">
+            {{ section.content|safe }}
+          </div>
+        </section>
+        {% endfor %}
+      </div>
+
+      <div
+        x-show="activePolicy === 'coaching'"
+        role="tabpanel"
+        id="coaching-refund-panel"
+        aria-labelledby="coaching-refund-tab"
+        x-cloak
+      >
+        <h2 class="text-2xl font-bold mb-4">
+          {{ refund_data.coaching.title }}
+        </h2>
+        <p class="text-sm text-gray-600 mb-8">
+          Effective Date: {{ refund_data.coaching.effective_date }}
+        </p>
+
+        {% for section in refund_data.coaching.sections %}
+        <section class="mb-8">
+          <h3 class="text-xl font-semibold mb-3">{{ section.heading }}</h3>
+          <div class="text-gray-700 leading-relaxed space-y-4">
+            {{ section.content|safe }}
+          </div>
+        </section>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

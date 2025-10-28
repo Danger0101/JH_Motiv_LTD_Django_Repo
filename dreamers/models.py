@@ -1,0 +1,68 @@
+from django.db import models
+
+class DreamerProfile(models.Model):
+    """Represents an individual or entity on the Wall of Dreamers."""
+    
+    # Core Data
+    name = models.CharField(max_length=150, help_text="Full Name or Business Name (e.g., Ashley Johnson | Haijahr)")
+    story_excerpt = models.TextField(blank=True, help_text="A short paragraph about their journey or dream.")
+    
+    # Display Control
+    is_featured = models.BooleanField(default=False, help_text="Check to feature this dreamer prominently.")
+    order = models.PositiveIntegerField(default=0, help_text="Manual ordering for display on the site.")
+
+    class Meta:
+        ordering = ['order', 'name']
+        verbose_name = "Dreamer Profile"
+        verbose_name_plural = "Dreamer Profiles"
+
+    def __str__(self):
+        return self.name
+
+class ChannelLink(models.Model):
+    """
+    Represents a social media or website link for a dreamer.
+    
+    NOTE: The 'unique_together' constraint was removed to allow Dreamers to have 
+    multiple links of the same type (e.g., two TikTok accounts).
+    """
+    CHANNEL_CHOICES = (
+        ('website', 'Website/Personal Link'), 
+        ('tiktok', 'TikTok'),
+        ('instagram', 'Instagram'),
+        ('youtube', 'YouTube'),
+        ('spotify', 'Spotify'),
+        ('facebook', 'Facebook'),
+        ('linkedin', 'LinkedIn'),
+        ('pinterest', 'Pinterest'),
+        ('twitter', 'X (Twitter)'),
+        ('github', 'GitHub'),
+        ('etsy', 'Etsy'),
+        ('email', 'Email Address (Mailto)'),
+    )
+    
+    dreamer = models.ForeignKey(
+        DreamerProfile, 
+        related_name='channels', 
+        on_delete=models.CASCADE,
+        help_text="The Dreamer this link belongs to."
+    )
+    channel_type = models.CharField(
+        max_length=50, 
+        choices=CHANNEL_CHOICES, 
+        help_text="Type of social media or link."
+    )
+    url = models.URLField(
+        max_length=300, 
+        help_text="Full URL to their profile or website (or mailto: link)."
+    )
+
+    class Meta:
+        ordering = ['dreamer', 'channel_type'] # Order links logically within the admin
+        verbose_name = "Channel Link"
+        verbose_name_plural = "Channel Links"
+        # unique_together constraint removed here.
+
+    def __str__(self):
+        # Uses get_channel_type_display() to show the user-friendly name (e.g., "YouTube")
+        return f"{self.dreamer.name} - {self.get_channel_type_display()} Link"

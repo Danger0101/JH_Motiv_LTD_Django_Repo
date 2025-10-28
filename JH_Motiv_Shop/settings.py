@@ -53,7 +53,9 @@ INSTALLED_APPS = [
     'products',
     'cart',
     'payments',
-    'coaching', # renamed to bookings
+    'coaching',
+    'dreamers',
+    'team',
 ]
 
 MIDDLEWARE = [
