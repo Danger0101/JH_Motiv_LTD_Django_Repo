@@ -109,14 +109,6 @@ AUTHENTICATION_BACKENDS = (
 SITE_ID = 1
 
 # --- DJANGO ALLAUTH SETTINGS (Cleaned and Finalized) ---
-ACCOUNT_SIGNUP_FIELDS = [
-    'email', 
-    'first_name', 
-    'last_name',
-    'password1',
-    'password2',
-    # This should pass validation as the form handles confirmation
-]
 
 # General settings
 ACCOUNT_ADAPTER = 'accounts.adapter.AccountAdapter'
@@ -128,6 +120,13 @@ ACCOUNT_RATE_LIMITS = {
 ACCOUNT_FORMS = {
     'signup': 'accounts.forms.CustomSignupForm',
 }
+
+# Email settings
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_VERIFICATION = 'optional'
+
 
 # Redirects and Logout Behavior
 LOGIN_REDIRECT_URL = '/'
