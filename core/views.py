@@ -44,10 +44,22 @@ def faqs_page(request):
 
 def privacy_policy_page(request):
     """Renders the Privacy Policy page with data and Alpine.js tabs."""
+    
+    # --- HTMX FRAGMENT HANDLING FOR POPUP ---
+    if request.headers.get('hx-request'):
+        # If HTMX requests this view, render only the content fragment
+        return render(request, 'core/partials/policy_content_fragment.html', {'policy_data': PRIVACY_POLICY_DATA, 'policy_type': 'privacy'})
+
     return render(request, 'core/privacy_policy.html', {'policy_data': PRIVACY_POLICY_DATA})
 
 def terms_of_service_page(request): 
     """Renders the Terms of Service page with data and Alpine.js tabs."""
+
+    # --- HTMX FRAGMENT HANDLING FOR POPUP ---
+    if request.headers.get('hx-request'):
+        # If HTMX requests this view, render only the content fragment
+        return render(request, 'core/partials/policy_content_fragment.html', {'tos_data': TOS_DATA, 'policy_type': 'tos'})
+
     return render(request, 'core/terms_of_service.html', {'tos_data': TOS_DATA})
 
 def refund_policy_page(request):
@@ -69,4 +81,3 @@ def set_cookie_consent(request):
         response.set_cookie('user_consent', consent_value, max_age=31536000, samesite='Lax', secure=True)
         return response
     return HttpResponse('Invalid consent value.', status=400)
-

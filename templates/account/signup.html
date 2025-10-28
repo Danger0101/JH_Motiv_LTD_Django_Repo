@@ -6,10 +6,13 @@
 
 {% block content %}
 <div class="max-w-md mx-auto py-8 px-4 sm:px-6 lg:px-8">
-    <div class="p-6 bg-white shadow-lg rounded-lg border" id="signup-form-container">
+    <div 
+        x-data="{}" {# CORRECT: Alpine context initialized on the outermost container #}
+        class="p-6 bg-white shadow-lg rounded-lg border" 
+        id="signup-form-container"
+    >
         <h2 class="text-2xl font-bold mb-6 text-gray-900">{% translate "Create Account" %}</h2>
 
-        {# Action is the allauth signup URL. You can use hx-post for HTMX fragment swap if preferred. #}
         <form id="signup_form" method="post" action="{% url 'account_signup' %}" hx-post="{% url 'account_signup' %}" hx-target="#signup-form-container" hx-swap="outerHTML">
             {% csrf_token %} 
 
@@ -21,27 +24,68 @@
             </div>
             {% endif %} 
             
-            {# Loop through all fields from the CustomSignupForm #}
             {% for field in form %}
-            <div class="mb-4">
-                <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                    {{ field.label }}
-                    {% if field.field.required %}
-                        <span class="text-red-500">*</span>
+                {% if field.name not in 'policy_agreement,marketing_opt_in' %}
+                <div class="mb-4">
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        {{ field.label }}
+                        {% if field.field.required %}
+                            <span class="text-red-500">*</span>
+                        {% endif %}
+                    </label>
+                    {{ field }} 
+                    {% if field.errors %}
+                    <p class="mt-1 text-xs text-red-500">{{ field.errors|striptags }}</p>
                     {% endif %}
-                </label>
-                {{ field }} 
-                {% if field.errors %}
-                <p class="mt-1 text-xs text-red-500">{{ field.errors|striptags }}</p>
+                </div>
                 {% endif %}
-            </div>
             {% endfor %}
             
+            <div class="space-y-4 pt-4 border-t mt-6">
+                
+                {# 1. POLICY AGREEMENT (REQUIRED) - USING POPUP BUTTONS #}
+                <div class="flex items-start">
+                    <div class="flex items-center h-5">
+                        {{ form.policy_agreement }}
+                    </div>
+                    <div class="ml-3 text-sm">
+                        <label for="{{ form.policy_agreement.id_for_label }}" class="font-medium text-gray-700">
+                            I have read and agree to the 
+                            <button type="button" 
+                                class="text-blue-600 hover:text-blue-500 underline font-semibold"
+                                x-on:click="$dispatch('open-modal', {policy: 'terms'})"
+                                >Terms of Service</button> 
+                            and 
+                            <button type="button" 
+                                class="text-blue-600 hover:text-blue-500 underline font-semibold"
+                                x-on:click="$dispatch('open-modal', {policy: 'privacy'})"
+                                >Privacy Policy</button>.
+                            <span class="text-red-500">*</span>
+                        </label>
+                    </div>
+                </div>
+                {% if form.policy_agreement.errors %}
+                    <p class="mt-1 text-xs text-red-500">{{ form.policy_agreement.errors.0 }}</p>
+                {% endif %}
+
+                {# 2. MARKETING OPT-IN (OPTIONAL) #}
+                <div class="flex items-start">
+                    <div class="flex items-center h-5">
+                        {{ form.marketing_opt_in }}
+                    </div>
+                    <div class="ml-3 text-sm">
+                        <label for="{{ form.marketing_opt_in.id_for_label }}" class="font-medium text-gray-700">
+                            I would like to receive motivational content and updates (optional).
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             {% if redirect_field_value %}
             <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
             {% endif %}
 
-            <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mt-6">
                 {% translate "Sign Up" %}
             </button>
         </form> 
@@ -54,4 +98,8 @@
         </p>
     </div>
 </div>
+
+{# CALL THE MODAL TEMPLATE (Must be at the end of the block) #}
+{% include 'core/partials/policy_modal.html' %}
+
 {% endblock %}

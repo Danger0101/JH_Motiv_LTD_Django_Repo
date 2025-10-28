@@ -1,0 +1,86 @@
+{% load i18n %}
+
+<div x-data="{ 
+        modalOpen: false, 
+        modalTitle: '',
+        policyUrl: '',
+        
+        // Listen for the event triggered by the buttons in signup.html
+        init() {
+            this.$watch('modalOpen', val => {
+                if (val) { document.body.classList.add('overflow-hidden'); }
+                else { document.body.classList.remove('overflow-hidden'); }
+            });
+            this.$root.addEventListener('open-modal', (e) => {
+                const policyType = e.detail.policy;
+                if (policyType === 'terms') {
+                    this.modalTitle = 'Terms of Service';
+                    this.policyUrl = '{% url "core:terms_of_service" %}'; 
+                } else if (policyType === 'privacy') {
+                    this.modalTitle = 'Privacy Policy';
+                    this.policyUrl = '{% url "core:privacy_policy" %}'; 
+                }
+                
+                // 1. Set the URL binding attribute on the loader element
+                this.$refs.contentLoader.setAttribute('hx-get', this.policyUrl);
+                
+                // 2. Trigger HTMX GET request after URL is set
+                this.$nextTick(() => {
+                    htmx.trigger(this.$refs.contentLoader, 'load-content');
+                });
+                
+                this.modalOpen = true;
+            });
+        }
+    }"
+    x-cloak
+>
+    <div x-show="modalOpen" class="fixed inset-0 bg-gray-900 bg-opacity-75 z-40 transition-opacity" x-on:click="modalOpen = false"></div>
+
+    <div 
+        x-show="modalOpen" 
+        class="fixed inset-0 z-50 overflow-y-auto"
+        x-on:keydown.escape.window="modalOpen = false"
+    >
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div 
+                x-transition:enter="ease-out duration-300" 
+                x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" 
+                x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" 
+                x-transition:leave="ease-in duration-200" 
+                x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" 
+                x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                class="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all w-full max-w-4xl max-h-[90vh]"
+                role="dialog" 
+                aria-modal="true"
+                aria-labelledby="modal-title"
+            >
+                <div class="sticky top-0 bg-gray-50 px-6 py-4 flex justify-between items-center border-b z-50">
+                    <h3 class="text-xl font-bold text-gray-900" id="modal-title" x-text="modalTitle">Policy Document</h3>
+                    <button type="button" x-on:click="modalOpen = false" class="text-gray-400 hover:text-gray-500">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                
+                <div class="p-6 overflow-y-auto max-h-[75vh]">
+                    <div 
+                        x-ref="contentLoader" {# Added ref to target this element in JS #}
+                        id="policy-content-loader"
+                        hx-trigger="load-content from:body"
+                        hx-target="this"
+                        hx-swap="innerHTML"
+                    >
+                        <p class="text-center text-gray-500">Loading content...</p>
+                    </div>
+                </div>
+
+                <div class="sticky bottom-0 bg-gray-50 px-6 py-3 text-right border-t z-50">
+                    <button type="button" x-on:click="modalOpen = false" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                        Close and Return
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>

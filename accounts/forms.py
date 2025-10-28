@@ -16,7 +16,9 @@ class TailwindFormMixin:
         common_classes = 'mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm'
         
         for field_name, field in self.fields.items():
-            field.widget.attrs.update({'class': common_classes})
+            # Exclude BooleanFields (checkboxes) from general text styling
+            if not isinstance(field.widget, forms.CheckboxInput):
+                field.widget.attrs.update({'class': common_classes})
             
             # Remove Django's default help text to keep the UI clean
             if field.help_text:
@@ -37,13 +39,25 @@ class CustomLoginForm(TailwindFormMixin, LoginForm):
 
 class CustomSignupForm(TailwindFormMixin, SignupForm):
     """
-    Custom form extending allauth's SignupForm to include first and last names.
-    This form relies on ACCOUNT_USERNAME_REQUIRED = False being set in settings.py.
+    Custom form extending allauth's SignupForm to include first and last names,
+    and mandatory policy agreement/optional marketing consent.
     """
     first_name = forms.CharField(max_length=150, required=True, 
                                  widget=forms.TextInput(attrs={'placeholder': 'First Name'}))
     last_name = forms.CharField(max_length=150, required=True, 
                                 widget=forms.TextInput(attrs={'placeholder': 'Last Name'}))
+
+    # --- Compliance Fields ---
+    policy_agreement = forms.BooleanField(
+        label="I have read and agree to the Terms of Service and Privacy Policy.", 
+        required=True,
+        error_messages={'required': 'You must agree to the Terms of Service and Privacy Policy to create an account.'}
+    )
+
+    marketing_opt_in = forms.BooleanField(
+        label="I would like to receive motivational content and updates (optional).",
+        required=False
+    )
 
     def save(self, request):
         """
@@ -56,7 +70,9 @@ class CustomSignupForm(TailwindFormMixin, SignupForm):
         user.first_name = self.cleaned_data['first_name']
         user.last_name = self.cleaned_data['last_name']
         
-        # Save the updated fields to the database
+        # NOTE: You would save the marketing_opt_in status to a UserProfile or
+        # a separate Subscription model here, but for simplicity, we just save the base user fields.
+        
         user.save()
         
         return user
