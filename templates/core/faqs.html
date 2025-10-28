@@ -1,10 +1,110 @@
 {% extends 'base.html' %}
 
-{% block title %}FAQs{% endblock %}
+{% block title %}Frequently Asked Questions{% endblock %}
 
 {% block content %}
-<div class="prose max-w-none">
-    <h1>Frequently Asked Questions</h1>
-    <p>This is the FAQs page. Content will be added here soon.</p>
+<div class="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div class="text-center">
+        <h1 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+            Frequently Asked Questions
+        </h1>
+        <p class="mt-4 text-lg text-gray-500">Can't find the answer you're looking for? Reach out to our support team.</p>
+    </div>
+
+    <div x-data="{ activeTab: 'retail' }" class="mt-12">
+        <div class="flex justify-center border-b border-gray-200" role="tablist" aria-label="FAQ Categories">
+            <button 
+                @click="activeTab = 'retail'"
+                :class="{ 'border-blue-500 text-blue-600': activeTab === 'retail', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'retail' }"
+                class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm focus:outline-none"
+                id="retail-tab"
+                role="tab"
+                aria-controls="retail-panel"
+                :aria-selected="activeTab === 'retail'"
+            >
+                Retail & Products
+            </button>
+            <button 
+                @click="activeTab = 'coaching'"
+                :class="{ 'border-blue-500 text-blue-600': activeTab === 'coaching', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'coaching' }"
+                class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm focus:outline-none"
+                id="coaching-tab"
+                role="tab"
+                aria-controls="coaching-panel"
+                :aria-selected="activeTab === 'coaching'"
+            >
+                Coaching Services
+            </button>
+        </div>
+
+        <div class="mt-8">
+            <div x-data="{ openItem: null }" role="presentation"> 
+                
+                <div x-show="activeTab === 'retail'" role="tabpanel" id="retail-panel" aria-labelledby="retail-tab">
+                    <div class="space-y-4">
+                        {% for item in faq_data.retail %}
+                            <div class="border rounded-lg shadow-sm">
+                                <h3 class="text-lg m-0 p-0">
+                                    <button 
+                                        @click="openItem = (openItem === 'retail-{{ forloop.counter }}' ? null : 'retail-{{ forloop.counter }}')"
+                                        class="flex justify-between items-center w-full text-left p-4 font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        :aria-expanded="openItem === 'retail-{{ forloop.counter }}'"
+                                        aria-controls="answer-retail-{{ forloop.counter }}"
+                                        id="question-retail-{{ forloop.counter }}"
+                                    >
+                                        {{ item.q }}
+                                        <svg class="w-5 h-5 transition-transform duration-300" :class="{ 'rotate-180': openItem === 'retail-{{ forloop.counter }}' }" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </button>
+                                </h3>
+
+                                <div 
+                                    x-show="openItem === 'retail-{{ forloop.counter }}'"
+                                    x-collapse 
+                                    class="p-4 pt-0 text-base text-gray-600"
+                                    role="region"
+                                    aria-labelledby="question-retail-{{ forloop.counter }}"
+                                    id="answer-retail-{{ forloop.counter }}"
+                                >
+                                    {{ item.a|safe }} 
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div x-show="activeTab === 'coaching'" role="tabpanel" id="coaching-panel" aria-labelledby="coaching-tab" x-cloak>
+                    <div class="space-y-4">
+                        {% for item in faq_data.coaching %}
+                             <div class="border rounded-lg shadow-sm">
+                                <h3 class="text-lg m-0 p-0">
+                                    <button 
+                                        @click="openItem = (openItem === 'coaching-{{ forloop.counter }}' ? null : 'coaching-{{ forloop.counter }}')"
+                                        class="flex justify-between items-center w-full text-left p-4 font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        :aria-expanded="openItem === 'coaching-{{ forloop.counter }}'"
+                                        aria-controls="answer-coaching-{{ forloop.counter }}"
+                                        id="question-coaching-{{ forloop.counter }}"
+                                    >
+                                        {{ item.q }}
+                                        <svg class="w-5 h-5 transition-transform duration-300" :class="{ 'rotate-180': openItem === 'coaching-{{ forloop.counter }}' }" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </button>
+                                </h3>
+
+                                <div 
+                                    x-show="openItem === 'coaching-{{ forloop.counter }}'"
+                                    x-collapse 
+                                    class="p-4 pt-0 text-base text-gray-600"
+                                    role="region"
+                                    aria-labelledby="question-coaching-{{ forloop.counter }}"
+                                    id="answer-coaching-{{ forloop.counter }}"
+                                >
+                                    {{ item.a|safe }} 
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+            </div> </div>
+    </div>
 </div>
 {% endblock %}
