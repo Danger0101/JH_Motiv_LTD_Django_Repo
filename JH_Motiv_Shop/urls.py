@@ -21,7 +21,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('unicorn/', include('django_unicorn.urls')),
     path('', include('core.urls')),
-    path('accounts/', include('django.contrib.auth.urls')),
+    # The line below is changed to include accounts.urls, which properly sets up django-allauth
+    path('accounts/', include('accounts.urls')),
     path('products/', include('products.urls')),
     path('cart/', include('cart.urls')),
     path('payments/', include('payments.urls')),

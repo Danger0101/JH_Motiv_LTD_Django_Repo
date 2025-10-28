@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Order #{{ order.id }} Details
+{% endblock %}
+
+{% block content %}
+<div class="prose max-w-none">
+    <h1>
+        {% if order.user %}
+            Order #{{ order.id }}
+        {% else %}
+            Guest Order Details
+        {% endif %}
+    </h1>
+
+    <p><strong>Order Token:</strong> {{ order.guest_order_token }}</p>
+    <p><strong>Order Total:</strong> ${{ order.total_paid }}</p>
+    <p><strong>Date:</strong> {{ order.created_at|date:"F j, Y" }}</p>
+
+    <h2 class="mt-6">Items</h2>
+    <div class="space-y-4">
+        {% for item in order.items.all %}
+            <div class="border p-4 rounded-lg">
+                <p class="font-bold">{{ item.variant.product.name }} ({{ item.variant.name }})</p>
+                <p>Quantity: {{ item.quantity }}</p>
+                <p>Price: ${{ item.price }}</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

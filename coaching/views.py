@@ -1,5 +1,9 @@
 from django.shortcuts import render
 from django.http import HttpResponse
+from django.views.generic import TemplateView
+
+class CoachingOverview(TemplateView):
+    template_name = 'coaching/coaching_overview.html'
 
 # pip install google-api-python-client
 

@@ -1,12 +1,39 @@
-
 {% for item in cart.items.all %}
-    <div>
-        <p>{{ item.variant.product.name }} ({{ item.variant.name }})</p>
-        <p>Price: ${{ item.variant.price }}</p>
-        <form hx-post="{% url 'cart:update_cart_item' item.id %}" hx-target="#cart-item-list" hx-swap="innerHTML">
-            {% csrf_token %}
-            <input type="number" name="quantity" value="{{ item.quantity }}" min="0">
-            <button type="submit">Update</button>
-        </form>
+<div class="row mb-4 d-flex justify-content-between align-items-center">
+    <div class="col-md-2 col-lg-2 col-xl-2">
+        <img src="{{ item.variant.get_image_url }}" class="img-fluid rounded-3" alt="{{ item.variant.product.name }}">
     </div>
+    <div class="col-md-3 col-lg-3 col-xl-3">
+        <h6 class="text-muted">{{ item.variant.product.name }}</h6>
+        <h6 class="text-black mb-0">{{ item.variant.name }}</h6>
+    </div>
+    <div class="col-md-3 col-lg-3 col-xl-2 d-flex">
+        <input type="number" value="{{ item.quantity }}" min="0" class="form-control form-control-sm"
+               hx-post="{% url 'cart:update_cart_item' item.id %}"
+               hx-target="#cart-item-list" 
+               hx-swap="innerHTML"
+               hx-trigger="change delay:500ms"
+               name="quantity">
+    </div>
+    <div class="col-md-3 col-lg-2 col-xl-2 offset-lg-1">
+        <h6 class="mb-0">£{{ item.get_total_price }}</h6>
+    </div>
+    <div class="col-md-1 col-lg-1 col-xl-1 text-end">
+        <a href="#!" class="text-muted"
+           hx-post="{% url 'cart:update_cart_item' item.id %}"
+           hx-target="#cart-item-list"
+           hx-swap="innerHTML"
+           hx-vals='{"quantity": 0}'>
+            <i class="fas fa-times"></i>
+        </a>
+    </div>
+</div>
+<hr class="my-4">
+{% empty %}
+<div class="row">
+    <div class="col text-center">
+        <p>Your cart is empty.</p>
+        <a href="{% url 'products:product_list' %}" class="btn btn-primary">Continue Shopping</a>
+    </div>
+</div>
 {% endfor %}

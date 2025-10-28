@@ -3,8 +3,14 @@ from django.conf import settings
 from products.models import Variant
 
 class Cart(models.Model):
+    STATUS_CHOICES = (
+        ('open', 'Open'),
+        ('submitted', 'Submitted'),
+    )
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     session_key = models.CharField(max_length=40, null=True, blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='open')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
