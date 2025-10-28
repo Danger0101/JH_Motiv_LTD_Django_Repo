@@ -4,24 +4,17 @@ Django settings for JH_Motiv_Shop project.
 
 from pathlib import Path
 import os
-import environ
-
-# Initialize django-environ
-env = environ.Env(
-    # set casting, default value
-    DEBUG=(bool, False)
-)
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Take environment variables from .env file
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 
 # Quick-start development settings - unsuitable for production
-SECRET_KEY = env('SECRET_KEY')
-DEBUG = env('DEBUG')
+SECRET_KEY = os.getenv('SECRET_KEY')
+DEBUG = os.getenv('DEBUG') == 'True'
 ALLOWED_HOSTS = []
 
 
@@ -89,7 +82,10 @@ WSGI_APPLICATION = 'JH_Motiv_Shop.wsgi.application'
 
 # Database
 DATABASES = {
-    'default': env.db(),
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
 
 
@@ -119,7 +115,6 @@ ACCOUNT_SIGNUP_FIELDS = [
     'last_name',
     'password1',
     'password2',
-    'policy_agreement',
     # This should pass validation as the form handles confirmation
 ]
 
@@ -131,7 +126,6 @@ ACCOUNT_RATE_LIMITS = {
 
 # Forms: Link to custom forms
 ACCOUNT_FORMS = {
-    'login': 'accounts.forms.CustomLoginForm',
     'signup': 'accounts.forms.CustomSignupForm',
 }
 
