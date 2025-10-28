@@ -1,10 +1,8 @@
-from django.urls import path, include
-from .views import ProfileView # Only need the specific view
+from django.urls import path
+from .views import update_marketing_preference
+
+app_name = 'accounts'
 
 urlpatterns = [
-    # 1. Include all the core allauth paths (login, logout, signup, etc.)
-    path('', include('allauth.urls')),
-    
-    # 2. Add your custom profile page path, which requires login
-    path('profile/', ProfileView.as_view(), name='account_profile'),
+    path('update-marketing-preference/', update_marketing_preference, name='update_marketing_preference'),
 ]

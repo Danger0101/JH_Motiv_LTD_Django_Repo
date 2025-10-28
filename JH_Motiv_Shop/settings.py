@@ -4,14 +4,24 @@ Django settings for JH_Motiv_Shop project.
 
 from pathlib import Path
 import os
+import environ
+
+# Initialize django-environ
+env = environ.Env(
+    # set casting, default value
+    DEBUG=(bool, False)
+)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Take environment variables from .env file
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
 
 # Quick-start development settings - unsuitable for production
-SECRET_KEY = 'django-insecure-(4$@12+rppcqw@z=efv6-gats=_3agu$u8etc5^id#58xwrb)7'
-DEBUG = True
+SECRET_KEY = env('SECRET_KEY')
+DEBUG = env('DEBUG')
 ALLOWED_HOSTS = []
 
 
@@ -54,7 +64,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
-    'allauth.account.middleware.AccountMiddleware', # Added for allauth
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'JH_Motiv_Shop.urls'
@@ -62,7 +72,6 @@ ROOT_URLCONF = 'JH_Motiv_Shop.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        # Added BASE_DIR / 'templates' for project-wide template lookup
         'DIRS': [os.path.join(BASE_DIR, 'templates')], 
         'APP_DIRS': True,
         'OPTIONS': {
@@ -80,10 +89,7 @@ WSGI_APPLICATION = 'JH_Motiv_Shop.wsgi.application'
 
 # Database
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': env.db(),
 }
 
 
@@ -97,10 +103,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # --- USER AND AUTHENTICATION CONFIGURATION ---
 
-# Use the custom User model defined in the 'accounts' app
 AUTH_USER_MODEL = 'accounts.User'
 
-# Authentication Backends (Required by allauth)
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
@@ -108,28 +112,33 @@ AUTHENTICATION_BACKENDS = (
 
 SITE_ID = 1
 
-# --- DJANGO ALLAUTH SETTINGS (Consolidated and Cleaned) ---
+# --- DJANGO ALLAUTH SETTINGS (Cleaned and Finalized) ---
+ACCOUNT_SIGNUP_FIELDS = [
+    'email', 
+    'first_name', 
+    'last_name',
+    'password1',
+    'password2',
+    'policy_agreement',
+    # This should pass validation as the form handles confirmation
+]
 
-# 1. Adapter: FIXES ModuleNotFoundError by pointing to the correct path
+# General settings
 ACCOUNT_ADAPTER = 'accounts.adapter.AccountAdapter'
+ACCOUNT_RATE_LIMITS = {
+    'login_failed': '5/min', 
+}
 
-# 2. Authentication: Use email as the primary login method (since username is not required)
-ACCOUNT_AUTHENTICATION_METHOD = "email"
-ACCOUNT_USERNAME_REQUIRED = False # Do not require a separate username field
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_EMAIL_VERIFICATION = "mandatory" # Highly recommended for security
-ACCOUNT_LOGIN_ATTEMPTS_LIMIT = 5
-
-# 3. Forms: Link to custom forms for field customization and Tailwind styling
+# Forms: Link to custom forms
 ACCOUNT_FORMS = {
     'login': 'accounts.forms.CustomLoginForm',
     'signup': 'accounts.forms.CustomSignupForm',
 }
 
-# 4. Redirects
+# Redirects and Logout Behavior
 LOGIN_REDIRECT_URL = '/'
 ACCOUNT_LOGOUT_REDIRECT_URL = '/'
-ACCOUNT_LOGOUT_ON_GET = True # Enables simple link-click logout
+ACCOUNT_LOGOUT_ON_GET = True 
 
 # Internationalization
 LANGUAGE_CODE = 'en-us'
