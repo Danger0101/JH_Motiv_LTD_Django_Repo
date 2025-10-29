@@ -1,10 +1,132 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %} {% block title %}Performance Coaching - JH Motiv LTD
+{% endblock %} {% block content %}
+<div class="bg-white">
+  <!-- Hero Section -->
+  <section class="bg-gray-900 text-white">
+    <div class="container mx-auto px-6 py-20 text-center">
+      <h1 class="text-4xl md:text-6xl font-bold leading-tight mb-4">
+        Mindset-to-Momentum Coaching
+      </h1>
+      <p class="text-lg md:text-xl mb-8 max-w-3xl mx-auto">
+        We partner with entrepreneurs to transform deep mindset blocks into
+        relentless, actionable momentum. It's not just about advice; it's about
+        unlocking the masterful mind you already possess.
+      </p>
+      <a
+        href="#packages"
+        class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-full transition duration-300 ease-in-out text-lg"
+      >
+        View Coaching Packages
+      </a>
+    </div>
+  </section>
 
-{% block title %}Coaching{% endblock %}
+  <!-- Introduction Section -->
+  <section class="py-16">
+    <div class="container mx-auto px-6 text-center">
+      <h2 class="text-3xl font-bold text-gray-800 mb-6">
+        What Makes Our Coaching Different?
+      </h2>
+      <p class="text-gray-600 max-w-2xl mx-auto mb-12">
+        Traditional mentorship gives you someone else's map. Our coaching helps
+        you draw your own. We use powerful questioning and accountability to
+        help you build resilient, unique solutions for your biggest challenges.
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="p-6">
+          <h3 class="text-xl font-semibold mb-2">
+            Deep Mindset Transformation
+          </h3>
+          <p class="text-gray-600">
+            Overcome self-doubt and build a bulletproof entrepreneurial
+            identity.
+          </p>
+        </div>
+        <div class="p-6">
+          <h3 class="text-xl font-semibold mb-2">Crystal-Clear Action Plans</h3>
+          <p class="text-gray-600">
+            Leave every 90-minute session with a non-negotiable plan to execute.
+          </p>
+        </div>
+        <div class="p-6">
+          <h3 class="text-xl font-semibold mb-2">Unstoppable Momentum</h3>
+          <p class="text-gray-600">
+            Generate consistent progress with repeatable systems and
+            accountability.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
 
-{% block content %}
-<div class="prose max-w-none">
-    <h1>Coaching Services</h1>
-    <p>This is the main coaching page. Information about our coaching services will be available here soon.</p>
+  <!-- Coaching Packages Section -->
+  <section id="packages" class="bg-gray-100 py-16">
+    <div class="container mx-auto px-6">
+      <h2 class="text-3xl font-bold text-center text-gray-800 mb-12">
+        Our Coaching Pathways
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <!-- Package 1 -->
+        <div class="bg-white rounded-lg shadow-lg p-8 text-center">
+          <h3 class="text-2xl font-bold mb-4">1-Month Clarity Kickstart</h3>
+          <p class="text-gray-600 mb-6">
+            For immediate mindset shifts and a fast, powerful action plan to get
+            you unstuck.
+          </p>
+          <a
+            href="#"
+            class="bg-blue-600 text-white font-bold py-2 px-6 rounded-full hover:bg-blue-700 transition duration-300"
+            >Learn More</a
+          >
+        </div>
+        <!-- Package 2 -->
+        <div
+          class="bg-white rounded-lg shadow-lg p-8 text-center border-4 border-green-500"
+        >
+          <h3 class="text-2xl font-bold mb-4">3-Month Mindset to Systems</h3>
+          <p class="text-gray-600 mb-6">
+            Our most popular program. Build and implement one major business
+            system from the ground up.
+          </p>
+          <a
+            href="#"
+            class="bg-green-600 text-white font-bold py-2 px-6 rounded-full hover:bg-green-700 transition duration-300"
+            >Learn More</a
+          >
+        </div>
+        <!-- Package 3 -->
+        <div class="bg-white rounded-lg shadow-lg p-8 text-center">
+          <h3 class="text-2xl font-bold mb-4">6-Month Momentum Blueprint</h3>
+          <p class="text-gray-600 mb-6">
+            For complete, sustainable transformation with long-term
+            accountability and support.
+          </p>
+          <a
+            href="#"
+            class="bg-blue-600 text-white font-bold py-2 px-6 rounded-full hover:bg-blue-700 transition duration-300"
+            >Learn More</a
+          >
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final CTA Section -->
+  <section class="py-20">
+    <div class="container mx-auto px-6 text-center">
+      <h2 class="text-3xl font-bold text-gray-800 mb-6">
+        Ready to Unlock Your Potential?
+      </h2>
+      <p class="text-gray-600 max-w-xl mx-auto mb-8">
+        Let's have a conversation about your goals and see if we're the right
+        fit to help you achieve them.
+      </p>
+      <a
+        href="#"
+        class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-8 rounded-full transition duration-300 ease-in-out text-lg"
+        >Book a Discovery Call</a
+      >
+    </div>
+  </section>
 </div>
 {% endblock %}

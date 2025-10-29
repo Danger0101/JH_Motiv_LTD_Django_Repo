@@ -5,8 +5,6 @@ from django.views.generic import TemplateView
 class CoachingOverview(TemplateView):
     template_name = 'coaching/coaching_overview.html'
 
-# pip install google-api-python-client
-
 def get_coach_availability(coach_user):
     """
     This function will retrieve the coach's availability from their Google Calendar.

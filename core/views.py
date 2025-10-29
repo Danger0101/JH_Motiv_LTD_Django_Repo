@@ -19,7 +19,7 @@ from team.models import TeamMember
 
 def home(request):
     """Renders the home page."""
-    return render(request, 'core/home.html')
+    return render(request, 'home.html')
 
 def about_page(request): 
     """Renders the About page, fetching dynamic Dreamer and Team data."""

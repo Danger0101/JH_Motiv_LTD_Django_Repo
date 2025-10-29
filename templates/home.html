@@ -1,0 +1,75 @@
+{% extends "base.html" %} {% block title %}Welcome to JH Motiv LTD{% endblock %}
+{% block extra_head %}
+<style>
+  .hero-section {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+  .hero-overlay {
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="space-y-16">
+  <div class="container mx-auto px-4">
+    <div class="flex flex-col lg:flex-row lg:space-x-8 space-y-8 lg:space-y-0">
+      <!-- Retail/Products Hero Section -->
+      <section
+        class="hero-section relative text-white py-20 md:py-32 w-full lg:w-1/2 rounded-lg overflow-hidden"
+        style="
+          background-image: url('https://images.unsplash.com/photo-1524678606370-a47625cb810c?q=80&w=2070&auto=format&fit=crop');
+        "
+        aria-labelledby="retail-heading"
+      >
+        <div class="hero-overlay absolute inset-0"></div>
+        <div class="container mx-auto px-6 text-center relative z-10">
+          <h1
+            id="retail-heading"
+            class="text-4xl md:text-5xl font-bold leading-tight mb-4"
+          >
+            Elevate Your Lifestyle
+          </h1>
+          <p class="text-lg md:text-xl mb-8 max-w-2xl mx-auto">
+            Discover our curated collection of products designed to inspire and
+            motivate you every day.
+          </p>
+          <a
+            href="{% url 'products:product_list' %}"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full transition duration-300 ease-in-out text-lg"
+            >Shop Now</a
+          >
+        </div>
+      </section>
+
+      <!-- Coaching Hero Section -->
+      <section
+        class="hero-section relative text-white py-20 md:py-32 w-full lg:w-1/2 rounded-lg overflow-hidden"
+        style="
+          background-image: url('https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=2070&auto=format&fit=crop');
+        "
+        aria-labelledby="coaching-heading"
+      >
+        <div class="hero-overlay absolute inset-0"></div>
+        <div class="container mx-auto px-6 text-center relative z-10">
+          <h2
+            id="coaching-heading"
+            class="text-4xl md:text-5xl font-bold leading-tight mb-4"
+          >
+            Unlock Your Potential
+          </h2>
+          <p class="text-lg md:text-xl mb-8 max-w-2xl mx-auto">
+            Our expert coaching programs will guide you to break barriers and
+            achieve your personal and professional goals.
+          </p>
+          <a
+            href="{% url 'coaching:coaching_overview' %}"
+            class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-full transition duration-300 ease-in-out text-lg"
+            >Explore Coaching</a
+          >
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}
