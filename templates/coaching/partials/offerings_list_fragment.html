@@ -1,0 +1,33 @@
+{% for offering in offerings %}
+<div id="offering-{{ offering.id }}" class="p-4 bg-white border border-gray-200 rounded-md shadow-sm">
+    <div class="flex justify-between items-start mb-2">
+        <h4 class="text-lg font-bold text-gray-900">
+            {{ offering.name }}
+        </h4>
+        <span class="text-xs font-semibold px-2 py-0.5 rounded 
+                     {% if offering.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+            {{ offering.is_active|yesno:"ACTIVE,INACTIVE" }}
+        </span>
+    </div>
+    
+    <p class="text-sm text-gray-600 mb-3">{{ offering.description|truncatechars:100 }}</p>
+    
+    <div class="flex justify-between items-center text-sm font-medium border-t pt-2">
+        <span class="text-indigo-600">${{ offering.price }} / {{ offering.duration_minutes }} min</span>
+        
+        <button
+            hx-delete="{% url 'coaching:api_offerings_detail' offering.id %}"
+            hx-target="#offering-{{ offering.id }}"
+            hx-swap="outerHTML swap:1s"
+            hx-confirm="PERMANENTLY delete the service '{{ offering.name }}'?"
+            class="text-red-500 hover:text-red-700 text-xs font-semibold p-1 transition"
+        >
+            Delete
+        </button>
+    </div>
+    </div>
+{% empty %}
+<p class="text-gray-500 p-3 bg-gray-50 rounded-md">
+    You currently have no services defined. Use the form to the left to create your first offering.
+</p>
+{% endfor %}

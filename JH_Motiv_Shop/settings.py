@@ -27,8 +27,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.sites',  # REQUIRED by allauth
-
+    'django.contrib.sites',
+    'django.contrib.humanize',
+    
+    'encrypted_model_fields',
     'django_htmx',
     'django_unicorn',
 
@@ -163,3 +165,6 @@ DEFAULT_FROM_EMAIL = 'support@jhmotiv.shop'
 GOOGLE_OAUTH2_CLIENT_ID = os.getenv('GOOGLE_OAUTH2_CLIENT_ID', 'your-client-id')
 GOOGLE_OAUTH2_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH2_CLIENT_SECRET', 'your-client-secret')
 GOOGLE_OAUTH2_REDIRECT_URI = os.getenv('GOOGLE_OAUTH2_REDIRECT_URI', 'http://localhost:8000/gcal/redirect')
+
+#Encryption:
+FIELD_ENCRYPTION_KEY = os.getenv('FIELD_ENCRYPTION_KEY')

@@ -4,12 +4,23 @@ from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
+from .fields import CustomEncryptedJSONField
+from timezone_field import TimeZoneField
+
 
 class User(AbstractUser):
     is_coach = models.BooleanField(default=False)
-    # RENAME: Renamed 'address' to 'billing_notes' to prevent the conflict.
     billing_notes = models.CharField(max_length=255, blank=True, null=True, 
                                      help_text="General notes or preferred billing address text.")
+    google_calendar_credentials = CustomEncryptedJSONField(max_length=4096, null=True, blank=True)
+    
+    # NEW FIELD: Quick toggle to pause all bookings
+    is_on_vacation = models.BooleanField(default=False, 
+                                         help_text="If checked, the coach is immediately unbookable.")
+    user_timezone = TimeZoneField(
+        default='UTC', 
+        help_text="User's preferred time zone for display and defining working hours."
+    )
 
     def __str__(self):
         return self.username

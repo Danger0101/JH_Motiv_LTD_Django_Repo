@@ -1,0 +1,99 @@
+{% load static humanize %}
+<div class="p-4 border rounded-lg bg-white shadow-md">
+  <div class="flex justify-between items-center mb-4 px-2">
+    <h2 class="text-xl font-bold text-gray-800">
+      {{ current_month|date:"F Y" }}
+    </h2>
+
+    <div class="text-sm text-gray-600 font-medium">
+      Timezone: {{ coach_tz }}
+    </div>
+
+    <div>
+      {# The following logic uses the variable pre-calculated in coach_calendar_view #}
+      <button
+        aria-label="Go to previous month"
+        class="text-gray-500 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+        type="button"
+        hx-get="{% url 'coaching:api_calendar_view' %}?year={{ prev_month.year }}&month={{ prev_month.month }}"
+        hx-target="#calendar-grid-ui"
+        hx-swap="innerHTML"
+        {% if prev_month_is_past %}disabled{% endif %}
+      >
+        &lt;
+      </button>
+      <button
+        aria-label="Go to next month"
+        class="text-gray-500 hover:text-gray-800 ml-2"
+        type="button"
+        hx-get="{% url 'coaching:api_calendar_view' %}?year={{ next_month.year }}&month={{ next_month.month }}"
+        hx-target="#calendar-grid-ui"
+        hx-swap="innerHTML"
+      >
+        &gt;
+      </button>
+    </div>
+  </div>
+
+  <div>
+    <table
+      data-component="availability-calendar-view"
+      class="w-full text-center border-collapse"
+    >
+      <thead>
+        <tr class="border-b">
+          {% for day_name in day_names %}
+          <th class="font-semibold text-gray-600 pb-2 text-sm">
+            {{ day_name }}
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for week in month_days %}
+        <tr>
+          {% for day in week %}
+
+          <td
+            class="p-1 border text-sm h-28 align-top relative {% if not day.is_current_month %}bg-gray-50 text-gray-400{% elif day.is_vacation or day.day < today_date %}bg-gray-100 text-gray-400 cursor-not-allowed{% else %}bg-white hover:bg-indigo-50 cursor-pointer{% endif %}"
+            {% if day.is_current_month and day.day >= today_date and not day.is_vacation %}
+              hx-get="{% url 'coaching:api_add_availability_modal' %}?date={{ day.day|date:'Y-m-d' }}" hx-target="#modal-container" hx-swap="innerHTML"
+            {% endif %}
+          >
+            <div
+              class="font-bold text-base mb-1 {% if day.is_today %}text-blue-600 ring-2 ring-blue-500 rounded-full w-8 h-8 flex items-center justify-center mx-auto{% endif %}"
+            >
+              {{ day.day.day }}
+            </div>
+
+            <div class="text-xs text-gray-600">
+              {% if day.is_vacation %}
+              <div class="text-red-500 font-semibold">Vacation</div>
+              {% elif day.available_slots %}
+                {% for slot in day.available_slots %}
+                <div class="text-green-700 font-medium">
+                  {{ slot.start_time }} – {{ slot.end_time }}
+                </div>
+                {% endfor %}
+              {% else %}
+                {% if day.is_current_month and day.day >= today_date %}
+              <div class="text-gray-400">Unavailable</div>
+              {% endif %} {% endif %}
+            </div>
+
+            {% if day.is_specific %}
+            <div
+              class="absolute top-1 right-1 text-lg font-bold text-indigo-500"
+              title="One-off adjustment applied"
+            >
+              *
+            </div>
+            {% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
