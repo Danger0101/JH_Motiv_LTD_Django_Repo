@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from products.models import Variant
+from decimal import Decimal # ADDED: Import Decimal for safe currency calculations
 
 class Cart(models.Model):
     STATUS_CHOICES = (
@@ -23,6 +24,11 @@ class CartItem(models.Model):
     cart = models.ForeignKey(Cart, related_name='items', on_delete=models.CASCADE)
     variant = models.ForeignKey(Variant, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
+
+    def get_total_price(self):
+        """Calculates the total price for this cart item (quantity * variant price)."""
+        # FIX: Added this method to resolve the AttributeError
+        return self.quantity * self.variant.price
 
     def __str__(self):
         return f"{self.quantity} of {self.variant.product.name} ({self.variant.name})"

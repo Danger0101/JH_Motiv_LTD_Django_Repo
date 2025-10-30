@@ -10,4 +10,5 @@ urlpatterns = [
     path('update/<int:item_id>/', views.update_cart_item, name='update_cart_item'),
     path('summary/', views.cart_summary_fragment, name='cart_summary_fragment'),
     path('items/', views.cart_item_list, name='cart_item_list'),
+    path('summary-panel/', views.cart_summary_panel, name='cart_summary_panel'),
 ]

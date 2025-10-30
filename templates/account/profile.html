@@ -32,5 +32,15 @@
           </p>
       </div>
     {% endwith %}
+
+    {% if user.is_coach %}
+    <hr class="my-6">
+    <h3>Google Calendar Integration</h3>
+    {% if user.google_calendar_credentials %}
+        <p>Your Google Calendar is connected.</p>
+    {% else %}
+        <a href="{% url 'gcal:google_calendar_init' %}" class="btn btn-primary">Connect Google Calendar</a>
+    {% endif %}
+    {% endif %}
 </div>
 {% endblock %}

@@ -1,39 +1,55 @@
 {% for item in cart.items.all %}
-<div class="row mb-4 d-flex justify-content-between align-items-center">
-    <div class="col-md-2 col-lg-2 col-xl-2">
-        <img src="{{ item.variant.get_image_url }}" class="img-fluid rounded-3" alt="{{ item.variant.product.name }}">
+<div class="flex flex-col sm:flex-row items-start sm:items-center py-4 border-b border-gray-100 last:border-b-0" role="listitem" aria-labelledby="product-name-{{ item.id }}">
+    
+    <div class="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 mr-4">
+        <img src="{{ item.variant.get_image_url }}" 
+             class="w-full h-full object-cover rounded-lg shadow-sm" 
+             alt="{{ item.variant.product.name }}">
     </div>
-    <div class="col-md-3 col-lg-3 col-xl-3">
-        <h6 class="text-muted">{{ item.variant.product.name }}</h6>
-        <h6 class="text-black mb-0">{{ item.variant.name }}</h6>
+
+    <div class="flex-grow min-w-0 mb-2 sm:mb-0" id="product-name-{{ item.id }}">
+        <h3 class="text-lg font-semibold text-gray-800 truncate">{{ item.variant.product.name }}</h3>
+        <p class="text-sm text-gray-500">{{ item.variant.name }}</p>
     </div>
-    <div class="col-md-3 col-lg-3 col-xl-2 d-flex">
-        <input type="number" value="{{ item.quantity }}" min="0" class="form-control form-control-sm"
+
+    <div class="flex items-center gap-4 mt-2 sm:mt-0 sm:ml-4">
+        <label for="quantity-{{ item.id }}" class="sr-only">Quantity for {{ item.variant.product.name }}</label>
+        <input type="number" 
+               id="quantity-{{ item.id }}"
+               value="{{ item.quantity }}" 
+               min="0" 
+               class="w-16 px-2 py-1 text-base border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-center"
                hx-post="{% url 'cart:update_cart_item' item.id %}"
                hx-target="#cart-item-list" 
                hx-swap="innerHTML"
-               hx-trigger="change delay:500ms"
-               name="quantity">
-    </div>
-    <div class="col-md-3 col-lg-2 col-xl-2 offset-lg-1">
-        <h6 class="mb-0">£{{ item.get_total_price }}</h6>
-    </div>
-    <div class="col-md-1 col-lg-1 col-xl-1 text-end">
-        <a href="#!" class="text-muted"
+               hx-trigger="change delay:100ms"
+               name="quantity"
+               aria-controls="cart-item-list">
+               
+        <div class="w-20 text-right">
+            <h4 class="text-lg font-bold text-gray-900">£{{ item.get_total_price|floatformat:2 }}</h4>
+        </div>
+
+        <a href="#" 
+           class="text-gray-400 hover:text-red-500 transition duration-150 p-1"
            hx-post="{% url 'cart:update_cart_item' item.id %}"
            hx-target="#cart-item-list"
            hx-swap="innerHTML"
-           hx-vals='{"quantity": 0}'>
-            <i class="fas fa-times"></i>
+           hx-vals='{"quantity": 0}'
+           aria-label="Remove item {{ item.variant.product.name }}">
+             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 7a1 1 0 012 0v8a1 1 0 11-2 0V7zm4 0a1 1 0 10-2 0v8a1 1 0 102 0V7z" clip-rule="evenodd" /></svg>
         </a>
     </div>
 </div>
-<hr class="my-4">
 {% empty %}
-<div class="row">
-    <div class="col text-center">
-        <p>Your cart is empty.</p>
-        <a href="{% url 'products:product_list' %}" class="btn btn-primary">Continue Shopping</a>
+<div class="text-center py-10 bg-gray-50 rounded-lg">
+    <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+    <h3 class="mt-2 text-xl font-medium text-gray-900">Your cart is empty</h3>
+    <p class="mt-1 text-sm text-gray-500">Add products to get started.</p>
+    <div class="mt-6">
+        <a href="{% url 'products:product_list' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition duration-150">
+            Continue Shopping
+        </a>
     </div>
 </div>
 {% endfor %}

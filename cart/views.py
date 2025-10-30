@@ -1,7 +1,8 @@
 from django.shortcuts import render, get_object_or_404
 from django.template.loader import render_to_string
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.views.decorators.http import require_POST
+from django.urls import reverse
 from .utils import get_or_create_cart, get_cart_summary_data
 from .models import CartItem
 from products.models import Variant
@@ -17,6 +18,11 @@ def add_to_cart(request, variant_id):
     variant = get_object_or_404(Variant, id=variant_id)
     quantity = int(request.POST.get('quantity', 1))
 
+    # Check variant availability (optional but recommended before saving)
+    if not variant.is_available(quantity):
+        # Optionally, handle out-of-stock error here, e.g., using Django messages
+        pass 
+
     cart_item, created = CartItem.objects.get_or_create(
         cart=cart,
         variant=variant,
@@ -27,9 +33,12 @@ def add_to_cart(request, variant_id):
         cart_item.quantity += quantity
         cart_item.save()
 
-    # Prepare the response to just update the summary, but also trigger a global event
-    response = cart_summary_fragment(request)
+    # Use a standard Django redirect (302 Found) to force navigation to the cart detail page.
+    response = HttpResponseRedirect(reverse('cart:cart_detail'))
+    
+    # Send the HX-Trigger header to ensure the cart icon in the navbar updates immediately.
     response['HX-Trigger'] = 'cartUpdated'
+    
     return response
 
 @require_POST
@@ -59,6 +68,12 @@ def cart_detail(request):
     cart = get_or_create_cart(request)
     summary_data = get_cart_summary_data(cart)
     return render(request, 'cart/detail.html', {'cart': cart, 'summary': summary_data})
+
+# NEW VIEW: Renders the summary panel content for HTMX reloading
+def cart_summary_panel(request):
+    cart = get_or_create_cart(request)
+    summary_data = get_cart_summary_data(cart)
+    return render(request, 'cart/partials/cart_summary_panel.html', {'cart': cart, 'summary': summary_data})
 
 
 def cart_item_list(request):

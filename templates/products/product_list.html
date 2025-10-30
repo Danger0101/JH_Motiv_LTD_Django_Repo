@@ -34,11 +34,11 @@
     </div>
 
     <!-- Product Grid -->
-    {% if products.object_list %}
+    {% if products %}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {% for product in products.object_list %}
+            {% for product in products %}
                 <div class="bg-white rounded-lg shadow-md overflow-hidden flex flex-col group">
-                    <a href="{{ product.get_absolute_url }}" class="block" aria-label="View details for {{ product.name }}">
+                    <a href="{% url 'products:product_detail' pk=product.pk %}" class="block" aria-label="View details for {{ product.name }}">
                         {% if product.featured_image %}
                             <img src="{{ product.featured_image.url }}" alt="{{ product.name }}" class="h-56 w-full object-cover group-hover:opacity-80 transition-opacity duration-300 bg-gray-200" loading="lazy" decoding="async">
                         {% else %}
@@ -49,12 +49,12 @@
                     </a>
                     <div class="p-4 flex flex-col flex-grow">
                         <h2 class="text-xl font-semibold text-gray-800 mb-2">
-                            <a href="{{ product.get_absolute_url }}" class="hover:text-blue-600">{{ product.name }}</a>
+                            <a href="{% url 'products:product_detail' pk=product.pk %}" class="hover:text-blue-600">{{ product.name }}</a>
                         </h2>
                         <p class="text-gray-600 text-sm mb-4 flex-grow">{{ product.description|truncatewords:20 }}</p>
                         <div class="mt-auto flex items-center justify-between">
-                            <p class="text-lg font-bold text-gray-900">${{ product.get_price_range.min_price|floatformat:2 }}</p>
-                            <a href="{{ product.get_absolute_url }}" class="bg-gray-800 text-white text-sm font-bold py-2 px-4 rounded-md hover:bg-gray-900 transition duration-300">View Details</a>
+                            <p class="text-lg font-bold text-gray-900">£{{ product.get_price_range.min_price|floatformat:2 }}</p>
+                            <a href="{% url 'products:product_detail' pk=product.pk %}" class="bg-gray-800 text-white text-sm font-bold py-2 px-4 rounded-md hover:bg-gray-900 transition duration-300">View Details</a>
                         </div>
                     </div>
                 </div>

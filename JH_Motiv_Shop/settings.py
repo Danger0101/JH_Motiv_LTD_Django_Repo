@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'coaching',
     'dreamers',
     'team',
+    'gcal',
 ]
 
 MIDDLEWARE = [
@@ -146,3 +147,19 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# =======================================================
+# EMAIL CONFIGURATION FOR DEVELOPMENT (TO PREVENT ERROR 10061)
+# =======================================================
+
+# This tells Django to print emails to the console/terminal 
+# instead of trying to send them over the network.
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# You should also set a default email address for 'allauth'
+DEFAULT_FROM_EMAIL = 'support@jhmotiv.shop'
+
+# Google Calendar API Credentials
+GOOGLE_OAUTH2_CLIENT_ID = os.getenv('GOOGLE_OAUTH2_CLIENT_ID', 'your-client-id')
+GOOGLE_OAUTH2_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH2_CLIENT_SECRET', 'your-client-secret')
+GOOGLE_OAUTH2_REDIRECT_URI = os.getenv('GOOGLE_OAUTH2_REDIRECT_URI', 'http://localhost:8000/gcal/redirect')

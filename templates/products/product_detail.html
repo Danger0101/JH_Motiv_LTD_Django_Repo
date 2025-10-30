@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ product.name }} - Shop{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+        
+        <div role="region" aria-label="Product Image">
+            <img src="{% if product.featured_image %}{{ product.featured_image.url }}{% else %}https://via.placeholder.com/500{% endif %}" 
+                 alt="{{ product.name }}" 
+                 class="w-full h-auto rounded-lg shadow-xl aspect-square object-cover">
+        </div>
+
+        <div>
+            <h1 class="text-4xl font-extrabold text-gray-800 mb-2">{{ product.name }}</h1>
+            <p class="text-gray-600 mb-6">{{ product.description }}</p>
+
+            {% if product.variants.all %}
+                {% with first_variant=product.variants.first %}
+                
+                <div x-data="{ 
+                    selectedColor: '{{ first_variant.color|default:"" }}',     
+                    selectedSize: '{{ first_variant.size|default:"" }}',       
+                    selectedVariantId: '{{ first_variant.id|default:'0' }}', 
+                    currentPrice: '{{ first_variant.price|floatformat:2|default:'0.00' }}',
+                    isInStock: true,
+                    
+                    // FIX: Using |escapejs to ensure the JSON string is safe for the HTML attribute
+                    variantMap: JSON.parse('{{ variant_lookup_json|escapejs }}'),
+                    
+                    findVariant: function() {
+                        const key = this.selectedColor + '_' + this.selectedSize;
+                        const data = this.variantMap[key] || null;
+
+                        if (data) {
+                            this.selectedVariantId = data.id;
+                            this.currentPrice = data.price.toFixed(2);
+                            this.isInStock = data.in_stock; 
+                        } else {
+                            this.selectedVariantId = '0'; 
+                            this.isInStock = false;
+                        }
+                    },
+                    
+                    selectInitialVariant: function() {
+                        this.findVariant();
+                    }
+                }" x-init="selectInitialVariant()">
+                    
+                    <div class="mb-6">
+                        <span class="text-4xl font-extrabold text-gray-900" x-text="'£' + currentPrice">
+                            £{{ first_variant.price|floatformat:2 }}
+                        </span>
+                    </div>
+
+                    <form action="{% url 'cart:add_to_cart' 0 %}" method="post" id="add-to-cart-form" class="space-y-8">
+                        {% csrf_token %}
+                        
+                        <div class="space-y-3">
+                            <h3 class="text-lg font-semibold text-gray-800">Color: 
+                                <span class="font-bold" x-text="selectedColor"></span>
+                            </h3>
+                            <div class="flex flex-wrap gap-3">
+                                {% for color_name, hex_code in unique_colors|dictsort:0 %}
+                                <button type="button" 
+                                        x-on:click="selectedColor = '{{ color_name }}'; findVariant();"
+                                        class="w-10 h-10 rounded-full border-2 transition-all duration-150 relative"
+                                        :class="{ 'ring-4 ring-offset-2 ring-blue-500': selectedColor === '{{ color_name }}', 'border-gray-300 hover:border-blue-400': selectedColor !== '{{ color_name }}' }"
+                                        style="background-color: {{ hex_code }}; {% if color_name == 'White' %}border: 1px solid #D1D5DB;{% endif %}"
+                                        aria-label="Select color {{ color_name }}">
+                                    
+                                    <template x-if="selectedColor === '{{ color_name }}'">
+                                         <svg class="w-4 h-4 text-white absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 drop-shadow-lg" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 13.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+                                    </template>
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <h3 class="text-lg font-semibold text-gray-800">Size: 
+                                <span class="font-bold" x-text="selectedSize"></span>
+                            </h3>
+                            <div class="flex flex-wrap gap-2">
+                                {% for size_name in unique_sizes %}
+                                <button type="button" 
+                                        x-on:click="selectedSize = '{{ size_name }}'; findVariant();"
+                                        class="px-5 py-2 border-2 rounded-xl cursor-pointer text-sm font-medium transition duration-150 ease-in-out shadow-sm"
+                                        :class="{ 'bg-blue-600 text-white border-blue-600': selectedSize === '{{ size_name }}', 'bg-white text-gray-700 border-gray-300 hover:border-blue-300': selectedSize !== '{{ size_name }}' }"
+                                        aria-label="Select size {{ size_name }}">
+                                    {{ size_name }}
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <input type="hidden" name="variant_id" :value="selectedVariantId">
+                        <input type="hidden" id="base-url-input" value="{% url 'cart:add_to_cart' 0 %}">
+                        
+                        <div x-show="isInStock" x-transition>
+                            <label for="quantity-input" class="block text-sm font-medium text-gray-700">Quantity:</label>
+                            <input type="number" id="quantity-input" name="quantity" value="1" min="1" max="99" class="mt-1 block w-full max-w-xs pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md" aria-label="Product quantity">
+                        </div>
+
+                        <button type="submit" 
+                                :disabled="!isInStock || selectedVariantId === '0'" 
+                                :class="{ 'bg-blue-600 hover:bg-blue-700': isInStock && selectedVariantId !== '0', 'bg-gray-400 cursor-not-allowed': !isInStock || selectedVariantId === '0' }"
+                                class="w-full text-white font-bold py-3 px-6 rounded-md transition duration-300 ease-in-out transform hover:-translate-y-0.5" 
+                                aria-label="Add selected product to cart">
+                            <span x-show="isInStock && selectedVariantId !== '0'">Add to Cart</span>
+                            <span x-show="!isInStock || selectedVariantId === '0'">Out of Stock / Invalid Selection</span>
+                        </button>
+                    </form>
+                </div>
+                {% endwith %}
+            {% else %}
+                <p class="text-red-500 font-semibold mt-4">This product is currently unavailable or has no variants.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const addToCartForm = document.getElementById('add-to-cart-form');
+    const hiddenVariantIdInput = addToCartForm.querySelector('input[name="variant_id"]');
+    const baseUrlInput = document.getElementById('base-url-input');
+
+    function updateFormAction() {
+        const selectedVariantId = hiddenVariantIdInput.value;
+        const baseUrl = baseUrlInput.value;
+
+        // Construct the new URL by replacing the placeholder '0' with the actual variant ID
+        if (selectedVariantId && selectedVariantId !== '0') {
+            // Correctly forms the URL, e.g., /cart/add/123/
+            addToCartForm.action = baseUrl.replace('0', selectedVariantId);
+            return true; // Indicate success
+        }
+        return false; // Indicate failure
+    }
+
+    // Use a MutationObserver to react to changes in the hidden input's value
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.attributeName === 'value') {
+                updateFormAction();
+            }
+        });
+    });
+
+    observer.observe(hiddenVariantIdInput, {
+        attributes: true // Observe attribute changes
+    });
+
+    // Also, run on form submit for a final check
+    addToCartForm.addEventListener('submit', function(event) {
+        if (!updateFormAction()) {
+            console.error('Invalid variant ID. Halting submission.');
+            event.preventDefault(); // Stop the form from submitting
+        }
+    });
+
+    // Initial setup
+    updateFormAction();
+});
+</script>
+{% endblock %}

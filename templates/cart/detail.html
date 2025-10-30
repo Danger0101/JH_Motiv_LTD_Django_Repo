@@ -3,63 +3,52 @@
 {% block title %}Shopping Cart{% endblock %}
 
 {% block content %}
-<section class="h-100 h-custom" style="background-color: #eee;">
-    <div class="container py-5 h-100">
-        <div class="row d-flex justify-content-center align-items-center h-100">
-            <div class="col-12">
-                <div class="card card-registration card-registration-2" style="border-radius: 15px;">
-                    <div class="card-body p-0">
-                        <div class="row g-0">
-                            <div class="col-lg-8">
-                                <div class="p-5">
-                                    <div class="d-flex justify-content-between align-items-center mb-5">
-                                        <h1 class="fw-bold mb-0 text-black">Shopping Cart</h1>
-                                        <h6 class="mb-0 text-muted">{{ summary.item_count }} items</h6>
-                                    </div>
-                                    <hr class="my-4">
+<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 min-h-screen bg-gray-50">
+    <div class="max-w-7xl mx-auto">
+        
+        <header class="mb-8 text-center md:text-left">
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-800">Your Shopping Cart</h1>
+            <p class="mt-2 text-lg text-gray-600">{{ summary.item_count }} items currently in cart.</p>
+        </header>
 
-                                    <div id="cart-item-list" hx-trigger="load, cartUpdated from:body" hx-get="{% url 'cart:cart_item_list' %}" hx-target="this">
-                                        {% include 'cart/partials/cart_item_list.html' %}
-                                    </div>
+        <div class="lg:grid lg:grid-cols-3 lg:gap-10">
+            
+            <div class="lg:col-span-2 bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 lg:mb-0" role="main" aria-label="Cart Items">
+                
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-4">
+                    Items ({{ summary.item_count }})
+                </h2>
 
-                                    <div class="pt-5">
-                                        <h6 class="mb-0"><a href="{% url 'products:product_list' %}" class="text-body"><i class="fas fa-long-arrow-alt-left me-2"></i>Back to shop</a></h6>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-lg-4 bg-grey">
-                                <div class="p-5">
-                                    <h3 class="fw-bold mb-5 mt-2 pt-1">Summary</h3>
-                                    <hr class="my-4">
+                <div id="cart-item-list" 
+                     hx-trigger="load, cartUpdated from:body" 
+                     hx-get="{% url 'cart:cart_item_list' %}" 
+                     hx-target="this">
+                    {% include 'cart/partials/cart_item_list.html' %}
+                </div>
 
-                                    <div class="d-flex justify-content-between mb-4">
-                                        <h5 class="text-uppercase">items {{ summary.item_count }}</h5>
-                                        <h5>£{{ summary.subtotal|floatformat:2 }}</h5>
-                                    </div>
-
-                                    <h5 class="text-uppercase mb-3">Shipping</h5>
-                                    <div class="mb-4 pb-2">
-                                        <select class="select">
-                                            <option value="1">Standard-Delivery- £5.00</option>
-                                        </select>
-                                    </div>
-
-                                    <hr class="my-4">
-
-                                    <div class="d-flex justify-content-between mb-5">
-                                        <h5 class="text-uppercase">Total price</h5>
-                                        <h5>£{{ summary.total|floatformat:2 }}</h5>
-                                    </div>
-
-                                    <button type="button" class="btn btn-dark btn-block btn-lg" data-mdb-ripple-color="dark">Proceed to Pay</button>
-
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="mt-8 pt-4 border-t border-gray-100">
+                    <a href="{% url 'products:product_list' %}" class="text-blue-600 hover:text-blue-800 font-medium flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                        Back to shop
+                    </a>
                 </div>
             </div>
+
+            <div class="lg:col-span-1 bg-white rounded-xl shadow-lg p-4 sm:p-6 sticky top-8" 
+                role="complementary" aria-label="Order Summary">
+                
+                <div id="cart-summary-panel-wrapper"
+                     hx-trigger="load, cartUpdated from:body"
+                     hx-get="{% url 'cart:cart_summary_panel' %}" 
+                     hx-target="this"
+                     hx-swap="innerHTML">
+                    {% include 'cart/partials/cart_summary_panel.html' %}
+                </div>
+
+            </div>
+            
         </div>
+        
     </div>
-</section>
+</div>
 {% endblock %}
