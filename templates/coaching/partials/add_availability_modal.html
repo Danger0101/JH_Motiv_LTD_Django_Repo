@@ -1,15 +1,19 @@
+{% load static %}
 {% comment %} This modal is loaded into #modal-container when a user clicks a calendar day. {% endcomment %}
 <div
   id="availability-modal"
   class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50"
 >
   <div
-    class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md"
+    class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg"
     role="dialog"
     aria-modal="true"
+    x-data="{ activeTab: 'one-off' }" {# 👈 Initialize Alpine.js state for tabs #}
   >
     <div class="flex justify-between items-center mb-4">
-      <h3 class="text-xl font-bold text-gray-800">Add Availability</h3>
+      <h3 class="text-xl font-bold text-gray-800">
+        Availability for {{ selected_date|date:"l, F j, Y" }}
+      </h3>
       <button
         onclick="this.closest('#availability-modal').remove()"
         class="text-gray-500 hover:text-gray-800"
@@ -18,87 +22,185 @@
       </button>
     </div>
 
-    <form
-      hx-post="{% url 'coaching:api_create_availability_from_modal' %}"
-      hx-swap="none"
-      hx-on::after-request="if(event.detail.successful) { this.closest('#availability-modal').remove(); htmx.trigger('body', 'specific-slot-updated'); } else { alert('Error: ' + event.detail.xhr.responseText); }"
-    >
-      {% csrf_token %}
+    {# ------------------ TAB NAVIGATION ------------------ #}
+    <div class="border-b mb-6 flex space-x-1">
+      <button
+        @click="activeTab = 'one-off'"
+        :class="activeTab === 'one-off' ? 'border-indigo-600 text-indigo-600 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700'"
+        class="py-2 px-4 border-b-2 text-sm transition duration-150"
+      >
+        One-Off Time
+      </button>
+      <button
+        @click="activeTab = 'recurring'"
+        :class="activeTab === 'recurring' ? 'border-indigo-600 text-indigo-600 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700'"
+        class="py-2 px-4 border-b-2 text-sm transition duration-150"
+      >
+        Weekly Schedule
+      </button>
+      <button
+        @click="activeTab = 'vacation'"
+        :class="activeTab === 'vacation' ? 'border-indigo-600 text-indigo-600 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700'"
+        class="py-2 px-4 border-b-2 text-sm transition duration-150"
+      >
+        Vacation Block
+      </button>
+    </div>
+    {# ------------------ END TAB NAVIGATION ------------------ #}
 
-      <input type="hidden" name="date" value="{{ date_str }}" />
+    {# ------------------ TAB 1: ONE-OFF AVAILABILITY (Your Original Form, Simplified) ------------------ #}
+    <div x-show="activeTab === 'one-off'">
+      <form
+        hx-post="{% url 'coaching:api_create_availability_from_modal' %}"
+        hx-swap="none"
+        hx-on::after-request="if(event.detail.successful) { this.closest('#availability-modal').remove(); htmx.trigger('body', 'specific-slot-updated'); htmx.trigger('body', 'recurring-schedule-updated'); } else { alert('Error: ' + event.detail.xhr.responseText); }"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="date" value="{{ date_str }}" />
+        {# Always send this type when using this tab #}
+        <input type="hidden" name="availability_type" value="specific" /> 
 
-      <div class="space-y-4">
-        <div
-          class="p-3 bg-indigo-50 border border-indigo-200 rounded-md text-center">
-          <p class="font-semibold text-indigo-800 text-lg">
-            {{ selected_date|date:"l, F j, Y" }}
+        <div class="space-y-4">
+          <p class="text-gray-600 text-sm">
+            Set a specific time range for **only {{ selected_date|date:"F j" }}**. This overrides your weekly schedule.
           </p>
-        </div>
 
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label
-              for="start_time"
-              class="block text-sm font-medium text-gray-700">Start Time</label
-            >
-            <input
-              type="time"
-              name="start_time"
-              value="09:00"
-              required
-              class="mt-1 p-2 border rounded-md w-full"
-            />
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="start_time" class="block text-sm font-medium text-gray-700">Start Time</label>
+              <input
+                type="time"
+                name="start_time"
+                value="09:00"
+                required
+                class="mt-1 p-2 border rounded-md w-full"
+              />
+            </div>
+            <div>
+              <label for="end_time" class="block text-sm font-medium text-gray-700">End Time</label>
+              <input
+                type="time"
+                name="end_time"
+                value="17:00"
+                required
+                class="mt-1 p-2 border rounded-md w-full"
+              />
+            </div>
           </div>
-          <div>
-            <label
-              for="end_time"
-              class="block text-sm font-medium text-gray-700">End Time</label
-            >
-            <input
-              type="time"
-              name="end_time"
-              value="17:00"
-              required
-              class="mt-1 p-2 border rounded-md w-full"
-            />
-          </div>
-        </div>
 
-        <div class="border-t pt-4 space-y-3">
-          <p class="text-sm font-medium text-gray-700">
-            How should this be applied?
+          <div class="border-t pt-4 space-y-3">
+            <p class="text-sm font-medium text-gray-700">Type of Adjustment:</p>
+            <label class="flex items-center p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
+              <input
+                type="radio"
+                name="is_available"
+                value="true"
+                checked
+                class="h-4 w-4 text-green-600"
+              />
+              <span class="ml-3 text-sm text-gray-800">I am **Available** during this time.</span>
+            </label>
+            <label class="flex items-center p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
+              <input
+                type="radio"
+                name="is_available"
+                value="false"
+                class="h-4 w-4 text-red-600"
+              />
+              <span class="ml-3 text-sm text-gray-800">This time should be **Blocked/Unavailable**.</span>
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 font-semibold transition"
+          >
+            Apply One-Off Adjustment
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    {# ------------------ TAB 2: WEEKLY RECURRENCE (Edit) ------------------ #}
+    <div x-show="activeTab === 'recurring'" style="display: none;">
+      <form
+        hx-post="{% url 'coaching:api_create_availability_from_modal' %}"
+        hx-swap="none"
+        hx-on::after-request="if(event.detail.successful) { this.closest('#availability-modal').remove(); htmx.trigger('body', 'recurring-schedule-updated'); } else { alert('Error: ' + event.detail.xhr.responseText); }"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="date" value="{{ date_str }}" />
+        <input type="hidden" name="availability_type" value="recurring" />
+
+        <div class="space-y-4">
+          <p class="text-gray-600 text-sm">
+            Set the default time for all future <strong>{{ day_name }}s</strong>. This will become part of your weekly schedule.
           </p>
-          <label
-            class="flex items-center p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
-            <input
-              type="radio"
-              name="availability_type"
-              value="specific"
-              checked
-              class="h-4 w-4 text-indigo-600"
-            />
-            <span class="ml-3 text-sm text-gray-800">Apply to <strong>this date only</strong>.</span>
-          </label>
-          <label
-            class="flex items-center p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
-            <input
-              type="radio"
-              name="availability_type"
-              value="recurring"
-              class="h-4 w-4 text-indigo-600"
-            />
-            <span class="ml-3 text-sm text-gray-800"
-              >Apply to all future <strong>{{ day_name }}s</strong> (updates weekly schedule).</span>
-          </label>
-        </div>
 
-        <button
-          type="submit"
-          class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 font-semibold transition"
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="start_time_recurring" class="block text-sm font-medium text-gray-700">Start Time</label>
+              <input
+                type="time"
+                id="start_time_recurring"
+                name="start_time"
+                value="09:00"
+                required
+                class="mt-1 p-2 border rounded-md w-full"
+              />
+            </div>
+            <div>
+              <label for="end_time_recurring" class="block text-sm font-medium text-gray-700">End Time</label>
+              <input
+                type="time"
+                id="end_time_recurring"
+                name="end_time"
+                value="17:00"
+                required
+                class="mt-1 p-2 border rounded-md w-full"
+              />
+            </div>
+          </div>
+          
+          <p class="text-xs text-gray-500 italic">
+            Note: To make a {{ day_name }} unavailable every week, go to the main "Weekly Schedule" manager and uncheck it.
+          </p>
+
+          <button
+            type="submit"
+            class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 font-semibold transition"
+          >
+            Set Recurring Time for {{ day_name }}s
+          </button>
+        </div>
+      </form>
+    </div>
+
+    {# ------------------ TAB 3: VACATION BLOCK ------------------ #}
+    <div x-show="activeTab === 'vacation'" style="display: none;">
+        <p class="text-gray-600 mb-4 text-sm">
+            Set a vacation or unbookable block starting from **{{ selected_date|date:"F j" }}**. This blocks all availability across a date range.
+        </p>
+        <form 
+            hx-post="{% url 'coaching:api_vacation_blocks' %}" 
+            hx-swap="none" 
+            hx-on::after-request="if(event.detail.successful) { this.closest('#availability-modal').remove(); htmx.trigger('body', 'block-added'); } else { alert('Error scheduling block: ' + event.detail.xhr.responseText); }"
+            class="space-y-4"
         >
-          Save Availability
-        </button>
-      </div>
-    </form>
+            {% csrf_token %}
+            <input type="hidden" name="start_date" value="{{ date_str }}" />
+
+            <div class="space-y-3">
+                <label for="end_date_vacation" class="block text-sm font-medium text-gray-700">Block End Date</label>
+                <input type="date" name="end_date" required class="p-2 border rounded w-full" min="{{ date_str }}" placeholder="End Date">
+                <input type="text" name="reason" class="p-2 border rounded w-full" placeholder="Reason (Optional)">
+            </div>
+            
+            <button type="submit" class="w-full bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 font-semibold transition">
+                Schedule Vacation Block
+            </button>
+        </form>
+    </div>
+    
   </div>
 </div>

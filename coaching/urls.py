@@ -10,11 +10,15 @@ urlpatterns = [
     # --- GENERAL VIEWS ---
     path('', views.CoachingOverview.as_view(), name='coaching_overview'),
     path('settings/', views.coach_settings_view, name='coach_settings'),
+    path('programs/', views.program_list_view, name='program_list'),
+    path('programs/purchase/<int:program_id>/', views.purchase_program_view, name='purchase_program'),
 
      # --- INTEGRATION/PLACEHOLDER VIEWS ---
     path('calendar-link/init/', views.calendar_link_init, name='calendar_link_init'),
     path('calendar-link/callback/', views.calendar_link_callback, name='calendar_link_callback'),
     path('book/<int:coach_id>/', views.booking_page, name='booking_page'),
+    path('offering/<int:offering_id>/', views.offering_detail_view, name='offering_detail'),
+    path('book/session/<int:offering_id>/', views.create_session_view, name='create_session'),
 
     # --- VACATION & AVAILABILITY API PATHS (Imported from Modules) ---
     # Vacation
@@ -27,6 +31,7 @@ urlpatterns = [
     path('api/availability/create/', availability.coach_create_availability_from_modal_view, name='api_create_availability_from_modal'),
     # Recurring Weekly Schedule Management
     path('api/availability/recurring/', availability.coach_recurring_availability_view, name='api_recurring_availability'),
+    
     
     # Specific One-Off Slot Management
     path('api/availability/specific/', availability.coach_specific_availability_view, name='api_specific_availability'),

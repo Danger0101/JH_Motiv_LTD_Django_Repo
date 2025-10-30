@@ -1,151 +1,158 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %} 
 
-{% block title %}Coach Settings & Availability{% endblock %}
+{% block title %}Coach Settings & Availability{% endblock %} 
 
 {% block content %}
 <div class="container mx-auto px-6 py-10">
-  <h1 class="text-3xl font-bold text-gray-800 mb-6">
-    Coach Availability & Settings 🗓️
-  </h1>
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">
+        Coach Availability & Settings 🗓️
+    </h1>
 
-  {% if user.is_coach %}
+    {% if user.is_coach %}
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    <div class="lg:col-span-1 space-y-8">
-      {# Scheduled Vacation Blocks #}
-      <div class="bg-white p-6 rounded-lg shadow-md">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Scheduled Vacation Blocks</h2>
-        <form
-          hx-post="{% url 'coaching:api_vacation_blocks' %}"
-          hx-target="#vacation-list"
-          hx-swap="beforeend"
-          class="space-y-4 mb-4 p-4 border rounded-lg bg-gray-50"
-        >
-          <input
-            type="date"
-            name="start_date"
-            required
-            class="p-2 border rounded w-full"
-            placeholder="Start Date"
-          />
-          <input
-            type="date"
-            name="end_date"
-            required
-            class="p-2 border rounded w-full"
-            placeholder="End Date"
-          />
-          <input
-            type="text"
-            name="reason"
-            class="p-2 border rounded w-full"
-            placeholder="Reason (Optional)"
-          />
-          <button
-            type="submit"
-            class="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition w-full"
-          >
-            Schedule Block
-          </button>
-        </form>
-        <div
-          id="vacation-list"
-          hx-get="{% url 'coaching:api_vacation_blocks' %}"
-          hx-trigger="load, block-added from:body, block-deleted from:body"
-          class="space-y-3"
-        >
-          <p class="text-gray-500">Loading scheduled blocks...</p>
+    <div class="bg-white p-6 rounded-lg shadow-xl" x-data="{ activeTab: 'availability' }">
+
+        <div class="border-b mb-6">
+            <nav class="-mb-px flex space-x-6">
+                <button @click="activeTab = 'availability'" :class="{ 'border-indigo-500 text-indigo-600': activeTab === 'availability' }" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Availability
+                </button>
+                <button @click="activeTab = 'vacation'" :class="{ 'border-indigo-500 text-indigo-600': activeTab === 'vacation' }" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Vacation Blocks
+                </button>
+                <button @click="activeTab = 'services'" :class="{ 'border-indigo-500 text-indigo-600': activeTab === 'services' }" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Services & Offerings
+                </button>
+            </nav>
         </div>
-      </div>
 
-      {# Service & Offering Management #}
-      <div class="bg-white p-6 rounded-lg shadow-lg">
-        <h2 class="text-2xl font-bold text-gray-800 mb-4">💼 Service & Offering Management</h2>
-        <div class="grid grid-cols-1 gap-4">
-          <div class="lg:col-span-1">
-            {% include 'coaching/partials/offerings_form_fragment.html' %}
-          </div>
-          <div class="lg:col-span-2">
-            <h3 class="font-medium text-gray-700 mb-2 border-b pb-1">
-              Your Active Services
-            </h3>
+        <div x-show="activeTab === 'availability'">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">🗓️ Combined Availability Calendar</h2>
+            <p class="text-gray-600 mb-4 text-sm">Click a date to add a one-off adjustment or set recurring availability for that day of the week.</p>
+
             <div
-              id="offerings-list"
-              hx-get="{% url 'coaching:api_offerings_list_create' %}"
-              hx-trigger="load, offering-updated from:body"
-              class="space-y-3"
+                id="calendar-grid-ui"
+                hx-get="{% url 'coaching:api_calendar_view' %}"
+                hx-trigger="load, block-added from:body, block-deleted from:body, specific-slot-updated from:body, recurring-schedule-updated from:body"
+                hx-swap="innerHTML"
+                class="mt-4 border-t pt-4"
             >
-              <p class="text-gray-500">Loading your offerings...</p>
+                <p class="text-gray-500">Loading availability calendar...</p>
             </div>
-          </div>
+
+            <div class="mt-6 border rounded-lg" x-data="{ open: false }">
+                <button @click="open = !open" class="w-full p-4 text-left font-semibold text-gray-700 hover:bg-gray-50 transition flex justify-between items-center">
+                    <span>Manage Recurring Schedule & Overrides</span>
+                    <span x-text="open ? 'Hide' : 'Show'"></span>
+                </button>
+
+                <div x-show="open" x-transition class="p-4 border-t">
+                    <div x-data="{ open: 'weekly' }">
+                        <div class="border-b-2 mb-4">
+                            <button @click="open = 'weekly'" :class="{ 'bg-gray-100': open === 'weekly' }" class="w-1/2 p-4 text-center font-semibold text-gray-700 hover:bg-gray-50 transition">
+                                Weekly Schedule
+                            </button>
+                            <button @click="open = 'one-off'" :class="{ 'bg-gray-100': open === 'one-off' }" class="w-1/2 p-4 text-center font-semibold text-gray-700 hover:bg-gray-50 transition">
+                                One-Off Adjustments
+                            </button>
+                        </div>
+
+                        <div x-show="open === 'weekly'" class="p-4">
+                            <div class="availability-manager bg-gray-50 h-full">
+                                <p class="text-xs text-gray-600 mb-4">Set the hours you are routinely available each week. This is the foundation of your schedule.</p>
+                                
+                                <div
+                                    id="recurring-schedule-ui"
+                                    hx-get="{% url 'coaching:api_recurring_availability' %}"
+                                    hx-trigger="load"
+                                    class="mt-4"
+                                >
+                                    <p class="text-gray-500">Loading weekly schedule...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div x-show="open === 'one-off'" class="p-4" style="display: none;">
+                            <div class="bg-gray-50 h-full">
+                                <p class="text-xs text-gray-600 mb-4">Review specific time overrides added via the calendar.</p>
+                                
+                                <div
+                                    id="specific-slots-list"
+                                    hx-get="{% url 'coaching:api_specific_availability' %}"
+                                    hx-trigger="load, specific-slot-updated from:body"
+                                    class="space-y-2 mt-4"
+                                >
+                                    <p class="text-gray-500">Loading specific adjustments...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
 
-    <div class="lg:col-span-2 space-y-8">
-      {# Unified Availability Calendar #}
-      <div class="bg-white p-6 rounded-lg shadow-xl border-l-4 border-green-500">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">🗓️ Combined Availability Calendar</h2>
-        <p class="text-gray-600 mb-4 text-sm">
-          Review your merged schedule. Changes below will update this view
-          automatically.
-        </p>
-
-        <div
-          id="calendar-grid-ui"
-          hx-get="{% url 'coaching:api_calendar_view' %}"
-          hx-trigger="load delay:100ms, block-added from:body, block-deleted from:body, specific-slot-updated from:body, recurring-schedule-updated from:body"
-          hx-swap="innerHTML"
-          hx-on::error="this.innerHTML='<p class=\'text-red-500\'>Error loading calendar: ' + event.detail.xhr.status + ' ' + event.detail.xhr.statusText + '</p>'"
-          class="mt-4 border-t pt-4"
-        >
-          <p class="text-gray-500">Loading availability calendar...</p>
+        <div x-show="activeTab === 'vacation'" style="display: none;">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Scheduled Vacation Blocks</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <form
+                        hx-post="{% url 'coaching:api_vacation_blocks' %}"
+                        hx-target="#vacation-list"
+                        hx-swap="beforeend"
+                        class="space-y-4 p-4 border rounded-lg bg-gray-50"
+                    >
+                        {% csrf_token %}
+                        <input type="date" name="start_date" required class="p-2 border rounded w-full" placeholder="Start Date" />
+                        <input type="date" name="end_date" required class="p-2 border rounded w-full" placeholder="End Date" />
+                        <input type="text" name="reason" class="p-2 border rounded w-full" placeholder="Reason (Optional)" />
+                        <button type="submit" class="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition w-full">
+                            Schedule Block
+                        </button>
+                    </form>
+                </div>
+                <div>
+                    <div
+                        id="vacation-list"
+                        hx-get="{% url 'coaching:api_vacation_blocks' %}"
+                        hx-trigger="load, block-added from:body, block-deleted from:body"
+                        class="space-y-3"
+                    >
+                        <p class="text-gray-500">Loading scheduled blocks...</p>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  </div>
 
-  {# Default Weekly Availability Settings #}
-  <div class="mt-8 bg-white p-6 rounded-lg shadow-lg border-t border-gray-200">
-    <h2 class="text-2xl font-bold text-gray-800 mb-4">⚙️ Default Weekly Availability Settings</h2>
-    <p class="text-gray-600 mb-4 text-sm">
-      Define your standard, weekly working hours. This forms the foundation of
-      your schedule.
+        <div x-show="activeTab === 'services'" style="display: none;">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">💼 Service & Offering Management</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    {% include 'coaching/partials/offerings_form_fragment.html' %}
+                </div>
+                <div>
+                    <h3 class="font-medium text-gray-700 mb-2 border-b pb-1">Your Active Services</h3>
+                    <div
+                        id="offerings-list"
+                        hx-get="{% url 'coaching:api_offerings_list_create' %}"
+                        hx-trigger="load, offering-updated from:body"
+                        class="space-y-3"
+                    >
+                        <p class="text-gray-500">Loading your offerings...</p
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    {% else %}
+    <p class="text-red-500">
+        Access Denied: You must be a coach to view these settings.
     </p>
-    <div
-      id="recurring-schedule-ui"
-      hx-get="{% url 'coaching:api_recurring_availability' %}"
-      hx-trigger="load delay:100ms"
-      class="mt-4 border-t pt-4"
-    >
-      <p class="text-gray-500">Loading weekly schedule controls...</p>
-    </div>
-  </div>
+    {% endif %}
 
-  {# One-Off Availability Adjustments #}
-  <div class="mt-8 bg-white p-6 rounded-lg shadow-lg border-t border-gray-200">
-    <h2 class="text-2xl font-bold text-gray-800 mb-4">✏️ One-Off Availability Adjustments</h2>
-    <p class="text-gray-600 mb-4 text-sm">
-      Use this to add or block specific time ranges for a single day, overriding
-      the weekly schedule.
-    </p>
-    <div
-      id="specific-slots-manager"
-      hx-get="{% url 'coaching:api_specific_availability' %}"
-      hx-trigger="load delay:200ms, specific-slot-updated from:body"
-      class="mt-4"
-    >
-      <p class="text-gray-500">Loading one-off schedule controls...</p>
-    </div>
-  </div>
-
-  {% else %}
-  <p class="text-red-500">
-    Access Denied: You must be a coach to view these settings.
-  </p>
-  {% endif %}
-
-  {# Container where modals will be loaded via HTMX #}
-  <div id="modal-container"></div>
+    {# Container where modals will be loaded via HTMX #}
+    <div id="modal-container"></div>
 </div>
 {% endblock %}

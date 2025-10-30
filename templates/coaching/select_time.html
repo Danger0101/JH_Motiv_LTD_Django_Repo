@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Book a Session: {{ offering.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-10">
+    <div class="max-w-4xl mx-auto">
+        <a href="{% url 'coaching:booking_page' coach.id %}" class="text-indigo-600 hover:underline mb-6 inline-block">&larr; Back to Offerings</a>
+        
+        <div class="bg-white p-8 rounded-lg shadow-xl mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">{{ offering.name }}</h1>
+            <p class="text-lg text-gray-600 mb-4">with {{ coach.get_full_name }}</p>
+            
+            <div class="prose max-w-none mb-6">
+                {{ offering.description | safe }}
+            </div>
+
+            <div class="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
+                <div>
+                    <p class="text-sm text-gray-600">Duration</p>
+                    <p class="font-semibold">{{ offering.duration_minutes }} minutes</p>
+                </div>
+                <div>
+                    {% if offering.booking_type == 'price' %}
+                        <p class="text-sm text-gray-600">Price</p>
+                        <p class="font-semibold text-lg text-indigo-600">£{{ offering.price }}</p>
+                    {% else %}
+                        <p class="text-sm text-gray-600">Cost</p>
+                        <p class="font-semibold text-lg text-indigo-600">{{ offering.tokens_required }} Token(s)</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">🗓️ Select a Time Slot</h2>
+
+        <div
+            id="calendar-grid-ui"
+            hx-get="{% url 'coaching:api_calendar_view' %}?coach_id={{ coach.id }}&offering_id={{ offering.id }}"
+            hx-trigger="load"
+            hx-swap="innerHTML"
+            class="mt-4 border rounded-lg shadow-md"
+        >
+            <p class="p-4 text-gray-500">Loading availability calendar...</p>
+        </div>
+    </div>
+
+    <div id="modal-container"></div>
+</div>
+{% endblock %}
