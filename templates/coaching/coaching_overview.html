@@ -1,7 +1,7 @@
-{% extends 'base.html' %} {% block title %}Performance Coaching - JH Motiv LTD
-{% endblock %} {% block content %}
+{% extends 'base.html' %} 
+{% block title %}Performance Coaching - JH Motiv LTD{% endblock %} 
+{% block content %}
 <div class="bg-white">
-  <!-- Hero Section -->
   <section class="bg-gray-900 text-white">
     <div class="container mx-auto px-6 py-20 text-center">
       <h1 class="text-4xl md:text-6xl font-bold leading-tight mb-4">
@@ -13,24 +13,21 @@
         unlocking the masterful mind you already possess.
       </p>
       <a
-        href="#packages"
+        href="#value-proposition"
         class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-full transition duration-300 ease-in-out text-lg"
       >
-        View Coaching Packages
+        Discover The Difference
       </a>
     </div>
   </section>
 
-  <!-- Introduction Section -->
-  <section class="py-16">
+  <section id="value-proposition" class="py-16">
     <div class="container mx-auto px-6 text-center">
       <h2 class="text-3xl font-bold text-gray-800 mb-6">
         What Makes Our Coaching Different?
       </h2>
       <p class="text-gray-600 max-w-2xl mx-auto mb-12">
-        Traditional mentorship gives you someone else's map. Our coaching helps
-        you draw your own. We use powerful questioning and accountability to
-        help you build resilient, unique solutions for your biggest challenges.
+        We focus on deep, sustainable change, not quick fixes. This isn't just a strategy session; it's a recalibration of your entrepreneurial operating system.
       </p>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div class="p-6">
@@ -45,88 +42,196 @@
         <div class="p-6">
           <h3 class="text-xl font-semibold mb-2">Crystal-Clear Action Plans</h3>
           <p class="text-gray-600">
-            Leave every 90-minute session with a non-negotiable plan to execute.
+            Leave every <strong>90-minute session</strong> with a non-negotiable plan to execute.
           </p>
         </div>
         <div class="p-6">
           <h3 class="text-xl font-semibold mb-2">Unstoppable Momentum</h3>
           <p class="text-gray-600">
             Generate consistent progress with repeatable systems and
-            accountability.
+            accountability. 
           </p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Coaching Packages Section -->
   <section id="packages" class="bg-gray-100 py-16">
     <div class="container mx-auto px-6">
-      <h2 class="text-3xl font-bold text-center text-gray-800 mb-12">
-        Our Coaching Pathways
+      <h2 class="text-3xl font-bold text-center text-gray-800 mb-4">
+        Available Coaching Sessions
       </h2>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <!-- Package 1 -->
-        <div class="bg-white rounded-lg shadow-lg p-8 text-center">
-          <h3 class="text-2xl font-bold mb-4">1-Month Clarity Kickstart</h3>
-          <p class="text-gray-600 mb-6">
-            For immediate mindset shifts and a fast, powerful action plan to get
-            you unstuck.
-          </p>
-          <a
-            href="#"
-            class="bg-blue-600 text-white font-bold py-2 px-6 rounded-full hover:bg-blue-700 transition duration-300"
-            >Learn More</a
-          >
+      <p class="text-center text-gray-600 max-w-2xl mx-auto mb-12">
+        Scroll through our available sessions. Each one is a focused, high-impact engagement designed to create clarity and momentum.
+      </p>
+    </div>
+    <div id="carousel-container" class="relative w-full">
+      <div id="carousel" class="flex overflow-x-auto snap-x snap-mandatory scroll-smooth py-8 px-4 space-x-8">
+        {% for offering in offerings %}
+        <div class="snap-center flex-shrink-0 w-80 md:w-96">
+          <div class="bg-white rounded-lg shadow-xl p-8 h-full flex flex-col justify-between border-t-4 {% if forloop.counter|divisibleby:2 %}border-green-500{% else %}border-blue-500{% endif %}">
+            <div>
+              <h3 class="text-2xl font-bold mb-3 text-gray-800">{{ offering.name }}</h3>
+              <p class="text-gray-600 mb-6 min-h-[6rem]">{{ offering.description }}</p>
+            </div>
+            <div>
+              <div class="flex justify-between items-baseline mb-6">
+                <span class="text-3xl font-bold text-gray-800">£{{ offering.price }}</span>
+                <span class="text-gray-600 font-semibold">{{ offering.duration_minutes }} mins</span>
+              </div>
+              <a href="{% url 'coaching:offering_detail' offering.id %}" class="block w-full text-center bg-gray-800 text-white font-bold py-3 px-6 rounded-full hover:bg-gray-900 transition duration-300">
+                View Availability & Book
+              </a>
+            </div>
+          </div>
         </div>
-        <!-- Package 2 -->
-        <div
-          class="bg-white rounded-lg shadow-lg p-8 text-center border-4 border-green-500"
-        >
-          <h3 class="text-2xl font-bold mb-4">3-Month Mindset to Systems</h3>
-          <p class="text-gray-600 mb-6">
-            Our most popular program. Build and implement one major business
-            system from the ground up.
-          </p>
-          <a
-            href="#"
-            class="bg-green-600 text-white font-bold py-2 px-6 rounded-full hover:bg-green-700 transition duration-300"
-            >Learn More</a
-          >
+        {% empty %}
+        <p class="text-center w-full text-gray-500">No coaching sessions are currently available. Please check back soon.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section id="difference" class="bg-gray-100 py-16">
+    <div class="container mx-auto px-6">
+      <h2 class="text-3xl font-bold text-center text-gray-800 mb-10">
+        Coaching vs. Mentorship: A Critical Difference
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-5xl mx-auto">
+        <div class="p-8 bg-white rounded-lg shadow-xl border-t-4 border-green-500">
+          <h3 class="text-2xl font-bold text-green-700 mb-4">Performance Coaching</h3>
+          <ul class="space-y-4 text-gray-700 list-disc list-inside">
+            <li><strong>Focus: The Client's Mindset and Potential.</strong> We guide you to discover <em>your</em> best path forward.</li>
+            <li><strong>Method: Powerful Questioning.</strong> We don't give answers; we help you find resilient, unique solutions.</li>
+            <li><strong>Goal: Sustainable, Internal Transformation.</strong> The goal is to make you a more masterful self-leader.</li>
+            <li><strong>Analogy:</strong> We help you <strong>draw your own map</strong>.</li>
+          </ul>
         </div>
-        <!-- Package 3 -->
-        <div class="bg-white rounded-lg shadow-lg p-8 text-center">
-          <h3 class="text-2xl font-bold mb-4">6-Month Momentum Blueprint</h3>
-          <p class="text-gray-600 mb-6">
-            For complete, sustainable transformation with long-term
-            accountability and support.
-          </p>
-          <a
-            href="#"
-            class="bg-blue-600 text-white font-bold py-2 px-6 rounded-full hover:bg-blue-700 transition duration-300"
-            >Learn More</a
-          >
+        <div class="p-8 bg-white rounded-lg shadow-xl border-t-4 border-gray-400">
+          <h3 class="text-2xl font-bold text-gray-700 mb-4">Traditional Mentorship</h3>
+          <ul class="space-y-4 text-gray-700 list-disc list-inside">
+            <li><strong>Focus: The Mentor's Experience.</strong> The advice is based on what worked for someone else.</li>
+            <li><strong>Method: Direct Advice.</strong> The mentor provides specific instructions and strategies.</li>
+            <li><strong>Goal: Achieving a Specific Outcome.</strong> The goal is to follow a proven, external roadmap.</li>
+            <li><strong>Analogy:</strong> You are following <strong>someone else's map</strong>.</li>
+          </ul>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Final CTA Section -->
-  <section class="py-20">
-    <div class="container mx-auto px-6 text-center">
-      <h2 class="text-3xl font-bold text-gray-800 mb-6">
-        Ready to Unlock Your Potential?
+  <section id="science" class="py-16">
+    <div class="container mx-auto px-6">
+      <h2 class="text-3xl font-bold text-center text-gray-800 mb-10">
+        The Science of Breakthrough: Why Coaching Works
       </h2>
-      <p class="text-gray-600 max-w-xl mx-auto mb-8">
-        Let's have a conversation about your goals and see if we're the right
-        fit to help you achieve them.
+      <div class="max-w-4xl mx-auto space-y-4" x-data="{ activeTab: 'ROI' }">
+        <div class="flex border-b border-gray-200">
+          <button @click="activeTab = 'ROI'" :class="{'border-green-500 text-green-600': activeTab === 'ROI', 'border-transparent text-gray-500 hover:text-gray-700': activeTab !== 'ROI'}" class="py-2 px-4 font-semibold border-b-2 transition duration-150">
+            Tangible ROI
+          </button>
+          <button @click="activeTab = 'Self-Efficacy'" :class="{'border-green-500 text-green-600': activeTab === 'Self-Efficacy', 'border-transparent text-gray-500 hover:text-gray-700': activeTab !== 'Self-Efficacy'}" class="py-2 px-4 font-semibold border-b-2 transition duration-150">
+            Increased Self-Efficacy
+          </button>
+          <button @click="activeTab = 'Clarity'" :class="{'border-green-500 text-green-600': activeTab === 'Clarity', 'border-transparent text-gray-500 hover:text-gray-700': activeTab !== 'Clarity'}" class="py-2 px-4 font-semibold border-b-2 transition duration-150">
+            Goal Clarity & Focus
+          </button>
+        </div>
+
+        <div x-show="activeTab === 'ROI'" class="p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
+          <h3 class="text-xl font-semibold mb-3">Coaching Delivers a Proven Return on Investment</h3>
+          <p class="text-gray-600 mb-3">
+            Studies show that coaching often provides a significant ROI for business owners, far surpassing the initial cost through increased efficiency, better decision-making, and improved leadership skills.
+          </p>
+          <p class="text-sm text-green-700 italic">
+            Reference: <a href="https://www.forbes.com/sites/forbescoachescouncil/2022/03/23/the-roi-of-coaching-is-it-worth-the-investment/" target="_blank" rel="noopener noreferrer" class="hover:underline">The ROI Of Coaching: Is It Worth The Investment? (Forbes) <span class="sr-only">(opens in a new tab)</span></a>
+          </p>
+        </div>
+
+        <div x-show="activeTab === 'Self-Efficacy'" class="p-6 bg-white border border-gray-200 rounded-lg shadow-sm" style="display: none;">
+          <h3 class="text-xl font-semibold mb-3">Building Belief: The Core of Sustainable Success</h3>
+          <p class="text-gray-600 mb-3">
+            Effective coaching is rooted in positive psychology, directly boosting your <strong>self-efficacy</strong>—your belief in your ability to succeed. This belief is the engine for sustained action and resilience against entrepreneurial challenges.
+          </p>
+          <p class="text-sm text-green-700 italic">
+            Reference: <a href="https://positivepsychology.com/self-efficacy-coaching/" target="_blank" rel="noopener noreferrer" class="hover:underline">How to Apply Self-Efficacy in Coaching (PositivePsychology.com) <span class="sr-only">(opens in a new tab)</span></a>
+          </p>
+        </div>
+
+        <div x-show="activeTab === 'Clarity'" class="p-6 bg-white border border-gray-200 rounded-lg shadow-sm" style="display: none;">
+          <h3 class="text-xl font-semibold mb-3">Turning Ambition into an Executable Strategy</h3>
+          <p class="text-gray-600 mb-3">
+            The structure of a coaching engagement forces clarity. We eliminate noise and prioritize high-leverage activities, turning vague goals into tangible, measurable objectives you can act on immediately. 
+          </p>
+          <p class="text-sm text-green-700 italic">
+            Reference: <a href="https://www.researchgate.net/publication/235292323_Goal-setting_and_personal_development_A_coaching_perspective" target="_blank" rel="noopener noreferrer" class="hover:underline">Goal-setting and personal development: A coaching perspective (ResearchGate) <span class="sr-only">(opens in a new tab)</span></a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" class="py-16">
+    <div class="container mx-auto px-6">
+      <h2 class="text-3xl font-bold text-center text-gray-800 mb-10">Frequently Asked Questions</h2>
+      <div class="max-w-3xl mx-auto">
+        <div class="space-y-4">
+          {% for item in faq_data.coaching %}
+          <div x-data="{ open: false }" class="bg-white border border-gray-200 rounded-lg">
+            <button @click="open = !open" class="w-full text-left p-4 flex justify-between items-center">
+              <span class="font-semibold text-gray-800">{{ item.q }}</span>
+              <span x-show="!open" class="text-gray-500">&plus;</span>
+              <span x-show="open" class="text-gray-800">&minus;</span>
+            </button>
+            <div x-show="open" x-transition class="p-4 border-t prose max-w-none text-gray-600">
+              {{ item.a|safe }}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="cta" class="bg-blue-600 text-white py-20">
+    <div class="container mx-auto px-6 text-center">
+      <h2 class="text-3xl md:text-4xl font-bold mb-4">
+        Still Have Doubts? Claim Your <strong>Momentum Catalyst Session</strong>
+      </h2>
+      <p class="text-lg mb-8 max-w-3xl mx-auto">
+        No sales pitch, just 90 minutes of pure, high-impact coaching. This complimentary session is designed to give you <strong>instant clarity</strong> and a direct experience of the value we provide before you commit.
       </p>
-      <a
-        href="#"
-        class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-8 rounded-full transition duration-300 ease-in-out text-lg"
-        >Book a Discovery Call</a
-      >
+      <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+        <a href="/coaching/apply-taster" class="bg-white text-blue-600 hover:bg-gray-100 font-bold py-3 px-8 rounded-full transition duration-300 ease-in-out text-lg">
+          Apply for a Free Session
+        </a>
+        <a href="#packages" class="bg-blue-800 hover:bg-blue-900 text-white font-bold py-3 px-8 rounded-full transition duration-300 ease-in-out text-lg">
+          Review All Packages
+        </a>
+      </div>
+      <p class="text-sm text-blue-200 mt-4">
+        *One session per client. Coach approval required to ensure a perfect fit and prevent abuse.*
+      </p>
     </div>
   </section>
 </div>
+
+<style>
+  html {
+    scroll-behavior: smooth;
+  }
+  #carousel {
+    /* Hide scrollbar for IE, Edge and Firefox */
+    -ms-overflow-style: none;  
+    scrollbar-width: none;  
+    /* Create the fade-out effect on the edges */
+    -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+    mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+  }
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  #carousel::-webkit-scrollbar {
+    display: none;
+  }
+</style>
+
 {% endblock %}

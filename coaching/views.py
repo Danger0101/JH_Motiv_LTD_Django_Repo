@@ -85,15 +85,94 @@ def purchase_program_view(request, program_id):
 
 @login_required
 def offering_detail_view(request, offering_id):
+    """
+    Shows session details and checks user eligibility (tokens/price)
+    before loading the calendar.
+    """
     offering = get_object_or_404(CoachOffering, id=offering_id)
+    coach = offering.coach
+    user = request.user
+    
+    # --- Token/Program Eligibility Check ---
+    is_eligible = False
+    token_count = 0
+    
+    if offering.booking_type == 'token':
+        # 1. Check for valid, active programs for this user/offering
+        active_programs = UserProgram.objects.filter(
+            user=user,
+            end_date__gte=timezone.now().date()
+        ).select_related('program')
+
+        # 2. Count unused, unexpired tokens associated with these programs
+        valid_tokens = Token.objects.filter(
+            user=user,
+            session__isnull=True, # Token is unused
+            expiration_date__gt=timezone.now(), # Token is not expired
+            user_program__in=active_programs # Token is tied to an active program
+        )
+        token_count = valid_tokens.count()
+        
+        if token_count >= offering.tokens_required:
+            is_eligible = True
+            
+        # Determine the earliest program start date for calendar filter (Optional, but useful)
+        earliest_start_date = active_programs.order_by('start_date').values_list('start_date', flat=True).first()
+        latest_end_date = active_programs.order_by('-end_date').values_list('end_date', flat=True).first()
+        
+    elif offering.booking_type == 'price':
+        # If it's a paid session, eligibility is assumed, but price is displayed.
+        is_eligible = True
+        earliest_start_date = None
+        latest_end_date = None
+
+
     context = {
         'offering': offering,
-        'coach': offering.coach
+        'coach': coach,
+        'is_eligible': is_eligible,
+        'token_count': token_count,
+        # Pass dates to filter the calendar view load request
+        'booking_start_date': earliest_start_date.isoformat() if earliest_start_date else None,
+        'booking_end_date': latest_end_date.isoformat() if latest_end_date else None,
     }
     return render(request, 'coaching/select_time.html', context)
 
+
 @login_required
 def create_session_view(request, offering_id):
-    offering = get_object_or_404(CoachOffering, id=offering_id)
-    # The rest of the booking logic will be implemented here
-    pass
+    """Handles the final booking process."""
+    if request.method == 'POST':
+        # 1. Fetch data
+        offering = get_object_or_404(CoachOffering, id=offering_id)
+        # Parse start_time and required token logic here
+        
+        # 2. Token Booking Logic (Transactional)
+        if offering.booking_type == 'token':
+            
+            # --- Repeat Eligibility Check as a safety measure ---
+            valid_tokens = Token.objects.filter(
+                user=request.user,
+                session__isnull=True,
+                expiration_date__gt=timezone.now()
+            ).select_for_update() # Lock tokens for transaction
+
+            if valid_tokens.count() < offering.tokens_required:
+                return HttpResponse("Error: Not enough valid tokens.", status=403)
+            
+            # Use one token and link it to the session (pseudo-session creation)
+            token_to_use = valid_tokens.first() # Or select based on earliest expiry
+            
+            # *** Placeholder: Create CoachingSession object and link token here ***
+            # new_session = CoachingSession.objects.create(...)
+            # token_to_use.session = new_session
+            # token_to_use.save()
+            
+            return HttpResponse(f"Session booked using Token {token_to_use.id}.", status=200)
+
+        elif offering.booking_type == 'price':
+             # --- Price Booking Logic ---
+             # Payment initiation/confirmation, then session creation
+             return HttpResponse(f"Session booked via direct payment of £{offering.price}.", status=200)
+
+    return redirect('coaching:offering_detail', offering_id=offering_id)

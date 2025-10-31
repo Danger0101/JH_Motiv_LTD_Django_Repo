@@ -6,43 +6,65 @@
 <div class="container mx-auto px-6 py-10">
     <div class="max-w-4xl mx-auto">
         <a href="{% url 'coaching:booking_page' coach.id %}" class="text-indigo-600 hover:underline mb-6 inline-block">&larr; Back to Offerings</a>
-        
         <div class="bg-white p-8 rounded-lg shadow-xl mb-8">
             <h1 class="text-3xl font-bold text-gray-800 mb-2">{{ offering.name }}</h1>
             <p class="text-lg text-gray-600 mb-4">with {{ coach.get_full_name }}</p>
-            
             <div class="prose max-w-none mb-6">
                 {{ offering.description | safe }}
             </div>
-
             <div class="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
                 <div>
                     <p class="text-sm text-gray-600">Duration</p>
                     <p class="font-semibold">{{ offering.duration_minutes }} minutes</p>
                 </div>
-                <div>
-                    {% if offering.booking_type == 'price' %}
-                        <p class="text-sm text-gray-600">Price</p>
-                        <p class="font-semibold text-lg text-indigo-600">£{{ offering.price }}</p>
-                    {% else %}
-                        <p class="text-sm text-gray-600">Cost</p>
-                        <p class="font-semibold text-lg text-indigo-600">{{ offering.tokens_required }} Token(s)</p>
-                    {% endif %}
+            <div>
+                {% if offering.booking_type == 'price' %}
+                <p class="text-sm text-gray-600">Price</p>
+                <p class="font-semibold text-lg text-indigo-600">£{{ offering.price }}</p>
+                {% else %}
+                <p class="text-sm text-gray-600">Cost</p>
+                <p class="font-semibold text-lg text-indigo-600">{{ offering.tokens_required }} Token(s)</p>
+                {% endif %}
+            </div>
+                {# NEW: Token Count Display #}
+                {% if offering.booking_type == 'token' %}
+                <div class="border-l pl-4">
+                    <p class="text-sm text-gray-600">Your Tokens</p>
+                    <p class="font-semibold text-lg {% if token_count >= offering.tokens_required %}text-green-600{% else %}text-red-600{% endif %}">
+                        {{ token_count }} Available
+                    </p>
                 </div>
+                {% endif %}
             </div>
         </div>
 
+        {# --- NEW: Conditional Availability/Ineligibility Block --- #}
+        {% if not user.is_authenticated %}
+        <div class="bg-red-50 border-l-4 border-red-500 text-red-800 p-4 mb-6" role="alert">
+            <p>Please <a href="{% url 'account_login' %}" class="font-semibold underline">log in</a> to view availability and book a session.</p>
+        </div>
+        {% elif offering.booking_type == 'token' and not is_eligible %}
+        <div class="bg-yellow-50 border-l-4 border-yellow-500 text-yellow-800 p-4 mb-6" role="alert">
+            <p class="font-semibold">You need {{ offering.tokens_required }} tokens to book this session.</p>
+            <p class="text-sm">Please purchase a coaching program to gain access.</p>
+            <a href="{% url 'coaching:program_list' %}" class="font-semibold text-sm underline mt-1 block">View Programs</a>
+        </div>
+        {% else %}
+        {# User is eligible, load the calendar #}
         <h2 class="text-2xl font-bold text-gray-800 mb-6">🗓️ Select a Time Slot</h2>
 
         <div
             id="calendar-grid-ui"
-            hx-get="{% url 'coaching:api_calendar_view' %}?coach_id={{ coach.id }}&offering_id={{ offering.id }}"
+            hx-get="{% url 'coaching:api_calendar_view' %}?coach_id={{ coach.id }}&offering_id={{ offering.id }}&start_date={{ booking_start_date }}&end_date={{ booking_end_date }}"
             hx-trigger="load"
             hx-swap="innerHTML"
             class="mt-4 border rounded-lg shadow-md"
         >
             <p class="p-4 text-gray-500">Loading availability calendar...</p>
         </div>
+        {% endif %}
+        {# --- END Conditional Availability/Ineligibility Block --- #}
+        
     </div>
 
     <div id="modal-container"></div>
