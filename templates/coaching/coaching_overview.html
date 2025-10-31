@@ -64,26 +64,32 @@
       <p class="text-center text-gray-600 max-w-2xl mx-auto mb-12">
         Scroll through our available sessions. Each one is a focused, high-impact engagement designed to create clarity and momentum.
       </p>
-    </div>
-    <div id="carousel-container" class="relative w-full">
-      <div id="carousel" class="flex overflow-x-auto snap-x snap-mandatory scroll-smooth py-8 px-4 space-x-8">
+    </div> 
+    <div 
+      id="carousel-container" 
+      class="relative w-full max-w-5xl mx-auto"
+      x-data="carousel()"
+    >
+      <button @click="prev()" id="prev-btn" class="absolute top-1/2 left-0 md:-left-12 -translate-y-1/2 z-10 bg-white rounded-full p-2 shadow-md hover:bg-gray-100 transition" aria-label="Previous Coaching Session">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+
+      <button @click="next()" id="next-btn" class="absolute top-1/2 right-0 md:-right-12 -translate-y-1/2 z-10 bg-white rounded-full p-2 shadow-md hover:bg-gray-100 transition" aria-label="Next Coaching Session">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+
+      <div 
+        id="carousel" 
+        x-ref="carousel" 
+        class="flex overflow-x-auto snap-x snap-mandatory scroll-smooth py-8 px-4 space-x-8"
+      >
         {% for offering in offerings %}
         <div class="snap-center flex-shrink-0 w-80 md:w-96">
-          <div class="bg-white rounded-lg shadow-xl p-8 h-full flex flex-col justify-between border-t-4 {% if forloop.counter|divisibleby:2 %}border-green-500{% else %}border-blue-500{% endif %}">
-            <div>
-              <h3 class="text-2xl font-bold mb-3 text-gray-800">{{ offering.name }}</h3>
-              <p class="text-gray-600 mb-6 min-h-[6rem]">{{ offering.description }}</p>
-            </div>
-            <div>
-              <div class="flex justify-between items-baseline mb-6">
-                <span class="text-3xl font-bold text-gray-800">£{{ offering.price }}</span>
-                <span class="text-gray-600 font-semibold">{{ offering.duration_minutes }} mins</span>
-              </div>
-              <a href="{% url 'coaching:offering_detail' offering.id %}" class="block w-full text-center bg-gray-800 text-white font-bold py-3 px-6 rounded-full hover:bg-gray-900 transition duration-300">
-                View Availability & Book
-              </a>
-            </div>
-          </div>
+          {% include "coaching/_offering_card.html" %} 
         </div>
         {% empty %}
         <p class="text-center w-full text-gray-500">No coaching sessions are currently available. Please check back soon.</p>
@@ -119,7 +125,6 @@
       </div>
     </div>
   </section>
-
   <section id="science" class="py-16">
     <div class="container mx-auto px-6">
       <h2 class="text-3xl font-bold text-center text-gray-800 mb-10">
@@ -170,29 +175,6 @@
       </div>
     </div>
   </section>
-
-  <section id="faq" class="py-16">
-    <div class="container mx-auto px-6">
-      <h2 class="text-3xl font-bold text-center text-gray-800 mb-10">Frequently Asked Questions</h2>
-      <div class="max-w-3xl mx-auto">
-        <div class="space-y-4">
-          {% for item in faq_data.coaching %}
-          <div x-data="{ open: false }" class="bg-white border border-gray-200 rounded-lg">
-            <button @click="open = !open" class="w-full text-left p-4 flex justify-between items-center">
-              <span class="font-semibold text-gray-800">{{ item.q }}</span>
-              <span x-show="!open" class="text-gray-500">&plus;</span>
-              <span x-show="open" class="text-gray-800">&minus;</span>
-            </button>
-            <div x-show="open" x-transition class="p-4 border-t prose max-w-none text-gray-600">
-              {{ item.a|safe }}
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-  </section>
-
   <section id="cta" class="bg-blue-600 text-white py-20">
     <div class="container mx-auto px-6 text-center">
       <h2 class="text-3xl md:text-4xl font-bold mb-4">
@@ -221,17 +203,71 @@
     scroll-behavior: smooth;
   }
   #carousel {
-    /* Hide scrollbar for IE, Edge and Firefox */
     -ms-overflow-style: none;  
     scrollbar-width: none;  
-    /* Create the fade-out effect on the edges */
     -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
     mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
   }
-  /* Hide scrollbar for Chrome, Safari and Opera */
   #carousel::-webkit-scrollbar {
     display: none;
   }
 </style>
+
+<script>
+  function carousel() {
+    return {
+      activeIndex: 0,
+      items: [],
+      init() {
+        // Use $nextTick to ensure the DOM is ready after rendering
+        this.$nextTick(() => {
+          this.items = Array.from(this.$refs.carousel.children);
+          // Initial centering on load
+          this.scrollToIndex(this.activeIndex);
+        });
+      },
+      scrollToIndex(index) {
+        const carousel = this.$refs.carousel;
+        const targetItem = this.items[index];
+
+        if (!targetItem) return;
+
+        const scrollPosition = targetItem.offsetLeft - (carousel.offsetWidth / 2) + (targetItem.offsetWidth / 2);
+        
+        carousel.scrollTo({
+          left: scrollPosition,
+          behavior: 'smooth'
+        });
+      },
+      next() {
+        this.activeIndex = (this.activeIndex + 1) % this.items.length;
+        this.scrollToIndex(this.activeIndex);
+      },
+      scrollToIndex(index, smooth = true) {
+        const carousel = this.$refs.carousel;
+        const targetItem = this.items[index];
+
+        if (!targetItem) return;
+
+        const itemCenter = targetItem.offsetLeft + (targetItem.offsetWidth / 2);
+        const carouselCenter = carousel.offsetWidth / 2;
+        const scrollPosition = itemCenter - carouselCenter;
+        
+        carousel.scrollTo({
+          left: scrollPosition,
+          behavior: smooth ? 'smooth' : 'auto'
+        });
+      },
+      next() {
+        this.activeIndex = (this.activeIndex + 1) % this.items.length;
+        this.scrollToIndex(this.activeIndex);
+      },
+      prev() {
+        this.activeIndex = (this.activeIndex - 1 + this.items.length) % this.items.length;
+        this.scrollToIndex(this.activeIndex);
+      },
+    }
+  }
+</script>
 
 {% endblock %}

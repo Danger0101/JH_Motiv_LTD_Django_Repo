@@ -234,11 +234,23 @@ class UserProgram(models.Model):
 class Token(models.Model):
     """Represents a single coaching session token."""
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='tokens')
-    user_program = models.ForeignKey(UserProgram, on_delete=models.CASCADE, related_name='tokens')
+    
+    # MODIFIED: Made null=True, blank=True to allow for free/taster tokens
+    user_program = models.ForeignKey(
+        'UserProgram', 
+        on_delete=models.CASCADE, 
+        related_name='tokens',
+        null=True, # Allows tokens not tied to a purchase
+        blank=True
+    )
+    
+    # NEW: Flag to track if this is the one-time free token
+    is_taster = models.BooleanField(default=False) 
+    
     purchase_date = models.DateTimeField(auto_now_add=True)
     expiration_date = models.DateTimeField()
     session = models.OneToOneField(
-        CoachingSession, 
+        'CoachingSession', 
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True, 
@@ -251,10 +263,102 @@ class Token(models.Model):
 
     def __str__(self):
         status = 'Used' if self.session else 'Available'
-        return f"Token for {self.user.username} ({status}) - Expires {self.expiration_date.strftime('%Y-%m-%d')}"
+        token_type = ' (Taster)' if self.is_taster else ''
+        return f"Token for {self.user.username} ({status}){token_type} - Expires {self.expiration_date.strftime('%Y-%m-%d')}"
 
     def save(self, *args, **kwargs):
         if not self.pk:
-            self.expiration_date = self.purchase_date + timezone.timedelta(days=365)
+            # If it's a taster token, set a shorter default expiration (e.g., 30 days)
+            if self.is_taster:
+                self.expiration_date = self.purchase_date + timezone.timedelta(days=30)
+            # If it's a purchased token, set the program's defined expiration (or a default)
+            elif self.user_program and self.user_program.end_date:
+                 # Calculate expiration based on the program's end date (or similar logic)
+                 # For simplicity, we'll use the 365 days default, but a real app might use program end date
+                 self.expiration_date = self.purchase_date + timezone.timedelta(days=365)
+            else:
+                 self.expiration_date = self.purchase_date + timezone.timedelta(days=365)
+                 
         super().save(*args, **kwargs)
 
+
+# Define constants for TokenApplication status choices
+TASTER_STATUS_PENDING = 'P'
+TASTER_STATUS_APPROVED = 'A'
+TASTER_STATUS_DENIED = 'D'
+TASTER_STATUS_CHOICES = [
+    (TASTER_STATUS_PENDING, 'Pending Review'),
+    (TASTER_STATUS_APPROVED, 'Approved - Token Granted'),
+    (TASTER_STATUS_DENIED, 'Denied'),
+]
+TASTER_STATUS_PENDING = 'P'
+TASTER_STATUS_APPROVED = 'A'
+TASTER_STATUS_DENIED = 'D'
+TASTER_STATUS_CHOICES = [
+    (TASTER_STATUS_PENDING, 'Pending Review'),
+    (TASTER_STATUS_APPROVED, 'Approved - Token Granted'),
+    (TASTER_STATUS_DENIED, 'Denied'),
+]
+
+
+class TokenApplication(models.Model):
+    """
+    Tracks a user's application for a token, primarily used for the
+    one-time 'Momentum Catalyst Session' (free taster).
+    """
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='token_applications'
+    )
+    
+    # Flag to identify if this application is for the free Taster Session
+    is_taster = models.BooleanField(default=False)
+    
+    # Application status and history
+    status = models.CharField(
+        max_length=1,
+        choices=TASTER_STATUS_CHOICES,
+        default=TASTER_STATUS_PENDING
+    )
+    
+    # Coach approval/denial tracking
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_applications',
+        limit_choices_to={'is_coach': True}
+    )
+    denied_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='denied_applications',
+        limit_choices_to={'is_coach': True}
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(default=timezone.now)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    denied_at = models.DateTimeField(null=True, blank=True)
+    
+    # Coach's optional reason for denial
+    denial_reason = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = "Token Application"
+        verbose_name_plural = "Token Applications"
+        # Unique constraint: A user can only have one PENDING or APPROVED taster application
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'is_taster'], 
+                condition=models.Q(is_taster=True, status__in=[TASTER_STATUS_PENDING, TASTER_STATUS_APPROVED]),
+                name='unique_pending_or_approved_taster'
+            )
+        ]
+    
+    def __str__(self):
+        return f"Application by {self.user.username} - Status: {self.get_status_display()}"
