@@ -26,6 +26,7 @@ class CoachingSession(models.Model):
     end_time = models.DateTimeField(default=timezone.now)
     service_name = models.CharField(max_length=255)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    paid_out = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.service_name} with {self.coach} at {self.start_time}"
@@ -44,6 +45,7 @@ class CoachVacationBlock(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     reason = models.CharField(max_length=255, blank=True, null=True)
+    override_allowed = models.BooleanField(default=False, help_text="If True, the coach can choose to book sessions during this block.")
 
     class Meta:
         verbose_name = "Vacation/Unbookable Block"
@@ -122,9 +124,9 @@ class RecurringAvailability(models.Model):
 
 
 class CoachOffering(models.Model):
-    """Defines a specific service offered by a coach, now supporting both direct pricing and a new token-based system."""
+    """Defines a specific service offered by a coach, now supporting both direct pricing and a new credit-based system."""
     BOOKING_TYPE_CHOICES = [
-        ('token', 'Token-based'),
+        ('credit', 'Credit-based'),
         ('price', 'Direct Price'),
     ]
     coach = models.ForeignKey(
@@ -140,8 +142,8 @@ class CoachOffering(models.Model):
     booking_type = models.CharField(
         max_length=10,
         choices=BOOKING_TYPE_CHOICES,
-        default='token',
-        help_text="Determines if this session is booked with tokens or a direct price."
+        default='credit',
+        help_text="Determines if this session is booked with credits or a direct price."
     )
     price = models.DecimalField(
         max_digits=8, 
@@ -150,11 +152,13 @@ class CoachOffering(models.Model):
         blank=True,
         help_text="Required only if booking_type is 'Direct Price'."
     )
-    tokens_required = models.PositiveIntegerField(
+    credits_required = models.PositiveIntegerField(
         default=1,
-        help_text="Number of tokens required to book this session (if token-based)."
+        help_text="Number of credits required to book this session (if credit-based)."
     )
     is_active = models.BooleanField(default=True, help_text="Controls visibility on the public site.")
+    rate = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text="The amount the coach will be paid for this offering.")
+
     class Meta:
         verbose_name = "Coach Offering"
         verbose_name_plural = "Coach Offerings"
@@ -166,21 +170,37 @@ class CoachOffering(models.Model):
     def clean(self):
         if self.booking_type == 'price' and self.price is None:
             raise ValidationError('Price is required for sessions with a direct price.')
-        if self.booking_type == 'token' and self.price is not None:
-            self.price = None # Ensure price is null for token-based offerings
+        if self.booking_type == 'credit' and self.price is not None:
+            self.price = None # Ensure price is null for credit-based offerings
+
+
+class CoachPayout(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('PAID', 'Paid'),
+    ]
+
+    coach = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='payouts')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Payout of {self.amount} to {self.coach.username} - {self.status}"
 
 
 
 class CoachingProgram(models.Model):
     """
-    Represents a purchasable coaching program that grants tokens and access for a specific duration.
+    Represents a purchasable coaching program that grants credits and access for a specific duration.
     e.g., '3-Month Bi-Weekly Coaching'.
     """
     name = models.CharField(max_length=255)
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
     duration_months = models.PositiveIntegerField(help_text="How many months of access this program grants.")
-    tokens_granted = models.PositiveIntegerField(help_text="Number of session tokens granted upon purchase.")
+    credits_granted = models.PositiveIntegerField(help_text="Number of session credits granted upon purchase.")
     is_active = models.BooleanField(default=True, help_text="Whether this program is available for purchase.")
 
     def __str__(self):
@@ -231,20 +251,20 @@ class UserProgram(models.Model):
 
 
 
-class Token(models.Model):
-    """Represents a single coaching session token."""
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='tokens')
+class SessionCredit(models.Model):
+    """Represents a single coaching session credit."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='session_credits')
     
-    # MODIFIED: Made null=True, blank=True to allow for free/taster tokens
+    # MODIFIED: Made null=True, blank=True to allow for free/taster credits
     user_program = models.ForeignKey(
         'UserProgram', 
         on_delete=models.CASCADE, 
-        related_name='tokens',
-        null=True, # Allows tokens not tied to a purchase
+        related_name='session_credits',
+        null=True, # Allows credits not tied to a purchase
         blank=True
     )
     
-    # NEW: Flag to track if this is the one-time free token
+    # NEW: Flag to track if this is the one-time free credit
     is_taster = models.BooleanField(default=False) 
     
     purchase_date = models.DateTimeField(auto_now_add=True)
@@ -254,24 +274,24 @@ class Token(models.Model):
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True, 
-        related_name='used_token'
+        related_name='used_credit'
     )
 
     def is_valid(self):
-        """Checks if the token is unused and not expired."""
+        """Checks if the credit is unused and not expired."""
         return self.session is None and timezone.now() < self.expiration_date
 
     def __str__(self):
         status = 'Used' if self.session else 'Available'
-        token_type = ' (Taster)' if self.is_taster else ''
-        return f"Token for {self.user.username} ({status}){token_type} - Expires {self.expiration_date.strftime('%Y-%m-%d')}"
+        credit_type = ' (Taster)' if self.is_taster else ''
+        return f"Credit for {self.user.username} ({status}){credit_type} - Expires {self.expiration_date.strftime('%Y-%m-%d')}"
 
     def save(self, *args, **kwargs):
         if not self.pk:
-            # If it's a taster token, set a shorter default expiration (e.g., 30 days)
+            # If it's a taster credit, set a shorter default expiration (e.g., 30 days)
             if self.is_taster:
                 self.expiration_date = self.purchase_date + timezone.timedelta(days=30)
-            # If it's a purchased token, set the program's defined expiration (or a default)
+            # If it's a purchased credit, set the program's defined expiration (or a default)
             elif self.user_program and self.user_program.end_date:
                  # Calculate expiration based on the program's end date (or similar logic)
                  # For simplicity, we'll use the 365 days default, but a real app might use program end date
@@ -282,34 +302,27 @@ class Token(models.Model):
         super().save(*args, **kwargs)
 
 
-# Define constants for TokenApplication status choices
-TASTER_STATUS_PENDING = 'P'
-TASTER_STATUS_APPROVED = 'A'
-TASTER_STATUS_DENIED = 'D'
-TASTER_STATUS_CHOICES = [
-    (TASTER_STATUS_PENDING, 'Pending Review'),
-    (TASTER_STATUS_APPROVED, 'Approved - Token Granted'),
-    (TASTER_STATUS_DENIED, 'Denied'),
-]
-TASTER_STATUS_PENDING = 'P'
-TASTER_STATUS_APPROVED = 'A'
-TASTER_STATUS_DENIED = 'D'
-TASTER_STATUS_CHOICES = [
-    (TASTER_STATUS_PENDING, 'Pending Review'),
-    (TASTER_STATUS_APPROVED, 'Approved - Token Granted'),
-    (TASTER_STATUS_DENIED, 'Denied'),
+# Define constants for CreditApplication status choices
+CREDIT_APP_STATUS_PENDING = 'P'
+CREDIT_APP_STATUS_APPROVED = 'A'
+CREDIT_APP_STATUS_DENIED = 'D'
+CREDIT_APP_STATUS_CHOICES = [
+    (CREDIT_APP_STATUS_PENDING, 'Pending Review'),
+    (CREDIT_APP_STATUS_APPROVED, 'Approved - Credit Granted'),
+    (CREDIT_APP_STATUS_DENIED, 'Denied'),
 ]
 
 
-class TokenApplication(models.Model):
+
+class CreditApplication(models.Model):
     """
-    Tracks a user's application for a token, primarily used for the
+    Tracks a user's application for a credit, primarily used for the
     one-time 'Momentum Catalyst Session' (free taster).
     """
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='token_applications'
+        related_name='credit_applications'
     )
     
     # Flag to identify if this application is for the free Taster Session
@@ -318,8 +331,8 @@ class TokenApplication(models.Model):
     # Application status and history
     status = models.CharField(
         max_length=1,
-        choices=TASTER_STATUS_CHOICES,
-        default=TASTER_STATUS_PENDING
+        choices=CREDIT_APP_STATUS_CHOICES,
+        default=CREDIT_APP_STATUS_PENDING
     )
     
     # Coach approval/denial tracking
@@ -328,7 +341,7 @@ class TokenApplication(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='approved_applications',
+        related_name='approved_credit_applications',
         limit_choices_to={'is_coach': True}
     )
     denied_by = models.ForeignKey(
@@ -336,7 +349,7 @@ class TokenApplication(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='denied_applications',
+        related_name='denied_credit_applications',
         limit_choices_to={'is_coach': True}
     )
     
@@ -349,16 +362,80 @@ class TokenApplication(models.Model):
     denial_reason = models.TextField(blank=True)
 
     class Meta:
-        verbose_name = "Token Application"
-        verbose_name_plural = "Token Applications"
+        verbose_name = "Credit Application"
+        verbose_name_plural = "Credit Applications"
         # Unique constraint: A user can only have one PENDING or APPROVED taster application
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'is_taster'], 
-                condition=models.Q(is_taster=True, status__in=[TASTER_STATUS_PENDING, TASTER_STATUS_APPROVED]),
+                condition=models.Q(is_taster=True, status__in=[CREDIT_APP_STATUS_PENDING, CREDIT_APP_STATUS_APPROVED]),
                 name='unique_pending_or_approved_taster'
             )
         ]
     
     def __str__(self):
         return f"Application by {self.user.username} - Status: {self.get_status_display()}"
+
+
+import uuid
+
+class RescheduleRequest(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('ACCEPTED', 'Accepted'),
+        ('DECLINED', 'Declined'),
+    ]
+
+    session = models.OneToOneField(CoachingSession, on_delete=models.CASCADE, related_name='reschedule_request')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Reschedule request for session {self.session.id} - {self.status}"
+
+
+class CoachSwapRequest(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING_COACH', 'Pending Coach Approval'),
+        ('PENDING_USER', 'Pending User Approval'),
+        ('ACCEPTED', 'Accepted'),
+        ('DECLINED', 'Declined'),
+    ]
+
+    session = models.OneToOneField(CoachingSession, on_delete=models.CASCADE, related_name='swap_request')
+    initiating_coach = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='initiated_swap_requests')
+    receiving_coach = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='received_swap_requests')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING_COACH')
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Swap request for session {self.session.id} from {self.initiating_coach} to {self.receiving_coach} - {self.status}"
+
+
+class CancellationPolicy(models.Model):
+    USER_TYPE_CHOICES = [
+        ('USER', 'User'),
+        ('COACH', 'Coach'),
+    ]
+
+    user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES)
+    hours_before_session = models.PositiveIntegerField()
+    refund_percentage = models.PositiveIntegerField()
+
+    def __str__(self):
+        return f"{self.user_type} cancellation policy: {self.refund_percentage}% refund if cancelled {self.hours_before_session} hours before." 
+
+
+class SessionNote(models.Model):
+    session = models.ForeignKey(CoachingSession, on_delete=models.CASCADE, related_name='notes')
+    coach = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='session_notes')
+    note = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Note for session {self.session.id} by {self.coach.username}"

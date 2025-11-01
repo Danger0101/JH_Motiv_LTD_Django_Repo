@@ -7,48 +7,59 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 import json
 import datetime
-from ..models import CoachVacationBlock
-from ..utils import coach_is_valid # Import the helper
-
+from ..models import CoachVacationBlock, CoachingSession, RescheduleRequest
 
 @login_required
 @require_http_methods(["GET", "POST"])
 def coach_vacation_blocks(request):
     if not coach_is_valid(request.user):
         return JsonResponse({"error": "Unauthorized access."}, status=403)
-
+    
     coach = request.user
-
+    
     if request.method == 'GET':
-        blocks = CoachVacationBlock.objects.filter(
-            coach=coach,
-            end_date__gte=timezone.now().date()
-        ).order_by('start_date')
-        
-        return render(request, 'coaching/partials/vacation_block_list_fragment.html', {'blocks': blocks})
+        blocks = CoachVacationBlock.objects.filter(coach=coach).order_by('start_date')
+        return render(request, 'coaching/partials/_vacation_blocks_list.html', {'vacation_blocks': blocks})
 
     elif request.method == 'POST':
         try:
-            data = request.POST if request.content_type == 'application/x-www-form-urlencoded' else json.loads(request.body)
-            
-            start_date = datetime.date.fromisoformat(data.get('start_date'))
-            end_date = datetime.date.fromisoformat(data.get('end_date'))
-            
+            data = request.POST
+            start_date = datetime.date.fromisoformat(data['start_date'])
+            end_date = datetime.date.fromisoformat(data['end_date'])
+            reason = data.get('reason', '')
+            override_allowed = data.get('override_allowed') == 'on'
+
             if start_date > end_date:
-                return HttpResponse('Start date cannot be after end date.', status=400)
+                raise ValueError("Start date cannot be after end date.")
             if end_date < timezone.now().date():
-                return HttpResponse('Cannot block dates in the past.', status=400)
+                raise ValueError("Cannot set a vacation block in the past.")
 
-            CoachVacationBlock.objects.create(
-                coach=coach, start_date=start_date, end_date=end_date, reason=data.get('reason', '')
+            vacation_block = CoachVacationBlock.objects.create(
+                coach=coach, 
+                start_date=start_date, 
+                end_date=end_date, 
+                reason=reason,
+                override_allowed=override_allowed
             )
-            
-            response = HttpResponse(status=201)
-            response['HX-Trigger'] = 'block-added'
-            return response
 
+            # Find clashing sessions
+            clashing_sessions = CoachingSession.objects.filter(
+                coach=coach,
+                start_time__date__range=(start_date, end_date),
+                status='BOOKED'
+            )
+
+            for session in clashing_sessions:
+                session.status = 'PENDING'
+                session.save()
+                RescheduleRequest.objects.create(session=session)
+
+            response = HttpResponse(status=201)
+            response['HX-Trigger'] = 'vacation-block-updated'
+            return response
+        
         except Exception as e:
-            return HttpResponse(f"Error processing block: {e}", status=400)
+            return HttpResponse(f"Error: {e}", status=400)
 
 
 @login_required

@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}Session Notes{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-10">
+    <div class="max-w-2xl mx-auto">
+        <a href="{% url 'coaching:coach_dashboard' %}" class="text-indigo-600 hover:underline mb-6 inline-block">&larr; Back to Dashboard</a>
+        <div class="bg-white p-8 rounded-lg shadow-xl mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Session Notes</h1>
+            <p class="text-lg text-gray-600 mb-4">For session with {{ session.client }} on {{ session.start_time|date:"M d, Y \a\t H:i" }}</p>
+
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Add a Note</h2>
+                <form method="POST">
+                    {% csrf_token %}
+                    <textarea name="note" class="w-full border rounded-lg p-2" rows="4" placeholder="Write your notes here..."></textarea>
+                    <button type="submit" class="mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full transition duration-300">
+                        Add Note
+                    </button>
+                </form>
+            </div>
+
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Previous Notes</h2>
+                <ul class="space-y-4">
+                    {% for note in notes %}
+                    <li class="border-b pb-4 last:border-b-0">
+                        <p class="text-gray-800">{{ note.note }}</p>
+                        <p class="text-sm text-gray-500 mt-2">By {{ note.coach.username }} on {{ note.created_at|date:"M d, Y H:i" }}</p>
+                    </li>
+                    {% empty %}
+                    <li>
+                        <p class="text-gray-500">No notes for this session yet.</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

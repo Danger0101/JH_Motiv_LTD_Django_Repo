@@ -14,11 +14,11 @@
           <div class="flex items-baseline justify-between border-t pt-4">
             <div class="text-gray-700">
               <p><strong>Duration:</strong> {{ program.duration_months }} months</p>
-              <p><strong>Tokens Granted:</strong> {{ program.tokens_granted }}</p>
+              <p><strong>Credits Granted:</strong> {{ program.credits_granted }}</p>
             </div>
             <div class="text-right">
               <p class="text-3xl font-bold text-gray-800 mb-2">£{{ program.price }}</p>
-              <a href="{% url 'coaching:purchase_program' program.id %}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-full transition duration-300">
+              <a href="{% url 'payments:create_checkout_session' program.id %}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-full transition duration-300">
                 Purchase Program
               </a>
             </div>

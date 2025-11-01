@@ -23,15 +23,15 @@
                 <p class="font-semibold text-lg text-indigo-600">£{{ offering.price }}</p>
                 {% else %}
                 <p class="text-sm text-gray-600">Cost</p>
-                <p class="font-semibold text-lg text-indigo-600">{{ offering.tokens_required }} Token(s)</p>
+                <p class="font-semibold text-lg text-indigo-600">{{ offering.credits_required }} Credit(s)</p>
                 {% endif %}
             </div>
-                {# NEW: Token Count Display #}
-                {% if offering.booking_type == 'token' %}
+                {# NEW: Credit Count Display #}
+                {% if offering.booking_type == 'credit' %}
                 <div class="border-l pl-4">
-                    <p class="text-sm text-gray-600">Your Tokens</p>
-                    <p class="font-semibold text-lg {% if token_count >= offering.tokens_required %}text-green-600{% else %}text-red-600{% endif %}">
-                        {{ token_count }} Available
+                    <p class="text-sm text-gray-600">Your Credits</p>
+                    <p class="font-semibold text-lg {% if credit_count >= offering.credits_required %}text-green-600{% else %}text-red-600{% endif %}">
+                        {{ credit_count }} Available
                     </p>
                 </div>
                 {% endif %}
@@ -43,9 +43,9 @@
         <div class="bg-red-50 border-l-4 border-red-500 text-red-800 p-4 mb-6" role="alert">
             <p>Please <a href="{% url 'account_login' %}" class="font-semibold underline">log in</a> to view availability and book a session.</p>
         </div>
-        {% elif offering.booking_type == 'token' and not is_eligible %}
+        {% elif offering.booking_type == 'credit' and not is_eligible %}
         <div class="bg-yellow-50 border-l-4 border-yellow-500 text-yellow-800 p-4 mb-6" role="alert">
-            <p class="font-semibold">You need {{ offering.tokens_required }} tokens to book this session.</p>
+            <p class="font-semibold">You need {{ offering.credits_required }} credits to book this session.</p>
             <p class="text-sm">Please purchase a coaching program to gain access.</p>
             <a href="{% url 'coaching:program_list' %}" class="font-semibold text-sm underline mt-1 block">View Programs</a>
         </div>

@@ -25,13 +25,15 @@ def get_nav_dates(year, month):
     return current_month_obj, prev_month_obj, next_month_obj
 
 
-def build_availability_grid(coach, year, month, current_month_obj, today):
+def build_availability_grid(coach, year, month, current_month_obj, today, user_tz):
     
     cal = calendar.Calendar(firstweekday=calendar.MONDAY)
     month_days_grid = cal.monthdatescalendar(year, month)
     
     start_of_period = month_days_grid[0][0]
     end_of_period = month_days_grid[-1][-1]
+
+    coach_tz = pytz.timezone(str(getattr(coach, 'user_timezone', timezone.get_current_timezone())))
     
     # --- Data Fetching ---
     recurring_map = {
@@ -51,13 +53,13 @@ def build_availability_grid(coach, year, month, current_month_obj, today):
         coach=coach, 
         start_date__lte=end_of_period,
         end_date__gte=start_of_period
-    ).values_list('start_date', 'end_date')
+    ).values_list('start_date', 'end_date', 'override_allowed')
 
     def is_on_vacation(day_date):
-        for start, end in vacation_list:
+        for start, end, override_allowed in vacation_list:
             if start <= day_date <= end:
-                return True
-        return False
+                return (True, override_allowed)
+        return (False, False)
         
     final_grid = []
 
@@ -75,7 +77,8 @@ def build_availability_grid(coach, year, month, current_month_obj, today):
                 'available_slots': []
             }
             
-            if is_on_vacation(day_date):
+            on_vacation, override_allowed = is_on_vacation(day_date)
+            if on_vacation and not override_allowed:
                 merged_day['is_vacation'] = True
                 week_data.append(merged_day)
                 continue
@@ -86,17 +89,29 @@ def build_availability_grid(coach, year, month, current_month_obj, today):
                 merged_day['is_specific'] = True
                 
                 if specific_slot['available']:
+                    start_dt = coach_tz.localize(datetime.datetime.combine(day_date, specific_slot['start']))
+                    end_dt = coach_tz.localize(datetime.datetime.combine(day_date, specific_slot['end']))
+                    
+                    user_start_dt = start_dt.astimezone(user_tz)
+                    user_end_dt = end_dt.astimezone(user_tz)
+
                     merged_day['available_slots'] = [{
-                        'start_time': specific_slot['start'].strftime("%I:%M %p"),
-                        'end_time': specific_slot['end'].strftime("%I:%M %p"),
+                        'start_time': user_start_dt.strftime("%I:%M %p"),
+                        'end_time': user_end_dt.strftime("%I:%M %p"),
                     }]
                 
             elif day_date.month == current_month_obj.month:
                 base_slot = recurring_map.get(day_of_week_num)
                 if base_slot and base_slot['available']:
+                    start_dt = coach_tz.localize(datetime.datetime.combine(day_date, base_slot['start']))
+                    end_dt = coach_tz.localize(datetime.datetime.combine(day_date, base_slot['end']))
+
+                    user_start_dt = start_dt.astimezone(user_tz)
+                    user_end_dt = end_dt.astimezone(user_tz)
+
                     merged_day['available_slots'] = [{
-                        'start_time': base_slot['start'].strftime("%I:%M %p"),
-                        'end_time': base_slot['end'].strftime("%I:%M %p"),
+                        'start_time': user_start_dt.strftime("%I:%M %p"),
+                        'end_time': user_end_dt.strftime("%I:%M %p"),
                     }]
             
             week_data.append(merged_day)
@@ -360,11 +375,13 @@ def coach_calendar_view(request):
     current_month_obj, prev_month_obj, next_month_obj = get_nav_dates(year, month)
     prev_month_is_past = (prev_month_obj.year < today.year) or \
                          (prev_month_obj.year == today.year and prev_month_obj.month < today.month)
-    final_grid = build_availability_grid(coach, year, month, current_month_obj, today)
+    user_tz = pytz.timezone(str(getattr(request.user, 'user_timezone', timezone.get_current_timezone())))
+    final_grid = build_availability_grid(coach, year, month, current_month_obj, today, user_tz)
     context = {
         'month_days': final_grid, 
         'current_month': current_month_obj,
         'coach_tz': coach_tz.zone,
+        'user_tz': user_tz.zone,
         'prev_month': prev_month_obj,
         'next_month': next_month_obj,
         'today_date': today,

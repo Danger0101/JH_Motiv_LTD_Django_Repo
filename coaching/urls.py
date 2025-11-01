@@ -40,4 +40,21 @@ urlpatterns = [
     # --- OFFERINGS API PATHS (Imported from Modules) ---
     path('api/offerings/', offerings.coach_offerings_list_create, name='api_offerings_list_create'),
     path('api/offerings/<int:offering_id>/', offerings.coach_offerings_detail, name='api_offerings_detail'),
+
+    # --- RESCHEDULE REQUEST ---
+    path('reschedule/<uuid:token>/', views.reschedule_request_view, name='reschedule_request'),
+
+    # --- COACH SWAP ---
+    path('swap/initiate/<int:session_id>/<int:receiving_coach_id>/', views.initiate_swap_request_view, name='initiate_swap_request'),
+    path('swap/coach-response/<uuid:token>/', views.coach_swap_response_view, name='coach_swap_response'),
+    path('swap/user-response/<uuid:token>/', views.user_swap_response_view, name='user_swap_response'),
+
+    # --- CANCELLATION ---
+    path('cancel-session/<int:session_id>/', views.cancel_session_view, name='cancel_session'),
+
+    # --- COACH DASHBOARD ---
+    path('dashboard/', views.CoachDashboardView.as_view(), name='coach_dashboard'),
+
+    # --- SESSION NOTES ---
+    path('session-notes/<int:session_id>/', views.session_notes_view, name='session_notes'),
 ]

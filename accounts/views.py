@@ -7,7 +7,7 @@ from django.views.generic import TemplateView
 from django.http import HttpResponse
 from .models import MarketingPreference
 
-from coaching.models import UserProgram, Token
+from coaching.models import UserProgram, SessionCredit
 from django.utils import timezone
 
 class ProfileView(LoginRequiredMixin, TemplateView):
@@ -20,9 +20,9 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         preference, created = MarketingPreference.objects.get_or_create(user=self.request.user)
         context['marketing_preference'] = preference
         
-        # Fetch coaching programs and tokens
+        # Fetch coaching programs and credits
         context['user_programs'] = UserProgram.objects.filter(user=self.request.user)
-        context['available_tokens'] = Token.objects.filter(
+        context['available_credits'] = SessionCredit.objects.filter(
             user=self.request.user, 
             session__isnull=True, 
             expiration_date__gte=timezone.now()
