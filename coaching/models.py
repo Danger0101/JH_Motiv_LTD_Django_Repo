@@ -121,7 +121,9 @@ class RecurringAvailability(models.Model):
     def __str__(self):
         day = self.get_day_of_week_display()
         status = "Available" if self.is_available else "Unavailable"
-        return f"{self.coach.username}: {day} ({self.start_time.strftime('%I:%M %p')} - {self.end_time.strftime('%I:%M %p')})"
+        start_time_str = self.start_time.strftime('%I:%M %p') if self.start_time else '--:--'
+        end_time_str = self.end_time.strftime('%I:%M %p') if self.end_time else '--:--'
+        return f"{self.coach.username}: {day} ({start_time_str} - {end_time_str})"
 
 
 class CoachOffering(models.Model):

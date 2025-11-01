@@ -19,44 +19,52 @@ from .models import (
 )
 
 
+from django.forms import ModelForm
+
+class RecurringAvailabilityForm(ModelForm):
+    class Meta:
+        model = RecurringAvailability
+        fields = '__all__'
+
 class RecurringAvailabilityFormSet(BaseInlineFormSet):
     def get_queryset(self):
         if not self.instance.pk:
-            return RecurringAvailability.objects.none()
+            # For a new coach, return an empty queryset, forms will be created with initial data
+            return super().get_queryset().none()
 
-        queryset = super().get_queryset()
+        # For an existing coach, get existing availability
+        queryset = super().get_queryset().filter(coach=self.instance).order_by('day_of_week')
         existing_days = {obj.day_of_week for obj in queryset}
-        
-        # Add dummy instances for missing days
+
+        # Create dummy instances for missing days
+        dummy_instances = []
         for i in range(7):
             if i not in existing_days:
-                dummy_instance = RecurringAvailability(coach=self.instance, day_of_week=i, is_available=False)
-                # We need to add this dummy instance to the queryset without saving it
-                # This is a bit tricky as Django's QuerySet is not designed for unsaved objects.
-                # A common workaround is to create a list of objects and then convert it to a queryset
-                # or to ensure the formset handles the creation of these forms.
-                # For now, we'll rely on the formset to create these forms if they don't exist in the queryset.
-                # The __init__ of the formset will handle populating initial data for these.
-                pass # The __init__ will handle the creation of forms for missing days
-        return queryset.order_by('day_of_week')
+                dummy_instances.append(
+                    RecurringAvailability(coach=self.instance, day_of_week=i, is_available=False)
+                )
+        
+        # Combine existing and dummy instances.
+        # This will be a list, not a QuerySet, but the formset can handle it.
+        # The formset will then create forms for these instances.
+        return list(queryset) + dummy_instances
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Ensure there are always 7 forms, even if the queryset was empty
+        if not self.forms:
+            for i in range(7):
+                # Create a new form for each day with initial data
+                form = self.empty_form.__class__(
+                    initial={'day_of_week': i, 'is_available': False},
+                    prefix=f'{self.prefix}-{i}'
+                )
+                form.instance.day_of_week = i # Set day_of_week on instance for day_display
+                self.forms.append(form)
         
-        # Collect existing forms and their day_of_week
-        existing_forms_map = {form.instance.day_of_week: form for form in self.forms if form.instance.pk}
-        
-        # Create a new list of forms, ensuring all 7 days are present
-        all_forms = []
-        for i in range(7):
-            if i in existing_forms_map:
-                all_forms.append(existing_forms_map[i])
-            else:
-                # Create a new form for the missing day
-                form = self._construct_form(i, initial={'day_of_week': i, 'is_available': False})
-                all_forms.append(form)
-        
-        self.forms = all_forms
+        # Sort forms by day_of_week for consistent display
+        self.forms.sort(key=lambda form: form.instance.day_of_week)
+
 
 
 class RecurringAvailabilityInline(admin.TabularInline):
@@ -102,22 +110,28 @@ class PurchasedUserOfferingInline(admin.TabularInline):
 
 
 class UserCreditApplicationInline(admin.TabularInline):
+    fk_name = 'user'
     model = CreditApplication
     extra = 0
-    fields = ('is_taster', 'status', 'created_at', 'approved_by')
-    readonly_fields = ('is_taster', 'status', 'created_at', 'approved_by')
+    can_delete = False
+    verbose_name_plural = 'Credit Applications'
+    fields = ('is_taster', 'status', 'created_at', 'approved_by', 'denied_by')
+    readonly_fields = ('is_taster', 'status', 'created_at')
+    autocomplete_fields = ('user', 'approved_by', 'denied_by')
 
 
 class SpecificAvailabilityInline(admin.TabularInline):
     model = SpecificAvailability
     extra = 0
-    fields = ('date', 'start_time', 'end_time', 'is_available')
+    fields = ('date', 'start_time', 'end_time', 'is_available', 'coach')
+    autocomplete_fields = ('coach',)
 
 
 class CoachVacationBlockInline(admin.TabularInline):
     model = CoachVacationBlock
     extra = 0
-    fields = ('start_date', 'end_date', 'reason', 'override_allowed')
+    fields = ('start_date', 'end_date', 'reason', 'override_allowed', 'coach')
+    autocomplete_fields = ('coach',)
 
 
 class CoachOfferingInline(admin.TabularInline):
@@ -130,24 +144,27 @@ class CoachOfferingInline(admin.TabularInline):
 class CoachPayoutInline(admin.TabularInline):
     model = CoachPayout
     extra = 0
-    fields = ('amount', 'status', 'created_at', 'paid_at')
+    fields = ('amount', 'status', 'created_at', 'paid_at', 'coach')
     readonly_fields = ('amount', 'status', 'created_at', 'paid_at')
+    autocomplete_fields = ('coach',)
 
 
 class CoachingSessionClientInline(admin.TabularInline):
     model = CoachingSession
     fk_name = 'client'
     extra = 0
-    fields = ('service_name', 'coach', 'start_time', 'status')
-    readonly_fields = ('service_name', 'coach', 'start_time', 'status')
+    fields = ('service_name', 'coach', 'start_time', 'status', 'client')
+    readonly_fields = ('service_name', 'start_time', 'status')
+    autocomplete_fields = ('coach', 'client')
 
 
 class CoachingSessionCoachInline(admin.TabularInline):
     model = CoachingSession
     fk_name = 'coach'
     extra = 0
-    fields = ('service_name', 'client', 'start_time', 'status')
-    readonly_fields = ('service_name', 'client', 'start_time', 'status')
+    fields = ('service_name', 'client', 'start_time', 'status', 'coach')
+    readonly_fields = ('service_name', 'start_time', 'status')
+    autocomplete_fields = ('client', 'coach')
 
 
 class CoachSessionNoteInline(admin.TabularInline):
@@ -159,10 +176,13 @@ class CoachSessionNoteInline(admin.TabularInline):
     extra = 0
 
 
-    fields = ('session', 'note', 'created_at')
+    fields = ('session', 'note', 'created_at', 'coach')
 
 
     readonly_fields = ('session', 'note', 'created_at')
+
+
+    autocomplete_fields = ('coach',)
 
 
 
@@ -210,31 +230,13 @@ class CoachOfferingAdmin(admin.ModelAdmin):
 
 
 
-@admin.register(RescheduleRequest)
-
-
-class RescheduleRequestAdmin(admin.ModelAdmin):
-
-
-    list_display = ('session', 'status', 'created_at')
-
-
-    list_filter = ('status',)
 
 
 
 
 
-@admin.register(CoachSwapRequest)
 
 
-class CoachSwapRequestAdmin(admin.ModelAdmin):
-
-
-    list_display = ('session', 'initiating_coach', 'receiving_coach', 'status')
-
-
-    list_filter = ('status', 'initiating_coach', 'receiving_coach')
 
 
 
@@ -262,4 +264,14 @@ class SessionNoteAdmin(admin.ModelAdmin):
     list_display = ('session', 'coach', 'created_at')
     search_fields = ('coach__username', 'session__id')
     date_hierarchy = 'created_at'
+    autocomplete_fields = ('coach', 'session')
+    list_select_related = ('coach', 'session')
+
+@admin.register(CoachingSession)
+class CoachingSessionAdmin(admin.ModelAdmin):
+    list_display = ('service_name', 'coach', 'client', 'start_time', 'status')
+    list_filter = ('status', 'coach', 'client')
+    search_fields = ('service_name', 'coach__username', 'client__username')
+    autocomplete_fields = ('coach', 'client')
+    list_select_related = ('coach', 'client')
 

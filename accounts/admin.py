@@ -46,7 +46,6 @@ class UserAdmin(BaseUserAdmin):
             inlines.append(PurchasedUserOfferingInline)
             inlines.append(UserSessionCreditInline)
             inlines.append(UserCreditApplicationInline)
-            inlines.append(UserGoalInline)
 
             # Inlines specific to coaches
             if obj.is_coach:
@@ -54,7 +53,6 @@ class UserAdmin(BaseUserAdmin):
                 inlines.append(SpecificAvailabilityInline)
                 inlines.append(CoachVacationBlockInline)
                 inlines.append(CoachingSessionCoachInline)
-                inlines.append(CoachOfferingInline)
                 inlines.append(CoachPayoutInline)
                 inlines.append(CoachSessionNoteInline)
             else:

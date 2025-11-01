@@ -268,7 +268,7 @@ class CoachingOverview(TemplateView):
         # Note: You had 'CoachOffering' and 'Offering' lines. I've consolidated and ensured ordering.
         try:
             # Fetch all active offerings ordered by ID to prevent ValueError
-            context['offerings'] = CoachOffering.objects.filter(is_active=True).select_related('coach').order_by('id')
+            context['offerings'] = CoachOffering.objects.filter(is_active=True).prefetch_related('coaches').order_by('id')
         except Exception as e:
             # Handle the case where the model might not exist or another error occurs
             context['offerings'] = [] 
@@ -464,14 +464,14 @@ def offering_detail_view(request, offering_id):
     before loading the calendar.
     """
     offering = get_object_or_404(CoachOffering, id=offering_id)
-    coach = offering.coach
+    coach = offering.coaches.first() # Get the first coach associated with the offering
     user = request.user
     
     # --- Credit/Program Eligibility Check (Updated to include Taster Credits) ---
     is_eligible = False
     credit_count = 0
     
-    if offering.booking_type == 'credit':
+    if offering.credits_granted > 0:
         # 1. Count ALL usable credits (purchased and taster)
         valid_credits = SessionCredit.objects.filter(
             user=user,
@@ -481,7 +481,7 @@ def offering_detail_view(request, offering_id):
         credit_count = valid_credits.count()
 
         # 2. Check if the required credits are available
-        if credit_count >= offering.credits_required:
+        if credit_count >= offering.credits_granted:
             is_eligible = True
             
         # 3. Determine validity dates (Only applies to purchased programs, not taster credits)
@@ -493,7 +493,7 @@ def offering_detail_view(request, offering_id):
         latest_end_date = active_offerings.order_by('-end_date').values_list('end_date', flat=True).first()
 
         
-    elif offering.booking_type == 'price':
+    else: # Assume it's price-based if no credits are granted
         # If it's a paid session, eligibility is assumed, but price is displayed.
         is_eligible = True
         earliest_start_date = None
@@ -520,7 +520,7 @@ def create_session_view(request, offering_id):
         # Assuming you parse start_time, etc., from request.POST here
 
         # 2. Credit Booking Logic (Transactional)
-        if offering.booking_type == 'credit':
+        if offering.credits_granted > 0:
             
             # --- Repeat Eligibility Check and credit selection ---
             valid_credits = SessionCredit.objects.filter(
@@ -529,18 +529,21 @@ def create_session_view(request, offering_id):
                 expiration_date__gt=timezone.now()
             ).select_for_update().order_by('expiration_date') # Lock and prioritize credits that expire soonest
 
-            if valid_credits.count() < offering.credits_required:
+            if valid_credits.count() < offering.credits_granted:
                 return HttpResponse("Error: Not enough valid credits.", status=403)
             
-            # Select the required number of credits (e.g., just the first one if credits_required is 1)
-            credits_to_use = valid_credits[:offering.credits_required]
+            # Select the required number of credits (e.g., just the first one if credits_granted is 1)
+            credits_to_use = valid_credits[:offering.credits_granted]
             
-            # *** Create CoachingSession object ***
-            # This is a placeholder for parsing the start time from the request
-            parsed_start_time = timezone.now() 
+            # Assuming a coach is selected or the first available coach is used
+            # In a real application, the specific coach should be passed from the frontend
+            selected_coach = offering.coaches.first() 
+            if not selected_coach:
+                return HttpResponse("Error: No coach associated with this offering.", status=400)
+
             new_session = CoachingSession.objects.create(
                 client=request.user,
-                coach=offering.coach,
+                coach=selected_coach,
                 service_name=offering.name,
                 start_time=parsed_start_time,
                 end_time=parsed_start_time + timezone.timedelta(minutes=offering.duration_minutes)
@@ -551,9 +554,9 @@ def create_session_view(request, offering_id):
                 credit.session = new_session
                 credit.save()
             
-            return HttpResponse(f"Session booked using {offering.credits_required} Credit(s).", status=200)
+            return HttpResponse(f"Session booked using {offering.credits_granted} Credit(s).", status=200)
 
-        elif offering.booking_type == 'price':
+        else: # Assume it's price-based if no credits are granted
               # --- Price Booking Logic ---
               # Payment initiation/confirmation, then session creation
               return HttpResponse(f"Session booked via direct payment of £{offering.price}.", status=200)
