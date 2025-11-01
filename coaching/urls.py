@@ -10,8 +10,8 @@ urlpatterns = [
     # --- GENERAL VIEWS ---
     path('', views.CoachingOverview.as_view(), name='coaching_overview'),
     path('settings/', views.coach_settings_view, name='coach_settings'),
-    path('programs/', views.program_list_view, name='program_list'),
-    path('programs/purchase/<int:program_id>/', views.purchase_program_view, name='purchase_program'),
+    path('offerings/', views.offering_list_view, name='offering_list'),
+    path('offerings/purchase/<int:offering_id>/', views.purchase_offering_view, name='purchase_offering'),
 
      # --- INTEGRATION/PLACEHOLDER VIEWS ---
     path('calendar-link/init/', views.calendar_link_init, name='calendar_link_init'),
@@ -57,4 +57,13 @@ urlpatterns = [
 
     # --- SESSION NOTES ---
     path('session-notes/<int:session_id>/', views.session_notes_view, name='session_notes'),
+
+    # --- GOAL TRACKING ---
+    path('offering-goals/<int:user_offering_id>/', views.program_goals_view, name='offering_goals'),
+
+    # --- TASTER SESSION ---
+    path('apply-taster/', views.apply_taster_view, name='apply_taster'),
+    path('manage-tasters/', views.coach_manage_taster_view, name='coach_manage_tasters'),
+    path('approve-taster/<int:application_id>/', views.approve_taster_credit_view, name='approve_taster_credit'),
+    path('deny-taster/<int:application_id>/', views.deny_taster_credit_view, name='deny_taster_credit'),
 ]

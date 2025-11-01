@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Coaching Offerings - JH Motiv LTD{% endblock %}
+
+{% block content %}
+<div class="bg-gray-100 py-12">
+  <div class="container mx-auto px-6">
+    <h1 class="text-4xl font-bold text-center text-gray-800 mb-8">Our Coaching Offerings</h1>
+    <div class="max-w-4xl mx-auto space-y-8">
+      {% for offering in offerings %}
+        <div class="bg-white rounded-lg shadow-lg p-8">
+          <h2 class="text-2xl font-bold text-gray-900 mb-3">{{ offering.name }}</h2>
+          <p class="text-gray-600 mb-4">{{ offering.description }}</p>
+          <div class="flex items-baseline justify-between border-t pt-4">
+            <div class="text-gray-700">
+              <p><strong>Duration:</strong> {{ offering.duration_months }} months</p>
+              <p><strong>Credits Granted:</strong> {{ offering.credits_granted }}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-3xl font-bold text-gray-800 mb-2">£{{ offering.price }}</p>
+              <a href="{% url 'payments:create_checkout_session' offering.id %}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-full transition duration-300">
+                Purchase Offering
+              </a>
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <p class="text-center text-gray-500">There are currently no coaching offerings available.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -46,8 +46,8 @@
         {% elif offering.booking_type == 'credit' and not is_eligible %}
         <div class="bg-yellow-50 border-l-4 border-yellow-500 text-yellow-800 p-4 mb-6" role="alert">
             <p class="font-semibold">You need {{ offering.credits_required }} credits to book this session.</p>
-            <p class="text-sm">Please purchase a coaching program to gain access.</p>
-            <a href="{% url 'coaching:program_list' %}" class="font-semibold text-sm underline mt-1 block">View Programs</a>
+            <p class="text-sm">Please purchase a coaching offering to gain access.</p>
+            <a href="{% url 'coaching:offering_list' %}" class="font-semibold text-sm underline mt-1 block">View Offerings</a>
         </div>
         {% else %}
         {# User is eligible, load the calendar #}

@@ -4,19 +4,97 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.views.generic import TemplateView
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils import timezone
-from django.db import transaction # Needed for safe token creation/usage
+from django.db import transaction
 
 from .utils import coach_is_valid
 
 # Import all API functions from the new modules (Already provided)
 from .api_views.vacation import coach_vacation_blocks, coach_vacation_block_detail
-from .api_views.availability import coach_recurring_availability_view, coach_specific_availability_view, coach_specific_availability_detail, coach_add_availability_modal_view, coach_create_availability_from_modal_view, coach_calendar_view
+from .api_views.availability import (
+    coach_recurring_availability_view,
+    coach_specific_availability_view,
+    coach_specific_availability_detail,
+    coach_add_availability_modal_view,
+    coach_create_availability_from_modal_view,
+    coach_calendar_view
+)
 from .api_views.offerings import coach_offerings_list_create, coach_offerings_detail
 
 # Model Imports (Added missing models: TokenApplication)
+
 from django.contrib.auth import get_user_model
-from .models import CoachingProgram, UserProgram, SessionCredit, CoachOffering, CreditApplication, RescheduleRequest, CoachSwapRequest, CancellationPolicy, SessionNote
+
+from .models import (
+
+    UserOffering,
+
+    SessionCredit,
+
+    CoachingSession,
+
+    CoachOffering,
+
+    CreditApplication,
+
+    RescheduleRequest,
+
+    CoachSwapRequest,
+
+    CancellationPolicy,
+
+    SessionNote,
+
+    Goal
+
+)
+
+
+
+
+
+@login_required
+
+def program_goals_view(request, user_offering_id):
+
+    user_offering = get_object_or_404(UserOffering, id=user_offering_id)
+
+    if request.user != user_offering.user and not user_offering.offering.coach == request.user:
+
+        return HttpResponse("Unauthorized", status=403)
+
+
+
+    if request.method == 'POST':
+
+        title = request.POST.get('title')
+
+        description = request.POST.get('description')
+
+        due_date = request.POST.get('due_date')
+
+        if title and description:
+
+            Goal.objects.create(
+
+                user_offering=user_offering,
+
+                title=title,
+
+                description=description,
+
+                due_date=due_date
+
+            )
+
+        return redirect('coaching:program_goals', user_offering_id=user_offering_id)
+
+
+
+    goals = Goal.objects.filter(user_offering=user_offering).order_by('-created_at')
+
+    return render(request, 'coaching/program_goals.html', {'user_offering': user_offering, 'goals': goals})
 
 @login_required
 def session_notes_view(request, session_id):
@@ -212,7 +290,7 @@ def apply_taster_view(request):
     existing_application = CreditApplication.objects.filter(
         user=user, 
         is_taster=True
-    ).exclude(status=TokenApplication.STATUS_DENIED).first() # Exclude DENIED to allow re-applying after denial
+    ).exclude(status=CreditApplication.STATUS_DENIED).first() # Exclude DENIED to allow re-applying after denial
     
     if existing_application:
         # User already applied or has a token. Redirect them to a status page.
@@ -250,9 +328,9 @@ def coach_manage_taster_view(request):
     if not coach_is_valid(request.user):
         return HttpResponse("Access Denied: You do not have coach privileges.", status=403)
         
-    pending_applications = TokenApplication.objects.filter(
+    pending_applications = CreditApplication.objects.filter(
         is_taster=True, 
-        status=TokenApplication.STATUS_PENDING
+        status=CreditApplication.STATUS_PENDING
     ).order_by('created_at')
     
     context = {
@@ -342,25 +420,25 @@ def coach_settings_view(request):
     return render(request, 'coaching/coach_settings.html')
 
 @login_required
-def program_list_view(request):
+def offering_list_view(request):
     """
-    Displays a list of all active coaching programs available for purchase.
+    Displays a list of all active coaching offerings available for purchase.
     """
-    programs = CoachingProgram.objects.filter(is_active=True)
+    offerings = CoachOffering.objects.filter(is_active=True)
     context = {
-        'programs': programs
+        'offerings': offerings
     }
-    return render(request, 'coaching/program_list.html', context)
+    return render(request, 'coaching/offering_list.html', context)
 
 @login_required
-def purchase_program_view(request, program_id):
+def purchase_offering_view(request, offering_id):
     """
-    Placeholder view for handling the purchase of a specific program.
+    Placeholder view for handling the purchase of a specific offering.
     In a real application, this would integrate with a payment gateway.
     """
-    program = get_object_or_404(CoachingProgram, id=program_id, is_active=True)
+    offering = get_object_or_404(CoachOffering, id=offering_id, is_active=True)
     # This is a placeholder. A real implementation would handle payment processing.
-    return HttpResponse(f"This is the confirmation page for purchasing '{program.name}'.")
+    return HttpResponse(f"This is the confirmation page for purchasing '{offering.name}'.")
 
 # All other existing views (`booking_page`, `coach_settings_view`, `program_list_view`, etc.) remain here.
 
@@ -407,12 +485,12 @@ def offering_detail_view(request, offering_id):
             is_eligible = True
             
         # 3. Determine validity dates (Only applies to purchased programs, not taster credits)
-        active_programs = UserProgram.objects.filter(
+        active_offerings = UserOffering.objects.filter(
              user=user,
              end_date__gte=timezone.now().date()
         )
-        earliest_start_date = active_programs.order_by('start_date').values_list('start_date', flat=True).first()
-        latest_end_date = active_programs.order_by('-end_date').values_list('end_date', flat=True).first()
+        earliest_start_date = active_offerings.order_by('start_date').values_list('start_date', flat=True).first()
+        latest_end_date = active_offerings.order_by('-end_date').values_list('end_date', flat=True).first()
 
         
     elif offering.booking_type == 'price':
@@ -457,19 +535,21 @@ def create_session_view(request, offering_id):
             # Select the required number of credits (e.g., just the first one if credits_required is 1)
             credits_to_use = valid_credits[:offering.credits_required]
             
-            # *** Placeholder: Create CoachingSession object ***
-            # new_session = CoachingSession.objects.create(
-            #     user=request.user,
-            #     coach=offering.coach,
-            #     offering=offering,
-            #     start_time=parsed_start_time,
-            #     # ... other session details
-            # )
+            # *** Create CoachingSession object ***
+            # This is a placeholder for parsing the start time from the request
+            parsed_start_time = timezone.now() 
+            new_session = CoachingSession.objects.create(
+                client=request.user,
+                coach=offering.coach,
+                service_name=offering.name,
+                start_time=parsed_start_time,
+                end_time=parsed_start_time + timezone.timedelta(minutes=offering.duration_minutes)
+            )
             
             # Link the credits to the new session
-            # for credit in credits_to_use:
-            #     credit.session = new_session
-            #     credit.save()
+            for credit in credits_to_use:
+                credit.session = new_session
+                credit.save()
             
             return HttpResponse(f"Session booked using {offering.credits_required} Credit(s).", status=200)
 

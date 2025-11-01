@@ -7,7 +7,7 @@ from django.views.generic import TemplateView
 from django.http import HttpResponse
 from .models import MarketingPreference
 
-from coaching.models import UserProgram, SessionCredit
+from coaching.models import UserOffering, SessionCredit
 from django.utils import timezone
 
 class ProfileView(LoginRequiredMixin, TemplateView):
@@ -21,7 +21,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         context['marketing_preference'] = preference
         
         # Fetch coaching programs and credits
-        context['user_programs'] = UserProgram.objects.filter(user=self.request.user)
+        context['user_offerings'] = UserOffering.objects.filter(user=self.request.user)
         context['available_credits'] = SessionCredit.objects.filter(
             user=self.request.user, 
             session__isnull=True, 

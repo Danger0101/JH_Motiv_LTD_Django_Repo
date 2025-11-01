@@ -1,7 +1,8 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-from django.core.exceptions import ValidationError 
+from django.core.exceptions import ValidationError
+from dateutil.relativedelta import relativedelta
 
 
 class CoachingSession(models.Model):
@@ -124,14 +125,9 @@ class RecurringAvailability(models.Model):
 
 
 class CoachOffering(models.Model):
-    """Defines a specific service offered by a coach, now supporting both direct pricing and a new credit-based system."""
-    BOOKING_TYPE_CHOICES = [
-        ('credit', 'Credit-based'),
-        ('price', 'Direct Price'),
-    ]
-    coach = models.ForeignKey(
+    """Defines a specific, purchasable service offered by a coach."""
+    coaches = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
         related_name='offerings',
         limit_choices_to={'is_coach': True}
     )
@@ -139,39 +135,48 @@ class CoachOffering(models.Model):
     slug = models.SlugField(max_length=255, help_text="URL-friendly identifier.")
     description = models.TextField()
     duration_minutes = models.IntegerField(help_text="Duration in minutes (e.g., 60 or 90).")
-    booking_type = models.CharField(
-        max_length=10,
-        choices=BOOKING_TYPE_CHOICES,
-        default='credit',
-        help_text="Determines if this session is booked with credits or a direct price."
-    )
     price = models.DecimalField(
         max_digits=8, 
-        decimal_places=2, 
-        null=True, 
-        blank=True,
-        help_text="Required only if booking_type is 'Direct Price'."
+        decimal_places=2,
+        help_text="The price for this offering."
     )
-    credits_required = models.PositiveIntegerField(
+    credits_granted = models.PositiveIntegerField(
         default=1,
-        help_text="Number of credits required to book this session (if credit-based)."
+        help_text="Number of session credits granted upon purchase."
     )
+    duration_months = models.PositiveIntegerField(default=3, help_text="How many months of access this program grants.")
     is_active = models.BooleanField(default=True, help_text="Controls visibility on the public site.")
     rate = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text="The amount the coach will be paid for this offering.")
 
     class Meta:
         verbose_name = "Coach Offering"
         verbose_name_plural = "Coach Offerings"
-        unique_together = ('coach', 'slug') 
+        # unique_together = ('coach', 'slug') # Removed as coach is now ManyToMany
 
     def __str__(self):
-        return f"{self.name} by {self.coach.username}"
+        coach_names = ', '.join([coach.username for coach in self.coaches.all()])
+        return f"{self.name} by {coach_names}"
 
-    def clean(self):
-        if self.booking_type == 'price' and self.price is None:
-            raise ValidationError('Price is required for sessions with a direct price.')
-        if self.booking_type == 'credit' and self.price is not None:
-            self.price = None # Ensure price is null for credit-based offerings
+
+class UserOffering(models.Model):
+    """Links a user to a coaching offering they have purchased."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='purchased_offerings')
+    offering = models.ForeignKey(CoachOffering, on_delete=models.PROTECT, related_name='user_enrollments')
+    purchase_date = models.DateField(default=timezone.now)
+    start_date = models.DateField()
+    end_date = models.DateField(help_text="The last day the user can book sessions under this offering.")
+
+    class Meta:
+        ordering = ['-end_date']
+
+    def __str__(self):
+        return f"{self.user.username} enrolled in {self.offering.name}"
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.start_date = self.purchase_date
+            self.end_date = self.start_date + relativedelta(months=self.offering.duration_months)
+        super().save(*args, **kwargs)
 
 
 class CoachPayout(models.Model):
@@ -190,81 +195,18 @@ class CoachPayout(models.Model):
         return f"Payout of {self.amount} to {self.coach.username} - {self.status}"
 
 
-
-class CoachingProgram(models.Model):
-    """
-    Represents a purchasable coaching program that grants credits and access for a specific duration.
-    e.g., '3-Month Bi-Weekly Coaching'.
-    """
-    name = models.CharField(max_length=255)
-    description = models.TextField()
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    duration_months = models.PositiveIntegerField(help_text="How many months of access this program grants.")
-    credits_granted = models.PositiveIntegerField(help_text="Number of session credits granted upon purchase.")
-    is_active = models.BooleanField(default=True, help_text="Whether this program is available for purchase.")
-
-    def __str__(self):
-        return self.name
-
-
-class CoachProgramLink(models.Model):
-    """Links a specific coach to a CoachingProgram they are authorized to teach."""
-    coach = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        limit_choices_to={'is_coach': True},
-        related_name='program_links'
-    )
-    program = models.ForeignKey(
-        CoachingProgram,
-        on_delete=models.CASCADE,
-        related_name='coach_links'
-    )
-
-    class Meta:
-        unique_together = ('coach', 'program')
-        verbose_name = "Coach Program Link"
-    
-    def __str__(self):
-        return f"{self.coach.username} authorized for {self.program.name}"
-
-
-class UserProgram(models.Model):
-    """Links a user to a coaching program they have purchased.This tracks their access period."""
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='coaching_programs')
-    program = models.ForeignKey(CoachingProgram, on_delete=models.PROTECT, related_name='user_enrollments')
-    purchase_date = models.DateField(default=timezone.now)
-    start_date = models.DateField()
-    end_date = models.DateField(help_text="The last day the user can book sessions under this program.")
-
-    class Meta:
-        ordering = ['-end_date']
-
-    def __str__(self):
-        return f"{self.user.username} enrolled in {self.program.name}"
-
-    def save(self, *args, **kwargs):
-        if not self.pk:
-            self.start_date = self.purchase_date
-            self.end_date = self.start_date + timezone.timedelta(days=self.program.duration_months * 30) # Approximation
-        super().save(*args, **kwargs)
-
-
-
 class SessionCredit(models.Model):
     """Represents a single coaching session credit."""
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='session_credits')
     
-    # MODIFIED: Made null=True, blank=True to allow for free/taster credits
-    user_program = models.ForeignKey(
-        'UserProgram', 
+    user_offering = models.ForeignKey(
+        'UserOffering', 
         on_delete=models.CASCADE, 
         related_name='session_credits',
-        null=True, # Allows credits not tied to a purchase
+        null=True, 
         blank=True
     )
     
-    # NEW: Flag to track if this is the one-time free credit
     is_taster = models.BooleanField(default=False) 
     
     purchase_date = models.DateTimeField(auto_now_add=True)
@@ -288,13 +230,11 @@ class SessionCredit(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk:
-            # If it's a taster credit, set a shorter default expiration (e.g., 30 days)
+            if self.purchase_date is None:
+                self.purchase_date = timezone.now()
             if self.is_taster:
                 self.expiration_date = self.purchase_date + timezone.timedelta(days=30)
-            # If it's a purchased credit, set the program's defined expiration (or a default)
-            elif self.user_program and self.user_program.end_date:
-                 # Calculate expiration based on the program's end date (or similar logic)
-                 # For simplicity, we'll use the 365 days default, but a real app might use program end date
+            elif self.user_offering and self.user_offering.end_date:
                  self.expiration_date = self.purchase_date + timezone.timedelta(days=365)
             else:
                  self.expiration_date = self.purchase_date + timezone.timedelta(days=365)
@@ -325,17 +265,14 @@ class CreditApplication(models.Model):
         related_name='credit_applications'
     )
     
-    # Flag to identify if this application is for the free Taster Session
     is_taster = models.BooleanField(default=False)
     
-    # Application status and history
     status = models.CharField(
         max_length=1,
         choices=CREDIT_APP_STATUS_CHOICES,
         default=CREDIT_APP_STATUS_PENDING
     )
     
-    # Coach approval/denial tracking
     approved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -353,18 +290,15 @@ class CreditApplication(models.Model):
         limit_choices_to={'is_coach': True}
     )
     
-    # Timestamps
     created_at = models.DateTimeField(default=timezone.now)
     approved_at = models.DateTimeField(null=True, blank=True)
     denied_at = models.DateTimeField(null=True, blank=True)
     
-    # Coach's optional reason for denial
     denial_reason = models.TextField(blank=True)
 
     class Meta:
         verbose_name = "Credit Application"
         verbose_name_plural = "Credit Applications"
-        # Unique constraint: A user can only have one PENDING or APPROVED taster application
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'is_taster'], 
@@ -439,3 +373,21 @@ class SessionNote(models.Model):
 
     def __str__(self):
         return f"Note for session {self.session.id} by {self.coach.username}"
+
+
+class Goal(models.Model):
+    STATUS_CHOICES = [
+        ('IN_PROGRESS', 'In Progress'),
+        ('COMPLETED', 'Completed'),
+    ]
+
+    user_offering = models.ForeignKey(UserOffering, on_delete=models.CASCADE, related_name='goals')
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='IN_PROGRESS')
+    due_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title

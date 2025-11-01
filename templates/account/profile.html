@@ -75,19 +75,19 @@
         {% endif %}
 
     <div class="mt-12">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">My Coaching Programs</h2>
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">My Coaching Offerings</h2>
         <div class="bg-white p-6 rounded-lg shadow-lg">
             <ul class="space-y-4">
-                {% for user_program in user_programs %}
+                {% for user_offering in user_offerings %}
                 <li class="border-b pb-4 last:border-b-0">
-                    <h3 class="text-xl font-semibold text-gray-800">{{ user_program.program.name }}</h3>
-                    <p class="text-gray-600">Purchased on: {{ user_program.purchase_date|date:"M d, Y" }}</p>
-                    <p class="text-gray-600">Access valid from {{ user_program.start_date|date:"M d, Y" }} to {{ user_program.end_date|date:"M d, Y" }}</p>
+                    <h3 class="text-xl font-semibold text-gray-800">{{ user_offering.offering.name }}</h3>
+                    <p class="text-gray-600">Purchased on: {{ user_offering.purchase_date|date:"M d, Y" }}</p>
+                    <p class="text-gray-600">Access valid from {{ user_offering.start_date|date:"M d, Y" }} to {{ user_offering.end_date|date:"M d, Y" }}</p>
                 </li>
                 {% empty %}
                 <li>
-                    <p class="text-gray-500">You have not purchased any coaching programs yet.</p>
-                    <a href="{% url 'coaching:program_list' %}" class="text-indigo-600 hover:underline">View available programs</a>
+                    <p class="text-gray-500">You have not purchased any coaching offerings yet.</p>
+                    <a href="{% url 'coaching:offering_list' %}" class="text-indigo-600 hover:underline">View available offerings</a>
                 </li>
                 {% endfor %}
             </ul>
