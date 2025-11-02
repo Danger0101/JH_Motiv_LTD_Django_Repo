@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Application Status{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 py-12">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-2xl mx-auto bg-white p-8 border rounded-lg shadow-md text-center">
+
+            <h1 class="text-3xl font-bold text-gray-900 mb-4">
+                Your Application Status
+            </h1>
+
+            <p class="text-gray-600 mb-6">
+                {{ message|default:"You have an existing application for the Momentum Catalyst Session." }}
+            </p>
+
+            <div class="bg-gray-100 p-4 rounded-lg text-left mb-6">
+                <p class="font-semibold text-gray-800">Current Status: 
+                    <span class="font-normal text-blue-600">{{ application.get_status_display }}</span>
+                </p>
+                <p class="font-semibold text-gray-800">Application Date: 
+                    <span class="font-normal">{{ application.created_at|date:"F j, Y" }}</span>
+                </p>
+            </div>
+
+            {% if application.status == 'A' %} {# 'A' for Approved #}
+                <p class="text-gray-700 mb-6">
+                    Congratulations! Your application was approved. You have been granted one credit for a Momentum Catalyst Session. You can book your session now.
+                </p>
+                <a href="{% url 'coaching:offering_detail' offering_id=1 %}" class="w-full inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out text-lg">
+                    Book Your Session Now
+                </a>
+            {% else %}
+                <p class="text-gray-700">You will be notified by email once a coach has reviewed your application.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

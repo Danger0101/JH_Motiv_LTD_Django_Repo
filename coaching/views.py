@@ -1,10 +1,12 @@
 # coaching/views.py (Refactored Main File)
 
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.generic import TemplateView
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.decorators.http import require_http_methods
+import json
 from django.utils import timezone
 from django.db import transaction
 
@@ -12,8 +14,7 @@ from .utils import coach_is_valid
 
 # Import all API functions from the new modules (Already provided)
 from .api_views.vacation import coach_vacation_blocks, coach_vacation_block_detail
-from .api_views.availability import (
-    coach_recurring_availability_view,
+from .api_views.availability import ( # This is a placeholder, the view is defined below now.
     coach_specific_availability_view,
     coach_specific_availability_detail,
     coach_add_availability_modal_view,
@@ -42,7 +43,8 @@ from .models import (
 
     CoachSwapRequest,
 
-    CancellationPolicy,
+    CancellationPolicy, 
+    RecurringAvailability,
 
     SessionNote,
 
@@ -290,7 +292,7 @@ def apply_taster_view(request):
     existing_application = CreditApplication.objects.filter(
         user=user, 
         is_taster=True
-    ).exclude(status=CreditApplication.STATUS_DENIED).first() # Exclude DENIED to allow re-applying after denial
+    ).exclude(status='DENIED').first() # Exclude DENIED to allow re-applying after denial
     
     if existing_application:
         # User already applied or has a token. Redirect them to a status page.
@@ -306,7 +308,7 @@ def apply_taster_view(request):
         CreditApplication.objects.create(
             user=user,
             is_taster=True,
-            status=CreditApplication.STATUS_PENDING,
+            status='PENDING',
             # Additional form data (e.g., goals) could be saved here
         )
         
@@ -330,7 +332,7 @@ def coach_manage_taster_view(request):
         
     pending_applications = CreditApplication.objects.filter(
         is_taster=True, 
-        status=CreditApplication.STATUS_PENDING
+        status='PENDING'
     ).order_by('created_at')
     
     context = {
@@ -350,11 +352,11 @@ def approve_taster_credit_view(request, application_id):
 
     application = get_object_or_404(CreditApplication, id=application_id, is_taster=True)
 
-    if application.status != CreditApplication.STATUS_PENDING:
+    if application.status != 'PENDING':
         return HttpResponse("Application is not pending review.", status=400)
 
     # 1. Update the application status
-    application.status = CreditApplication.STATUS_APPROVED
+    application.status = 'APPROVED'
     application.approved_by = request.user
     application.approved_at = timezone.now()
     application.save()
@@ -383,10 +385,10 @@ def deny_taster_credit_view(request, application_id):
 
     application = get_object_or_404(CreditApplication, id=application_id, is_taster=True)
 
-    if application.status != CreditApplication.STATUS_PENDING:
+    if application.status != 'PENDING':
         return HttpResponse("Application is not pending review.", status=400)
     
-    application.status = CreditApplication.STATUS_DENIED
+    application.status = 'DENIED'
     application.denied_by = request.user
     application.denied_at = timezone.now()
     application.save()
@@ -448,7 +450,7 @@ def booking_page(request, coach_id):
     Displays all active service offerings for a specific coach.
     """
     coach = get_object_or_404(User, id=coach_id, is_coach=True)
-    offerings = CoachOffering.objects.filter(coach=coach, is_active=True)
+    offerings = CoachOffering.objects.filter(coaches=coach, is_active=True)
     
     context = {
         'coach': coach,
@@ -517,7 +519,11 @@ def create_session_view(request, offering_id):
     """Handles the final booking process."""
     if request.method == 'POST':
         offering = get_object_or_404(CoachOffering, id=offering_id)
-        # Assuming you parse start_time, etc., from request.POST here
+        # Placeholder: Parse start_time from the request.
+        # You will need to implement the actual parsing from your frontend data.
+        start_time_str = request.POST.get('start_time') # e.g., '2023-10-27T10:00:00Z'
+        # A robust implementation should handle parsing and timezone conversion.
+        parsed_start_time = timezone.now() # Replace with actual parsed time
 
         # 2. Credit Booking Logic (Transactional)
         if offering.credits_granted > 0:
@@ -560,5 +566,5 @@ def create_session_view(request, offering_id):
               # --- Price Booking Logic ---
               # Payment initiation/confirmation, then session creation
               return HttpResponse(f"Session booked via direct payment of £{offering.price}.", status=200)
-
+    
     return redirect('coaching:offering_detail', offering_id=offering_id)

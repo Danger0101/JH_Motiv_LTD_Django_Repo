@@ -8,6 +8,7 @@ from django.utils import timezone
 import json
 import datetime
 from ..models import CoachVacationBlock, CoachingSession, RescheduleRequest
+from ..utils import coach_is_valid
 
 @login_required
 @require_http_methods(["GET", "POST"])

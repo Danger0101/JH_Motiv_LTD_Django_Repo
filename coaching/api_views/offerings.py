@@ -21,7 +21,7 @@ def coach_offerings_list_create(request):
     coach = request.user
     
     if request.method == 'GET':
-        offerings = CoachOffering.objects.filter(coach=coach).order_by('name')
+        offerings = CoachOffering.objects.filter(coaches=coach).order_by('name')
         
         # HTMX FIX: Return HTML fragment, not raw JSON
         return render(request, 'coaching/partials/offerings_list_fragment.html', {'offerings': offerings})
@@ -36,8 +36,7 @@ def coach_offerings_list_create(request):
             if int(data['duration_minutes']) <= 0:
                 return JsonResponse({"error": "Duration must be positive."}, status=400)
 
-            CoachOffering.objects.create(
-                coach=coach,
+            new_offering = CoachOffering.objects.create(
                 name=data['name'],
                 slug=data['slug'],
                 description=data.get('description', ''),
@@ -45,6 +44,8 @@ def coach_offerings_list_create(request):
                 price=data.get('price', 0.00),
                 is_active=data.get('is_active', 'off') == 'on'
             )
+            # Add the current coach to the ManyToManyField
+            new_offering.coaches.add(coach)
             
             response = HttpResponse(status=201)
             response['HX-Trigger'] = 'offering-updated'
@@ -63,7 +64,7 @@ def coach_offerings_detail(request, offering_id):
     if not coach_is_valid(request.user):
         return JsonResponse({"error": "Unauthorized access."}, status=403)
 
-    offering = get_object_or_404(CoachOffering, pk=offering_id, coach=request.user)
+    offering = get_object_or_404(CoachOffering, pk=offering_id, coaches=request.user)
 
     if request.method == 'GET':
         data = {"id": offering.id, "name": offering.name, "slug": offering.slug, 
@@ -96,3 +97,35 @@ def coach_offerings_detail(request, offering_id):
         response = HttpResponse(status=200)
         response['HX-Trigger'] = 'offering-updated'
         return response
+
+@login_required
+@require_http_methods(["POST"])
+def add_coach_to_offering(request, offering_id):
+    """Allows a coach to add themselves to an offering."""
+    if not coach_is_valid(request.user):
+        return HttpResponse("Unauthorized", status=403)
+
+    offering = get_object_or_404(CoachOffering, id=offering_id)
+    offering.coaches.add(request.user)
+    
+    # This response is for HTMX to replace the button
+    return render(request, 'coaching/partials/_offering_coach_actions.html', {
+        'offering': offering,
+        'user': request.user
+    })
+
+@login_required
+@require_http_methods(["POST"])
+def remove_coach_from_offering(request, offering_id):
+    """Allows a coach to remove themselves from an offering."""
+    if not coach_is_valid(request.user):
+        return HttpResponse("Unauthorized", status=403)
+
+    offering = get_object_or_404(CoachOffering, id=offering_id)
+    offering.coaches.remove(request.user)
+
+    # This response is for HTMX to replace the button
+    return render(request, 'coaching/partials/_offering_coach_actions.html', {
+        'offering': offering,
+        'user': request.user
+    })

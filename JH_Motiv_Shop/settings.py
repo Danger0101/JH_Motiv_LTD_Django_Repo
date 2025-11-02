@@ -116,7 +116,7 @@ SITE_ID = 1
 # General settings
 ACCOUNT_ADAPTER = 'accounts.adapter.AccountAdapter'
 ACCOUNT_RATE_LIMITS = {
-    'login_failed': '5/min', 
+    'login_failed': '50/m', 
 }
 
 # Forms: Link to custom forms
@@ -126,8 +126,8 @@ ACCOUNT_FORMS = {
 
 # Email settings
 ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
 ACCOUNT_EMAIL_VERIFICATION = 'optional'
 
 

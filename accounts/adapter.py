@@ -1,6 +1,7 @@
 # accounts/adapter.py
 
 from allauth.account.adapter import DefaultAccountAdapter
+from django.http import HttpResponse
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 

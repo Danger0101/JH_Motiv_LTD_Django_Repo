@@ -90,6 +90,10 @@
         {% for offering in offerings %}
         <div class="snap-center flex-shrink-0 w-80 md:w-96">
           {% include "coaching/_offering_card.html" %} 
+          
+          {% if user.is_authenticated and user.is_coach %}
+            {% include "coaching/partials/_offering_coach_actions.html" %}
+          {% endif %}
         </div>
         {% empty %}
         <p class="text-center w-full text-gray-500">No coaching sessions are currently available. Please check back soon.</p>
@@ -184,7 +188,7 @@
         No sales pitch, just 90 minutes of pure, high-impact coaching. This complimentary session is designed to give you <strong>instant clarity</strong> and a direct experience of the value we provide before you commit.
       </p>
       <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-        <a href="/coaching/apply-taster" class="bg-white text-blue-600 hover:bg-gray-100 font-bold py-3 px-8 rounded-full transition duration-300 ease-in-out text-lg">
+        <a href="{% url 'coaching:apply_taster' %}" class="bg-white text-blue-600 hover:bg-gray-100 font-bold py-3 px-8 rounded-full transition duration-300 ease-in-out text-lg">
           Apply for a Free Session
         </a>
         <a href="#packages" class="bg-blue-800 hover:bg-blue-900 text-white font-bold py-3 px-8 rounded-full transition duration-300 ease-in-out text-lg">

@@ -32,7 +32,6 @@ urlpatterns = [
     # Recurring Weekly Schedule Management
     path('api/availability/recurring/', availability.coach_recurring_availability_view, name='api_recurring_availability'),
     
-    
     # Specific One-Off Slot Management
     path('api/availability/specific/', availability.coach_specific_availability_view, name='api_specific_availability'),
     path('api/availability/specific/<int:slot_id>/', availability.coach_specific_availability_detail, name='api_specific_availability_detail'),
@@ -40,6 +39,10 @@ urlpatterns = [
     # --- OFFERINGS API PATHS (Imported from Modules) ---
     path('api/offerings/', offerings.coach_offerings_list_create, name='api_offerings_list_create'),
     path('api/offerings/<int:offering_id>/', offerings.coach_offerings_detail, name='api_offerings_detail'),
+    # Coach self-assignment to offerings
+    path('api/offerings/<int:offering_id>/add-coach/', offerings.add_coach_to_offering, name='add_coach_to_offering'),
+    path('api/offerings/<int:offering_id>/remove-coach/', offerings.remove_coach_from_offering, name='remove_coach_from_offering'),
+
 
     # --- RESCHEDULE REQUEST ---
     path('reschedule/<uuid:token>/', views.reschedule_request_view, name='reschedule_request'),

@@ -140,42 +140,36 @@ def coach_recurring_availability_view(request):
                 "is_available": slot.is_available,
             })
         
-        timezone_obj = getattr(coach, 'user_timezone', timezone.get_current_timezone())
-        timezone_str = str(timezone_obj) 
-
         context = {
             'schedule': json.dumps(data), 
-            'timezone': timezone_str 
         }
         return render(request, 'coaching/partials/_recurring_availability_form.html', context)
 
     elif request.method == 'POST':
         try:
-            if not request.content_type == 'application/json':
+            if 'application/json' not in request.content_type:
                 return JsonResponse({"error": "Invalid content type. Please submit data as JSON."}, status=400)
             
             data = json.loads(request.body)
             new_schedule_slots = data.get('schedule', [])
 
             with transaction.atomic():
-                RecurringAvailability.objects.filter(coach=coach).delete()
-
                 for slot_data in new_schedule_slots:
-                    if slot_data.get('is_available', False):
-                        day = int(slot_data['day_of_week'])
-                        start_time = datetime.time.fromisoformat(slot_data['start_time'])
-                        end_time = datetime.time.fromisoformat(slot_data['end_time'])
-
-                        if start_time >= end_time:
-                            raise ValueError(f"On {calendar.day_name[day]}, start time must be before end time.")
-
-                        RecurringAvailability.objects.create(
-                            coach=coach,
-                            day_of_week=day,
-                            start_time=start_time,
-                            end_time=end_time,
-                            is_available=True
-                        )
+                    day = int(slot_data['day_of_week'])
+                    start_time = datetime.time.fromisoformat(slot_data['start_time'])
+                    end_time = datetime.time.fromisoformat(slot_data['end_time'])
+                    is_available = slot_data.get('is_available', False)
+                    
+                    if is_available and start_time >= end_time:
+                        raise ValueError(f"On {calendar.day_name[day]}, start time must be before end time.")
+                    
+                    RecurringAvailability.objects.update_or_create(
+                        coach=coach,
+                        day_of_week=day,
+                        defaults={
+                            'start_time': start_time, 'end_time': end_time, 'is_available': is_available
+                        }
+                    )
 
             response = JsonResponse({"success": True, "message": "Weekly schedule updated successfully."}, status=200)
             response['HX-Trigger'] = 'recurring-schedule-updated'
@@ -187,37 +181,6 @@ def coach_recurring_availability_view(request):
             return JsonResponse({"error": f"An unexpected error occurred: {e}"}, status=500)
 
 
-@login_required
-@require_http_methods(["POST"])
-def coach_recurring_remove_view(request):
-    if not coach_is_valid(request.user):
-        return HttpResponse("Unauthorized", status=403)
-    
-    coach = request.user
-    data = request.POST
-    action_type = data.get('action_type')
-
-    try:
-        with transaction.atomic():
-            if action_type == 'remove_all':
-                count = RecurringAvailability.objects.filter(coach=coach).count()
-                RecurringAvailability.objects.filter(coach=coach).delete()
-                message = f"Successfully wiped all {count} recurring schedule entries."
-
-            elif action_type == 'remove_day':
-                day = int(data.get('day_of_week'))
-                RecurringAvailability.objects.filter(coach=coach, day_of_week=day).delete()
-                message = f"Successfully removed recurring schedule for day {day}."
-            
-            else:
-                return HttpResponse("Invalid removal action specified.", status=400)
-                
-        response = HttpResponse(message, status=200)
-        response['HX-Trigger'] = 'recurring-schedule-updated'
-        return response
-
-    except Exception as e:
-        return HttpResponse(f"Error during removal: {e}", status=400)
 # =======================================================
 # SPECIFIC AVAILABILITY API
 # =======================================================

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Apply for a Momentum Catalyst Session{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 py-12">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-2xl mx-auto bg-white p-8 border rounded-lg shadow-md text-center">
+
+            <h1 class="text-3xl font-bold text-gray-900 mb-4">
+                Apply for Your Momentum Catalyst Session
+            </h1>
+
+            <p class="text-gray-600 mb-6">
+                This complimentary 90-minute session is designed to give you <strong>instant clarity</strong> and a direct experience of the value we provide before you commit. There is no sales pitch, just pure, high-impact coaching.
+            </p>
+
+            <form method="post" action="{% url 'coaching:apply_taster' %}">
+                {% csrf_token %}
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out text-lg">
+                    Submit My Application
+                </button>
+            </form>
+
+            <p class="text-sm text-gray-500 mt-4">
+                *After submission, a coach will review your application. This is to ensure a perfect fit and prevent abuse. You will be notified of the outcome.*
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
