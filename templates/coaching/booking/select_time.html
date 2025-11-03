@@ -15,7 +15,9 @@
             <div class="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
                 <div>
                     <p class="text-sm text-gray-600">Duration</p>
-                    <p class="font-semibold">{{ offering.duration_minutes }} minutes</p>
+                    <p class="font-semibold">
+                        {% if offering.is_full_day %}Full Day{% else %}{{ offering.duration_minutes }} minutes{% endif %}
+                    </p>
                 </div>
             <div>
                 {% if offering.credits_granted > 0 %}

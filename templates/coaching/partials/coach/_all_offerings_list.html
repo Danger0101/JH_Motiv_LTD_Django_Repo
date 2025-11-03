@@ -6,7 +6,9 @@
             <div class="p-4 bg-white border border-gray-200 rounded-lg shadow-sm flex justify-between items-center">
                 <div>
                     <h4 class="font-bold text-gray-900">{{ offering.name }}</h4>
-                    <p class="text-sm text-gray-500">{{ offering.duration_minutes }} min &bull; £{{ offering.price }}</p>
+                    <p class="text-sm text-gray-500">
+                        {% if offering.is_full_day %}Full Day{% else %}{{ offering.duration_minutes }} min{% endif %} &bull; £{{ offering.price }}
+                    </p>
                 </div>
                 <div class="w-24 flex-shrink-0">
                     {% include "coaching/partials/coach/_offering_coach_actions.html" with offering=offering user=request.user %}
@@ -25,7 +27,9 @@
             <div class="p-4 bg-white border border-gray-200 rounded-lg shadow-sm flex justify-between items-center">
                 <div>
                     <h4 class="font-bold text-gray-900">{{ offering.name }}</h4>
-                    <p class="text-sm text-gray-500">{{ offering.duration_minutes }} min &bull; £{{ offering.price }}</p>
+                    <p class="text-sm text-gray-500">
+                        {% if offering.is_full_day %}Full Day{% else %}{{ offering.duration_minutes }} min{% endif %} &bull; £{{ offering.price }}
+                    </p>
                 </div>
                 <div class="w-24 flex-shrink-0">
                     {% include "coaching/partials/coach/_offering_coach_actions.html" with offering=offering user=request.user %}

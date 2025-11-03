@@ -123,20 +123,15 @@ class RecurringAvailability(models.Model):
     
     start_time = models.TimeField(help_text="Start time for this day's availability.")
     end_time = models.TimeField(help_text="End time for this day's availability.")
-    is_available = models.BooleanField(
-        default=True, 
-        help_text="If set to False, the coach is unavailable for the entire day."
-    )
 
     class Meta:
         verbose_name = "Recurring Availability Block"
         verbose_name_plural = "Recurring Availability Blocks"
         ordering = ['day_of_week', 'start_time']
-        unique_together = ('coach', 'day_of_week')
 
     def __str__(self):
         day = self.get_day_of_week_display()
-        status = "Available" if self.is_available else "Unavailable"
+        status = "Available"
         start_time_str = self.start_time.strftime('%I:%M %p') if self.start_time else '--:--'
         end_time_str = self.end_time.strftime('%I:%M %p') if self.end_time else '--:--'
         return f"{self.coach.username}: {day} ({start_time_str} - {end_time_str})"
@@ -152,7 +147,11 @@ class CoachOffering(models.Model):
     name = models.CharField(max_length=255, help_text="Public-facing service name.")
     slug = models.SlugField(max_length=255, blank=True, help_text="URL-friendly identifier. Auto-generated if left blank.")
     description = models.TextField()
-    duration_minutes = models.IntegerField(help_text="Duration in minutes (e.g., 60 or 90).")
+    
+    # Duration can be by minutes or a full day
+    duration_minutes = models.IntegerField(null=True, blank=True, help_text="Duration in minutes (e.g., 60). Leave blank for full-day sessions.")
+    is_full_day = models.BooleanField(default=False, help_text="Check if this is a full-day session that blocks the entire day.")
+    
     price = models.DecimalField(
         max_digits=8, 
         decimal_places=2,
@@ -165,6 +164,8 @@ class CoachOffering(models.Model):
     duration_months = models.PositiveIntegerField(default=3, help_text="How many months of access this program grants.")
     is_active = models.BooleanField(default=True, help_text="Controls visibility on the public site.")
     rate = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text="The amount the coach will be paid for this offering.")
+    
+    terms_and_conditions = models.TextField(blank=True, help_text="Optional: Any specific terms and conditions for this offering.")
 
     class Meta:
         verbose_name = "Coach Offering"
@@ -179,6 +180,19 @@ class CoachOffering(models.Model):
         if not self.slug:
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
+
+    def clean(self):
+        """
+        Custom validation to ensure duration is set correctly.
+        """
+        if self.is_full_day and self.duration_minutes:
+            raise ValidationError("A full-day session cannot have a specific minute duration.")
+        if not self.is_full_day and not self.duration_minutes:
+            raise ValidationError("A non-full-day session must have a duration in minutes.")
+        if self.duration_minutes and self.duration_minutes <= 0:
+            raise ValidationError("Duration in minutes must be a positive number.")
+
+
 
 
 class UserOffering(models.Model):
@@ -425,3 +439,17 @@ class Goal(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class PreSessionQuestion(models.Model):
+    """A question that can be attached to an offering for clients to answer before a session."""
+    offering = models.ForeignKey(CoachOffering, on_delete=models.CASCADE, related_name='pre_session_questions')
+    text = models.CharField(max_length=500, help_text="The question text (e.g., 'What is your primary goal for this session?')")
+    is_required = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0, help_text="Order in which the questions are displayed.")
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return self.text

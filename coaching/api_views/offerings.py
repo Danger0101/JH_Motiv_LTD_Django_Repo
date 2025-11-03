@@ -22,39 +22,59 @@ def coach_offerings_list_create(request):
     
     if request.method == 'GET':
         # This view now ONLY handles the "My Offerings" tab.
-        # It shows offerings created by the coach.
-        offerings = CoachOffering.objects.filter(coaches=coach).order_by('name')
+        # It shows offerings the coach is part of.
+        offerings = CoachOffering.objects.filter(coaches=coach).prefetch_related('pre_session_questions').order_by('name')
         return render(request, 'coaching/partials/coach/_my_offerings_list.html', {'offerings': offerings})
 
     elif request.method == 'POST':
         try:
             data = request.POST 
+            offering_id = data.get('offering_id')
             
-            if not all([data.get('name'), data.get('slug'), data.get('duration_minutes')]):
-                return JsonResponse({"error": "Missing required fields."}, status=400)
-            
-            if int(data['duration_minutes']) <= 0:
-                return JsonResponse({"error": "Duration must be positive."}, status=400)
+            # Prepare data for create or update
+            offering_data = {
+                'name': data.get('name'),
+                'description': data.get('description', ''),
+                'price': data.get('price', 0.00),
+                'credits_granted': data.get('credits_granted', 1),
+                'duration_months': data.get('duration_months', 3),
+                'is_active': data.get('is_active') == 'on',
+                'is_full_day': data.get('is_full_day') == 'on',
+                'duration_minutes': data.get('duration_minutes') if data.get('duration_minutes') else None,
+                'terms_and_conditions': data.get('terms_and_conditions', ''),
+            }
 
-            new_offering = CoachOffering.objects.create(
-                name=data['name'],
-                slug=data['slug'],
-                description=data.get('description', ''),
-                duration_minutes=data['duration_minutes'],
-                price=data.get('price', 0.00),
-                is_active=data.get('is_active', 'off') == 'on'
-            )
-            # Add the current coach to the ManyToManyField
-            new_offering.coaches.add(coach)
-            
-            response = HttpResponse(status=201)
-            response['HX-Trigger'] = 'offering-updated'
-            return response
+            if offering_id: # This is an UPDATE
+                offering = get_object_or_404(CoachOffering, pk=offering_id, coaches=coach)
+                for key, value in offering_data.items():
+                    setattr(offering, key, value)
+                offering.full_clean()
+                offering.save()
+            else: # This is a CREATE
+                offering = CoachOffering(**offering_data)
+                offering.full_clean()
+                offering.save()
+                offering.coaches.add(coach)
+
+            # Handle Pre-session Questions
+            question_texts = request.POST.getlist('pre_session_questions')
+            offering.pre_session_questions.all().delete() # Simple approach: delete and re-create
+            for i, text in enumerate(question_texts):
+                if text.strip():
+                    PreSessionQuestion.objects.create(offering=offering, text=text, order=i)
+
+            # After saving, re-render the form to show the updated state
+            offerings = CoachOffering.objects.filter(coaches=coach).prefetch_related('pre_session_questions').order_by('name')
+            return render(request, 'coaching/partials/coach/_my_offerings_list.html', {'offerings': offerings, 'success_message': 'Offering saved successfully!'})
         
         except IntegrityError:
-            return JsonResponse({"error": "An offering with that slug already exists for this coach."}, status=400)
+            return HttpResponse("An offering with that name already exists (slug must be unique).", status=400)
+        except ValidationError as e:
+            # Convert validation error to a user-friendly message
+            error_message = ". ".join(e.messages)
+            return HttpResponse(error_message, status=400)
         except Exception as e:
-            return JsonResponse({"error": f"Creation failed: {e}"}, status=400)
+            return HttpResponse(f"An unexpected error occurred: {e}", status=400)
 
 
 @login_required

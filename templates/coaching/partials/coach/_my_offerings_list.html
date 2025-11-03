@@ -1,40 +1,89 @@
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-    <div class="p-4 border rounded-lg bg-indigo-50">
-        <h3 class="font-medium text-indigo-700 mb-3">Create New Service</h3>
-        <form hx-post="{% url 'coaching:api_offerings_list_create' %}" 
-              hx-target="#offerings-list-container" 
-              hx-swap="innerHTML">
-            {% csrf_token %}
-            <div class="space-y-3 text-sm">
-                <input type="text" name="name" placeholder="Service Name (e.g., Clarity Call)" required class="p-2 border rounded w-full text-gray-800">
-                <input type="text" name="slug" placeholder="Slug (e.g., clarity-call)" required class="p-2 border rounded w-full text-gray-800">
-                <div class="flex space-x-2">
-                    <input type="number" name="duration_minutes" placeholder="Duration (mins)" required min="15" step="15" class="p-2 border rounded w-1/2 text-gray-800">
-                    <input type="number" name="price" placeholder="Price (e.g., 99.00)" required step="0.01" class="p-2 border rounded w-1/2 text-gray-800">
+<div x-data="offeringManager()">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Form for Creating/Editing -->
+        <div class="p-4 border rounded-lg bg-indigo-50">
+            <h3 class="font-medium text-indigo-700 mb-3" x-text="isEditing ? 'Edit Offering' : 'Create New Offering'"></h3>
+            <form id="offering-form" hx-post="{% url 'coaching:api_offerings_list_create' %}" hx-target="#offerings-list-container" hx-swap="innerHTML">
+                {% csrf_token %}
+                <input type="hidden" name="offering_id" x-model="formData.id">
+                <div class="space-y-3 text-sm">
+                    <input type="text" name="name" placeholder="Offering Name" required class="p-2 border rounded w-full" x-model="formData.name">
+                    <textarea name="description" placeholder="Description..." rows="3" class="p-2 border rounded w-full" x-model="formData.description"></textarea>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" name="price" placeholder="Price (£)" required step="0.01" class="p-2 border rounded w-full" x-model="formData.price">
+                        <input type="number" name="credits_granted" placeholder="# of Sessions" required min="1" class="p-2 border rounded w-full" x-model="formData.credits_granted">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 items-center">
+                        <input type="number" name="duration_months" placeholder="Access (Months)" required min="1" class="p-2 border rounded w-full" x-model="formData.duration_months">
+                        <div class="flex items-center p-2">
+                            <input type="checkbox" name="is_active" id="is_active_form" class="h-4 w-4" x-model="formData.is_active">
+                            <label for="is_active_form" class="ml-2 text-gray-700">Is Active</label>
+                        </div>
+                    </div>
+                    <div class="border-t pt-3">
+                        <div class="flex items-center p-2">
+                            <input type="checkbox" name="is_full_day" id="is_full_day_form" class="h-4 w-4" x-model="formData.is_full_day">
+                            <label for="is_full_day_form" class="ml-2 text-gray-700">Full-Day Session (blocks entire day)</label>
+                        </div>
+                        <div x-show="!formData.is_full_day">
+                            <input type="number" name="duration_minutes" placeholder="Duration (mins)" min="15" step="15" class="p-2 border rounded w-full" x-model="formData.duration_minutes">
+                        </div>
+                    </div>
+                    <div class="border-t pt-3">
+                        <h4 class="font-medium text-gray-700 mb-2">Pre-Session Questions (Optional)</h4>
+                        <div id="questions-container" class="space-y-2">
+                            <template x-for="(question, index) in formData.questions" :key="index">
+                                <div class="flex items-center space-x-2">
+                                    <input type="text" name="pre_session_questions" class="p-2 border rounded w-full" x-model="question.text">
+                                    <button type="button" @click="removeQuestion(index)" class="text-red-500 hover:text-red-700">&times;</button>
+                                </div>
+                            </template>
+                        </div>
+                        <button type="button" @click="addQuestion()" class="text-indigo-600 text-xs mt-2">+ Add Question</button>
+                    </div>
+                    <textarea name="terms_and_conditions" placeholder="Terms & Conditions (Optional)..." rows="3" class="p-2 border rounded w-full" x-model="formData.terms_and_conditions"></textarea>
+                    
+                    <div class="flex space-x-2">
+                        <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition w-full">Save Offering</button>
+                        <button type="button" @click="resetForm()" x-show="isEditing" class="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600 transition">Cancel</button>
+                    </div>
                 </div>
-                <textarea name="description" placeholder="Brief service description..." rows="3" class="p-2 border rounded w-full text-gray-800"></textarea>
-                <div class="flex items-center">
-                    <input type="checkbox" name="is_active" id="is_active_new" checked class="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
-                    <label for="is_active_new" class="ml-2 text-gray-700">Service is Active</label>
-                </div>
-                <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition w-full">
-                    Add New Offering 
-                </button>
-            </div>
-        </form>
-    </div>
+            </form>
+        </div>
 
-    <div>
-        <h3 class="text-lg font-medium text-gray-900 mb-3">Your Created Offerings</h3>
-        <div class="space-y-3">
-            {% for offering in offerings %}
-            <div class="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
-                <h4 class="font-bold text-gray-900">{{ offering.name }}</h4>
-                <p class="text-sm text-gray-500">{{ offering.duration_minutes }} min &bull; £{{ offering.price }}</p>
+        <!-- List of Existing Offerings -->
+        <div>
+            <h3 class="text-lg font-medium text-gray-900 mb-3">Your Offerings</h3>
+            <div class="space-y-3">
+                {% for offering in offerings %}
+                <div class="p-4 bg-white border border-gray-200 rounded-lg shadow-sm flex justify-between items-center">
+                    <div>
+                        <h4 class="font-bold text-gray-900">{{ offering.name }}</h4>
+                        <p class="text-sm text-gray-500">{{ offering.duration_minutes|default:"Full Day" }} min &bull; £{{ offering.price }}</p>
+                    </div>
+                    <button @click="editOffering({{ offering.id }})" class="text-indigo-600 hover:underline text-sm font-semibold">Edit</button>
+                </div>
+                <script id="offering-data-{{ offering.id }}" type="application/json">
+                    {
+                        "id": {{ offering.id }},
+                        "name": "{{ offering.name|escapejs }}",
+                        "description": "{{ offering.description|escapejs }}",
+                        "price": "{{ offering.price }}",
+                        "credits_granted": {{ offering.credits_granted }},
+                        "duration_months": {{ offering.duration_months }},
+                        "is_active": {{ offering.is_active|yesno:"true,false" }},
+                        "is_full_day": {{ offering.is_full_day|yesno:"true,false" }},
+                        "duration_minutes": "{{ offering.duration_minutes|default:'' }}",
+                        "terms_and_conditions": "{{ offering.terms_and_conditions|escapejs }}",
+                        "questions": [
+                            {% for q in offering.pre_session_questions.all %}{"text": "{{ q.text|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}
+                        ]
+                    }
+                </script>
+                {% empty %}
+                <p class="text-gray-500 text-sm p-3">You have not joined any offerings yet.</p>
+                {% endfor %}
             </div>
-            {% empty %}
-            <p class="text-gray-500 text-sm p-3">You have not created any offerings yet.</p>
-            {% endfor %}
         </div>
     </div>
 </div>

@@ -24,7 +24,11 @@
                 <ul class="text-sm text-gray-600 space-y-2">
                     <li class="flex items-center">
                         <span class="text-green-500 mr-2">✔</span>
+                        {% if offering.is_full_day %}
+                        <span>Full Day Session</span>
+                        {% else %}
                         <span>{{ offering.duration_minutes }} minutes session</span>
+                        {% endif %}
                     </li>
                 </ul>
             </div>

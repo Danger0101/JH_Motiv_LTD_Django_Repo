@@ -47,10 +47,10 @@ def build_availability_grid(coach, offering, year, month, current_month_obj, tod
     coach_tz = pytz.timezone(coach_tz_str)
     
     # --- Data Fetching ---
-    recurring_map = {
-        r.day_of_week: {'start': r.start_time, 'end': r.end_time, 'available': r.is_available}
-        for r in RecurringAvailability.objects.filter(coach=coach)
-    }
+    # Fetch all recurring slots and group them by day of the week
+    recurring_slots_by_day = [[] for _ in range(7)]
+    for r in RecurringAvailability.objects.filter(coach=coach):
+        recurring_slots_by_day[r.day_of_week].append({'start': r.start_time, 'end': r.end_time})
 
     specific_map = {
         s.date: {'start': s.start_time, 'end': s.end_time, 'available': s.is_available}
@@ -81,7 +81,6 @@ def build_availability_grid(coach, offering, year, month, current_month_obj, tod
         return (False, False)
         
     final_grid = []
-    session_duration = datetime.timedelta(minutes=offering.duration_minutes)
 
     # Convert existing session times to a set of start times for quick lookup
     booked_slots_utc = set()
@@ -90,6 +89,10 @@ def build_availability_grid(coach, offering, year, month, current_month_obj, tod
 
     def generate_slots(day_date, start_time, end_time):
         """Generate bookable slots for a given time range."""
+        # This should only run for offerings with a minute duration
+        if not offering.duration_minutes:
+            return []
+        session_duration = datetime.timedelta(minutes=offering.duration_minutes)
         slots = []
         current_time = coach_tz.localize(datetime.datetime.combine(day_date, start_time))
         end_datetime = coach_tz.localize(datetime.datetime.combine(day_date, end_time))
@@ -111,7 +114,7 @@ def build_availability_grid(coach, offering, year, month, current_month_obj, tod
             user_start_dt = current_time.astimezone(user_tz)
             slots.append({
                 'start_time_iso': current_time.isoformat(),
-                'start_time_display': user_start_dt.strftime("%-I:%M %p"),
+                'start_time_display': user_start_dt.strftime("%I:%M %p"),
             })
             current_time += session_duration
         
@@ -131,6 +134,7 @@ def build_availability_grid(coach, offering, year, month, current_month_obj, tod
                 'is_vacation': False,
                 'is_outside_program': False,
                 'is_specific': False,
+                'is_bookable_full_day': False,
                 'available_slots': []
             }
 
@@ -147,16 +151,25 @@ def build_availability_grid(coach, offering, year, month, current_month_obj, tod
                 week_data.append(merged_day)
                 continue
             
-            # Determine the base availability for the day
-            specific_slot = specific_map.get(day_date)
-            if specific_slot:
-                merged_day['is_specific'] = True
-                if specific_slot['available']:
-                    merged_day['available_slots'] = generate_slots(day_date, specific_slot['start'], specific_slot['end'])
+            # Handle Full-Day vs. Slot-Based Offerings
+            if offering.is_full_day:
+                # For full-day offerings, check if the day is free
+                day_has_sessions = any(s.astimezone(coach_tz).date() == day_date for s in booked_slots_utc)
+                if not day_has_sessions and day_date >= today:
+                    merged_day['is_bookable_full_day'] = True
             else:
-                base_slot = recurring_map.get(day_of_week_num)
-                if base_slot and base_slot['available']:
-                    merged_day['available_slots'] = generate_slots(day_date, base_slot['start'], base_slot['end'])
+                # For slot-based offerings, generate time slots
+                specific_slot = specific_map.get(day_date)
+                if specific_slot:
+                    merged_day['is_specific'] = True
+                    if specific_slot['available']:
+                        merged_day['available_slots'] = generate_slots(day_date, specific_slot['start'], specific_slot['end'])
+                else:
+                    # Iterate over all recurring slots for this day of the week
+                    all_slots_for_day = []
+                    for base_slot in recurring_slots_by_day[day_of_week_num]:
+                        all_slots_for_day.extend(generate_slots(day_date, base_slot['start'], base_slot['end']))
+                    merged_day['available_slots'] = sorted(all_slots_for_day, key=lambda x: x['start_time_iso'])
             
             week_data.append(merged_day)
         final_grid.append(week_data)
@@ -173,67 +186,62 @@ def coach_recurring_availability_view(request):
     Handles GET and POST for a coach's recurring availability using a Django FormSet.
     """
     if not coach_is_valid(request.user):
-        return HttpResponse("Unauthorized", status=403)
+        return JsonResponse({"error": "Unauthorized access."}, status=403)
 
     coach = request.user
 
-    # Define a FormSet for RecurringAvailability
-    RecurringAvailabilityFormSet = modelformset_factory(
-        RecurringAvailability,
-        fields=('is_available', 'start_time', 'end_time'),
-        extra=0, # We will manage the 7 forms manually
-        widgets={
-            'start_time': forms.TimeInput(attrs={'type': 'time', 'class': 'p-1 border rounded w-full'}, format='%H:%M'),
-            'end_time': forms.TimeInput(attrs={'type': 'time', 'class': 'p-1 border rounded w-full'}, format='%H:%M'),
-        }
-    )
-
     if request.method == 'POST':
-        formset = RecurringAvailabilityFormSet(request.POST, queryset=RecurringAvailability.objects.filter(coach=coach))
-        if formset.is_valid():
-            instances = formset.save(commit=False)
-            for instance in instances:
-                instance.coach = coach
-                instance.save()
-            
-            # Re-fetch the formset after saving to show a fresh form
-            queryset = RecurringAvailability.objects.filter(coach=coach).order_by('day_of_week')
-            formset = RecurringAvailabilityFormSet(queryset=queryset)
-            
-            # Add the 'days' list to the context for re-rendering
-            days = [d[1] for d in RecurringAvailability.DAY_CHOICES]
-            
-            # Add a success message and trigger the calendar update via headers
-            context = {'formset': formset, 'days': days, 'success_message': 'Weekly schedule saved successfully!'}
+        try:
+            data = json.loads(request.body)
+            schedule_data = data.get('schedule', [])
+
+            with transaction.atomic():
+                # Delete old schedule
+                RecurringAvailability.objects.filter(coach=coach).delete()
+
+                # Create new schedule from payload
+                for day_index, day_data in enumerate(schedule_data):
+                    for slot in day_data['slots']:
+                        start_time = datetime.time.fromisoformat(slot['start'])
+                        end_time = datetime.time.fromisoformat(slot['end'])
+
+                        if start_time >= end_time:
+                            raise ValueError(f"On {day_data['name']}, start time must be before end time.")
+
+                        RecurringAvailability.objects.create(
+                            coach=coach,
+                            day_of_week=day_index,
+                            start_time=start_time,
+                            end_time=end_time,
+                            is_available=True # is_available is now implicit by the slot's existence
+                        )
+
+            # After saving, re-render the form with the new data and a success message
+            new_schedule = [[] for _ in range(7)]
+            for slot in RecurringAvailability.objects.filter(coach=coach).order_by('start_time'):
+                new_schedule[slot.day_of_week].append({
+                    'start': slot.start_time.strftime('%H:%M'),
+                    'end': slot.end_time.strftime('%H:%M'),
+                })
+            context = {'schedule_data': json.dumps(new_schedule), 'success_message': 'Schedule saved successfully!'}
             response = render(request, 'coaching/partials/coach/_recurring_availability_form.html', context)
             response['HX-Trigger'] = 'recurring-schedule-updated'
             return response
-        else:
-            # If form is not valid, re-render the form with errors
-            days = [d[1] for d in RecurringAvailability.DAY_CHOICES]
-            return render(request, 'coaching/partials/coach/_recurring_availability_form.html', {'formset': formset, 'days': days})
 
-    # For a GET request:
-    # Ensure there's a RecurringAvailability object for each day of the week for the coach
-    for i in range(7):
-        RecurringAvailability.objects.get_or_create(
-            coach=coach,
-            day_of_week=i,
-            defaults={
-                'start_time': datetime.time(9, 0),
-                'end_time': datetime.time(17, 0),
-                'is_available': i < 5 # Default Mon-Fri to available
-            }
-        )
+        except (ValueError, TypeError) as e:
+            return JsonResponse({"error": str(e)}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": "An unexpected error occurred."}, status=500)
 
-    # Create the formset with the guaranteed 7 entries, ordered by day
-    queryset = RecurringAvailability.objects.filter(coach=coach).order_by('day_of_week')
-    formset = RecurringAvailabilityFormSet(queryset=queryset)
-    
-    # Pair each form with its day name for stable rendering
-    days = [d[1] for d in RecurringAvailability.DAY_CHOICES]
-    
-    context = {'formset': formset, 'days': days}
+    # GET request
+    schedule = [[] for _ in range(7)]
+    for slot in RecurringAvailability.objects.filter(coach=coach).order_by('start_time'):
+        schedule[slot.day_of_week].append({
+            'start': slot.start_time.strftime('%H:%M'),
+            'end': slot.end_time.strftime('%H:%M'),
+        })
+
+    context = {'schedule_data': json.dumps(schedule)}
     return render(request, 'coaching/partials/coach/_recurring_availability_form.html', context)
 
 

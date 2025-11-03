@@ -47,7 +47,7 @@ from .models import (
     CancellationPolicy, 
     RecurringAvailability,
 
-    SessionNote,
+    SessionNote, SessionStatus,
 
     Goal
 
@@ -302,7 +302,17 @@ def create_session_view(request, offering_id):
         start_time_str = request.POST.get('start_time') # e.g., '2023-10-27T10:00:00Z'
         
         try:
-            parsed_start_time = isoparse(start_time_str)
+            # For full-day sessions, the start_time will be just a date (e.g., '2025-11-20')
+            if offering.is_full_day:
+                day_date = isoparse(start_time_str).date()
+                coach_tz = timezone.pytz.timezone(str(getattr(offering.coaches.first(), 'user_timezone', timezone.get_current_timezone())))
+                # Set start to beginning of day and end to end of day in coach's timezone
+                parsed_start_time = coach_tz.localize(datetime.datetime.combine(day_date, datetime.time.min))
+                end_time = coach_tz.localize(datetime.datetime.combine(day_date, datetime.time.max))
+            else:
+                parsed_start_time = isoparse(start_time_str)
+                end_time = None # Let the model's save() method calculate it
+
         except (ValueError, TypeError):
             return HttpResponse("Invalid start time format.", status=400)
 
@@ -328,8 +338,7 @@ def create_session_view(request, offering_id):
             if not selected_coach:
                 return HttpResponse("Error: No coach associated with this offering.", status=400)
 
-            # The end_time is now calculated automatically in the model's save() method.
-            new_session = CoachingSession.objects.create(client=request.user, coach=selected_coach, offering=offering, start_time=parsed_start_time, status=SessionStatus.BOOKED)
+            new_session = CoachingSession.objects.create(client=request.user, coach=selected_coach, offering=offering, start_time=parsed_start_time, end_time=end_time, status=SessionStatus.BOOKED)
             
             # Link the credits to the new session
             for credit in credits_to_use:
