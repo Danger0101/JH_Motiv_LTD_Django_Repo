@@ -103,6 +103,18 @@ class UserGoalInline(admin.TabularInline):
     fields = ('title', 'status', 'due_date')
 
 class PurchasedUserOfferingInline(admin.TabularInline):
+    pass
+
+
+@admin.register(UserOffering)
+class UserOfferingAdmin(admin.ModelAdmin):
+    list_display = ('user', 'offering', 'purchase_date', 'start_date', 'end_date')
+    list_filter = ('offering', 'purchase_date', 'end_date')
+    search_fields = ('user__username', 'offering__name')
+    autocomplete_fields = ('user', 'offering')
+    inlines = [UserSessionCreditInline, UserGoalInline]
+
+class PurchasedUserOfferingInline(admin.TabularInline):
     model = UserOffering
     extra = 0
     fields = ('offering', 'purchase_date', 'start_date', 'end_date')
@@ -153,18 +165,18 @@ class CoachingSessionClientInline(admin.TabularInline):
     model = CoachingSession
     fk_name = 'client'
     extra = 0
-    fields = ('service_name', 'coach', 'start_time', 'status', 'client')
-    readonly_fields = ('service_name', 'start_time', 'status')
-    autocomplete_fields = ('coach', 'client')
+    fields = ('offering', 'coach', 'start_time', 'status', 'client')
+    readonly_fields = ('offering', 'start_time', 'status')
+    autocomplete_fields = ('offering', 'coach', 'client')
 
 
 class CoachingSessionCoachInline(admin.TabularInline):
     model = CoachingSession
     fk_name = 'coach'
     extra = 0
-    fields = ('service_name', 'client', 'start_time', 'status', 'coach')
-    readonly_fields = ('service_name', 'start_time', 'status')
-    autocomplete_fields = ('client', 'coach')
+    fields = ('offering', 'client', 'start_time', 'status', 'coach')
+    readonly_fields = ('offering', 'start_time', 'status')
+    autocomplete_fields = ('offering', 'client', 'coach')
 
 
 class CoachSessionNoteInline(admin.TabularInline):
@@ -269,9 +281,18 @@ class SessionNoteAdmin(admin.ModelAdmin):
 
 @admin.register(CoachingSession)
 class CoachingSessionAdmin(admin.ModelAdmin):
-    list_display = ('service_name', 'coach', 'client', 'start_time', 'status')
+    list_display = ('offering', 'coach', 'client', 'start_time', 'status')
     list_filter = ('status', 'coach', 'client')
-    search_fields = ('service_name', 'coach__username', 'client__username')
-    autocomplete_fields = ('coach', 'client')
-    list_select_related = ('coach', 'client')
+    search_fields = ('offering__name', 'coach__username', 'client__username')
+    autocomplete_fields = ('offering', 'coach', 'client')
+    list_select_related = ('offering', 'coach', 'client')
+    date_hierarchy = 'start_time'
 
+@admin.register(CreditApplication)
+class CreditApplicationAdmin(admin.ModelAdmin):
+    list_display = ('user', 'is_taster', 'status', 'created_at', 'approved_by')
+    list_filter = ('status', 'is_taster', 'created_at')
+    search_fields = ('user__username', 'user__email')
+    autocomplete_fields = ('user', 'approved_by', 'denied_by')
+    readonly_fields = ('created_at', 'approved_at', 'denied_at')
+    date_hierarchy = 'created_at'

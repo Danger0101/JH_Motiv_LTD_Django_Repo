@@ -11,11 +11,11 @@
             <h2 class="text-2xl font-semibold text-indigo-800 mb-3">Manage Availability</h2>
             <p class="text-indigo-700">Set your recurring and specific availability.</p>
         </a>
-        <a href="#" class="bg-white p-6 rounded-lg shadow-lg text-center hover:shadow-xl transition-shadow">
+        <a href="{% url 'coaching:coach_settings' %}" class="bg-white p-6 rounded-lg shadow-lg text-center hover:shadow-xl transition-shadow">
             <h2 class="text-2xl font-semibold text-indigo-800 mb-3">Manage Offerings</h2>
             <p class="text-indigo-700">Create and edit your coaching offerings.</p>
         </a>
-        <a href="#" class="bg-white p-6 rounded-lg shadow-lg text-center hover:shadow-xl transition-shadow">
+        <a href="{% url 'coaching:coach_settings' %}" class="bg-white p-6 rounded-lg shadow-lg text-center hover:shadow-xl transition-shadow">
             <h2 class="text-2xl font-semibold text-indigo-800 mb-3">View Earnings</h2>
             <p class="text-indigo-700">Track your session earnings and payouts.</p>
         </a>
@@ -27,7 +27,7 @@
             <ul class="space-y-4">
                 {% for session in upcoming_sessions %}
                 <li class="border-b pb-4 last:border-b-0">
-                    <h3 class="text-xl font-semibold text-gray-800">{{ session.service_name }} with {{ session.client }}</h3>
+                    <h3 class="text-xl font-semibold text-gray-800">{{ session.offering.name }} with {{ session.client }}</h3>
                     <p class="text-gray-600">{{ session.start_time|date:"M d, Y \a\t H:i" }}</p>
                 </li>
                 {% empty %}
@@ -45,7 +45,7 @@
             <ul class="space-y-4">
                 {% for session in past_sessions %}
                 <li class="border-b pb-4 last:border-b-0">
-                    <h3 class="text-xl font-semibold text-gray-800">{{ session.service_name }} with {{ session.client }}</h3>
+                    <h3 class="text-xl font-semibold text-gray-800">{{ session.offering.name }} with {{ session.client }}</h3>
                     <p class="text-gray-600">{{ session.start_time|date:"M d, Y \a\t H:i" }}</p>
                 </li>
                 {% empty %}

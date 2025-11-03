@@ -54,12 +54,6 @@ def payment_success(request):
                 offering=offering,
             )
             
-            # Create SessionCredits
-            for i in range(offering.credits_granted):
-                SessionCredit.objects.create(
-                    user=request.user,
-                    user_offering=user_offering,
-                )
 
             return render(request, 'payments/success.html', {'session': session})
         except stripe.error.StripeError as e:

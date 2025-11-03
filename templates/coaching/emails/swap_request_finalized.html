@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Coach Swap Update</title>
+</head>
+<body>
+    <p>Hi {{ recipient.first_name|default:recipient.username }},</p>
+    <p>This is an update regarding the coach swap request for the session on {{ swap_request.session.start_time|date:"F j, Y" }}.</p>
+    <p>The final status is: <strong>{{ swap_request.get_status_display }}</strong>.</p>
+    <p>If accepted, the new coach for this session is {{ swap_request.session.coach.get_full_name|default:swap_request.session.coach.username }}.</p>
+    <p>Best,<br>The JH Motiv LTD Team</p>
+</body>
+</html>

@@ -1,0 +1,12 @@
+Hi {{ recipient.first_name|default:recipient.username }},
+
+Coach {{ swap_request.initiating_coach.get_full_name|default:swap_request.initiating_coach.username }} has requested you to take over their session with {{ swap_request.session.client.get_full_name|default:swap_request.session.client.username }}.
+
+Session: {{ swap_request.session.offering.name }}
+Time: {{ swap_request.session.start_time|date:"F j, Y, P" }}
+
+Please use the link below to accept or decline this request:
+{{ response_url }}
+
+Best,
+The JH Motiv LTD Team

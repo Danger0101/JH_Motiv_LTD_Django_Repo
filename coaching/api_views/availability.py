@@ -4,11 +4,15 @@ from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
+from django import forms
+from django.forms import modelformset_factory
+from django.contrib.auth import get_user_model
+from django.db import transaction, models
 from django.utils import timezone
 import json
 import datetime
-from ..models import RecurringAvailability, SpecificAvailability, CoachVacationBlock 
+from dateutil.parser import isoparse 
+from ..models import RecurringAvailability, SpecificAvailability, CoachVacationBlock, CoachOffering, CoachingSession, SessionStatus
 from ..utils import coach_is_valid
 from django.db.models import Q
 import calendar
@@ -25,15 +29,22 @@ def get_nav_dates(year, month):
     return current_month_obj, prev_month_obj, next_month_obj
 
 
-def build_availability_grid(coach, year, month, current_month_obj, today, user_tz):
+def build_availability_grid(coach, offering, year, month, current_month_obj, today, user_tz, program_start_date=None, program_end_date=None):
     
     cal = calendar.Calendar(firstweekday=calendar.MONDAY)
     month_days_grid = cal.monthdatescalendar(year, month)
     
     start_of_period = month_days_grid[0][0]
     end_of_period = month_days_grid[-1][-1]
+    
+    # Ensure program dates are date objects if they exist
+    if isinstance(program_start_date, str):
+        program_start_date = isoparse(program_start_date).date()
+    if isinstance(program_end_date, str):
+        program_end_date = isoparse(program_end_date).date()
 
-    coach_tz = pytz.timezone(str(getattr(coach, 'user_timezone', timezone.get_current_timezone())))
+    coach_tz_str = str(getattr(coach, 'user_timezone', timezone.get_current_timezone()))
+    coach_tz = pytz.timezone(coach_tz_str)
     
     # --- Data Fetching ---
     recurring_map = {
@@ -55,6 +66,14 @@ def build_availability_grid(coach, year, month, current_month_obj, today, user_t
         end_date__gte=start_of_period
     ).values_list('start_date', 'end_date', 'override_allowed')
 
+    # Fetch existing sessions to block out those times
+    existing_sessions = CoachingSession.objects.filter(
+        coach=coach,
+        start_time__range=(coach_tz.localize(datetime.datetime.combine(start_of_period, datetime.time.min)),
+                           coach_tz.localize(datetime.datetime.combine(end_of_period, datetime.time.max))),
+        status__in=[SessionStatus.BOOKED, SessionStatus.PENDING]
+    ).values_list('start_time', 'end_time')
+
     def is_on_vacation(day_date):
         for start, end, override_allowed in vacation_list:
             if start <= day_date <= end:
@@ -62,6 +81,43 @@ def build_availability_grid(coach, year, month, current_month_obj, today, user_t
         return (False, False)
         
     final_grid = []
+    session_duration = datetime.timedelta(minutes=offering.duration_minutes)
+
+    # Convert existing session times to a set of start times for quick lookup
+    booked_slots_utc = set()
+    for start, end in existing_sessions:
+        booked_slots_utc.add(start.astimezone(pytz.utc))
+
+    def generate_slots(day_date, start_time, end_time):
+        """Generate bookable slots for a given time range."""
+        slots = []
+        current_time = coach_tz.localize(datetime.datetime.combine(day_date, start_time))
+        end_datetime = coach_tz.localize(datetime.datetime.combine(day_date, end_time))
+
+        # Ensure we don't generate slots in the past
+        now_in_coach_tz = timezone.now().astimezone(coach_tz)
+
+        while current_time + session_duration <= end_datetime:
+            # Check if slot is in the future
+            if current_time < now_in_coach_tz:
+                current_time += session_duration
+                continue
+
+            # Check for conflicts with existing sessions
+            if current_time.astimezone(pytz.utc) in booked_slots_utc:
+                current_time += session_duration
+                continue
+
+            user_start_dt = current_time.astimezone(user_tz)
+            slots.append({
+                'start_time_iso': current_time.isoformat(),
+                'start_time_display': user_start_dt.strftime("%-I:%M %p"),
+            })
+            current_time += session_duration
+        
+        return slots
+
+
 
     for week in month_days_grid:
         week_data = []
@@ -73,112 +129,112 @@ def build_availability_grid(coach, year, month, current_month_obj, today, user_t
                 'is_current_month': day_date.month == current_month_obj.month,
                 'is_today': day_date == today,
                 'is_vacation': False,
+                'is_outside_program': False,
                 'is_specific': False,
                 'available_slots': []
             }
+
+            # Check if the day is outside the user's program validity dates
+            if (program_start_date and day_date < program_start_date) or \
+               (program_end_date and day_date > program_end_date):
+                merged_day['is_outside_program'] = True
+                week_data.append(merged_day)
+                continue
             
             on_vacation, override_allowed = is_on_vacation(day_date)
             if on_vacation and not override_allowed:
                 merged_day['is_vacation'] = True
                 week_data.append(merged_day)
                 continue
-
-            specific_slot = specific_map.get(day_date)
             
+            # Determine the base availability for the day
+            specific_slot = specific_map.get(day_date)
             if specific_slot:
                 merged_day['is_specific'] = True
-                
                 if specific_slot['available']:
-                    start_dt = coach_tz.localize(datetime.datetime.combine(day_date, specific_slot['start']))
-                    end_dt = coach_tz.localize(datetime.datetime.combine(day_date, specific_slot['end']))
-                    
-                    user_start_dt = start_dt.astimezone(user_tz)
-                    user_end_dt = end_dt.astimezone(user_tz)
-
-                    merged_day['available_slots'] = [{
-                        'start_time': user_start_dt.strftime("%I:%M %p"),
-                        'end_time': user_end_dt.strftime("%I:%M %p"),
-                    }]
-                
-            elif day_date.month == current_month_obj.month:
+                    merged_day['available_slots'] = generate_slots(day_date, specific_slot['start'], specific_slot['end'])
+            else:
                 base_slot = recurring_map.get(day_of_week_num)
                 if base_slot and base_slot['available']:
-                    start_dt = coach_tz.localize(datetime.datetime.combine(day_date, base_slot['start']))
-                    end_dt = coach_tz.localize(datetime.datetime.combine(day_date, base_slot['end']))
-
-                    user_start_dt = start_dt.astimezone(user_tz)
-                    user_end_dt = end_dt.astimezone(user_tz)
-
-                    merged_day['available_slots'] = [{
-                        'start_time': user_start_dt.strftime("%I:%M %p"),
-                        'end_time': user_end_dt.strftime("%I:%M %p"),
-                    }]
+                    merged_day['available_slots'] = generate_slots(day_date, base_slot['start'], base_slot['end'])
             
             week_data.append(merged_day)
         final_grid.append(week_data)
     
     return final_grid
+
 # =======================================================
 # RECURRING AVAILABILITY
 # =======================================================
 @login_required
 @require_http_methods(["GET", "POST"])
 def coach_recurring_availability_view(request):
+    """
+    Handles GET and POST for a coach's recurring availability using a Django FormSet.
+    """
     if not coach_is_valid(request.user):
-        return JsonResponse({"error": "Unauthorized access."}, status=403)
-    
+        return HttpResponse("Unauthorized", status=403)
+
     coach = request.user
-    
-    if request.method == 'GET':
-        schedule = RecurringAvailability.objects.filter(coach=coach).order_by('day_of_week', 'start_time')
-        data = []
-        for slot in schedule:
-            data.append({
-                "day_of_week": slot.day_of_week,
-                "start_time": slot.start_time.strftime("%H:%M"),
-                "end_time": slot.end_time.strftime("%H:%M"),
-                "is_available": slot.is_available,
-            })
-        
-        context = {
-            'schedule': json.dumps(data), 
+
+    # Define a FormSet for RecurringAvailability
+    RecurringAvailabilityFormSet = modelformset_factory(
+        RecurringAvailability,
+        fields=('is_available', 'start_time', 'end_time'),
+        extra=0, # We will manage the 7 forms manually
+        widgets={
+            'start_time': forms.TimeInput(attrs={'type': 'time', 'class': 'p-1 border rounded w-full'}, format='%H:%M'),
+            'end_time': forms.TimeInput(attrs={'type': 'time', 'class': 'p-1 border rounded w-full'}, format='%H:%M'),
         }
-        return render(request, 'coaching/partials/_recurring_availability_form.html', context)
+    )
 
-    elif request.method == 'POST':
-        try:
-            if 'application/json' not in request.content_type:
-                return JsonResponse({"error": "Invalid content type. Please submit data as JSON."}, status=400)
+    if request.method == 'POST':
+        formset = RecurringAvailabilityFormSet(request.POST, queryset=RecurringAvailability.objects.filter(coach=coach))
+        if formset.is_valid():
+            instances = formset.save(commit=False)
+            for instance in instances:
+                instance.coach = coach
+                instance.save()
             
-            data = json.loads(request.body)
-            new_schedule_slots = data.get('schedule', [])
-
-            with transaction.atomic():
-                for slot_data in new_schedule_slots:
-                    day = int(slot_data['day_of_week'])
-                    start_time = datetime.time.fromisoformat(slot_data['start_time'])
-                    end_time = datetime.time.fromisoformat(slot_data['end_time'])
-                    is_available = slot_data.get('is_available', False)
-                    
-                    if is_available and start_time >= end_time:
-                        raise ValueError(f"On {calendar.day_name[day]}, start time must be before end time.")
-                    
-                    RecurringAvailability.objects.update_or_create(
-                        coach=coach,
-                        day_of_week=day,
-                        defaults={
-                            'start_time': start_time, 'end_time': end_time, 'is_available': is_available
-                        }
-                    )
-
-            response = JsonResponse({"success": True, "message": "Weekly schedule updated successfully."}, status=200)
+            # Re-fetch the formset after saving to show a fresh form
+            queryset = RecurringAvailability.objects.filter(coach=coach).order_by('day_of_week')
+            formset = RecurringAvailabilityFormSet(queryset=queryset)
+            
+            # Add the 'days' list to the context for re-rendering
+            days = [d[1] for d in RecurringAvailability.DAY_CHOICES]
+            
+            # Add a success message and trigger the calendar update via headers
+            context = {'formset': formset, 'days': days, 'success_message': 'Weekly schedule saved successfully!'}
+            response = render(request, 'coaching/partials/coach/_recurring_availability_form.html', context)
             response['HX-Trigger'] = 'recurring-schedule-updated'
             return response
-        
-        except ValueError as e:
-            return JsonResponse({"error": f"Validation Error: {e}"}, status=400)
-        except Exception as e:
-            return JsonResponse({"error": f"An unexpected error occurred: {e}"}, status=500)
+        else:
+            # If form is not valid, re-render the form with errors
+            days = [d[1] for d in RecurringAvailability.DAY_CHOICES]
+            return render(request, 'coaching/partials/coach/_recurring_availability_form.html', {'formset': formset, 'days': days})
+
+    # For a GET request:
+    # Ensure there's a RecurringAvailability object for each day of the week for the coach
+    for i in range(7):
+        RecurringAvailability.objects.get_or_create(
+            coach=coach,
+            day_of_week=i,
+            defaults={
+                'start_time': datetime.time(9, 0),
+                'end_time': datetime.time(17, 0),
+                'is_available': i < 5 # Default Mon-Fri to available
+            }
+        )
+
+    # Create the formset with the guaranteed 7 entries, ordered by day
+    queryset = RecurringAvailability.objects.filter(coach=coach).order_by('day_of_week')
+    formset = RecurringAvailabilityFormSet(queryset=queryset)
+    
+    # Pair each form with its day name for stable rendering
+    days = [d[1] for d in RecurringAvailability.DAY_CHOICES]
+    
+    context = {'formset': formset, 'days': days}
+    return render(request, 'coaching/partials/coach/_recurring_availability_form.html', context)
 
 
 # =======================================================
@@ -198,7 +254,7 @@ def coach_specific_availability_view(request):
             date__gte=timezone.now().date()
         ).order_by('date', 'start_time')
         
-        return render(request, 'coaching/partials/_specific_slots_list.html', {'specific_slots': slots})
+        return render(request, 'coaching/partials/coach/_specific_slots_list.html', {'specific_slots': slots})
 
     elif request.method == 'POST':
         try:
@@ -269,7 +325,7 @@ def coach_add_availability_modal_view(request):
         'selected_date': selected_date,
         'day_name': day_name,
     }
-    return render(request, 'coaching/partials/add_availability_modal.html', context)
+    return render(request, 'coaching/partials/coach/add_availability_modal.html', context)
 
 
 @login_required
@@ -327,20 +383,34 @@ def coach_create_availability_from_modal_view(request):
 @login_required
 @require_http_methods(["GET"])
 def coach_calendar_view(request):
-    if not coach_is_valid(request.user):
-        return JsonResponse({"error": "Unauthorized access."}, status=403)
-    coach = request.user
+    # This view can be accessed by both coaches and clients, so we get the coach from the request.
+    coach_id = request.GET.get('coach_id')
+    coach = get_object_or_404(get_user_model(), pk=coach_id, is_coach=True)
+
     now = timezone.now()
     year = int(request.GET.get('year', now.year))
     month = int(request.GET.get('month', now.month))
-    coach_tz = pytz.timezone(str(getattr(coach, 'user_timezone', timezone.get_current_timezone())))
+
+    # Get offering and coach from request to determine slot duration
+    try:
+        offering_id = request.GET.get('offering_id')
+        offering = get_object_or_404(CoachOffering, pk=offering_id)
+    except (ValueError, CoachOffering.DoesNotExist):
+        return HttpResponse("Invalid or missing Offering ID.", status=400)
+
+    coach_tz_str = str(getattr(coach, 'user_timezone', timezone.get_current_timezone()))
+    coach_tz = pytz.timezone(coach_tz_str)
     today = now.astimezone(coach_tz).date()
     current_month_obj, prev_month_obj, next_month_obj = get_nav_dates(year, month)
     prev_month_is_past = (prev_month_obj.year < today.year) or \
                          (prev_month_obj.year == today.year and prev_month_obj.month < today.month)
-    user_tz = pytz.timezone(str(getattr(request.user, 'user_timezone', timezone.get_current_timezone())))
-    final_grid = build_availability_grid(coach, year, month, current_month_obj, today, user_tz)
+    user_tz_str = str(getattr(request.user, 'user_timezone', timezone.get_current_timezone()))
+    user_tz = pytz.timezone(user_tz_str)
+
+    final_grid = build_availability_grid(coach, offering, year, month, current_month_obj, today, user_tz, request.GET.get('start_date'), request.GET.get('end_date'))
     context = {
+        'offering': offering,
+        'coach': coach,
         'month_days': final_grid, 
         'current_month': current_month_obj,
         'coach_tz': coach_tz.zone,
@@ -353,6 +423,6 @@ def coach_calendar_view(request):
     }
     return render(
         request,
-        'coaching/partials/calendar_grid_fragment.html',
+        'coaching/partials/booking/calendar_grid_fragment.html',
         context
     )

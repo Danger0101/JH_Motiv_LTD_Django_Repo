@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 
-{% block title %}Offering Goals{% endblock %}
+{% block title %}Program Goals{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-6 py-10">
     <div class="max-w-2xl mx-auto">
         <a href="{% url 'accounts:profile' %}" class="text-indigo-600 hover:underline mb-6 inline-block">&larr; Back to Profile</a>
         <div class="bg-white p-8 rounded-lg shadow-xl mb-8">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">Offering Goals</h1>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Program Goals</h1>
             <p class="text-lg text-gray-600 mb-4">For {{ user_offering.offering.name }}</p>
 
             <div class="mb-8">
@@ -43,7 +43,7 @@
                     </li>
                     {% empty %}
                     <li>
-                        <p class="text-gray-500">No goals for this offering yet.</p>
+                        <p class="text-gray-500">No goals for this program yet.</p>
                     </li>
                     {% endfor %}
                 </ul>

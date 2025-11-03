@@ -3,15 +3,17 @@ from django.conf import settings
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from dateutil.relativedelta import relativedelta
+from django.utils.text import slugify
 
+
+class SessionStatus(models.TextChoices):
+    PENDING = 'PENDING', 'Pending'
+    BOOKED = 'BOOKED', 'Booked'
+    COMPLETED = 'COMPLETED', 'Completed'
+    CANCELLED = 'CANCELLED', 'Cancelled'
+    MISSED = 'MISSED', 'Missed'
 
 class CoachingSession(models.Model):
-    STATUS_CHOICES = [
-        ('BOOKED', 'Booked'),
-        ('PENDING', 'Pending'),
-        ('CANCELLED', 'Cancelled'),
-    ]
-
     coach = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -24,13 +26,27 @@ class CoachingSession(models.Model):
         related_name='client_sessions'
     )
     start_time = models.DateTimeField()
-    end_time = models.DateTimeField(default=timezone.now)
-    service_name = models.CharField(max_length=255)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    end_time = models.DateTimeField(blank=True, help_text="Automatically calculated on save.")
+    offering = models.ForeignKey(
+        'CoachOffering',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sessions'
+    )
+    status = models.CharField(max_length=20, choices=SessionStatus.choices, default=SessionStatus.PENDING)
     paid_out = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.service_name} with {self.coach} at {self.start_time}"
+        service_name = self.offering.name if self.offering else "Deleted Service"
+        return f"{service_name} with {self.coach} at {self.start_time}"
+
+    def save(self, *args, **kwargs):
+        # Automatically calculate end_time if it's not set
+        if self.start_time and self.offering and not self.end_time:
+            self.end_time = self.start_time + timezone.timedelta(minutes=self.offering.duration_minutes)
+        super().save(*args, **kwargs)
+
 
 
 
@@ -134,7 +150,7 @@ class CoachOffering(models.Model):
         limit_choices_to={'is_coach': True}
     )
     name = models.CharField(max_length=255, help_text="Public-facing service name.")
-    slug = models.SlugField(max_length=255, help_text="URL-friendly identifier.")
+    slug = models.SlugField(max_length=255, blank=True, help_text="URL-friendly identifier. Auto-generated if left blank.")
     description = models.TextField()
     duration_minutes = models.IntegerField(help_text="Duration in minutes (e.g., 60 or 90).")
     price = models.DecimalField(
@@ -159,6 +175,11 @@ class CoachOffering(models.Model):
         coach_names = ', '.join([coach.username for coach in self.coaches.all()])
         return f"{self.name} by {coach_names}"
 
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
 
 class UserOffering(models.Model):
     """Links a user to a coaching offering they have purchased."""
@@ -180,16 +201,34 @@ class UserOffering(models.Model):
             self.end_date = self.start_date + relativedelta(months=self.offering.duration_months)
         super().save(*args, **kwargs)
 
+    @property
+    def consumed_credits(self):
+        """Counts credits linked to completed or missed sessions."""
+        return self.session_credits.filter(
+            session__status__in=[SessionStatus.COMPLETED, SessionStatus.MISSED]
+        ).count()
 
+    @property
+    def pending_credits(self):
+        """Counts credits linked to booked but not yet completed sessions."""
+        return self.session_credits.filter(
+            session__status__in=[SessionStatus.PENDING, SessionStatus.BOOKED]
+        ).count()
+
+    @property
+    def available_credits(self):
+        """Calculates the number of credits still available to be booked."""
+        total_credits_in_pool = self.session_credits.count()
+        return total_credits_in_pool - self.consumed_credits - self.pending_credits
+
+
+class PayoutStatus(models.TextChoices):
+    PENDING = 'PENDING', 'Pending'
+    PAID = 'PAID', 'Paid'
 class CoachPayout(models.Model):
-    STATUS_CHOICES = [
-        ('PENDING', 'Pending'),
-        ('PAID', 'Paid'),
-    ]
-
     coach = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='payouts')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    status = models.CharField(max_length=20, choices=PayoutStatus.choices, default=PayoutStatus.PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
     paid_at = models.DateTimeField(null=True, blank=True)
 
@@ -234,26 +273,26 @@ class SessionCredit(models.Model):
         if not self.pk:
             if self.purchase_date is None:
                 self.purchase_date = timezone.now()
-            if self.is_taster:
-                self.expiration_date = self.purchase_date + timezone.timedelta(days=30)
-            elif self.user_offering and self.user_offering.end_date:
-                 self.expiration_date = self.purchase_date + timezone.timedelta(days=365)
+
+            # If the credit is linked to a specific purchased offering,
+            # its expiration should align with the offering's access end date.
+            if self.user_offering and self.user_offering.end_date:
+                # Set expiration to the end of the day of the offering's end_date
+                self.expiration_date = timezone.make_aware(
+                    timezone.datetime.combine(self.user_offering.end_date, timezone.datetime.max.time())
+                )
             else:
-                 self.expiration_date = self.purchase_date + timezone.timedelta(days=365)
-                 
+                # Default expiration for taster credits or other standalone credits
+                self.expiration_date = self.purchase_date + timezone.timedelta(days=365)
         super().save(*args, **kwargs)
 
 
-# Define constants for CreditApplication status choices
-CREDIT_APP_STATUS_PENDING = 'P'
-CREDIT_APP_STATUS_APPROVED = 'A'
-CREDIT_APP_STATUS_DENIED = 'D'
-CREDIT_APP_STATUS_CHOICES = [
-    (CREDIT_APP_STATUS_PENDING, 'Pending Review'),
-    (CREDIT_APP_STATUS_APPROVED, 'Approved - Credit Granted'),
-    (CREDIT_APP_STATUS_DENIED, 'Denied'),
-]
 
+
+class CreditApplicationStatus(models.TextChoices):
+    PENDING = 'P', 'Pending Review'
+    APPROVED = 'A', 'Approved - Credit Granted'
+    DENIED = 'D', 'Denied'
 
 
 class CreditApplication(models.Model):
@@ -271,8 +310,8 @@ class CreditApplication(models.Model):
     
     status = models.CharField(
         max_length=1,
-        choices=CREDIT_APP_STATUS_CHOICES,
-        default=CREDIT_APP_STATUS_PENDING
+        choices=CreditApplicationStatus.choices,
+        default=CreditApplicationStatus.PENDING
     )
     
     approved_by = models.ForeignKey(
@@ -304,7 +343,7 @@ class CreditApplication(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'is_taster'], 
-                condition=models.Q(is_taster=True, status__in=[CREDIT_APP_STATUS_PENDING, CREDIT_APP_STATUS_APPROVED]),
+                condition=models.Q(is_taster=True, status__in=[CreditApplicationStatus.PENDING, CreditApplicationStatus.APPROVED]),
                 name='unique_pending_or_approved_taster'
             )
         ]
@@ -314,16 +353,13 @@ class CreditApplication(models.Model):
 
 
 import uuid
-
+class RescheduleStatus(models.TextChoices):
+    PENDING = 'PENDING', 'Pending'
+    ACCEPTED = 'ACCEPTED', 'Accepted'
+    DECLINED = 'DECLINED', 'Declined'
 class RescheduleRequest(models.Model):
-    STATUS_CHOICES = [
-        ('PENDING', 'Pending'),
-        ('ACCEPTED', 'Accepted'),
-        ('DECLINED', 'Declined'),
-    ]
-
     session = models.OneToOneField(CoachingSession, on_delete=models.CASCADE, related_name='reschedule_request')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    status = models.CharField(max_length=20, choices=RescheduleStatus.choices, default=RescheduleStatus.PENDING)
     token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -332,18 +368,16 @@ class RescheduleRequest(models.Model):
         return f"Reschedule request for session {self.session.id} - {self.status}"
 
 
+class SwapStatus(models.TextChoices):
+    PENDING_COACH = 'PENDING_COACH', 'Pending Coach Approval'
+    PENDING_USER = 'PENDING_USER', 'Pending User Approval'
+    ACCEPTED = 'ACCEPTED', 'Accepted'
+    DECLINED = 'DECLINED', 'Declined'
 class CoachSwapRequest(models.Model):
-    STATUS_CHOICES = [
-        ('PENDING_COACH', 'Pending Coach Approval'),
-        ('PENDING_USER', 'Pending User Approval'),
-        ('ACCEPTED', 'Accepted'),
-        ('DECLINED', 'Declined'),
-    ]
-
     session = models.OneToOneField(CoachingSession, on_delete=models.CASCADE, related_name='swap_request')
     initiating_coach = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='initiated_swap_requests')
     receiving_coach = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='received_swap_requests')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING_COACH')
+    status = models.CharField(max_length=20, choices=SwapStatus.choices, default=SwapStatus.PENDING_COACH)
     token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -377,16 +411,14 @@ class SessionNote(models.Model):
         return f"Note for session {self.session.id} by {self.coach.username}"
 
 
+class GoalStatus(models.TextChoices):
+    IN_PROGRESS = 'IN_PROGRESS', 'In Progress'
+    COMPLETED = 'COMPLETED', 'Completed'
 class Goal(models.Model):
-    STATUS_CHOICES = [
-        ('IN_PROGRESS', 'In Progress'),
-        ('COMPLETED', 'Completed'),
-    ]
-
     user_offering = models.ForeignKey(UserOffering, on_delete=models.CASCADE, related_name='goals')
     title = models.CharField(max_length=255)
     description = models.TextField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='IN_PROGRESS')
+    status = models.CharField(max_length=20, choices=GoalStatus.choices, default=GoalStatus.IN_PROGRESS)
     due_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

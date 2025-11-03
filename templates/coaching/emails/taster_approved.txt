@@ -1,0 +1,11 @@
+Hi {{ user.first_name|default:user.username }},
+
+Great news! Your application for the Momentum Catalyst Session has been approved.
+
+You now have one credit to book your complimentary session. You can book it here:
+{{ booking_url }}
+
+We look forward to working with you.
+
+Best,
+The JH Motiv LTD Team

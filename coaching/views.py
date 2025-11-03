@@ -4,12 +4,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.views.generic import TemplateView
 from django.contrib.auth.decorators import login_required
+from django.urls import reverse
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.decorators.http import require_http_methods
 import json
 from django.utils import timezone
 from django.db import transaction
-
+from dateutil.parser import isoparse
 from .utils import coach_is_valid
 
 # Import all API functions from the new modules (Already provided)
@@ -61,8 +62,8 @@ from .models import (
 def program_goals_view(request, user_offering_id):
 
     user_offering = get_object_or_404(UserOffering, id=user_offering_id)
-
-    if request.user != user_offering.user and not user_offering.offering.coach == request.user:
+    # Correctly check if the user is the client OR one of the coaches for the offering
+    if request.user != user_offering.user and request.user not in user_offering.offering.coaches.all():
 
         return HttpResponse("Unauthorized", status=403)
 
@@ -96,7 +97,7 @@ def program_goals_view(request, user_offering_id):
 
     goals = Goal.objects.filter(user_offering=user_offering).order_by('-created_at')
 
-    return render(request, 'coaching/program_goals.html', {'user_offering': user_offering, 'goals': goals})
+    return render(request, 'coaching/program/program_goals.html', {'user_offering': user_offering, 'goals': goals})
 
 @login_required
 def session_notes_view(request, session_id):
@@ -115,12 +116,12 @@ def session_notes_view(request, session_id):
         return redirect('coaching:session_notes', session_id=session_id)
 
     notes = SessionNote.objects.filter(session=session).order_by('-created_at')
-    return render(request, 'coaching/session_notes.html', {'session': session, 'notes': notes})
+    return render(request, 'coaching/coach/session_notes.html', {'session': session, 'notes': notes})
 from django.views.generic import ListView
 
 class CoachDashboardView(LoginRequiredMixin, ListView):
     model = CoachingSession
-    template_name = 'coaching/coach_dashboard.html'
+    template_name = 'coaching/coach/coach_dashboard.html'
     context_object_name = 'sessions'
 
     def get_queryset(self):
@@ -133,126 +134,6 @@ class CoachDashboardView(LoginRequiredMixin, ListView):
         context['past_sessions'] = self.get_queryset().filter(start_time__lt=now)
         return context
 
-@login_required
-def cancel_session_view(request, session_id):
-    session = get_object_or_404(CoachingSession, id=session_id)
-    user = request.user
-
-    if user != session.client and user != session.coach:
-        return HttpResponse("Unauthorized", status=403)
-
-    user_type = 'USER' if user == session.client else 'COACH'
-
-    time_difference = session.start_time - timezone.now()
-    hours_before_session = time_difference.total_seconds() / 3600
-
-    policies = CancellationPolicy.objects.filter(user_type=user_type).order_by('-hours_before_session')
-    refund_percentage = 0
-
-    for policy in policies:
-        if hours_before_session >= policy.hours_before_session:
-            refund_percentage = policy.refund_percentage
-            break
-
-    if request.method == 'POST':
-        session.status = 'CANCELLED'
-        session.save()
-
-        if refund_percentage > 0:
-            credit = SessionCredit.objects.get(session=session)
-            if refund_percentage == 100:
-                credit.session = None
-                credit.save()
-            else:
-                # For partial refunds, you might need a more complex system
-                # For now, we'll just refund the whole credit
-                credit.session = None
-                credit.save()
-
-        return render(request, 'coaching/cancellation_confirmation.html', {'session': session, 'refund_percentage': refund_percentage})
-
-    return render(request, 'coaching/cancel_session.html', {'session': session, 'refund_percentage': refund_percentage})
-
-@login_required
-def initiate_swap_request_view(request, session_id, receiving_coach_id):
-    session = get_object_or_404(CoachingSession, id=session_id, coach=request.user)
-    receiving_coach = get_object_or_404(User, id=receiving_coach_id, is_coach=True)
-
-    if request.method == 'POST':
-        swap_request = CoachSwapRequest.objects.create(
-            session=session,
-            initiating_coach=request.user,
-            receiving_coach=receiving_coach,
-        )
-        # Notify the receiving coach
-        return HttpResponse("Swap request initiated.")
-
-@login_required
-def coach_swap_response_view(request, token):
-    swap_request = get_object_or_404(CoachSwapRequest, token=token, receiving_coach=request.user)
-
-    if request.method == 'POST':
-        action = request.POST.get('action')
-        if action == 'accept':
-            swap_request.status = 'PENDING_USER'
-            swap_request.save()
-            # Notify the user
-            return HttpResponse("Swap request accepted. Waiting for user confirmation.")
-        elif action == 'decline':
-            swap_request.status = 'DECLINED'
-            swap_request.save()
-            # Notify the initiating coach
-            return HttpResponse("Swap request declined.")
-
-    return render(request, 'coaching/coach_swap_response.html', {'swap_request': swap_request})
-
-@login_required
-def user_swap_response_view(request, token):
-    swap_request = get_object_or_404(CoachSwapRequest, token=token, session__client=request.user)
-
-    if request.method == 'POST':
-        action = request.POST.get('action')
-        if action == 'accept':
-            swap_request.status = 'ACCEPTED'
-            swap_request.save()
-            # Update the session coach
-            session = swap_request.session
-            session.coach = swap_request.receiving_coach
-            session.save()
-            # Notify the coaches
-            return HttpResponse("Swap accepted.")
-        elif action == 'decline':
-            swap_request.status = 'DECLINED'
-            swap_request.save()
-            # Notify the coaches
-            return HttpResponse("Swap declined.")
-
-    return render(request, 'coaching/user_swap_response.html', {'swap_request': swap_request})
-
-@login_required
-def reschedule_request_view(request, token):
-    reschedule_request = get_object_or_404(RescheduleRequest, token=token)
-    session = reschedule_request.session
-
-    if request.method == 'POST':
-        action = request.POST.get('action')
-        if action == 'reschedule':
-            reschedule_request.status = 'ACCEPTED'
-            reschedule_request.save()
-            # Redirect to booking page to select a new time
-            return redirect('coaching:offering_detail', offering_id=session.service_name)
-        elif action == 'cancel':
-            reschedule_request.status = 'DECLINED'
-            reschedule_request.save()
-            session.status = 'CANCELLED'
-            session.save()
-            # Refund the credit
-            credit = SessionCredit.objects.get(session=session)
-            credit.session = None
-            credit.save()
-            return render(request, 'coaching/reschedule_declined.html')
-
-    return render(request, 'coaching/reschedule_request.html', {'reschedule_request': reschedule_request}) 
 # ^^ ASSUMING TokenApplication and Offering models exist/are created
 
 User = get_user_model()
@@ -278,125 +159,6 @@ class CoachingOverview(TemplateView):
             
         return context
 
-# --- MOMENTUM CATALYST SESSION VIEWS (NEW) ---
-
-@login_required
-def apply_taster_view(request):
-    """
-    Handles the user application for the one-time Momentum Catalyst Session credit.
-    Records the application for coach approval.
-    """
-    user = request.user
-    
-    # 1. Check if the user already has a pending or approved application
-    existing_application = CreditApplication.objects.filter(
-        user=user, 
-        is_taster=True
-    ).exclude(status='DENIED').first() # Exclude DENIED to allow re-applying after denial
-    
-    if existing_application:
-        # User already applied or has a token. Redirect them to a status page.
-        return render(request, 'coaching/taster_status.html', {
-            'application': existing_application,
-            'message': 'You have already applied for or received your Momentum Catalyst Session credit.'
-        })
-
-    if request.method == 'POST':
-        # Assuming a simple form post to initiate the application
-        
-        # 2. Create the application record
-        CreditApplication.objects.create(
-            user=user,
-            is_taster=True,
-            status='PENDING',
-            # Additional form data (e.g., goals) could be saved here
-        )
-        
-        # 3. Redirect to a waiting/confirmation page
-        return render(request, 'coaching/taster_confirmation.html', {
-            'message': 'Your application for the Momentum Catalyst Session has been submitted. A coach will review it shortly.'
-        })
-
-    # Display the application form (GET request)
-    return render(request, 'coaching/apply_taster.html', {})
-
-
-@login_required
-def coach_manage_taster_view(request):
-    """
-    View for coaches to see pending taster credit applications and approve/deny them.
-    This would typically be part of coach_settings_view.
-    """
-    if not coach_is_valid(request.user):
-        return HttpResponse("Access Denied: You do not have coach privileges.", status=403)
-        
-    pending_applications = CreditApplication.objects.filter(
-        is_taster=True, 
-        status='PENDING'
-    ).order_by('created_at')
-    
-    context = {
-        'pending_applications': pending_applications,
-    }
-    return render(request, 'coaching/coach_manage_tasters.html', context)
-
-
-@login_required
-@transaction.atomic
-def approve_taster_credit_view(request, application_id):
-    """
-    Handles the coach's action to approve a taster credit application.
-    """
-    if not coach_is_valid(request.user) or request.method != 'POST':
-        return HttpResponse("Unauthorized or Invalid Request.", status=403)
-
-    application = get_object_or_404(CreditApplication, id=application_id, is_taster=True)
-
-    if application.status != 'PENDING':
-        return HttpResponse("Application is not pending review.", status=400)
-
-    # 1. Update the application status
-    application.status = 'APPROVED'
-    application.approved_by = request.user
-    application.approved_at = timezone.now()
-    application.save()
-
-    # 2. Grant the one-time Taster Credit
-    # This credit should ideally be tied to a specific free offering/program type
-    SessionCredit.objects.create(
-        user=application.user,
-        # Set a short expiry date (e.g., 30 days)
-        expiration_date=timezone.now() + timezone.timedelta(days=30), 
-        is_taster=True, # Flag it as a one-time free credit
-    )
-    
-    # Optional: Send a notification email to the user
-
-    return redirect('coaching:coach_manage_tasters') # Redirect back to the management view
-
-
-@login_required
-def deny_taster_credit_view(request, application_id):
-    """
-    Handles the coach's action to deny a taster credit application (e.g., abuse detected).
-    """
-    if not coach_is_valid(request.user) or request.method != 'POST':
-        return HttpResponse("Unauthorized or Invalid Request.", status=403)
-
-    application = get_object_or_404(CreditApplication, id=application_id, is_taster=True)
-
-    if application.status != 'PENDING':
-        return HttpResponse("Application is not pending review.", status=400)
-    
-    application.status = 'DENIED'
-    application.denied_by = request.user
-    application.denied_at = timezone.now()
-    application.save()
-
-    # Optional: Send a notification email to the user explaining the denial
-
-    return redirect('coaching:coach_manage_tasters')
-
 # --- Existing Placeholder/Integration Functions (Remains Here) ---
 
 def get_coach_availability(coach_user):
@@ -419,7 +181,14 @@ def coach_settings_view(request):
     """
     if not coach_is_valid(request.user):
         return HttpResponse("Access Denied: You do not have coach privileges.", status=403)
-    return render(request, 'coaching/coach_settings.html')
+    
+    # Find a default offering to use for the calendar preview.
+    # Prioritize one the coach is part of, otherwise take any active one.
+    default_offering = CoachOffering.objects.filter(coaches=request.user, is_active=True).first()
+    if not default_offering:
+        default_offering = CoachOffering.objects.filter(is_active=True).first()
+        
+    return render(request, 'coaching/coach/coach_settings.html', {'default_offering': default_offering})
 
 @login_required
 def offering_list_view(request):
@@ -456,17 +225,27 @@ def booking_page(request, coach_id):
         'coach': coach,
         'offerings': offerings,
     }
-    return render(request, 'coaching/booking_page.html', context)
+    return render(request, 'coaching/booking/booking_page.html', context)
 
 
 @login_required
-def offering_detail_view(request, offering_id):
+def offering_detail_view(request, offering_slug, coach_id=None):
     """
     Shows session details and checks user eligibility (credits/price/taster credits)
-    before loading the calendar.
+    before loading the calendar. Can be filtered to a specific coach.
     """
-    offering = get_object_or_404(CoachOffering, id=offering_id)
-    coach = offering.coaches.first() # Get the first coach associated with the offering
+    offering = get_object_or_404(CoachOffering, slug=offering_slug)
+    
+    if coach_id:
+        coach = get_object_or_404(User, id=coach_id, is_coach=True)
+        # Ensure the selected coach is actually associated with the offering
+        if coach not in offering.coaches.all():
+            return HttpResponse("This coach does not provide this service.", status=404)
+    else:
+        coach = offering.coaches.first()
+
+    if not coach:
+        return HttpResponse("No coaches are available for this offering.", status=404)
     user = request.user
     
     # --- Credit/Program Eligibility Check (Updated to include Taster Credits) ---
@@ -510,7 +289,7 @@ def offering_detail_view(request, offering_id):
         'booking_start_date': earliest_start_date.isoformat() if earliest_start_date else None,
         'booking_end_date': latest_end_date.isoformat() if latest_end_date else None,
     }
-    return render(request, 'coaching/select_time.html', context)
+    return render(request, 'coaching/booking/select_time.html', context)
 
 
 @login_required
@@ -520,10 +299,12 @@ def create_session_view(request, offering_id):
     if request.method == 'POST':
         offering = get_object_or_404(CoachOffering, id=offering_id)
         # Placeholder: Parse start_time from the request.
-        # You will need to implement the actual parsing from your frontend data.
         start_time_str = request.POST.get('start_time') # e.g., '2023-10-27T10:00:00Z'
-        # A robust implementation should handle parsing and timezone conversion.
-        parsed_start_time = timezone.now() # Replace with actual parsed time
+        
+        try:
+            parsed_start_time = isoparse(start_time_str)
+        except (ValueError, TypeError):
+            return HttpResponse("Invalid start time format.", status=400)
 
         # 2. Credit Booking Logic (Transactional)
         if offering.credits_granted > 0:
@@ -547,19 +328,37 @@ def create_session_view(request, offering_id):
             if not selected_coach:
                 return HttpResponse("Error: No coach associated with this offering.", status=400)
 
-            new_session = CoachingSession.objects.create(
-                client=request.user,
-                coach=selected_coach,
-                service_name=offering.name,
-                start_time=parsed_start_time,
-                end_time=parsed_start_time + timezone.timedelta(minutes=offering.duration_minutes)
-            )
+            # The end_time is now calculated automatically in the model's save() method.
+            new_session = CoachingSession.objects.create(client=request.user, coach=selected_coach, offering=offering, start_time=parsed_start_time, status=SessionStatus.BOOKED)
             
             # Link the credits to the new session
             for credit in credits_to_use:
                 credit.session = new_session
                 credit.save()
             
+            # Send notification emails to client and coach
+            try:
+                from .utils import send_multipart_email
+                # Notify Client
+                client_context = {
+                    'recipient': new_session.client,
+                    'session': new_session,
+                    'user_timezone': str(getattr(new_session.client, 'user_timezone', timezone.get_current_timezone()))
+                }
+                send_multipart_email("Session Confirmed: " + new_session.offering.name, 'coaching/emails/session_booked.txt', 'coaching/emails/session_booked.html', client_context, [new_session.client.email])
+
+                # Notify Coach
+                coach_context = {
+                    'recipient': new_session.coach,
+                    'session': new_session,
+                    'user_timezone': str(getattr(new_session.coach, 'user_timezone', timezone.get_current_timezone()))
+                }
+                send_multipart_email("New Session Booked: " + new_session.offering.name, 'coaching/emails/session_booked.txt', 'coaching/emails/session_booked.html', coach_context, [new_session.coach.email])
+
+            except Exception as e:
+                # Log the error, but don't block the response since the booking was successful
+                print(f"Error sending booking confirmation email for session {new_session.id}: {e}")
+
             return HttpResponse(f"Session booked using {offering.credits_granted} Credit(s).", status=200)
 
         else: # Assume it's price-based if no credits are granted
@@ -567,4 +366,33 @@ def create_session_view(request, offering_id):
               # Payment initiation/confirmation, then session creation
               return HttpResponse(f"Session booked via direct payment of £{offering.price}.", status=200)
     
-    return redirect('coaching:offering_detail', offering_id=offering_id)
+    offering = get_object_or_404(CoachOffering, id=offering_id)
+    return redirect('coaching:offering_detail', offering_slug=offering.slug)
+
+@login_required
+def taster_booking_start(request):
+    """
+    Displays a list of coaches for the user to choose from to book their
+    free taster session.
+    """
+    # Check if user has an approved taster credit
+    has_taster_credit = SessionCredit.objects.filter(
+        user=request.user,
+        is_taster=True,
+        session__isnull=True,
+        expiration_date__gt=timezone.now()
+    ).exists()
+
+    if not has_taster_credit:
+        return HttpResponse("You do not have an available taster session credit.", status=403)
+
+    coaches = User.objects.filter(is_coach=True, is_active=True)
+    
+    # The slug for the taster offering is hardcoded here, as created by the management command.
+    taster_offering_slug = 'taster-session'
+
+    context = {
+        'coaches': coaches,
+        'taster_offering_slug': taster_offering_slug,
+    }
+    return render(request, 'coaching/taster/taster_select_coach.html', context)

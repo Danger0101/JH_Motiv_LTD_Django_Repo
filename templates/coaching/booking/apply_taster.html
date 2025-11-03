@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Momentum Catalyst Session{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-10">
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8 text-center">
+
+        {% if not application %}
+            <!-- State 1: User has not applied yet -->
+            <h1 class="text-3xl font-bold text-gray-800 mb-4">Apply for Your Free Momentum Catalyst Session</h1>
+            <p class="text-gray-700 mb-6">This is a one-time, complimentary 30-minute session to help you gain clarity and momentum. Submit your application and a coach will review it shortly.</p>
+            <form method="POST">
+                {% csrf_token %}
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300">
+                    Apply Now
+                </button>
+            </form>
+
+        {% elif application.status == 'P' %}
+            <!-- State 2: Application is pending -->
+            <h1 class="text-3xl font-bold text-gray-800 mb-4">Application Submitted!</h1>
+            <p class="text-gray-700 mb-6">Your application for the Momentum Catalyst Session has been received. A coach will review it shortly. You will be notified once it's approved.</p>
+            <div class="bg-yellow-100 text-yellow-800 p-4 rounded-lg">
+                Status: <strong>Pending Review</strong>
+            </div>
+
+        {% elif application.status == 'A' %}
+            <!-- State 3: Application is approved -->
+            <h1 class="text-3xl font-bold text-green-700 mb-4">You're Approved!</h1>
+            <p class="text-gray-700 mb-6">Your application has been approved. You now have one credit to book your Momentum Catalyst Session.</p>
+            <a href="{% url 'coaching:taster_booking_start' %}" class="w-full inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300">
+                Book Your Session Now
+            </a>
+
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

@@ -21,10 +21,10 @@ def coach_offerings_list_create(request):
     coach = request.user
     
     if request.method == 'GET':
+        # This view now ONLY handles the "My Offerings" tab.
+        # It shows offerings created by the coach.
         offerings = CoachOffering.objects.filter(coaches=coach).order_by('name')
-        
-        # HTMX FIX: Return HTML fragment, not raw JSON
-        return render(request, 'coaching/partials/offerings_list_fragment.html', {'offerings': offerings})
+        return render(request, 'coaching/partials/coach/_my_offerings_list.html', {'offerings': offerings})
 
     elif request.method == 'POST':
         try:
@@ -108,11 +108,39 @@ def add_coach_to_offering(request, offering_id):
     offering = get_object_or_404(CoachOffering, id=offering_id)
     offering.coaches.add(request.user)
     
-    # This response is for HTMX to replace the button
-    return render(request, 'coaching/partials/_offering_coach_actions.html', {
-        'offering': offering,
-        'user': request.user
-    })
+    # This response is for HTMX to replace the entire "All Offerings" list
+    # We re-run the logic from the all_offerings_list_view to get the updated lists
+    # Fetch ALL offerings, not just active ones, so coaches can see and rejoin inactive ones.
+    all_offerings = CoachOffering.objects.prefetch_related('coaches').order_by('name')
+    
+    # Separate offerings into two lists based on the coach's participation
+    joined_offerings = all_offerings.filter(coaches=request.user)
+    not_joined_offerings = all_offerings.exclude(coaches=request.user)
+
+    context = {'joined_offerings': joined_offerings, 'not_joined_offerings': not_joined_offerings}
+    return render(request, 'coaching/partials/coach/_all_offerings_list.html', context)
+
+
+@login_required
+@require_http_methods(["GET"])
+def all_offerings_list_view(request):
+    """
+    Renders a list of ALL active offerings, allowing a coach to see which ones
+    they can join or leave.
+    """
+    if not coach_is_valid(request.user):
+        return HttpResponse("Unauthorized", status=403)
+    
+    # Fetch ALL offerings, not just active ones, so coaches can see and rejoin inactive ones.
+    all_offerings = CoachOffering.objects.prefetch_related('coaches').order_by('name')
+    
+    # Separate offerings into two lists based on the coach's participation
+    joined_offerings = all_offerings.filter(coaches=request.user)
+    not_joined_offerings = all_offerings.exclude(coaches=request.user)
+
+    context = {'joined_offerings': joined_offerings, 'not_joined_offerings': not_joined_offerings}
+    
+    return render(request, 'coaching/partials/coach/_all_offerings_list.html', context)
 
 @login_required
 @require_http_methods(["POST"])
@@ -124,8 +152,14 @@ def remove_coach_from_offering(request, offering_id):
     offering = get_object_or_404(CoachOffering, id=offering_id)
     offering.coaches.remove(request.user)
 
-    # This response is for HTMX to replace the button
-    return render(request, 'coaching/partials/_offering_coach_actions.html', {
-        'offering': offering,
-        'user': request.user
-    })
+    # This response is for HTMX to replace the entire "All Offerings" list
+    # We re-run the logic from the all_offerings_list_view to get the updated lists
+    # Fetch ALL offerings, not just active ones, so coaches can see and rejoin inactive ones.
+    all_offerings = CoachOffering.objects.prefetch_related('coaches').order_by('name')
+    
+    # Separate offerings into two lists based on the coach's participation
+    joined_offerings = all_offerings.filter(coaches=request.user)
+    not_joined_offerings = all_offerings.exclude(coaches=request.user)
+
+    context = {'joined_offerings': joined_offerings, 'not_joined_offerings': not_joined_offerings}
+    return render(request, 'coaching/partials/coach/_all_offerings_list.html', context)

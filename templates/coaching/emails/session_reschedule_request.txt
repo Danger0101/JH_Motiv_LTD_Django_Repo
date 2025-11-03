@@ -1,0 +1,12 @@
+Hi {{ client.first_name|default:client.username }},
+
+Due to a change in your coach's availability, your session for "{{ session.offering.name }}" scheduled for {{ session.start_time|date:"F j, Y, P" }} needs to be rescheduled.
+
+Please use the link below to find a new time that works for you. Your session credit has been returned to your account for this purpose.
+
+Reschedule Link: {{ reschedule_url }}
+
+We apologize for any inconvenience.
+
+Best,
+The JH Motiv LTD Team

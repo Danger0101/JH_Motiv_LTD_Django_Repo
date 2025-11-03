@@ -14,10 +14,10 @@
                 <p class="text-gray-600 mb-4">{{ offering.description }}</p>
                 
                 <div class="text-lg font-semibold text-gray-700 mb-2">
-                    {% if offering.booking_type == 'price' %}
-                        <span class="text-3xl font-bold text-indigo-600">£{{ offering.price }}</span>
+                    {% if offering.credits_granted > 0 %}
+                        <span class="text-3xl font-bold text-indigo-600">{{ offering.credits_granted }} Credit(s)</span>
                     {% else %}
-                        <span class="text-3xl font-bold text-indigo-600">{{ offering.credits_required }} Credit(s)</span>
+                        <span class="text-3xl font-bold text-indigo-600">£{{ offering.price }}</span>
                     {% endif %}
                 </div>
                 
@@ -30,7 +30,7 @@
             </div>
             
             <div class="p-6 bg-gray-50">
-                <a href="{% url 'coaching:offering_detail' offering.id %}" class="block w-full text-center bg-indigo-600 text-white py-3 px-6 rounded-md hover:bg-indigo-700 font-semibold transition">
+                <a href="{% url 'coaching:offering_detail_coach' offering_slug=offering.slug coach_id=coach.id %}" class="block w-full text-center bg-indigo-600 text-white py-3 px-6 rounded-md hover:bg-indigo-700 font-semibold transition">
                     View Availability
                 </a>
             </div>

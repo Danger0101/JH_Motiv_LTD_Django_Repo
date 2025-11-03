@@ -89,10 +89,10 @@
       >
         {% for offering in offerings %}
         <div class="snap-center flex-shrink-0 w-80 md:w-96">
-          {% include "coaching/_offering_card.html" %} 
+          {% include "coaching/partials/_offering_card.html" %} 
           
           {% if user.is_authenticated and user.is_coach %}
-            {% include "coaching/partials/_offering_coach_actions.html" %}
+            {% include "coaching/partials/coach/_offering_coach_actions.html" %}
           {% endif %}
         </div>
         {% empty %}
@@ -242,10 +242,6 @@
           left: scrollPosition,
           behavior: 'smooth'
         });
-      },
-      next() {
-        this.activeIndex = (this.activeIndex + 1) % this.items.length;
-        this.scrollToIndex(this.activeIndex);
       },
       scrollToIndex(index, smooth = true) {
         const carousel = this.$refs.carousel;

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Application Approved!</title>
+</head>
+<body>
+    <p>Hi {{ user.first_name|default:user.username }},</p>
+    <p>Great news! Your application for the <strong>Momentum Catalyst Session</strong> has been approved.</p>
+    <p>You now have one credit to book your complimentary session. Please use the link below to schedule your session:</p>
+    <p><a href="{{ booking_url }}">Book Your Session Now</a></p>
+    <p>We look forward to working with you.</p>
+    <p>Best,<br>The JH Motiv LTD Team</p>
+</body>
+</html>

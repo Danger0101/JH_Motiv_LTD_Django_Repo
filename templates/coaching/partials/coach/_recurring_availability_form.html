@@ -1,0 +1,45 @@
+{% load coaching_extras %}
+
+<form hx-post="{% url 'coaching:api_recurring_availability' %}" hx-target="this" hx-swap="outerHTML">
+    {% csrf_token %}
+    {{ formset.management_form }}
+    
+    {% if success_message %}
+    <div class="p-3 mb-4 text-sm text-green-800 bg-green-100 rounded-lg" role="alert">
+        {{ success_message }}
+    </div>
+    {% endif %}
+    
+    <div class="space-y-3" x-data>
+        {% for form in formset.forms %}
+        <div class="flex items-center space-x-4 p-2 border-b last:border-b-0" x-data="{ is_available: {{ form.initial.is_available|yesno:'true,false' }} }">
+            {{ form.id }}
+            <div class="flex items-center w-28">
+                {{ form.is_available }}
+                <label for="{{ form.is_available.id_for_label }}" class="ml-2 font-semibold" @change="is_available = $event.target.checked">
+                    {{ days|get_item:forloop.counter0 }}
+                </label>
+            </div>
+            <div class="time-inputs flex flex-grow space-x-2" :class="{ 'opacity-50 pointer-events-none': !is_available }">
+                <div class="w-1/2">
+                    <label for="{{ form.start_time.id_for_label }}" class="sr-only">Start Time</label>
+                    {{ form.start_time }}
+                </div>
+                <div class="w-1/2">
+                    <label for="{{ form.end_time.id_for_label }}" class="sr-only">End Time</label>
+                    {{ form.end_time }}
+                </div>
+            </div>
+        </div>
+        {% if form.errors %}
+        <div class="text-red-600 text-sm p-2">
+            <p><strong>{{ days|get_item:forloop.counter0 }}:</strong> {{ form.errors.as_text | cut:"* " | cut:"__all__" | safe }}</p>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+
+    <button type="submit" class="mt-4 w-full bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition">
+        Save Weekly Schedule
+    </button>
+</form>
