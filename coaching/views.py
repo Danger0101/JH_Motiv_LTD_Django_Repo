@@ -229,67 +229,195 @@ def booking_page(request, coach_id):
 
 
 @login_required
-def offering_detail_view(request, offering_slug, coach_id=None):
-    """
-    Shows session details and checks user eligibility (credits/price/taster credits)
-    before loading the calendar. Can be filtered to a specific coach.
-    """
-    offering = get_object_or_404(CoachOffering, slug=offering_slug)
-    
-    if coach_id:
-        coach = get_object_or_404(User, id=coach_id, is_coach=True)
-        # Ensure the selected coach is actually associated with the offering
-        if coach not in offering.coaches.all():
-            return HttpResponse("This coach does not provide this service.", status=404)
-    else:
-        coach = offering.coaches.first()
 
-    if not coach:
-        return HttpResponse("No coaches are available for this offering.", status=404)
+
+def offering_detail_view(request, offering_slug, coach_id=None):
+
+
+    """
+
+
+    Shows session details and checks user eligibility (credits/price/taster credits)
+
+
+    before loading the calendar. Can be filtered to a specific coach.
+
+
+    If no coach_id is provided, it shows a list of coaches for the offering.
+
+
+    """
+
+
+    offering = get_object_or_404(CoachOffering, slug=offering_slug)
+
+
     user = request.user
-    
+
+
+
+
+
     # --- Credit/Program Eligibility Check (Updated to include Taster Credits) ---
+
+
     is_eligible = False
+
+
     credit_count = 0
-    
+
+
+    earliest_start_date = None
+
+
+    latest_end_date = None
+
+
+
+
+
     if offering.credits_granted > 0:
+
+
         # 1. Count ALL usable credits (purchased and taster)
+
+
         valid_credits = SessionCredit.objects.filter(
+
+
             user=user,
+
+
             session__isnull=True, # Credit is unused
+
+
             expiration_date__gt=timezone.now() # Credit is not expired
+
+
         )
+
+
         credit_count = valid_credits.count()
 
+
+
+
+
         # 2. Check if the required credits are available
+
+
         if credit_count >= offering.credits_granted:
+
+
             is_eligible = True
-            
+
+
+
+
+
         # 3. Determine validity dates (Only applies to purchased programs, not taster credits)
+
+
         active_offerings = UserOffering.objects.filter(
+
+
              user=user,
+
+
              end_date__gte=timezone.now().date()
+
+
         )
+
+
         earliest_start_date = active_offerings.order_by('start_date').values_list('start_date', flat=True).first()
+
+
         latest_end_date = active_offerings.order_by('-end_date').values_list('end_date', flat=True).first()
 
-        
+
     else: # Assume it's price-based if no credits are granted
+
+
         # If it's a paid session, eligibility is assumed, but price is displayed.
+
+
         is_eligible = True
-        earliest_start_date = None
-        latest_end_date = None
 
 
-    context = {
+
+
+
+    common_context = {
+
+
         'offering': offering,
-        'coach': coach,
+
+
         'is_eligible': is_eligible,
+
+
         'credit_count': credit_count,
+
+
         'booking_start_date': earliest_start_date.isoformat() if earliest_start_date else None,
+
+
         'booking_end_date': latest_end_date.isoformat() if latest_end_date else None,
+
+
     }
-    return render(request, 'coaching/booking/select_time.html', context)
+
+
+
+
+
+    if coach_id:
+
+
+        coach = get_object_or_404(User, id=coach_id, is_coach=True)
+
+
+        # Ensure the selected coach is actually associated with the offering
+
+
+        if coach not in offering.coaches.all():
+
+
+            return HttpResponse("This coach does not provide this service.", status=404)
+
+
+        
+
+
+        context = {**common_context, 'coach': coach}
+
+
+        return render(request, 'coaching/booking/select_time.html', context)
+
+
+    else:
+
+
+        # No coach_id provided, show a list of coaches for this offering
+
+
+        coaches = offering.coaches.filter(is_active=True).order_by('username')
+
+
+        if not coaches.exists():
+
+
+            return HttpResponse("No coaches are available for this offering.", status=404)
+
+
+        
+
+
+        context = {**common_context, 'coaches': coaches}
+
+
+        return render(request, 'coaching/booking/select_coach.html', context)
 
 
 @login_required
