@@ -26,7 +26,6 @@ class CustomLoginView(LoginView):
         
         return response
 
-from coaching.models import UserOffering, SessionCredit
 from django.utils import timezone
 
 class ProfileView(LoginRequiredMixin, TemplateView):
@@ -38,14 +37,6 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         # Fetch marketing preferences
         preference, created = MarketingPreference.objects.get_or_create(user=self.request.user)
         context['marketing_preference'] = preference
-        
-        # Fetch coaching programs and credits
-        context['user_offerings'] = UserOffering.objects.filter(user=self.request.user)
-        context['available_credits'] = SessionCredit.objects.filter(
-            user=self.request.user, 
-            session__isnull=True, 
-            expiration_date__gte=timezone.now()
-        ).order_by('expiration_date')
         
         return context
 

@@ -1,19 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import User, MarketingPreference, Address
-from coaching.admin import (
-    RecurringAvailabilityInline,
-    PurchasedUserOfferingInline,
-    UserSessionCreditInline,
-    UserCreditApplicationInline,
-    UserGoalInline,
-    CoachingSessionClientInline,
-    CoachingSessionCoachInline,
-    CoachPayoutInline,
-    CoachVacationBlockInline,
-    SpecificAvailabilityInline,
-    CoachSessionNoteInline,
-)
 
 class MarketingPreferenceInline(admin.StackedInline):
     model = MarketingPreference
@@ -38,27 +25,6 @@ class UserAdmin(BaseUserAdmin):
         ('Coach Settings', {'fields': ('is_on_vacation', 'user_timezone', 'billing_notes')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
-
-    def get_inlines(self, request, obj=None):
-        inlines = list(self.inlines)
-        if obj:
-            # Inlines for all users
-            inlines.append(PurchasedUserOfferingInline)
-            inlines.append(UserSessionCreditInline)
-            inlines.append(UserCreditApplicationInline)
-
-            # Inlines specific to coaches
-            if obj.is_coach:
-                inlines.append(RecurringAvailabilityInline)
-                inlines.append(SpecificAvailabilityInline)
-                inlines.append(CoachVacationBlockInline)
-                inlines.append(CoachingSessionCoachInline)
-                inlines.append(CoachPayoutInline)
-                inlines.append(CoachSessionNoteInline)
-            else:
-                # If not a coach, show sessions where they are a client
-                inlines.append(CoachingSessionClientInline)
-        return inlines
 
 # Register the custom User admin
 admin.site.register(User, UserAdmin)

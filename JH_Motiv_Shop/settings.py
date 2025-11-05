@@ -45,7 +45,6 @@ INSTALLED_APPS = [
     'products',
     'cart',
     'payments',
-    'coaching',
     'dreamers',
     'team',
     'gcal',
