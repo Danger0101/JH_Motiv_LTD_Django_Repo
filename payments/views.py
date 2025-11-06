@@ -8,6 +8,10 @@ from .models import Order
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
+def create_checkout_session(request, offering_id):
+    # Placeholder view
+    return HttpResponse("This is a placeholder for the checkout session creation.")
+
 def order_detail_guest(request, guest_order_token):
     """Displays a guest's order details using a secure token."""
     order = get_object_or_404(Order, guest_order_token=guest_order_token)

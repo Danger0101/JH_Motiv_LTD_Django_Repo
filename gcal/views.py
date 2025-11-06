@@ -72,4 +72,4 @@ def google_calendar_redirect(request):
     }
     request.user.save()
 
-    return redirect(reverse('profile'))
+    return redirect(reverse('account:account_profile'))

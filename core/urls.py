@@ -12,4 +12,5 @@ urlpatterns = [
     path('terms-of-service/', views.terms_of_service_page, name='terms_of_service'),
     path('shipping-policy/', views.shipping_policy_page, name='shipping_policy'),
     path('refund-policy/', views.refund_policy_page, name='refund_policy'),
+    path('coach/', views.coach_landing_page, name='coach_landing'),
 ]

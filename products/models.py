@@ -11,7 +11,7 @@ class StockPool(models.Model):
     Manages a centralized pool of inventory shared across one or more Variants.
     Removes the need for individual Variant inventory counts.
     """
-    name = models.CharField(max_length=100, unique=True, help_text="e.g., 'White T-Shirt Blanks', 'Coaching Slot Quota'")
+    name = models.CharField(max_length=100, unique=True, help_text="e.g., 'White T-Shirt Blanks'")
     available_stock = models.PositiveIntegerField(default=0)
     low_stock_threshold = models.PositiveIntegerField(default=10)
 
@@ -30,7 +30,6 @@ class Product(models.Model):
     PRODUCT_TYPE_CHOICES = [
         ('physical', 'Physical'),
         ('digital', 'Digital'),
-        ('coaching', 'Coaching'),
     ]
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)

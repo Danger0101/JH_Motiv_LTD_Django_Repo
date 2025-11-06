@@ -16,16 +16,33 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
+    # Core Django Admin
     path('admin/', admin.site.urls),
-    path('unicorn/', include('django_unicorn.urls')),
-    path('', include('core.urls')),
-    # The line below is changed to include accounts.urls, which properly sets up django-allauth
-    path('accounts/', include('accounts.urls')),
-    path('products/', include('products.urls')),
-    path('cart/', include('cart.urls')),
-    path('payments/', include('payments.urls')),
 
-    path('gcal/', include('gcal.urls')),
+    # Allauth URLs
+    path('accounts/', include('allauth.urls')),
+    path('unicorn/', include('django_unicorn.urls')),
+
+    # Coaching System Apps
+    path('', include('core.urls', namespace='core')),
+    path('coach/', include('coaching_booking.urls')),
+    path('app/', include('dashboard.urls')),
+    path('info/', include('coaching_client.urls')),
+    path('admin/offers/', include('coaching_core.urls', namespace='coaching')),
+    path('coach/time/', include('coaching_availability.urls')),
+    path('oauth/', include('gcal.urls')),
+
+    # Existing and Standard Apps
+    path('auth/', include('accounts.urls', namespace='account')),
+    path('checkout/', include('payments.urls')),
+    path('cart/', include('cart.urls', namespace='cart')),
+    path('shop/', include('products.urls')),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

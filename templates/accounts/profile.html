@@ -7,16 +7,7 @@
     <h1 class="text-4xl font-bold text-gray-800 mb-2">👋 Welcome, {{ user.first_name|default:user.username }}</h1>
     <p class="text-gray-600 mb-8">This is your centralized account dashboard.</p>
 
-    {% if user.is_coach %}
-    <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 mb-8 shadow-md">
-        <h2 class="text-2xl font-semibold text-indigo-800 mb-3">Coach Dashboard Tools</h2>
-        <p class="text-indigo-700 mb-3">Manage your availability, offerings, and integration settings here.</p>
-        <a href="{% url 'coaching:coach_settings' %}" 
-           class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition duration-200">
-            Go to Coach Settings
-        </a>
-    </div>
-    {% endif %}
+
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         
@@ -30,15 +21,23 @@
         </div>
         
         <div class="bg-white p-6 rounded-lg shadow-lg">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Google Calendar</h2>
+            <p class="text-gray-600 mb-4">Connect your Google Calendar to automatically sync your coaching sessions.</p>
+            <a href="{% url 'gcal:google_calendar_init' %}" class="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-300">
+                Connect to Google Calendar
+            </a>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-lg">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">Marketing Preferences</h2>
             {% with marketing_preference=user.marketing_preference %}
-            <form hx-post="{% url 'update_marketing_preference' %}" 
+            <form hx-post="{% url 'account:update_marketing_preference' %}" 
                   hx-target="#marketing-preference-status-wrapper" hx-swap="innerHTML">
                 {% csrf_token %}
                 <div class="flex items-center space-x-2">
                     <input type="checkbox" name="is_subscribed" id="marketing_opt_in"
                            {% if marketing_preference.is_subscribed %}checked{% endif %}
-                           hx-post="{% url 'update_marketing_preference' %}"
+                           hx-post="{% url 'account:update_marketing_preference' %}"
                            hx-trigger="change"
                            hx-target="#marketing-preference-status-wrapper"
                            hx-swap="innerHTML"
@@ -58,21 +57,7 @@
             {% endwith %}
         </div>
         
-        {% if user.is_coach %}
-        <div class="bg-white p-6 rounded-lg shadow-lg border-l-4 border-yellow-500">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">Google Calendar 📅</h2>
-            {% if user.google_calendar_credentials %}
-                <p class="text-green-600 font-semibold mb-3">✅ Calendar is connected and secure.</p>
-                <button class="text-sm text-red-500 hover:text-red-700">Disconnect Calendar</button>
-            {% else %}
-                <p class="text-red-600 mb-3">Calendar not yet linked.</p>
-                <a href="{% url 'gcal:google_calendar_init' %}" 
-                   class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200 text-sm">
-                    Connect Google Calendar
-                </a>
-            {% endif %}
-        </div>
-        {% endif %}
+
 
     <div class="mt-12">
         <h2 class="text-2xl font-bold text-gray-800 mb-6">My Coaching Offerings</h2>
@@ -87,7 +72,7 @@
                 {% empty %}
                 <li>
                     <p class="text-gray-500">You have not purchased any coaching offerings yet.</p>
-                    <a href="{% url 'coaching:offering_list' %}" class="text-indigo-600 hover:underline">View available offerings</a>
+                    <a href="{% url 'coaching_booking:offer-list' %}" class="text-indigo-600 hover:underline">View available offerings</a>
                 </li>
                 {% endfor %}
             </ul>

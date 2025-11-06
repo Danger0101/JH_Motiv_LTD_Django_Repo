@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>Your Profile</h1>
+
+    <!-- Static Links/Tabs for HTMX Content -->
+    {% include "accounts/_profile_data_links.html" %}
+
+    <!-- Div where HTMX content will be loaded -->
+    <!-- The initial content can be loaded with a trigger on the body or a surrounding div -->
+    <div id="profile-content" hx-get="{% url 'account:htmx_enrollment_status' %}" hx-trigger="load" hx-swap="innerHTML">
+        <!-- Loading spinner could go here -->
+        <p>Loading...</p>
+    </div>
+
+    <hr>
+
+    <h2>Edit Your Coach Profile</h2>
+    {% include "accounts/_coach_profile_form.html" %}
+</div>
+
+{#
+    HTMX Usage Notes:
+    - The main content div `profile-content` loads the initial view (`_enrollment_status.html`) on page load.
+    - The links in `_profile_data_links.html` should target this div.
+    - Example link:
+      <a href="#" hx-get="{% url 'htmx_session_list' %}" hx-target="#profile-content" hx-swap="innerHTML">My Sessions</a>
+#}
+{% endblock %}

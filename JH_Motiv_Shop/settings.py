@@ -30,6 +30,9 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.humanize',
     
+    # Accounts
+    'accounts',
+    
     'encrypted_model_fields',
     'django_htmx',
     'django_unicorn',
@@ -41,13 +44,18 @@ INSTALLED_APPS = [
 
     # Project Apps
     'core',
-    'accounts',
     'products',
     'cart',
     'payments',
     'dreamers',
     'team',
     'gcal',
+    # Coaching Apps
+    'coaching_core',
+    'coaching_booking',
+    'coaching_availability',
+    'coaching_client',
+    'dashboard',
 ]
 
 MIDDLEWARE = [
@@ -145,6 +153,10 @@ USE_TZ = True
 # Static files
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

@@ -1,6 +1,12 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, MarketingPreference, Address
+from .models import User, MarketingPreference, Address, CoachProfile
+
+# Inlines for UserAdmin
+class CoachProfileInline(admin.StackedInline):
+    model = CoachProfile
+    can_delete = False
+    verbose_name_plural = 'Coach Profiles'
 
 class MarketingPreferenceInline(admin.StackedInline):
     model = MarketingPreference
@@ -10,12 +16,13 @@ class MarketingPreferenceInline(admin.StackedInline):
 
 class AddressInline(admin.StackedInline):
     model = Address
-    extra = 1 # Show one extra form for adding an address
+    extra = 1
     can_delete = True
     verbose_name_plural = 'Addresses'
 
+# Custom UserAdmin
 class UserAdmin(BaseUserAdmin):
-    inlines = (MarketingPreferenceInline, AddressInline)
+    inlines = (CoachProfileInline, MarketingPreferenceInline, AddressInline)
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'is_coach', 'is_on_vacation')
     list_filter = BaseUserAdmin.list_filter + ('is_coach', 'is_on_vacation')
     fieldsets = (
@@ -26,8 +33,20 @@ class UserAdmin(BaseUserAdmin):
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
 
-# Register the custom User admin
+# Register the custom User admin, ensuring the default is unregistered first
+if admin.site.is_registered(User):
+    admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
+
+@admin.register(CoachProfile)
+class CoachProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'time_zone', 'is_available_for_new_clients')
+    list_filter = ('is_available_for_new_clients', 'time_zone')
+    search_fields = ['user__email', 'bio']
+    # Note: The requested UserDetailInline was not created because CoachProfile
+    # is the child in the User-CoachProfile relationship. The standard practice
+    # is to inline the 'child' (CoachProfile) on the 'parent' (User) admin,
+    # which has been done in the UserAdmin above.
 
 # Also register Address model to be managed independently
 @admin.register(Address)

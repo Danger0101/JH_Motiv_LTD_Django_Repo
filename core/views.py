@@ -70,6 +70,10 @@ def shipping_policy_page(request):
     """Renders the Shipping Policy page with data."""
     return render(request, 'core/shipping_policy.html', {'shipping_data': SHIPPING_POLICY_DATA})
 
+def coach_landing_page(request):
+    """Renders the coach landing page."""
+    return render(request, 'core/coach_landing.html')
+
 @require_POST
 def set_cookie_consent(request):
     """

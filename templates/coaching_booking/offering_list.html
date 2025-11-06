@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <h1 class="text-3xl font-bold mb-6">Our Coaching Offerings</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for offering in offerings %}
+            <div class="bg-white shadow-lg rounded-lg p-6">
+                <h2 class="text-2xl font-semibold mb-2">{{ offering.name }}</h2>
+                <p class="text-gray-600 mb-4">{{ offering.description }}</p>
+                <p class="text-xl font-bold text-indigo-600 mb-4">${{ offering.price }}</p>
+                <a href="{% url 'coaching_booking:offer-enroll' offering.slug %}"
+                   class="inline-block bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition duration-300">
+                    Enroll Now
+                </a>
+            </div>
+        {% empty %}
+            <p class="col-span-full text-gray-600">No coaching offerings are currently available.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock content %}

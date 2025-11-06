@@ -9,7 +9,7 @@
     <div class="p-6 bg-white shadow-lg rounded-lg border" id="login-form-container">
         <h2 class="text-2xl font-bold mb-6 text-gray-900">{% translate "Log In" %}</h2>
 
-        {% url 'account_login' as login_url %}
+        {% url 'account:login' as login_url %}
         
         <form method="post" action="{{ login_url }}" hx-post="{{ login_url }}" hx-target="#login-form-container" hx-swap="outerHTML">
             {% csrf_token %}
@@ -38,7 +38,7 @@
             
             {# RENDER FORGOT PASSWORD LINK HERE #}
             <div class="text-right mb-4">
-                <a class="text-sm font-medium text-blue-600 hover:text-blue-500" href="{% url 'account_reset_password' %}">
+                <a class="text-sm font-medium text-blue-600 hover:text-blue-500" href="{% url 'account:password_reset' %}">
                     {% translate "Forgot Password?" %}
                 </a>
             </div>
@@ -64,9 +64,13 @@
         {% if ACCOUNT_ALLOW_REGISTRATION %}
         <p class="mt-4 text-center text-sm text-gray-600">
             {% translate "Don't have an account?" %}
-            <a href="{% url 'account_signup' %}" class="font-medium text-blue-600 hover:text-blue-500">
+            <a href="{% url 'account:signup' %}" class="font-medium text-blue-600 hover:text-blue-500">
                 {% translate "Sign up here" %}
             </a>
+        <p class="mt-4 text-center text-sm text-gray-600">
+            By logging in, you agree to our
+            <a href="{% url 'core:terms_of_service' %}" class="font-medium text-blue-600 hover:text-blue-500">Terms of Service</a> and
+            <a href="{% url 'core:privacy_policy' %}" class="font-medium text-blue-600 hover:text-blue-500">Privacy Policy</a>.
         </p>
         {% endif %}
     </div>

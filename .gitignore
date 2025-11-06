@@ -2,6 +2,11 @@
 __pycache__/
 *.py[cod]
 *$py.class
+venv/
+/venv/
+.venv/
+.ipynb_checkpoints
+
 
 # C extensions
 *.so

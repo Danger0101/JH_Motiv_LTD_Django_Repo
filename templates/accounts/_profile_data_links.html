@@ -1,0 +1,8 @@
+<!-- These links will trigger HTMX requests to load different parts of the profile -->
+<div class="tabs">
+    <ul>
+        <li><a hx-get="{% url 'account:htmx_enrollment_status' %}" hx-target="#profile-content" hx-swap="innerHTML">Enrollment Status</a></li>
+        <li><a hx-get="{% url 'account:htmx_session_list' %}" hx-target="#profile-content" hx-swap="innerHTML">My Sessions</a></li>
+        <li><a hx-get="{% url 'account:htmx_order_history' %}" hx-target="#profile-content" hx-swap="innerHTML">Order History</a></li>
+    </ul>
+</div>
