@@ -1,6 +1,6 @@
 from django.views.generic import ListView, DetailView, TemplateView, FormView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
 from datetime import date, timedelta
@@ -12,6 +12,10 @@ from coaching_availability.utils import calculate_bookable_slots
 
 from .models import ClientOfferingEnrollment, SessionBooking
 # from .forms import SessionBookingForm # Assuming a form exists
+
+def coach_landing_view(request):
+    """Renders the coach landing page."""
+    return render(request, 'core/coach_landing.html')
 
 class OfferListView(ListView):
     """Displays all active coaching offerings available for purchase/enrollment."""

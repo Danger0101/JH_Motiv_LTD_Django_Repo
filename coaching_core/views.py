@@ -59,4 +59,4 @@ def api_recurring_availability(request):
             return JsonResponse({'status': 'success', 'message': 'Recurring availability processed.'})
         except json.JSONDecodeError:
             return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
-    return JsonResponse({'status': 'error', 'message': 'Only POST method is allowed'}, status=405)
+        return JsonResponse({'status': 'error', 'message': 'Only POST method is allowed'}, status=405)
