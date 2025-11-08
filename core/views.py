@@ -12,6 +12,7 @@ from .shipping_policy_data import SHIPPING_POLICY_DATA
 from .about_data import ABOUT_DATA
 from dreamers.models import DreamerProfile
 from team.models import TeamMember
+from products.models import Product
 
 # ==============================================================================
 # 1. FUNCTION-BASED VIEWS (Data-Driven Pages)
@@ -19,7 +20,13 @@ from team.models import TeamMember
 
 def home(request):
     """Renders the home page."""
-    return render(request, 'home.html')
+    products = Product.objects.all()
+    team_members = TeamMember.objects.filter(is_active=True)
+    context = {
+        'products': products,
+        'team_members': team_members,
+    }
+    return render(request, 'home.html', context)
 
 def about_page(request): 
     """Renders the About page, fetching dynamic Dreamer and Team data."""
@@ -69,10 +76,6 @@ def refund_policy_page(request):
 def shipping_policy_page(request):
     """Renders the Shipping Policy page with data."""
     return render(request, 'core/shipping_policy.html', {'shipping_data': SHIPPING_POLICY_DATA})
-
-def coach_landing_page(request):
-    """Renders the coach landing page."""
-    return render(request, 'core/coach_landing.html')
 
 @require_POST
 def set_cookie_consent(request):

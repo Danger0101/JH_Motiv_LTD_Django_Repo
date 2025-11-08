@@ -8,14 +8,46 @@ from datetime import date, timedelta
 # Assumed imports from other apps
 from coaching_core.models import Offering
 from coaching_availability.utils import calculate_bookable_slots
+from coaching_client.models import ContentPage
+from accounts.models import CoachProfile
 # from gcal.utils import create_event
 
 from .models import ClientOfferingEnrollment, SessionBooking
 # from .forms import SessionBookingForm # Assuming a form exists
 
+from team.models import TeamMember
+
 def coach_landing_view(request):
-    """Renders the coach landing page."""
-    return render(request, 'core/coach_landing.html')
+    """Renders the coach landing page, fetching all active coaches and offerings."""
+    
+    # 1. Fetch Coaches and Offerings
+    # Ensure CoachProfile is linked to an active user and available for new clients
+    coaches = CoachProfile.objects.filter(
+        user__is_active=True,
+        is_available_for_new_clients=True
+    ).select_related('user') # Select related is good practice for performance
+
+    # Fetch active offerings
+    offerings = Offering.objects.filter(active_status=True).prefetch_related('coaches')
+    
+    # 2. Define Knowledge Categories (Expanded list)
+    # The categories are hardcoded as requested, to avoid adding a model.
+    KNOWLEDGE_CATEGORIES = [
+        ('all', 'Business Coaches'),
+    ]
+    
+    # 3. Fetch Knowledge/Content Pages
+    # For the 'Backed by Research' section, we can use the ContentPage model.
+    # Limiting to 3 for the homepage display.
+    knowledge_pages = ContentPage.objects.filter(is_published=True).order_by('title')[:3]
+
+    context = {
+        'coaches': coaches,
+        'offerings': offerings,
+        'knowledge_pages': knowledge_pages,
+        'knowledge_categories': KNOWLEDGE_CATEGORIES[1:], # Exclude 'All Coaches' for the tab bar
+    }
+    return render(request, 'coaching_booking/coach_landing.html', context)
 
 class OfferListView(ListView):
     """Displays all active coaching offerings available for purchase/enrollment."""

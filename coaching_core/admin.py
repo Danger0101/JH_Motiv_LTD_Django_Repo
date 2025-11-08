@@ -19,13 +19,12 @@ class OfferingAdmin(admin.ModelAdmin):
     list_display = ('name', 'session_length_minutes', 'price', 'active_status', 'created_by')
     list_filter = ('active_status', 'duration_type', 'is_whole_day')
     search_fields = ['name', 'description']
-    prepopulated_fields = {'slug': ('name',)}
     fieldsets = (
         ('Service Details', {
-            'fields': ('name', 'slug', 'description')
+            'fields': ('name', 'description')
         }),
         ('Pricing & Length', {
-            'fields': ('price', 'duration_type', 'total_length_units', 'session_length_minutes', 'is_whole_day')
+            'fields': ('price', 'duration_type', 'total_length_units', 'session_length_minutes', 'total_number_of_sessions', 'is_whole_day')
         }),
         ('Status & Audit', {
             'fields': ('active_status', 'created_by', 'created_at')
