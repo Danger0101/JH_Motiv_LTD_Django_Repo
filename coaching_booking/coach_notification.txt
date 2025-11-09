@@ -1,0 +1,9 @@
+Hi {{ coach_name }},
+
+Great news! A new client has just enrolled in the {{ offering_name }} program and has been assigned to you.
+
+Client Details:
+- Name: {{ client_name }}
+- Email: {{ client_email }}
+
+Please ensure your availability is up-to-date in the dashboard so they can book their first session.

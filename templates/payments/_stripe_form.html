@@ -1,0 +1,34 @@
+<!-- This element will be replaced by Stripe's embedded checkout form -->
+<div id="checkout">
+    <!-- A loading indicator can be shown here before Stripe.js mounts the form -->
+</div>
+
+<!-- Error messages from Stripe will be displayed here -->
+<div id="error-message" class="text-danger mt-3"></div>
+
+<script>
+    // Ensure this script runs only once, even if HTMX swaps multiple times.
+    if (!window.stripeInitialized) {
+        window.stripeInitialized = true;
+
+        (function() {
+            const stripe = Stripe("{{ stripe_publishable_key }}");
+            const clientSecret = "{{ client_secret }}";
+
+            if (!clientSecret) {
+                document.getElementById('error-message').textContent = 'Could not initialize payment form. Please try again.';
+                return;
+            }
+
+            // Initialize and mount the embedded checkout
+            async function initialize() {
+                const checkout = await stripe.initEmbeddedCheckout({
+                    clientSecret,
+                });
+                checkout.mount('#checkout');
+            }
+
+            initialize();
+        })();
+    }
+</script>

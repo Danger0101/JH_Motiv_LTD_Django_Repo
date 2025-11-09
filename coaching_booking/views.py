@@ -1,9 +1,13 @@
 from django.views.generic import ListView, DetailView, TemplateView, FormView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.conf import settings
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.utils import timezone
 from datetime import date, timedelta
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
+from django.http import HttpResponseRedirect, HttpResponse
 
 # Assumed imports from other apps
 from coaching_core.models import Offering
@@ -16,6 +20,92 @@ from .models import ClientOfferingEnrollment, SessionBooking
 # from .forms import SessionBookingForm # Assuming a form exists
 
 from team.models import TeamMember
+
+@login_required
+@require_POST
+def book_session(request):
+    enrollment_id = request.POST.get('enrollment_id')
+    coach_id = request.POST.get('coach_id')
+    start_time_str = request.POST.get('start_time')
+
+    if not all([enrollment_id, coach_id, start_time_str]):
+        return HttpResponse("Missing booking information.", status=400)
+
+    try:
+        enrollment = get_object_or_404(ClientOfferingEnrollment, id=enrollment_id, client=request.user)
+        coach = get_object_or_404(CoachProfile, id=coach_id)
+        
+        # Convert start_time string to datetime object
+        # Assuming start_time_str format is 'YYYY-MM-DD HH:MM'
+        start_datetime = timezone.datetime.strptime(start_time_str, '%Y-%m-%d %H:%M')
+        
+        # Ensure the enrollment has remaining sessions
+        if enrollment.remaining_sessions <= 0:
+            return HttpResponse("No sessions remaining for this enrollment.", status=400)
+
+        # Create the session booking
+        SessionBooking.objects.create(
+            enrollment=enrollment,
+            coach=coach,
+            client=request.user,
+            start_datetime=start_datetime,
+            # end_datetime will be calculated in the model's save method
+        )
+        
+        # The enrollment's remaining_sessions will be decremented by the SessionBooking's save method
+        
+        # HTMX response to refresh the profile content or redirect
+        # For now, let's redirect to the profile page to show updated bookings
+        response = HttpResponseRedirect(reverse('accounts:account_profile'))
+        response['HX-Redirect'] = reverse('accounts:account_profile') # For HTMX to handle full redirect
+        return response
+
+    except ClientOfferingEnrollment.DoesNotExist:
+        return HttpResponse("Enrollment not found.", status=404)
+    except CoachProfile.DoesNotExist:
+        return HttpResponse("Coach not found.", status=404)
+    except ValueError:
+        return HttpResponse("Invalid date/time format.", status=400)
+    except Exception as e:
+        return HttpResponse(f"An error occurred: {e}", status=500)
+
+@login_required
+@require_POST
+def cancel_session(request, booking_id):
+    booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
+    booking.cancel() # This method handles session forfeiture/restoration
+    
+    # Return the updated bookings partial
+    user_bookings = SessionBooking.objects.filter(client=request.user).order_by('start_datetime')
+    return render(request, 'accounts/profile_bookings.html', {'user_bookings': user_bookings})
+
+@login_required
+def reschedule_session_form(request, booking_id):
+    booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
+    return render(request, 'accounts/partials/reschedule_form.html', {'booking': booking})
+
+@login_required
+@require_POST
+def reschedule_session(request, booking_id):
+    booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
+    
+    # For rescheduling, we need a new start time. This example assumes it's passed via POST.
+    # In a real scenario, you'd likely render a form to select a new time.
+    new_start_time_str = request.POST.get('new_start_time') 
+    if not new_start_time_str:
+        return HttpResponse("New start time is required for rescheduling.", status=400)
+    
+    try:
+        new_start_time = timezone.datetime.strptime(new_start_time_str, '%Y-%m-%d %H:%M')
+        booking.reschedule(new_start_time) # This method handles session forfeiture/rescheduling
+        
+        # Return the updated bookings partial
+        user_bookings = SessionBooking.objects.filter(client=request.user).order_by('start_datetime')
+        return render(request, 'accounts/profile_bookings.html', {'user_bookings': user_bookings})
+    except ValueError:
+        return HttpResponse("Invalid new start time format.", status=400)
+    except Exception as e:
+        return HttpResponse(f"An error occurred during rescheduling: {e}", status=500)
 
 def coach_landing_view(request):
     """Renders the coach landing page, fetching all active coaches and offerings."""
@@ -63,10 +153,14 @@ class OfferListView(ListView):
 class OfferEnrollmentStartView(LoginRequiredMixin, DetailView):
     """Initiates the checkout/enrollment process for a specific offering."""
     model = Offering
-    template_name = 'coaching_booking/enrollment_start.html'
-    context_object_name = 'offering'
-    # This view would typically hand off to a payment gateway.
-    # After successful payment, a ClientOfferingEnrollment would be created.
+    template_name = 'coaching_booking/checkout_embedded.html' # Use the embedded checkout template
+    
+    def get_context_data(self, **kwargs):
+        """Pass the Stripe Public Key to the template."""
+        context = super().get_context_data(**kwargs)
+        # This key is needed by the Stripe.js library on the frontend
+        context['STRIPE_PUBLIC_KEY'] = settings.STRIPE_PUBLISHABLE_KEY
+        return context
 
 class SessionBookingView(LoginRequiredMixin, FormView):
     """Allows an enrolled client to schedule a single session from available slots."""

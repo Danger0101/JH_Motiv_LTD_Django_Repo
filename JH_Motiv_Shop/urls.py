@@ -38,7 +38,7 @@ urlpatterns = [
 
     # Existing and Standard Apps
     path('auth/', include('accounts.urls', namespace='account')),
-    path('checkout/', include('payments.urls')),
+    path('checkout/', include('payments.urls', namespace='payments')),
     path('cart/', include('cart.urls', namespace='cart')),
     path('shop/', include('products.urls')),
 ]

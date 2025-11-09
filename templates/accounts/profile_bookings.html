@@ -1,0 +1,29 @@
+<div class="bg-white p-6 rounded-lg shadow-lg">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">My Booked Sessions</h2>
+    <ul class="space-y-4">
+        {% for booking in user_bookings %}
+        <li class="border-b pb-4 last:border-b-0">
+            <h3 class="text-xl font-semibold text-gray-800">Session with {{ booking.coach.user.get_full_name }}</h3>
+            <p class="text-gray-600">Date: {{ booking.start_datetime|date:"M d, Y" }}</p>
+            <p class="text-gray-600">Time: {{ booking.start_datetime|time:"H:i" }} - {{ booking.end_datetime|time:"H:i" }}</p>
+            <p class="text-gray-600">Status: {{ booking.get_status_display }}</p>
+            {% if booking.status == 'BOOKED' %}
+            <div class="mt-3 flex space-x-2">
+                <button hx-post="{% url 'coaching_booking:cancel_session' booking.id %}" hx-confirm="Are you sure you want to cancel this session?" hx-target="#profile-content" hx-swap="innerHTML"
+                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                    Cancel Session
+                </button>
+                <button hx-get="{% url 'coaching_booking:reschedule_session_form' booking.id %}" hx-target="#profile-content" hx-swap="innerHTML"
+                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-indigo-600 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Reschedule Session
+                </button>
+            </div>
+            {% endif %}
+        </li>
+        {% empty %}
+        <li>
+            <p class="text-gray-500">You have no upcoming or past booked sessions.</p>
+        </li>
+        {% endfor %}
+    </ul>
+</div>

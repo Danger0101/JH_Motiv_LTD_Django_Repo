@@ -3,10 +3,14 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
+from django.utils import timezone
 from .models import MarketingPreference
 from allauth.account.views import LoginView, SignupView, PasswordResetView, PasswordChangeView, PasswordSetView, LogoutView, PasswordResetDoneView, PasswordResetDoneView
+from coaching_booking.models import ClientOfferingEnrollment, SessionBooking
+from coaching_core.models import Offering
+from accounts.models import CoachProfile # Assuming CoachProfile is in accounts.models or accessible
 
 class CustomLoginView(LoginView):
     template_name = 'accounts/login.html'
@@ -53,6 +57,23 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         # Fetch marketing preferences
         preference, created = MarketingPreference.objects.get_or_create(user=self.request.user)
         context['marketing_preference'] = preference
+
+        # Fetch user's coaching offerings (enrollments)
+        context['user_offerings'] = ClientOfferingEnrollment.objects.filter(client=self.request.user).order_by('-enrolled_on')
+
+        # Fetch user's booked sessions
+        context['user_bookings'] = SessionBooking.objects.filter(client=self.request.user).order_by('start_datetime')
+
+        # For now, available_credits will be the same as user_offerings for simplicity
+        # In a real scenario, this might be a separate model or a filtered queryset of enrollments
+        context['available_credits'] = ClientOfferingEnrollment.objects.filter(
+            client=self.request.user,
+            remaining_sessions__gt=0,
+            is_active=True,
+            end_date__gte=timezone.now().date() # Assuming end_date is a DateField
+        ).order_by('-enrolled_on')
+        
+        context['active_tab'] = 'offerings' # Set default active tab
         
         return context
 
@@ -79,53 +100,127 @@ def update_marketing_preference(request):
     return HttpResponse("Invalid request", status=400)
 
 # HTMX Profile Views
+@login_required
+def profile_offerings_partial(request):
+    user_offerings = ClientOfferingEnrollment.objects.filter(client=request.user).order_by('-enrolled_on')
+    available_credits = ClientOfferingEnrollment.objects.filter(
+        client=request.user,
+        remaining_sessions__gt=0,
+        is_active=True,
+        end_date__gte=timezone.now().date()
+    ).order_by('-enrolled_on')
+    return render(request, 'accounts/profile_offerings.html', {
+        'user_offerings': user_offerings,
+        'available_credits': available_credits,
+        'active_tab': 'offerings'
+    })
 
-class ProfileDataLoadMixin:
-    """
-    A reusable mixin to ensure the requesting user is authenticated
-    and provides user context.
-    """
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['user'] = self.request.user
-        return context
+@login_required
+def profile_bookings_partial(request):
+    user_bookings = SessionBooking.objects.filter(client=request.user).order_by('start_datetime')
+    return render(request, 'accounts/profile_bookings.html', {
+        'user_bookings': user_bookings,
+        'active_tab': 'bookings'
+    })
 
-class EnrollmentStatusHtmxView(LoginRequiredMixin, ProfileDataLoadMixin, TemplateView):
-    """
-    Renders the enrollment status partial for the authenticated user.
-    """
-    template_name = "coaching_booking/_enrollment_status.html"
+@login_required
+def profile_book_session_partial(request):
+    user_offerings = ClientOfferingEnrollment.objects.filter(
+        client=request.user,
+        remaining_sessions__gt=0,
+        is_active=True,
+        end_date__gte=timezone.now().date()
+    ).order_by('-enrolled_on')
+    coaches = CoachProfile.objects.filter(user__is_active=True, is_available_for_new_clients=True) # Filter active and available coaches
+    
+    selected_enrollment_id = request.GET.get('enrollment_id')
+    selected_enrollment = None
+    if selected_enrollment_id:
+        selected_enrollment = get_object_or_404(ClientOfferingEnrollment, id=selected_enrollment_id, client=request.user)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Logic Stub: Fetch the latest active ClientOfferingEnrollment
-        # from coaching_booking.models import ClientOfferingEnrollment
-        # context['enrollment'] = ClientOfferingEnrollment.objects.filter(client=self.request.user, is_active=True).first()
-        return context
+    return render(request, 'accounts/profile_book_session.html', {
+        'user_offerings': user_offerings,
+        'coaches': coaches,
+        'selected_enrollment': selected_enrollment,
+        'active_tab': 'book_session'
+    })
 
-class SessionListHtmxView(LoginRequiredMixin, ProfileDataLoadMixin, TemplateView):
-    """
-    Renders the upcoming sessions partial for the authenticated user.
-    """
-    template_name = "coaching_booking/_session_list.html"
+@login_required
+def get_coaches_for_offering(request):
+    enrollment_id = request.GET.get('enrollment_id')
+    coaches = []
+    if enrollment_id:
+        try:
+            enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id, client=request.user)
+            # Get coaches associated with the offering of this enrollment
+            coaches = enrollment.offering.coaches.filter(user__is_active=True, is_available_for_new_clients=True)
+        except ClientOfferingEnrollment.DoesNotExist:
+            pass # Handle error or return empty list
+    
+    # Render options for the coach select dropdown
+    return render(request, 'accounts/partials/coach_options.html', {'coaches': coaches})
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Logic Stub: Fetch upcoming SessionBooking records
-        # from coaching_booking.models import SessionBooking
-        # from django.utils import timezone
-        # context['sessions'] = SessionBooking.objects.filter(client=self.request.user, start_datetime__gte=timezone.now()).order_by('start_datetime')
-        return context
+@login_required
+def get_available_slots(request):
+    enrollment_id = request.GET.get('enrollment_id')
+    coach_id = request.GET.get('coach_id')
+    
+    # Placeholder for actual logic to fetch available slots
+    # This would involve querying coaching_availability models and potentially Google Calendar
+    available_slots = [] 
+    if enrollment_id and coach_id:
+        try:
+            enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id, client=request.user)
+            coach = CoachProfile.objects.get(id=coach_id)
+            
+            # TODO: Implement actual logic to get available slots based on coach availability and offering session length
+            # For now, return some dummy data or an empty list
+            available_slots = [
+                {'start_time': '2025-11-15 10:00', 'end_time': '2025-11-15 11:00'},
+                {'start_time': '2025-11-15 14:00', 'end_time': '2025-11-15 15:00'},
+            ]
+        except (ClientOfferingEnrollment.DoesNotExist, CoachProfile.DoesNotExist):
+            pass
 
-class OrderHistoryHtmxView(LoginRequiredMixin, ProfileDataLoadMixin, TemplateView):
-    """
-    Renders the order history partial for the authenticated user.
-    """
-    template_name = "payments/_order_history.html"
+    return render(request, 'accounts/partials/available_slots.html', {'available_slots': available_slots})
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Logic Stub: Fetch generic payments.Order history
-        # from payments.models import Order
-        # context['orders'] = Order.objects.filter(user=self.request.user).order_by('-created_at')
-        return context
+# The existing HTMX views are not needed anymore as we are replacing them with the new tab structure
+# class EnrollmentStatusHtmxView(LoginRequiredMixin, ProfileDataLoadMixin, TemplateView):
+#     """
+#     Renders the enrollment status partial for the authenticated user.
+#     """
+#     template_name = "coaching_booking/_enrollment_status.html"
+
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         # Logic Stub: Fetch the latest active ClientOfferingEnrollment
+#         # from coaching_booking.models import ClientOfferingEnrollment
+#         # context['enrollment'] = ClientOfferingEnrollment.objects.filter(client=self.request.user, is_active=True).first()
+#         return context
+
+# class SessionListHtmxView(LoginRequiredMixin, ProfileDataLoadMixin, TemplateView):
+#     """
+#     Renders the upcoming sessions partial for the authenticated user.
+#     """
+#     template_name = "coaching_booking/_session_list.html"
+
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         # Logic Stub: Fetch upcoming SessionBooking records
+#         # from coaching_booking.models import SessionBooking
+#         # from django.utils import timezone
+#         # context['sessions'] = SessionBooking.objects.filter(client=self.request.user, start_datetime__gte=timezone.now()).order_by('start_datetime')
+#         return context
+
+# class OrderHistoryHtmxView(LoginRequiredMixin, ProfileDataLoadMixin, TemplateView):
+#     """
+#     Renders the order history partial for the authenticated user.
+#     """
+#     template_name = "payments/_order_history.html"
+
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         # Logic Stub: Fetch generic payments.Order history
+#         # from payments.models import Order
+#         # context['orders'] = Order.objects.filter(user=self.request.user).order_by('-created_at')
+#         return context

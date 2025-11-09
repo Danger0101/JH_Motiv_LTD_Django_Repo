@@ -9,7 +9,7 @@
 
 
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-10">
         
         <div class="bg-white p-6 rounded-lg shadow-lg">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">Account Information</h2>
@@ -56,45 +56,31 @@
             </div>
             {% endwith %}
         </div>
-        
-
-
-    <div class="mt-12">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">My Coaching Offerings</h2>
-        <div class="bg-white p-6 rounded-lg shadow-lg">
-            <ul class="space-y-4">
-                {% for user_offering in user_offerings %}
-                <li class="border-b pb-4 last:border-b-0">
-                    <h3 class="text-xl font-semibold text-gray-800">{{ user_offering.offering.name }}</h3>
-                    <p class="text-gray-600">Purchased on: {{ user_offering.purchase_date|date:"M d, Y" }}</p>
-                    <p class="text-gray-600">Access valid from {{ user_offering.start_date|date:"M d, Y" }} to {{ user_offering.end_date|date:"M d, Y" }}</p>
-                </li>
-                {% empty %}
-                <li>
-                    <p class="text-gray-500">You have not purchased any coaching offerings yet.</p>
-                    <a href="{% url 'coaching_booking:offer-list' %}" class="text-indigo-600 hover:underline">View available offerings</a>
-                </li>
-                {% endfor %}
-            </ul>
-        </div>
     </div>
 
     <div class="mt-12">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">My Session Credits</h2>
-        <div class="bg-white p-6 rounded-lg shadow-lg">
-            <p class="text-lg font-semibold text-gray-700 mb-4">You have <span class="text-indigo-600">{{ available_credits.count }}</span> available credits.</p>
-            <ul class="space-y-2">
-                {% for credit in available_credits %}
-                <li class="p-3 bg-gray-50 rounded-md flex justify-between items-center">
-                    <span class="text-gray-800">Credit purchased on {{ credit.purchase_date|date:"M d, Y" }}</span>
-                    <span class="text-sm font-medium text-red-600">Expires on {{ credit.expiration_date|date:"M d, Y" }}</span>
-                </li>
-                {% empty %}
-                <li>
-                    <p class="text-gray-500">You have no available session credits.</p>
-                </li>
-                {% endfor %}
-            </ul>
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                <button hx-get="{% url 'account:profile_offerings' %}" hx-target="#profile-content" hx-swap="innerHTML"
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm {% if active_tab == 'offerings' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}"
+                        aria-current="page">
+                    My Coaching Offerings
+                </button>
+                <button hx-get="{% url 'account:profile_bookings' %}" hx-target="#profile-content" hx-swap="innerHTML"
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm {% if active_tab == 'bookings' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
+                    My Bookings
+                </button>
+                <button hx-get="{% url 'account:profile_book_session' %}" hx-target="#profile-content" hx-swap="innerHTML"
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm {% if active_tab == 'book_session' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
+                    Book a Session
+                </button>
+            </nav>
+        </div>
+
+        <div id="profile-content" class="mt-8">
+            {# Default content or initial tab content will be loaded here #}
+            {# For now, let's load the offerings by default #}
+            {% include 'accounts/profile_offerings.html' %}
         </div>
     </div>
 

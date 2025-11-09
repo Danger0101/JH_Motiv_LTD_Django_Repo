@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 
 app_name = 'coaching_booking'
@@ -8,5 +8,8 @@ urlpatterns = [
     path('offers/', views.OfferListView.as_view(), name='offer-list'),
     path('enroll/<slug:slug>/', views.OfferEnrollmentStartView.as_view(), name='offer-enroll'),
     path('schedule/<int:enrollment_pk>/', views.SessionBookingView.as_view(), name='session-schedule'),
-    path('dashboard/', views.ClientDashboardView.as_view(), name='dashboard'),
+    path('book-session/', views.book_session, name='book_session'),
+    path('cancel-session/<int:booking_id>/', views.cancel_session, name='cancel_session'),
+    path('reschedule-session/<int:booking_id>/', views.reschedule_session, name='reschedule_session'),
+    path('reschedule-session-form/<int:booking_id>/', views.reschedule_session_form, name='reschedule_session_form'),
 ]

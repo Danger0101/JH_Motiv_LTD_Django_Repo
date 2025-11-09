@@ -33,7 +33,7 @@ Enroll in {{ offering.name }} - {{ block.super }}
 
             <div class="text-center">
                 <p class="text-gray-600 mb-4">You are logged in as <strong>{{ user.email }}</strong>. Click below to proceed to a secure checkout.</p>
-                <a href="{% url 'payments:create_checkout_session' offering_id=offering.id %}" class="inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-12 rounded-lg transition duration-300 text-lg">
+                <a href="{% url 'payments:enroll_in_offering' offering_id=offering.id %}" class="inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-12 rounded-lg transition duration-300 text-lg">
                     Proceed to Payment
                 </a>
                 <p class="mt-4 text-sm text-gray-500">You will be redirected to our secure payment partner.</p>

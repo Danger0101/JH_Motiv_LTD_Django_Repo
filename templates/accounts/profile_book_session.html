@@ -1,0 +1,47 @@
+<div class="bg-white p-6 rounded-lg shadow-lg">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">Book a New Session</h2>
+
+    <form hx-post="{% url 'accounts:get_available_slots' %}" hx-target="#available-slots-container" hx-swap="innerHTML">
+        {% csrf_token %}
+        <div class="mb-4">
+            <label for="enrollment_id" class="block text-sm font-medium text-gray-700">Select Offering:</label>
+            <select id="enrollment_id" name="enrollment_id"
+                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                    hx-get="{% url 'accounts:get_coaches_for_offering' %}"
+                    hx-target="#coach_id"
+                    hx-trigger="change">
+                <option value="">-- Select an Offering --</option>
+                {% for enrollment in user_offerings %}
+                    {% if enrollment.remaining_sessions > 0 and enrollment.is_active and not enrollment.is_expired %}
+                        <option value="{{ enrollment.id }}" {% if selected_enrollment and selected_enrollment.id == enrollment.id %}selected{% endif %}>
+                            {{ enrollment.offering.name }} ({{ enrollment.remaining_sessions }} sessions remaining)
+                        </option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-4">
+            <label for="coach_id" class="block text-sm font-medium text-gray-700">Select Coach:</label>
+            <select id="coach_id" name="coach_id"
+                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                    hx-get="{% url 'accounts:get_available_slots' %}"
+                    hx-target="#available-slots-container"
+                    hx-trigger="change from:#coach_id, change from:#enrollment_id">
+                <option value="">-- Select a Coach --</option>
+                {% if coaches %}
+                    {% for coach in coaches %}
+                        <option value="{{ coach.id }}" {% if selected_coach and selected_coach.id == coach.id %}selected{% endif %}>
+                            {{ coach.user.get_full_name }}
+                        </option>
+                    {% endfor %}
+                {% endif %}
+            </select>
+        </div>
+
+        <div id="available-slots-container" class="mt-6">
+            {# Available slots will be loaded here via HTMX #}
+            <p class="text-gray-500">Select an offering and a coach to see available session slots.</p>
+        </div>
+    </form>
+</div>

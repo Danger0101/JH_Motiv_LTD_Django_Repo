@@ -1,32 +1,43 @@
 {% extends 'base.html' %}
 
-{% block title %}
-    Order #{{ order.id }} Details
-{% endblock %}
+{% block title %}Order Details{% endblock %}
 
 {% block content %}
-<div class="prose max-w-none">
-    <h1>
-        {% if order.user %}
-            Order #{{ order.id }}
-        {% else %}
-            Guest Order Details
-        {% endif %}
-    </h1>
+<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 min-h-screen bg-gray-50">
+    <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-8">
+        <h1 class="text-3xl font-extrabold text-gray-800">Your Order Details</h1>
+        
+        {% if order %}
+            <p class="mt-2 text-lg text-gray-600">Order <span class="font-semibold text-gray-900">#{{ order.id }}</span></p>
+            <p class="mt-1 text-gray-500 text-sm">Placed on: {{ order.created_at|date:"F d, Y" }}</p>
 
-    <p><strong>Order Token:</strong> {{ order.guest_order_token }}</p>
-    <p><strong>Order Total:</strong> ${{ order.total_paid }}</p>
-    <p><strong>Date:</strong> {{ order.created_at|date:"F j, Y" }}</p>
-
-    <h2 class="mt-6">Items</h2>
-    <div class="space-y-4">
-        {% for item in order.items.all %}
-            <div class="border p-4 rounded-lg">
-                <p class="font-bold">{{ item.variant.product.name }} ({{ item.variant.name }})</p>
-                <p>Quantity: {{ item.quantity }}</p>
-                <p>Price: ${{ item.price }}</p>
+            <div class="mt-8 text-left border-t pt-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Order Summary</h2>
+                <div class="space-y-4">
+                    {% for item in order.items.all %}
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-semibold text-gray-800">{{ item.variant.product.name }}</p>
+                                <p class="text-sm text-gray-500">{{ item.variant.name }} (x{{ item.quantity }})</p>
+                            </div>
+                            <p class="font-semibold text-gray-800">£{{ item.price|floatformat:2 }}</p>
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="flex justify-between items-center border-t mt-6 pt-4">
+                    <p class="text-lg font-bold text-gray-900">Total Paid</p>
+                    <p class="text-xl font-extrabold text-blue-600">£{{ order.total_paid|floatformat:2 }}</p>
+                </div>
             </div>
-        {% endfor %}
+        {% else %}
+            <p class="mt-4 text-lg text-gray-600">We could not find your order details. Please check the link and try again.</p>
+        {% endif %}
+
+        <div class="mt-8 text-center">
+            <a href="{% url 'products:product_list' %}" class="text-blue-600 hover:text-blue-800 font-medium">
+                Continue Shopping
+            </a>
+        </div>
     </div>
 </div>
 {% endblock %}

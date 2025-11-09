@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>Checkout</h1>
+    <h2>{{ offering.name }}</h2>
+    <p>{{ offering.description }}</p>
+    <p>Price: ${{ offering.price }}</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">Confirm Purchase</button>
+    </form>
+</div>
+{% endblock %}

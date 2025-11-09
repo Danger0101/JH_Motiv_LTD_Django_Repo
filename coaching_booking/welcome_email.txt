@@ -1,0 +1,13 @@
+Welcome Aboard, {{ client_name }}!
+
+Congratulations on enrolling in the {{ offering_name }} program!
+
+We are thrilled to have you join us and are excited to support you on your journey. You have been assigned to {{ coach_name }}, who will be your guide and partner in achieving your goals.
+
+What's Next?
+You can now head to your client dashboard to book your first session. Your coach will have their availability updated, so you can find a time that works best for you.
+
+If you have any questions before your first session, please don't hesitate to reach out.
+
+Best regards,
+The JH Motiv Team

@@ -1,0 +1,5 @@
+{% for coach in coaches %}
+    <option value="{{ coach.id }}">{{ coach.user.get_full_name }}</option>
+{% empty %}
+    <option value="">No coaches available for this offering</option>
+{% endfor %}

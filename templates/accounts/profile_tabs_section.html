@@ -1,0 +1,29 @@
+<div class="mt-12" id="profile-tabs-section">
+    <div class="border-b border-gray-200">
+        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+            <button hx-get="{% url 'accounts:profile_offerings' %}" hx-target="#profile-tabs-section" hx-swap="outerHTML"
+                    class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm {% if active_tab == 'offerings' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}"
+                    aria-current="page">
+                My Coaching Offerings
+            </button>
+            <button hx-get="{% url 'accounts:profile_bookings' %}" hx-target="#profile-tabs-section" hx-swap="outerHTML"
+                    class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm {% if active_tab == 'bookings' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
+                My Bookings
+            </button>
+            <button hx-get="{% url 'accounts:profile_book_session' %}" hx-target="#profile-tabs-section" hx-swap="outerHTML"
+                    class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm {% if active_tab == 'book_session' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
+                Book a Session
+            </button>
+        </nav>
+    </div>
+
+    <div id="profile-content" class="mt-8">
+        {% if active_tab == 'offerings' %}
+            {% include 'accounts/profile_offerings.html' %}
+        {% elif active_tab == 'bookings' %}
+            {% include 'accounts/profile_bookings.html' %}
+        {% elif active_tab == 'book_session' %}
+            {% include 'accounts/profile_book_session.html' %}
+        {% endif %}
+    </div>
+</div>

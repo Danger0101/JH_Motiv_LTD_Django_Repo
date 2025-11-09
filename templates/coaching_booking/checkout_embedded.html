@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_head %}
+    <script src="https://js.stripe.com/v3/"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white text-center">
+                    <h1 class="mb-0">Complete Your Enrollment</h1>
+                </div>
+                <div class="card-body">
+                    <p class="lead text-center">You are enrolling in: <strong>{{ offering.name }}</strong></p>
+                    <p class="text-center">Price: <strong>£{{ offering.price }}</strong></p>
+
+                    <div id="checkout" class="mt-4">
+                        <!-- Stripe Checkout will be mounted here -->
+                        <div class="d-flex justify-content-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="ms-2">Loading checkout...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    const offeringId = "{{ offering.id }}";
+    const stripe = Stripe("{{ STRIPE_PUBLIC_KEY }}");
+
+    initialize();
+
+    async function initialize() {
+        try {
+            const response = await fetch(`{% url 'payments:create_coaching_checkout_session' offering_id=offering.id %}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie('csrftoken') },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to create checkout session.');
+            }
+
+            const { clientSecret } = await response.json();
+
+            const checkout = await stripe.initEmbeddedCheckout({
+                clientSecret,
+            });
+
+            // Clear the loading spinner from the checkout div before mounting
+            document.getElementById('checkout').innerHTML = '';
+
+            checkout.mount('#checkout');
+        } catch (error) {
+            console.error("Error initializing Stripe Checkout:", error);
+            document.getElementById('checkout').innerHTML = `
+                <div class="alert alert-danger" role="alert">
+                    <h4 class="alert-heading">Checkout Error!</h4>
+                    <p>There was an issue loading the payment form. Please try again later.</p>
+                    <hr>
+                    <p class="mb-0">Details: ${error.message || error}</p>
+                </div>
+            `;
+        }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}
