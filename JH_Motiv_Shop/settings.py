@@ -4,6 +4,7 @@ Django settings for JH_Motiv_Shop project.
 
 from pathlib import Path
 import os
+import dj_database_url
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -14,9 +15,20 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = os.getenv('SECRET_KEY')
-DEBUG = os.getenv('DEBUG')
-ALLOWED_HOSTS = []
+# Set DEBUG = False in production. The '1' == '1' pattern is a safe way to evaluate the env var.
+DEBUG = os.environ.get('DEBUG', '0') == '1'
 
+HEROKU_APP_NAME = os.environ.get('HEROKU_APP_NAME')
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+CSRF_TRUSTED_ORIGINS = []
+
+if HEROKU_APP_NAME:
+    heroku_domain = f'{HEROKU_APP_NAME}.herokuapp.com'
+    ALLOWED_HOSTS.append(heroku_domain)
+    CSRF_TRUSTED_ORIGINS.append(f'https://{heroku_domain}')
+
+# In production, ensure you add your custom domain to both lists if you have one.
+# e.g., ALLOWED_HOSTS.append('www.yourdomain.com')
 
 # Application definition
 
@@ -26,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    # NOTE: 'whitenoise.middleware.WhiteNoiseMiddleware' is correctly placed in MIDDLEWARE
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'django.contrib.humanize',
@@ -60,6 +73,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Add whitenoise middleware right after SecurityMiddleware
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -91,11 +106,14 @@ WSGI_APPLICATION = 'JH_Motiv_Shop.wsgi.application'
 
 
 # Database
+# Configure database from DATABASE_URL environment variable.
+# Fallbacks to a local SQLite database if DATABASE_URL is not set.
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+        conn_max_age=600,
+        ssl_require='postgres' in os.environ.get('DATABASE_URL', '')
+    )
 }
 
 
@@ -131,10 +149,9 @@ ACCOUNT_FORMS = {
     'signup': 'accounts.forms.CustomSignupForm',
 }
 
-# Email settings
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = True
-ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+# Login, Signup, and Email settings
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
+ACCOUNT_LOGIN_METHOD = 'username_email'
 ACCOUNT_EMAIL_VERIFICATION = 'optional'
 
 
@@ -154,6 +171,10 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Use WhiteNoise's storage backend in production
+if not DEBUG:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files
 MEDIA_URL = '/media/'
@@ -184,6 +205,7 @@ FIELD_ENCRYPTION_KEY = os.getenv('FIELD_ENCRYPTION_KEY')
 # Stripe API Keys
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET') # For verifying webhook signatures
 
 LOGGING = {
     'version': 1,
@@ -198,3 +220,11 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
+# --- HEROKU PRODUCTION SETTINGS ---
+if not DEBUG:
+    # Force SSL/HTTPS
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True

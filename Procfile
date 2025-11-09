@@ -1,0 +1,1 @@
+web: gunicorn JH_Motiv_Shop.wsgi --log-file -
