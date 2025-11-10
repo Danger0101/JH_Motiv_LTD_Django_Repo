@@ -73,8 +73,8 @@ def payment_success(request):
     
     # Base context for all paths to prevent KeyErrors in templates.
     context = {
-        'cart_summary': get_cart_summary_data(cart),
-        'summary': {},
+        'summary': get_cart_summary_data(cart),
+        'order_summary': {},
         'title': "Payment Successful!",
         'message': "Thank you for your payment.",
         'coach': None,
@@ -94,7 +94,7 @@ def payment_success(request):
         context.update({
             'title': 'Enrollment Confirmed',
             'message': 'Thank you for your coaching enrollment! You will receive a confirmation email shortly.',
-            'summary': {'name': 'Executive Scale Mastermind', 'price': '€1999'},
+            'order_summary': {'name': 'Executive Scale Mastermind', 'price': '€1999'},
             'coach': coach_profile,
         })
         return render(request, 'payments/success.html', context)
@@ -111,7 +111,7 @@ def payment_success(request):
             
             if offering:
                 context['offering'] = offering
-                context['summary'] = {'name': offering.name, 'price': f"€{offering.price}"}
+                context['order_summary'] = {'name': offering.name, 'price': f"€{offering.price}"}
 
             coach_id = metadata.get('coach_id')
             if coach_id:
