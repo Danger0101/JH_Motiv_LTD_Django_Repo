@@ -205,13 +205,6 @@ GOOGLE_OAUTH2_REDIRECT_URI = os.getenv('GOOGLE_OAUTH2_REDIRECT_URI', 'http://loc
 FIELD_ENCRYPTION_KEY = os.getenv('FIELD_ENCRYPTION_KEY')
 
 
-
-if not FIELD_ENCRYPTION_KEY:
-
-    raise ImproperlyConfigured("FIELD_ENCRYPTION_KEY must be defined in settings")
-
-
-
 # Stripe API Keys
 
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
