@@ -183,18 +183,20 @@ def stripe_webhook(request):
             # Return a 500 to force Stripe to retry. This gives you time to investigate.
             return HttpResponse("Webhook Error: Missing product_type in metadata.", status=500)
 
-        print(f"Processing session {session.id} for product_type: '{product_type}'")
-
-        # --- A. COACHING ENROLLMENT LOGIC (Priority) ---
-        if product_type == 'coaching_offering':
-            try:
-                user_id = metadata.get('user_id')
-                offering_id = metadata.get('offering_id')
-                coach_id = metadata.get('coach_id')
-
-                if not all([user_id, offering_id, coach_id]):
-                    raise ValueError("Missing required metadata for coaching enrollment (user_id, offering_id, or coach_id).")
-
+                        print(f"Processing session {session.id} for product_type: '{product_type}'")
+                        print(f"Webhook Metadata: {metadata}") # ADDED LOGGING
+        
+                # --- A. COACHING ENROLLMENT LOGIC (Priority) ---
+                if product_type == 'coaching_offering':
+                    try:
+                        user_id = metadata.get('user_id')
+                        offering_id = metadata.get('offering_id')
+                        coach_id = metadata.get('coach_id')
+        
+                        print(f"Extracted IDs - User: {user_id}, Offering: {offering_id}, Coach: {coach_id}") # ADDED LOGGING
+        
+                        if not all([user_id, offering_id, coach_id]):
+                            raise ValueError("Missing required metadata for coaching enrollment (user_id, offering_id, or coach_id).")
                 # Fetch related objects
                 user = get_object_or_404(User, pk=user_id)
                 offering = get_object_or_404(Offering, pk=offering_id)
