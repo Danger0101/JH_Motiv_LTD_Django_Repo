@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from dashboard import views as dashboard_views
+
 
 urlpatterns = [
     # Core Django Admin
@@ -28,13 +28,10 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
     path('unicorn/', include('django_unicorn.urls')),
 
-    # Add the new dashboard URL
-    path('dashboard/', dashboard_views.dashboard_view, name='dashboard'),
-
     # Coaching System Apps
     path('', include('core.urls', namespace='core')),
     path('coach/', include('coaching_booking.urls')),
-    path('app/', include('dashboard.urls')),
+    path('dashboard/', include('dashboard.urls', namespace='dashboard')),
     path('info/', include('coaching_client.urls')),
     path('admin/offers/', include('coaching_core.urls', namespace='coaching')),
     path('coach/time/', include('coaching_availability.urls')),

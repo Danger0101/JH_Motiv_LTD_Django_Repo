@@ -77,7 +77,7 @@ class ClientOfferingEnrollment(models.Model):
         if not self.pk:  # If creating a new enrollment
             self.total_sessions = self.offering.total_number_of_sessions
             self.remaining_sessions = self.offering.total_number_of_sessions
-            self.end_date = self.enrolled_on.date() + relativedelta(months=+5)
+            self.end_date = timezone.now().date() + relativedelta(months=+5)
         super().save(*args, **kwargs)
 
     def add_session(self):

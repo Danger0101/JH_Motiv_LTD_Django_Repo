@@ -8,9 +8,9 @@ from django.urls import reverse
 @login_required
 def dashboard_view(request):
     if request.user.is_coach:
-        return HttpResponseRedirect(reverse('app:coach_dashboard'))
+        return HttpResponseRedirect(reverse('dashboard:coach_dashboard'))
     else:
-        return HttpResponseRedirect(reverse('app:client_dashboard'))
+        return HttpResponseRedirect(reverse('dashboard:client_dashboard'))
 
 class StaffDashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'dashboard/staff_dashboard.html'
