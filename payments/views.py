@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.db import transaction, models # ADDED: models for coach query
 from django.contrib.auth import get_user_model # ADDED: Better way to get User model
 
-from cart.utils import get_or_create_cart
+from cart.utils import get_or_create_cart, get_cart_summary_data
 from cart.models import Cart
 # NEW/UPDATED IMPORTS
 from coaching_booking.models import ClientOfferingEnrollment 
@@ -66,14 +66,38 @@ def create_checkout_session(request):
 def payment_success(request):
     """
     Handles the successful payment redirect from Stripe.
-    Displays a generic confirmation message, as the webhook handles order creation.
+    Displays a confirmation message and ensures all required template variables are present.
     """
     session_id = request.GET.get('session_id')
-    context = {}
+    cart = get_or_create_cart(request)
+    
+    # Base context for all paths to prevent KeyErrors in templates.
+    context = {
+        'cart_summary': get_cart_summary_data(cart),
+        'summary': {},
+        'title': "Payment Successful!",
+        'message': "Thank you for your payment.",
+        'coach': None,
+    }
 
     if not session_id:
-        # Render a generic success page if there's no session ID.
-        return render(request, 'payments/success.html')
+        # If no session ID is provided, show a generic success page with dummy data as requested.
+        coach_profile = None
+        try:
+            # Attempt to find the specific coach 'John Hummel'.
+            user = User.objects.get(first_name="John", last_name="Hummel", is_coach=True)
+            coach_profile = CoachProfile.objects.get(user=user)
+        except (User.DoesNotExist, CoachProfile.DoesNotExist, User.MultipleObjectsReturned):
+            # Fallback to the first available coach if not found.
+            coach_profile = CoachProfile.objects.first()
+
+        context.update({
+            'title': 'Enrollment Confirmed',
+            'message': 'Thank you for your coaching enrollment! You will receive a confirmation email shortly.',
+            'summary': {'name': 'Executive Scale Mastermind', 'price': '€1999'},
+            'coach': coach_profile,
+        })
+        return render(request, 'payments/success.html', context)
 
     try:
         session = stripe.checkout.Session.retrieve(session_id)
@@ -81,15 +105,18 @@ def payment_success(request):
         product_type = metadata.get('product_type')
 
         if product_type == 'coaching_offering':
+            context['title'] = "Enrollment Successful!"
             offering_id = metadata.get('offering_id')
-            if offering_id:
-                context['offering'] = get_object_or_404(Offering, pk=offering_id)
+            offering = get_object_or_404(Offering, pk=offering_id) if offering_id else None
             
+            if offering:
+                context['offering'] = offering
+                context['summary'] = {'name': offering.name, 'price': f"€{offering.price}"}
+
             coach_id = metadata.get('coach_id')
             if coach_id:
                 coach = get_object_or_404(CoachProfile, pk=coach_id)
                 context['coach'] = coach
-                # Create a more personalized and actionable message
                 context['message'] = (
                     f"You have been successfully enrolled and assigned to coach {coach.user.get_full_name()}. "
                     f"You can now visit your dashboard to book your first session."
@@ -97,20 +124,12 @@ def payment_success(request):
             else:
                 context['message'] = "Thank you for enrolling. You will receive a confirmation email with details on how to book your sessions."
 
-            context['title'] = "Enrollment Successful!"
-
         elif product_type == 'ecommerce_cart':
-            context['title'] = "Payment Successful!"
             context['message'] = "Thank you for your purchase. Your order is being processed and you will receive a confirmation email shortly."
         
-        else: # Fallback for unknown or missing product_type
-            context['title'] = "Payment Successful!"
-            context['message'] = "Thank you for your payment."
-
         return render(request, 'payments/success.html', context)
 
     except stripe.InvalidRequestError:
-        # This will catch invalid session IDs, including the literal '{CHECKOUT_SESSION_ID}'
         return HttpResponse("Invalid or expired payment session.", status=400)
     except Exception as e:
         print(f"Error in payment_success view: {e}")

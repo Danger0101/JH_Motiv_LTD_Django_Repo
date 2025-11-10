@@ -132,16 +132,17 @@ def coach_landing_view(request):
     # Limiting to 3 for the homepage display.
     knowledge_pages = ContentPage.objects.filter(is_published=True).order_by('title')[:3]
 
-    # 4. Get cart summary data
-    cart = get_or_create_cart(request)
-    summary = get_cart_summary_data(cart)
+    # 4. Define page summary text and cart summary
+    page_summary_text = "Welcome to our coaching services!"
+    cart_summary = {'item_count': 0}
 
     context = {
         'coaches': coaches,
         'offerings': offerings,
         'knowledge_pages': knowledge_pages,
         'knowledge_categories': KNOWLEDGE_CATEGORIES[1:], # Exclude 'All Coaches' for the tab bar
-        'summary': summary,
+        'page_summary_text': page_summary_text,
+        'cart_summary': cart_summary,
     }
     return render(request, 'coaching_booking/coach_landing.html', context)
 
