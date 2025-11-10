@@ -193,7 +193,11 @@ Coach Landing - {{ block.super }}
             <div class="mt-12 grid md:grid-cols-3 gap-8">
                 {% for coach in coaches %}
                 <div class="bg-gray-50 p-6 rounded-lg shadow-md text-center">
-                    <img class="w-32 h-32 rounded-full mx-auto object-cover" src="{{ coach.public_photo.url|default:'{% static "images/default_coach_avatar.png" %}' }}" alt="{{ coach.user.get_full_name }}">
+                    {% if coach.public_photo %}
+                    <img class="w-32 h-32 rounded-full mx-auto object-cover" src="{{ coach.public_photo.url }}" alt="{{ coach.user.get_full_name }}">
+                    {% else %}
+                    <img class="w-32 h-32 rounded-full mx-auto object-cover" src="{% static 'images/default_coach_avatar.png' %}" alt="Default Coach Avatar">
+                    {% endif %}
                     <h3 class="mt-4 text-xl font-bold text-gray-800">{{ coach.user.get_full_name }}</h3>
                     <p class="mt-2 text-gray-600 text-sm italic">{{ coach.bio|truncatewords:10 }}</p>
                     <a href="{% url 'coaching_booking:offer-list' %}?coach={{ coach.user.username }}" class="mt-4 inline-block bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg">View Offers</a>
