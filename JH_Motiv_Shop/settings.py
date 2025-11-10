@@ -16,30 +16,21 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = os.getenv('SECRET_KEY')
-# Set DEBUG = False in production. The '1' == '1' pattern is a safe way to evaluate the env var.
-DEBUG = os.environ.get('DEBUG', '0') == '1'
+DEBUG = 'False'
 
 HEROKU_APP_NAME = os.environ.get('HEROKU_APP_NAME')
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
-CSRF_TRUSTED_ORIGINS = []
+CSRF_TRUSTED_ORIGINS = ['https://jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com/']
 
-if HEROKU_APP_NAME:
-    heroku_domain = f'{HEROKU_APP_NAME}.herokuapp.com'
-    ALLOWED_HOSTS.append(heroku_domain)
-    CSRF_TRUSTED_ORIGINS.append(f'https://{heroku_domain}')
-
-# In production, ensure you add your custom domain to both lists if you have one.
-# e.g., ALLOWED_HOSTS.append('www.yourdomain.com')
+ALLOWED_HOSTS=['https://jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com/', 'localhost', '127.0.0.1']
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    # NOTE: 'whitenoise.middleware.WhiteNoiseMiddleware' is correctly placed in MIDDLEWARE
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'django.contrib.humanize',
@@ -185,15 +176,22 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # =======================================================
-# EMAIL CONFIGURATION FOR DEVELOPMENT (TO PREVENT ERROR 10061)
+# EMAIL CONFIGURATION
 # =======================================================
 
-# This tells Django to print emails to the console/terminal 
-# instead of trying to send them over the network.
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-# You should also set a default email address for 'allauth'
-DEFAULT_FROM_EMAIL = 'support@jhmotiv.shop'
+if not DEBUG:
+    # Production: SendGrid
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.sendgrid.net'
+    EMAIL_HOST_USER = 'apikey'  # This is literally the string 'apikey'
+    EMAIL_HOST_PASSWORD = os.environ.get('SENDGRID_API_KEY')
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'support@jhmotiv.shop')
+else:
+    # Development: Console
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    DEFAULT_FROM_EMAIL = 'support@jhmotiv.shop'
 
 # Google Calendar API Credentials
 GOOGLE_OAUTH2_CLIENT_ID = os.getenv('GOOGLE_OAUTH2_CLIENT_ID', 'your-client-id')
@@ -201,58 +199,35 @@ GOOGLE_OAUTH2_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH2_CLIENT_SECRET', 'your-cli
 GOOGLE_OAUTH2_REDIRECT_URI = os.getenv('GOOGLE_OAUTH2_REDIRECT_URI', 'http://localhost:8000/gcal/redirect')
 
 #Encryption:
-
 FIELD_ENCRYPTION_KEY = os.getenv('FIELD_ENCRYPTION_KEY')
 
 
 # Stripe API Keys
-
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
-
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
-
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET') # For verifying webhook signatures
 
 
 
 LOGGING = {
-
     'version': 1,
-
     'disable_existing_loggers': False,
-
     'handlers': {
-
         'console': {
-
             'class': 'logging.StreamHandler',
-
         },
-
     },
-
     'root': {
-
         'handlers': ['console'],
-
         'level': 'INFO',
-
     },
-
 }
 
 
 
 # --- HEROKU PRODUCTION SETTINGS ---
-
 if not DEBUG:
-
-    # Force SSL/HTTPS
-
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
     SECURE_SSL_REDIRECT = True
-
     SESSION_COOKIE_SECURE = True
-
     CSRF_COOKIE_SECURE = True
