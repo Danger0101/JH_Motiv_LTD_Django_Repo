@@ -19,6 +19,7 @@ from accounts.models import CoachProfile
 from .models import ClientOfferingEnrollment, SessionBooking
 # from .forms import SessionBookingForm # Assuming a form exists
 
+from cart.utils import get_or_create_cart, get_cart_summary_data
 from team.models import TeamMember
 
 @login_required
@@ -131,12 +132,16 @@ def coach_landing_view(request):
     # Limiting to 3 for the homepage display.
     knowledge_pages = ContentPage.objects.filter(is_published=True).order_by('title')[:3]
 
+    # 4. Get cart summary data
+    cart = get_or_create_cart(request)
+    summary = get_cart_summary_data(cart)
+
     context = {
         'coaches': coaches,
         'offerings': offerings,
         'knowledge_pages': knowledge_pages,
         'knowledge_categories': KNOWLEDGE_CATEGORIES[1:], # Exclude 'All Coaches' for the tab bar
-        'summary': 'Welcome to our coaching services!',
+        'summary': summary,
     }
     return render(request, 'coaching_booking/coach_landing.html', context)
 
@@ -157,10 +162,15 @@ class OfferEnrollmentStartView(LoginRequiredMixin, DetailView):
     template_name = 'coaching_booking/checkout_embedded.html' # Use the embedded checkout template
     
     def get_context_data(self, **kwargs):
-        """Pass the Stripe Public Key to the template."""
+        """Pass the Stripe Public Key and cart summary to the template."""
         context = super().get_context_data(**kwargs)
         # This key is needed by the Stripe.js library on the frontend
         context['STRIPE_PUBLIC_KEY'] = settings.STRIPE_PUBLISHABLE_KEY
+        
+        # Add cart summary data for the navbar
+        cart = get_or_create_cart(self.request)
+        context['summary'] = get_cart_summary_data(cart)
+        
         return context
 
 class SessionBookingView(LoginRequiredMixin, FormView):
