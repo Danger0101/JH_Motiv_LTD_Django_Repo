@@ -136,6 +136,7 @@ def coach_landing_view(request):
         'offerings': offerings,
         'knowledge_pages': knowledge_pages,
         'knowledge_categories': KNOWLEDGE_CATEGORIES[1:], # Exclude 'All Coaches' for the tab bar
+        'summary': 'Welcome to our coaching services!',
     }
     return render(request, 'coaching_booking/coach_landing.html', context)
 
