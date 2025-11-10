@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from dashboard import views as dashboard_views
 
 urlpatterns = [
     # Core Django Admin
@@ -26,6 +27,9 @@ urlpatterns = [
     # Allauth URLs
     path('accounts/', include('allauth.urls')),
     path('unicorn/', include('django_unicorn.urls')),
+
+    # Add the new dashboard URL
+    path('dashboard/', dashboard_views.dashboard_view, name='dashboard'),
 
     # Coaching System Apps
     path('', include('core.urls', namespace='core')),
