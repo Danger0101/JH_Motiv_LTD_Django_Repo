@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from .models import MarketingPreference
 from allauth.account.views import LoginView, SignupView, PasswordResetView, PasswordChangeView, PasswordSetView, LogoutView, PasswordResetDoneView, PasswordResetDoneView
+from cart.utils import get_or_create_cart, get_cart_summary_data
 from coaching_booking.models import ClientOfferingEnrollment, SessionBooking
 from coaching_core.models import Offering
 from accounts.models import CoachProfile # Assuming CoachProfile is in accounts.models or accessible
@@ -53,6 +54,10 @@ class ProfileView(LoginRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        
+        cart = get_or_create_cart(self.request)
+        summary = get_cart_summary_data(cart)
+        context['summary'] = summary
         
         # Fetch marketing preferences
         preference, created = MarketingPreference.objects.get_or_create(user=self.request.user)

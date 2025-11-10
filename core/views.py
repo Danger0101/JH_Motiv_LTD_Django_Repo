@@ -10,6 +10,7 @@ from .tos_data import TOS_DATA
 from .refund_policy_data import REFUND_POLICY_DATA
 from .shipping_policy_data import SHIPPING_POLICY_DATA
 from .about_data import ABOUT_DATA
+from cart.utils import get_or_create_cart, get_cart_summary_data
 from dreamers.models import DreamerProfile
 from team.models import TeamMember
 from products.models import Product
@@ -22,9 +23,12 @@ def home(request):
     """Renders the home page."""
     products = Product.objects.all()
     team_members = TeamMember.objects.filter(is_active=True)
+    cart = get_or_create_cart(request)
+    summary = get_cart_summary_data(cart)
     context = {
         'products': products,
         'team_members': team_members,
+        'summary': summary,
     }
     return render(request, 'home.html', context)
 
