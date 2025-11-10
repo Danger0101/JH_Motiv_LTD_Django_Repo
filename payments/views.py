@@ -309,7 +309,7 @@ def create_coaching_checkout_session_view(request, offering_id):
                     'quantity': 1,
                 }],
                 mode='payment',
-                return_url=request.build_absolute_uri(reverse('payments:payment_success')),
+                return_url=request.build_absolute_uri(reverse('payments:payment_success')) + '?session_id={CHECKOUT_SESSION_ID}',
                 metadata={
                     'product_type': 'coaching_offering', 
                     'offering_id': str(offering.id),
