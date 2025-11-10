@@ -134,7 +134,8 @@ def coach_landing_view(request):
 
     # 4. Define page summary text and cart summary
     page_summary_text = "Welcome to our coaching services!"
-    cart_summary = {'item_count': 0}
+    cart = get_or_create_cart(request)
+    summary_data = get_cart_summary_data(cart)
 
     context = {
         'coaches': coaches,
@@ -142,7 +143,7 @@ def coach_landing_view(request):
         'knowledge_pages': knowledge_pages,
         'knowledge_categories': KNOWLEDGE_CATEGORIES[1:], # Exclude 'All Coaches' for the tab bar
         'page_summary_text': page_summary_text,
-        'cart_summary': cart_summary,
+        'summary': summary_data,
     }
     return render(request, 'coaching_booking/coach_landing.html', context)
 
