@@ -158,6 +158,12 @@ class OfferListView(ListView):
         # Assuming 'active_status' is a boolean field on the Offering model
         return Offering.objects.filter(active_status=True)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        cart = get_or_create_cart(self.request)
+        context['summary'] = get_cart_summary_data(cart)
+        return context
+
 class OfferEnrollmentStartView(LoginRequiredMixin, DetailView):
     """Initiates the checkout/enrollment process for a specific offering."""
     model = Offering
