@@ -66,8 +66,16 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         # Fetch user's coaching offerings (enrollments)
         context['user_offerings'] = ClientOfferingEnrollment.objects.filter(client=self.request.user).order_by('-enrolled_on')
 
-        # Fetch user's booked sessions
-        context['user_bookings'] = SessionBooking.objects.filter(client=self.request.user).order_by('start_datetime')
+        # Fetch user's upcoming and past booked sessions as a client
+        now = timezone.now()
+        context['client_upcoming_sessions'] = SessionBooking.objects.filter(
+            client=self.request.user,
+            start_datetime__gte=now
+        ).order_by('start_datetime')
+        context['client_past_sessions'] = SessionBooking.objects.filter(
+            client=self.request.user,
+            start_datetime__lt=now
+        ).order_by('-start_datetime') # Order past sessions by most recent first
 
         # Add flags for dashboard elements
         context['is_coach'] = self.request.user.is_coach
