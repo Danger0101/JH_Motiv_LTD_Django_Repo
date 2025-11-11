@@ -17,10 +17,7 @@
                     <button class="inline-block p-4 border-b-2 rounded-t-lg" id="account-tab" type="button" role="tab" aria-controls="account" aria-selected="true" @click="activeTab = 'account'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'account', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'account' }">Account Information</button>
                 </li>
                 <li class="mr-2" role="presentation">
-                    <button class="inline-block p-4 border-b-2 rounded-t-lg" id="my-bookings-tab" type="button" role="tab" aria-controls="my-bookings" aria-selected="false" @click="activeTab = 'my-bookings'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'my-bookings', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'my-bookings' }">My Bookings</button>
-                </li>
-                <li class="mr-2" role="presentation">
-                    <button class="inline-block p-4 border-b-2 rounded-t-lg" id="my-offerings-tab" type="button" role="tab" aria-controls="my-offerings" aria-selected="false" @click="activeTab = 'my-offerings'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'my-offerings', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'my-offerings' }">My Offerings</button>
+                    <button class="inline-block p-4 border-b-2 rounded-t-lg" id="my-coaching-tab" type="button" role="tab" aria-controls="my-coaching" aria-selected="false" @click="activeTab = 'my-coaching'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'my-coaching', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'my-coaching' }">My Coaching</button>
                 </li>
                 <li class="mr-2" role="presentation">
                     <button class="inline-block p-4 border-b-2 rounded-t-lg" id="book-session-tab" type="button" role="tab" aria-controls="book-session" aria-selected="false" @click="activeTab = 'book-session'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'book-session', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'book-session' }">Book Session</button>
@@ -58,8 +55,8 @@
                 </div>
             </div>
 
-            <!-- My Bookings Tab -->
-            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="my-bookings" role="tabpanel" aria-labelledby="my-bookings-tab" x-show="activeTab === 'my-bookings'">
+            <!-- My Coaching Tab -->
+            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="my-coaching" role="tabpanel" aria-labelledby="my-coaching-tab" x-show="activeTab === 'my-coaching'">
                 <div class="bg-white p-6 rounded-lg shadow-lg">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">My Coaching Sessions</h2>
 
@@ -84,13 +81,8 @@
                     {% else %}
                         <p>No past sessions.</p>
                     {% endif %}
-                </div>
-            </div>
 
-            <!-- My Offerings Tab -->
-            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="my-offerings" role="tabpanel" aria-labelledby="my-offerings-tab" x-show="activeTab === 'my-offerings'">
-                <div class="bg-white p-6 rounded-lg shadow-lg">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">My Coaching Offerings</h2>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 mt-8">My Coaching Offerings</h2>
                     {% if user_offerings %}
                         <ul class="list-disc list-inside space-y-1">
                             {% for offering in user_offerings %}
