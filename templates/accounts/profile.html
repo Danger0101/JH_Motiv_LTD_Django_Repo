@@ -19,6 +19,12 @@
                 <li class="mr-2" role="presentation">
                     <button class="inline-block p-4 border-b-2 rounded-t-lg" id="my-bookings-tab" type="button" role="tab" aria-controls="my-bookings" aria-selected="false" @click="activeTab = 'my-bookings'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'my-bookings', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'my-bookings' }">My Bookings</button>
                 </li>
+                <li class="mr-2" role="presentation">
+                    <button class="inline-block p-4 border-b-2 rounded-t-lg" id="my-offerings-tab" type="button" role="tab" aria-controls="my-offerings" aria-selected="false" @click="activeTab = 'my-offerings'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'my-offerings', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'my-offerings' }">My Offerings</button>
+                </li>
+                <li class="mr-2" role="presentation">
+                    <button class="inline-block p-4 border-b-2 rounded-t-lg" id="book-session-tab" type="button" role="tab" aria-controls="book-session" aria-selected="false" @click="activeTab = 'book-session'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'book-session', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'book-session' }">Book Session</button>
+                </li>
                 {% if is_coach %}
                 <li class="mr-2" role="presentation">
                     <button class="inline-block p-4 border-b-2 rounded-t-lg" id="coach-tab" type="button" role="tab" aria-controls="coach" aria-selected="false" @click="activeTab = 'coach'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'coach', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'coach' }">Coach Dashboard</button>
@@ -78,6 +84,42 @@
                     {% else %}
                         <p>No past sessions.</p>
                     {% endif %}
+                </div>
+            </div>
+
+            <!-- My Offerings Tab -->
+            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="my-offerings" role="tabpanel" aria-labelledby="my-offerings-tab" x-show="activeTab === 'my-offerings'">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">My Coaching Offerings</h2>
+                    {% if user_offerings %}
+                        <ul class="list-disc list-inside space-y-1">
+                            {% for offering in user_offerings %}
+                                <li>{{ offering.offering.name }} - Remaining Sessions: {{ offering.remaining_sessions }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>You have not purchased any coaching offerings yet.</p>
+                    {% endif %}
+
+                    <h3 class="text-lg font-semibold text-gray-700 mt-4 mb-2">Available Credits</h3>
+                    {% if available_credits %}
+                        <ul class="list-disc list-inside space-y-1">
+                            {% for credit in available_credits %}
+                                <li>{{ credit.offering.name }} - {{ credit.remaining_sessions }} sessions remaining (Expires: {{ credit.expiration_date|date:"M d, Y" }})</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No available coaching credits.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Book Session Tab -->
+            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="book-session" role="tabpanel" aria-labelledby="book-session-tab" x-show="activeTab === 'book-session'" hx-get="{% url 'accounts:profile_book_session_partial' %}" hx-trigger="load once" hx-swap="innerHTML">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Book a New Session</h2>
+                    <!-- Content will be loaded via HTMX -->
+                    <p>Loading session booking form...</p>
                 </div>
             </div>
 
