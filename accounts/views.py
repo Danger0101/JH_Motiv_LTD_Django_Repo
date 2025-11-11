@@ -93,7 +93,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             client=self.request.user,
             remaining_sessions__gt=0,
             is_active=True,
-            end_date__gte=timezone.now().date() # Assuming end_date is a DateField
+            expiration_date__gte=timezone.now()
         ).order_by('-enrolled_on')
         
         context['active_tab'] = 'offerings' # Set default active tab
@@ -130,7 +130,7 @@ def profile_offerings_partial(request):
         client=request.user,
         remaining_sessions__gt=0,
         is_active=True,
-        end_date__gte=timezone.now().date()
+        expiration_date__gte=timezone.now().date()
     ).order_by('-enrolled_on')
     return render(request, 'accounts/profile_offerings.html', {
         'user_offerings': user_offerings,
@@ -152,7 +152,7 @@ def profile_book_session_partial(request):
         client=request.user,
         remaining_sessions__gt=0,
         is_active=True,
-        end_date__gte=timezone.now().date()
+        expiration_date__gte=timezone.now().date()
     ).order_by('-enrolled_on')
     coaches = CoachProfile.objects.filter(user__is_active=True, is_available_for_new_clients=True) # Filter active and available coaches
     
