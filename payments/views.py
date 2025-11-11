@@ -16,6 +16,8 @@ from coaching_core.models import Offering
 from accounts.models import CoachProfile
 from .models import Order, OrderItem
 from products.models import Product, Variant
+from django.utils import timezone
+
 
 User = get_user_model() # Get the user model
 stripe.api_key = settings.STRIPE_SECRET_KEY
