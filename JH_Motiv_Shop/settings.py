@@ -96,13 +96,10 @@ WSGI_APPLICATION = 'JH_Motiv_Shop.wsgi.application'
 
 
 # Database
-# Configure database from DATABASE_URL environment variable.
-# Fallbacks to a local SQLite database if DATABASE_URL is not set.
 DATABASES = {
     'default': dj_database_url.config(
-        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
-        conn_max_age=600,
-        ssl_require='postgres' in os.environ.get('DATABASE_URL', '')
+        conn_max_age=0, 
+        ssl_require=True
     )
 }
 

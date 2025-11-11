@@ -69,6 +69,24 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         # Fetch user's booked sessions
         context['user_bookings'] = SessionBooking.objects.filter(client=self.request.user).order_by('start_datetime')
 
+        # Add flags for dashboard elements
+        context['is_coach'] = self.request.user.is_coach
+        context['is_staff'] = self.request.user.is_staff
+
+        if self.request.user.is_coach:
+            # Fetch upcoming sessions where the current user is the coach
+            context['coach_upcoming_sessions'] = SessionBooking.objects.filter(
+                coach=self.request.user.coachprofile, # Assuming a reverse relation from User to CoachProfile
+                start_datetime__gte=timezone.now()
+            ).order_by('start_datetime')
+
+            # Fetch clients assigned to this coach
+            # This assumes ClientOfferingEnrollment has a 'coach' field or can be linked via 'offering'
+            # For simplicity, let's get unique clients from sessions booked with this coach
+            context['coach_clients'] = ClientOfferingEnrollment.objects.filter(
+                offering__coaches=self.request.user.coachprofile, # Assuming 'offering' has a ManyToMany with 'coaches'
+            ).values_list('client__username', flat=True).distinct()
+
         # For now, available_credits will be the same as user_offerings for simplicity
         # In a real scenario, this might be a separate model or a filtered queryset of enrollments
         context['available_credits'] = ClientOfferingEnrollment.objects.filter(
