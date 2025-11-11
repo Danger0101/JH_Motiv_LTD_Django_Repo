@@ -169,10 +169,16 @@ def profile_book_session_partial(request):
     if selected_enrollment_id:
         selected_enrollment = get_object_or_404(ClientOfferingEnrollment, id=selected_enrollment_id, client=request.user)
 
+    selected_coach_id = request.GET.get('coach_id')
+    selected_coach = None
+    if selected_coach_id:
+        selected_coach = get_object_or_404(CoachProfile, id=selected_coach_id)
+
     return render(request, 'accounts/profile_book_session.html', {
         'user_offerings': user_offerings,
         'coaches': coaches,
         'selected_enrollment': selected_enrollment,
+        'selected_coach': selected_coach,
         'active_tab': 'book_session'
     })
 
