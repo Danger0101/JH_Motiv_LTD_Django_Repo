@@ -1,11 +1,11 @@
 <div class="bg-white p-6 rounded-lg shadow-lg">
     <h2 class="text-2xl font-bold text-gray-800 mb-6">My Booked Sessions</h2>
-    <ul class="space-y-4">
+    <ul class="space-y-4" role="list">
         {% for booking in user_bookings %}
         <li class="border-b pb-4 last:border-b-0">
             <h3 class="text-xl font-semibold text-gray-800">Session with {{ booking.coach.user.get_full_name }}</h3>
-            <p class="text-gray-600">Date: {{ booking.start_datetime|date:"M d, Y" }}</p>
-            <p class="text-gray-600">Time: {{ booking.start_datetime|time:"H:i" }} - {{ booking.end_datetime|time:"H:i" }}</p>
+            <p class="text-gray-600">Date: <strong>{{ booking.start_datetime|date:"M d, Y" }}</strong></p>
+            <p class="text-gray-600">Time: <strong>{{ booking.start_datetime|time:"H:i" }} - {{ booking.end_datetime|time:"H:i" }}</strong></p>
             <p class="text-gray-600">Status: {{ booking.get_status_display }}</p>
             {% if booking.status == 'BOOKED' %}
             <div class="mt-3 flex space-x-2">
