@@ -84,7 +84,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             # This assumes ClientOfferingEnrollment has a 'coach' field or can be linked via 'offering'
             # For simplicity, let's get unique clients from sessions booked with this coach
             context['coach_clients'] = ClientOfferingEnrollment.objects.filter(
-                offering__coaches=self.request.user.coachprofile, # Assuming 'offering' has a ManyToMany with 'coaches'
+                offering__coaches=self.request.user.coach_profile, # Assuming 'offering' has a ManyToMany with 'coaches'
             ).values_list('client__username', flat=True).distinct()
 
         # For now, available_credits will be the same as user_offerings for simplicity
