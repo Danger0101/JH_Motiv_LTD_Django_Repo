@@ -9,115 +9,133 @@
 
 
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-10">
-        
-        <div class="bg-white p-6 rounded-lg shadow-lg">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">Account Information</h2>
-            <ul class="space-y-2 text-gray-700">
-                <li><strong>Username:</strong> {{ user.username }}</li>
-                <li><strong>Email:</strong> {{ user.email }}</li>
-                <li><strong>Joined:</strong> {{ user.date_joined|date:"M d, Y" }}</li>
-                </ul>
-        </div>
-        
-        {% if is_coach %}
-        <div class="bg-white p-6 rounded-lg shadow-lg">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">Coach Dashboard Elements</h2>
-            <h3 class="text-lg font-semibold text-gray-700 mb-2">Upcoming Sessions</h3>
-            {% if coach_upcoming_sessions %}
-                <ul class="list-disc list-inside space-y-1">
-                    {% for session in coach_upcoming_sessions %}
-                        <li>{{ session.start_datetime|date:"M d, H:i" }} with {{ session.client.username }}</li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>No upcoming sessions.</p>
-            {% endif %}
-
-            <h3 class="text-lg font-semibold text-gray-700 mt-4 mb-2">Your Clients</h3>
-            {% if coach_clients %}
-                <ul class="list-disc list-inside space-y-1">
-                    {% for client in coach_clients %}
-                        <li>{{ client }}</li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>No clients assigned yet.</p>
-            {% endif %}
-        </div>
-        {% endif %}
-
-        {% if is_staff %}
-        <div class="bg-white p-6 rounded-lg shadow-lg">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">Staff Dashboard Elements</h2>
-            <p>This section is visible to staff members.</p>
-            {# TODO: Include actual staff dashboard components here #}
-        </div>
-        {% endif %}
-
-        <div class="bg-white p-6 rounded-lg shadow-lg">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">Google Calendar</h2>
-            <p class="text-gray-600 mb-4">Connect your Google Calendar to automatically sync your coaching sessions.</p>
-            <a href="{% url 'gcal:google_calendar_init' %}" class="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-300">
-                Connect to Google Calendar
-            </a>
+    <div x-data="{ activeTab: 'account' }" class="w-full">
+        <!-- Tab Headers -->
+        <div class="mb-4 border-b border-gray-200">
+            <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" id="myTab" data-tabs-toggle="#myTabContent" role="tablist">
+                <li class="mr-2" role="presentation">
+                    <button class="inline-block p-4 border-b-2 rounded-t-lg" id="account-tab" type="button" role="tab" aria-controls="account" aria-selected="true" @click="activeTab = 'account'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'account', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'account' }">Account Information</button>
+                </li>
+                {% if is_coach %}
+                <li class="mr-2" role="presentation">
+                    <button class="inline-block p-4 border-b-2 rounded-t-lg" id="coach-tab" type="button" role="tab" aria-controls="coach" aria-selected="false" @click="activeTab = 'coach'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'coach', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'coach' }">Coach Dashboard</button>
+                </li>
+                {% endif %}
+                {% if is_staff %}
+                <li class="mr-2" role="presentation">
+                    <button class="inline-block p-4 border-b-2 rounded-t-lg" id="staff-tab" type="button" role="tab" aria-controls="staff" aria-selected="false" @click="activeTab = 'staff'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'staff', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'staff' }">Staff Dashboard</button>
+                </li>
+                {% endif %}
+                <li class="mr-2" role="presentation">
+                    <button class="inline-block p-4 border-b-2 rounded-t-lg" id="integrations-tab" type="button" role="tab" aria-controls="integrations" aria-selected="false" @click="activeTab = 'integrations'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'integrations', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'integrations' }">Integrations</button>
+                </li>
+                <li class="mr-2" role="presentation">
+                    <button class="inline-block p-4 border-b-2 rounded-t-lg" id="preferences-tab" type="button" role="tab" aria-controls="preferences" aria-selected="false" @click="activeTab = 'preferences'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'preferences', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'preferences' }">Preferences</button>
+                </li>
+            </ul>
         </div>
 
-        <div class="bg-white p-6 rounded-lg shadow-lg">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">Marketing Preferences</h2>
-            {% with marketing_preference=user.marketing_preference %}
-            <form hx-post="{% url 'account:update_marketing_preference' %}" 
-                  hx-target="#marketing-preference-status-wrapper" hx-swap="innerHTML">
-                {% csrf_token %}
-                <div class="flex items-center space-x-2">
-                    <input type="checkbox" name="is_subscribed" id="marketing_opt_in"
-                           {% if marketing_preference.is_subscribed %}checked{% endif %}
-                           hx-post="{% url 'account:update_marketing_preference' %}"
-                           hx-trigger="change"
-                           hx-target="#marketing-preference-status-wrapper"
-                           hx-swap="innerHTML"
-                           class="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
-                    <label for="marketing_opt_in" class="text-gray-700">
-                        Receive marketing emails
-                    </label>
+        <!-- Tab Content -->
+        <div id="myTabContent">
+            <!-- Account Information Tab -->
+            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="account" role="tabpanel" aria-labelledby="account-tab" x-show="activeTab === 'account'">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Account Information</h2>
+                    <ul class="space-y-2 text-gray-700">
+                        <li><strong>Username:</strong> {{ user.username }}</li>
+                        <li><strong>Email:</strong> {{ user.email }}</li>
+                        <li><strong>Joined:</strong> {{ user.date_joined|date:"M d, Y" }}</li>
+                    </ul>
                 </div>
-            </form>
-            <div id="marketing-preference-status-wrapper" class="mt-3">
-                <p id="marketing-preference-status" class="text-sm">
-                    Current status: <strong class="{% if marketing_preference.is_subscribed %}text-green-600{% else %}text-red-600{% endif %}">
-                        {% if marketing_preference.is_subscribed %}Subscribed{% else %}Unsubscribed{% endif %}
-                    </strong>
-                </p>
             </div>
-            {% endwith %}
+
+            <!-- Coach Dashboard Tab -->
+            {% if is_coach %}
+            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="coach" role="tabpanel" aria-labelledby="coach-tab" x-show="activeTab === 'coach'">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Coach Dashboard Elements</h2>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Upcoming Sessions</h3>
+                    {% if coach_upcoming_sessions %}
+                        <ul class="list-disc list-inside space-y-1">
+                            {% for session in coach_upcoming_sessions %}
+                                <li>{{ session.start_datetime|date:"M d, H:i" }} with {{ session.client.username }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No upcoming sessions.</p>
+                    {% endif %}
+
+                    <h3 class="text-lg font-semibold text-gray-700 mt-4 mb-2">Your Clients</h3>
+                    {% if coach_clients %}
+                        <ul class="list-disc list-inside space-y-1">
+                            {% for client in coach_clients %}
+                                <li>{{ client }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No clients assigned yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Staff Dashboard Tab -->
+            {% if is_staff %}
+            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="staff" role="tabpanel" aria-labelledby="staff-tab" x-show="activeTab === 'staff'">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Staff Dashboard Elements</h2>
+                    <p>This section is visible to staff members.</p>
+                    {# TODO: Include actual staff dashboard components here #}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Integrations Tab -->
+            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="integrations" role="tabpanel" aria-labelledby="integrations-tab" x-show="activeTab === 'integrations'">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Google Calendar</h2>
+                    <p class="text-gray-600 mb-4">Connect your Google Calendar to automatically sync your coaching sessions.</p>
+                    <a href="{% url 'gcal:google_calendar_init' %}" class="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-300">
+                        Connect to Google Calendar
+                    </a>
+                </div>
+            </div>
+
+            <!-- Preferences Tab -->
+            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="preferences" role="tabpanel" aria-labelledby="preferences-tab" x-show="activeTab === 'preferences'">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Marketing Preferences</h2>
+                    {% with marketing_preference=user.marketing_preference %}
+                    <form hx-post="{% url 'account:update_marketing_preference' %}" 
+                          hx-target="#marketing-preference-status-wrapper" hx-swap="innerHTML">
+                        {% csrf_token %}
+                        <div class="flex items-center space-x-2">
+                            <input type="checkbox" name="is_subscribed" id="marketing_opt_in"
+                                   {% if marketing_preference.is_subscribed %}checked{% endif %}
+                                   hx-post="{% url 'account:update_marketing_preference' %}"
+                                   hx-trigger="change"
+                                   hx-target="#marketing-preference-status-wrapper"
+                                   hx-swap="innerHTML"
+                                   class="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                            <label for="marketing_opt_in" class="text-gray-700">
+                                Receive marketing emails
+                            </label>
+                        </div>
+                    </form>
+                    <div id="marketing-preference-status-wrapper" class="mt-3">
+                        <p id="marketing-preference-status" class="text-sm">
+                            Current status: <strong class="{% if marketing_preference.is_subscribed %}text-green-600{% else %}text-red-600{% endif %}">
+                                {% if marketing_preference.is_subscribed %}Subscribed{% else %}Unsubscribed{% endif %}
+                            </strong>
+                        </p>
+                    </div>
+                    {% endwith %}
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="mt-12">
-        <div class="border-b border-gray-200">
-            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-                <button hx-get="{% url 'account:profile_offerings' %}" hx-target="#profile-content" hx-swap="innerHTML"
-                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm {% if active_tab == 'offerings' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}"
-                        aria-current="page">
-                    My Coaching Offerings
-                </button>
-                <button hx-get="{% url 'account:profile_bookings' %}" hx-target="#profile-content" hx-swap="innerHTML"
-                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm {% if active_tab == 'bookings' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
-                    My Bookings
-                </button>
-                <button hx-get="{% url 'account:profile_book_session' %}" hx-target="#profile-content" hx-swap="innerHTML"
-                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm {% if active_tab == 'book_session' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
-                    Book a Session
-                </button>
-            </nav>
-        </div>
 
-        <div id="profile-content" class="mt-8">
-            {# Default content or initial tab content will be loaded here #}
-            {# For now, let's load the offerings by default #}
-            {% include 'accounts/profile_offerings.html' %}
-        </div>
-    </div>
 
 </div>
 {% endblock %}
