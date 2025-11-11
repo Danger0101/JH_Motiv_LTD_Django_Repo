@@ -6,6 +6,7 @@ from django.http import JsonResponse, HttpResponse
 from django.urls import reverse
 from django.db import transaction, models # ADDED: models for coach query
 from django.contrib.auth import get_user_model # ADDED: Better way to get User model
+from datetime import timedelta # NEW IMPORT
 
 from cart.utils import get_or_create_cart, get_cart_summary_data
 from cart.models import Cart
@@ -185,38 +186,64 @@ def stripe_webhook(request):
         print(f"Processing session {session.id} for product_type: '{product_type}'")
         print(f"Webhook Metadata: {metadata}") # ADDED LOGGING
         
-        # --- A. COACHING ENROLLMENT LOGIC (Priority) ---
+        # --- A. COACHING ENROLLMENT LOGIC (Updated with Expiry Rules) ---
         if product_type == 'coaching_offering':
             try:
                 user_id = metadata.get('user_id')
                 offering_id = metadata.get('offering_id')
                 coach_id = metadata.get('coach_id')
 
-                print(f"Extracted IDs - User: {user_id}, Offering: {offering_id}, Coach: {coach_id}") # ADDED LOGGING
-
                 if not all([user_id, offering_id, coach_id]):
-                    raise ValueError("Missing required metadata for coaching enrollment (user_id, offering_id, or coach_id).")
-            # Fetch related objects
-                user = get_object_or_404(User, pk=user_id)
-                offering = get_object_or_404(Offering, pk=offering_id)
-                coach_profile = get_object_or_404(CoachProfile, pk=coach_id)
+                    raise ValueError("Missing required metadata for coaching enrollment.")
+                
+                user = User.objects.get(pk=user_id)
+                offering = Offering.objects.get(pk=offering_id)
+                coach_profile = CoachProfile.objects.get(pk=coach_id)
 
-                # Check for existing enrollment to prevent webhook retries causing duplicates
+                # 1. Calculate Enrollment Expiration Date
+                # Based on rule: 3 months (monthly) + 2 months buffer = 5 months total duration.
+                # NOTE: Assuming offering.duration_months or similar attribute exists.
+                
+                expiration_date = None
+                
+                if 'monthly' in offering.name.lower(): # Rule: 3 months + 2 months buffer = 5 months
+                    # Assuming a 3-month term plus 2 months grace
+                    expiration_date = timezone.now() + timedelta(days=150) # 5 months * 30 days
+                    print("Rule applied: Monthly, expiry in 5 months.")
+                    
+                elif 'weekly' in offering.name.lower(): # Rule: 4 weeks for a weekly offer
+                    expiration_date = timezone.now() + timedelta(weeks=4)
+                    print("Rule applied: Weekly, expiry in 4 weeks.")
+                    
+                elif 'whole day' in offering.name.lower() or 'immersion' in offering.name.lower(): # Rule: Whole Day/Immersion, 12 months from purchase
+                    expiration_date = timezone.now() + timedelta(days=365)
+                    print("Rule applied: Whole Day/Immersion, expiry in 12 months.")
+
+                # If the system doesn't find a matching rule, ensure it has a default (e.g., 6 months)
+                if expiration_date is None:
+                     expiration_date = timezone.now() + timedelta(days=180) # Default 6 months
+                     print("Rule applied: Default 6 months expiry.")
+
+
+                # 2. Check for existing enrollment (prevent duplicates from webhook retries)
                 if ClientOfferingEnrollment.objects.filter(client=user, offering=offering, is_active=True).exists():
                     print(f"Duplicate enrollment skipped for user {user.id} in offering {offering.id}.")
                     return HttpResponse(status=200)
 
-                # Create the Client Offering Enrollment (New Client Creation)
+                # 3. Create the Client Offering Enrollment
                 ClientOfferingEnrollment.objects.create(
                     client=user,
                     offering=offering,
-                    coach=coach_profile
+                    coach=coach_profile,
+                    purchase_date=timezone.now(), # Use current time for purchase
+                    expiration_date=expiration_date # Assign calculated expiry date
                 )
                 
-                print(f"SUCCESS: Client Enrollment created for {user.email} in {offering.name}")
+                print(f"SUCCESS: Client Enrollment created for {user.email}. Expires: {expiration_date}")
             
             except Exception as e:
                 print(f"FATAL ERROR in Coaching Enrollment: {e}")
+                # Return 500 so Stripe retries, giving you time to fix missing IDs/models
                 return HttpResponse("Coaching Enrollment failed.", status=500)
 
         # --- B. E-COMMERCE ORDER LOGIC (Fallback/General Cart) ---

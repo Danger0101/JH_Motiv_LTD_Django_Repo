@@ -45,15 +45,14 @@ class ClientOfferingEnrollment(models.Model):
         verbose_name="Remaining Sessions",
         help_text="Number of sessions left for the client to book."
     )
-    start_date = models.DateField(
-        verbose_name="Start Date",
-        null=True, blank=True,
-        help_text="The date of the client's first booked session."
+    purchase_date = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Purchase Date"
     )
-    end_date = models.DateField(
-        verbose_name="End Date",
+    expiration_date = models.DateTimeField(
         null=True, blank=True,
-        help_text="The calculated end date of the package based on the offering terms."
+        verbose_name="Expiration Date",
+        help_text="The date when the enrollment expires."
     )
     is_active = models.BooleanField(
         default=True,
@@ -77,7 +76,6 @@ class ClientOfferingEnrollment(models.Model):
         if not self.pk:  # If creating a new enrollment
             self.total_sessions = self.offering.total_number_of_sessions
             self.remaining_sessions = self.offering.total_number_of_sessions
-            self.end_date = timezone.now().date() + relativedelta(months=+5)
         super().save(*args, **kwargs)
 
     def add_session(self):
@@ -92,8 +90,10 @@ class ClientOfferingEnrollment(models.Model):
 
     @property
     def is_expired(self):
-        """Returns True if the enrollment has passed its end date."""
-        return timezone.now().date() > self.end_date
+        """Returns True if the enrollment has passed its expiration date."""
+        if self.expiration_date:
+            return timezone.now() > self.expiration_date
+        return False
 
 
 class SessionBooking(models.Model):

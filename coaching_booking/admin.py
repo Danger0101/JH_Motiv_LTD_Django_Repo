@@ -18,10 +18,10 @@ class SessionBookingInline(admin.TabularInline):
 
 @admin.register(ClientOfferingEnrollment)
 class EnrollmentAdmin(admin.ModelAdmin):
-    list_display = ('client_link', 'coach_link', 'offering_link', 'remaining_sessions', 'end_date', 'is_active')
+    list_display = ('client_link', 'coach_link', 'offering_link', 'remaining_sessions', 'expiration_date', 'is_active')
     list_filter = ('is_active', 'coach', 'offering')
     search_fields = ['client__email', 'client__first_name', 'client__last_name', 'coach__user__email', 'offering__name']
-    readonly_fields = ('enrolled_on', 'end_date')
+    readonly_fields = ('enrolled_on', 'expiration_date')
     inlines = [SessionBookingInline]
     list_select_related = ('client', 'coach__user', 'offering') # Performance boost
     actions = ['add_bonus_session']
