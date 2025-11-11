@@ -76,7 +76,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         if self.request.user.is_coach:
             # Fetch upcoming sessions where the current user is the coach
             context['coach_upcoming_sessions'] = SessionBooking.objects.filter(
-                coach=self.request.user.coachprofile, # Assuming a reverse relation from User to CoachProfile
+                coach=self.request.user.coach_profile, # Assuming a reverse relation from User to CoachProfile
                 start_datetime__gte=timezone.now()
             ).order_by('start_datetime')
 
