@@ -256,7 +256,6 @@ if not DEBUG:
 # =======================================================
 # DJANGO ALLAUTH SOCIAL ACCOUNT SETTINGS
 # =======================================================
-
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'SCOPE': [
@@ -268,11 +267,12 @@ SOCIALACCOUNT_PROVIDERS = {
         'AUTH_PARAMS': {
             'access_type': 'offline', # Required for long-term access (refresh tokens)
         },
-        # Required: Use the official API configuration method (via Django Admin)
-        'APP': {
-            'client_id': os.getenv('GOOGLE_OAUTH2_CLIENT_ID'),
-            'secret': os.getenv('GOOGLE_OAUTH2_CLIENT_SECRET'),
-        }
+        # NOTE: allauth uses the DB configuration below, 
+        # but defining this here ensures scope definition is correct.
+        # 'APP': {
+        #     'client_id': os.getenv('GOOGLE_OAUTH2_CLIENT_ID'),
+        #     'secret': os.getenv('GOOGLE_OAUTH2_CLIENT_SECRET'),
+        # }
     }
 }
 
