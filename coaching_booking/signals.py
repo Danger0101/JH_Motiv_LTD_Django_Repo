@@ -14,6 +14,8 @@ def handle_session_booking_save(sender, instance, created, **kwargs):
         return
 
     if created:
+        # Create a new calendar event
+        event = create_calendar_event(
             coach_profile=instance.coach,
             summary=f"Coaching Session with {instance.client.get_full_name()}",
             description=f"Coaching session for the offering: {instance.enrollment.offering.name if instance.enrollment else 'Taster Session'}",
