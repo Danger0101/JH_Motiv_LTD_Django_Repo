@@ -251,3 +251,28 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+
+
+# =======================================================
+# DJANGO ALLAUTH SOCIAL ACCOUNT SETTINGS
+# =======================================================
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+            'https://www.googleapis.com/auth/calendar.events',
+            'https://www.googleapis.com/auth/meetings.space.created',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'offline', # Required for long-term access (refresh tokens)
+        },
+        # Required: Use the official API configuration method (via Django Admin)
+        'APP': {
+            'client_id': os.getenv('GOOGLE_OAUTH2_CLIENT_ID'),
+            'secret': os.getenv('GOOGLE_OAUTH2_CLIENT_SECRET'),
+        }
+    }
+}
+
