@@ -16,7 +16,7 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = os.getenv('SECRET_KEY')
-DEBUG = True
+DEBUG = False
 
 HEROKU_APP_NAME = os.environ.get('HEROKU_APP_NAME')
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com']
@@ -193,13 +193,13 @@ GOOGLE_OAUTH2_CLIENT_ID = os.getenv('GOOGLE_OAUTH2_CLIENT_ID')
 GOOGLE_OAUTH2_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH2_CLIENT_SECRET')
 GOOGLE_OAUTH2_REDIRECT_URI = os.getenv('GOOGLE_OAUTH2_REDIRECT_URI')
 
-# if not DEBUG:
-#     if not GOOGLE_OAUTH2_CLIENT_ID:
-#         raise ImproperlyConfigured("GOOGLE_OAUTH2_CLIENT_ID is not set in the environment variables.")
-#     if not GOOGLE_OAUTH2_CLIENT_SECRET:
-#         raise ImproperlyConfigured("GOOGLE_OAUTH2_CLIENT_SECRET is not set in the environment variables.")
-#     if not GOOGLE_OAUTH2_REDIRECT_URI:
-#         raise ImproperlyConfigured("GOOGLE_OAUTH2_REDIRECT_URI is not set in the environment variables.")
+if not DEBUG:
+    if not GOOGLE_OAUTH2_CLIENT_ID:
+        raise ImproperlyConfigured("GOOGLE_OAUTH2_CLIENT_ID is not set in the environment variables.")
+    if not GOOGLE_OAUTH2_CLIENT_SECRET:
+        raise ImproperlyConfigured("GOOGLE_OAUTH2_CLIENT_SECRET is not set in the environment variables.")
+    if not GOOGLE_OAUTH2_REDIRECT_URI:
+        raise ImproperlyConfigured("GOOGLE_OAUTH2_REDIRECT_URI is not set in the environment variables.")
 
 #Encryption:
 FIELD_ENCRYPTION_KEY = os.getenv('FIELD_ENCRYPTION_KEY')
