@@ -14,17 +14,17 @@ from accounts.models import CoachProfile
 
 @login_required
 def google_calendar_init(request):
-    flow = Flow.from_client_secrets_file(
-        client_secrets_file=None,  # Use client config from settings
-        client_config={
-            "web": {
-                "client_id": settings.GOOGLE_OAUTH2_CLIENT_ID,
-                "client_secret": settings.GOOGLE_OAUTH2_CLIENT_SECRET,
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [settings.GOOGLE_OAUTH2_REDIRECT_URI],
-            }
-        },
+    client_config = {
+        "web": {
+            "client_id": settings.GOOGLE_OAUTH2_CLIENT_ID,
+            "client_secret": settings.GOOGLE_OAUTH2_CLIENT_SECRET,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "redirect_uris": [settings.GOOGLE_OAUTH2_REDIRECT_URI],
+        }
+    }
+    flow = Flow.from_client_config(
+        client_config=client_config,
         scopes=[
             "https://www.googleapis.com/auth/calendar.events",
             "https://www.googleapis.com/auth/calendar.readonly",
@@ -45,19 +45,20 @@ def google_calendar_init(request):
 def google_calendar_redirect(request):
     state = request.session.pop('oauth_state', '')
 
-    flow = Flow.from_client_secrets_file(
-        client_secrets_file=None,  # Use client config from settings
-        client_config={
-            "web": {
-                "client_id": settings.GOOGLE_OAUTH2_CLIENT_ID,
-                "client_secret": settings.GOOGLE_OAUTH2_CLIENT_SECRET,
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [settings.GOOGLE_OAUTH2_REDIRECT_URI],
-            }
-        },
+    client_config = {
+        "web": {
+            "client_id": settings.GOOGLE_OAUTH2_CLIENT_ID,
+            "client_secret": settings.GOOGLE_OAUTH2_CLIENT_SECRET,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "redirect_uris": [settings.GOOGLE_OAUTH2_REDIRECT_URI],
+        }
+    }
+
+    flow = Flow.from_client_config(
+        client_config=client_config,
         scopes=[
-            "https.www.googleapis.com/auth/calendar.events",
+            "https://www.googleapis.com/auth/calendar.events",
             "https://www.googleapis.com/auth/calendar.readonly",
         ],
         redirect_uri=settings.GOOGLE_OAUTH2_REDIRECT_URI,
