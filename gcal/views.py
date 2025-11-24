@@ -5,6 +5,11 @@ from django.contrib.auth.decorators import login_required
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from django.utils import timezone
+from datetime import timedelta
+
+from .models import GoogleCredentials
+from accounts.models import CoachProfile
 
 
 @login_required
@@ -62,14 +67,55 @@ def google_calendar_redirect(request):
     flow.fetch_token(authorization_response=request.build_absolute_uri())
 
     credentials = flow.credentials
-    request.user.google_calendar_credentials = {
-        'token': credentials.token,
-        'refresh_token': credentials.refresh_token,
-        'token_uri': credentials.token_uri,
-        'client_id': credentials.client_id,
-        'client_secret': credentials.client_secret,
-        'scopes': credentials.scopes
-    }
-    request.user.save()
 
-    return redirect(reverse('account:account_profile'))
+    # Get or create a CoachProfile for the current user
+    coach_profile, created = CoachProfile.objects.get_or_create(user=request.user)
+
+    # Create or update the GoogleCredentials object
+    GoogleCredentials.objects.update_or_create(
+        coach=coach_profile,
+        defaults={
+            'access_token': credentials.token,
+            'refresh_token': credentials.refresh_token,
+            'token_expiry': timezone.now() + timedelta(seconds=credentials.expires_in),
+            'scopes': ' '.join(credentials.scopes),
+            'calendar_id': 'primary'  # Default to primary calendar
+        }
+    )
+
+    return redirect(reverse('accounts:account_profile'))
+
+from django.http import JsonResponse
+from datetime import datetime, time
+
+from .utils import get_calendar_conflicts
+
+
+def get_coach_availability(request, coach_id):
+    """
+    Returns a JSON response with the coach's availability for a given date range.
+    """
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+
+    if not all([start_date_str, end_date_str]):
+        return JsonResponse({'error': 'start_date and end_date are required'}, status=400)
+
+    try:
+        start_date = datetime.fromisoformat(start_date_str)
+        end_date = datetime.fromisoformat(end_date_str)
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format. Use ISO format.'}, status=400)
+
+    try:
+        coach_profile = CoachProfile.objects.get(id=coach_id)
+    except CoachProfile.DoesNotExist:
+        return JsonResponse({'error': 'Coach not found'}, status=404)
+
+    conflicts = get_calendar_conflicts(coach_profile, start_date, end_date)
+
+    # This is a simplified availability calculation. A more robust solution
+    # would consider the coach's working hours, buffer times, etc.
+    
+    # For now, just return the conflicts
+    return JsonResponse({'conflicts': conflicts})

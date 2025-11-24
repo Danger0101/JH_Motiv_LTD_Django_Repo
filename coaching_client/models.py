@@ -68,11 +68,10 @@ class TasterSessionRequest(models.Model):
     """
     Manages client requests for the free 90-minute taster session.
     """
-    client = models.ForeignKey(
+    client = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='taster_session_request',
-        unique=True, # Enforces that a client can only have one request
         verbose_name="Client"
     )
     requested_at = models.DateTimeField(auto_now_add=True, verbose_name="Requested At")
