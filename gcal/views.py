@@ -27,7 +27,7 @@ def google_calendar_init(request):
         client_config=client_config,
         scopes=[
             "https://www.googleapis.com/auth/calendar.events",
-            "https://www.googleapis.com/auth/calendar.readonly",
+            "https://www.googleapis.com/auth/meetings.space.created",
         ],
         redirect_uri=settings.GOOGLE_OAUTH2_REDIRECT_URI
     )
@@ -59,7 +59,7 @@ def google_calendar_redirect(request):
         client_config=client_config,
         scopes=[
             "https://www.googleapis.com/auth/calendar.events",
-            "https://www.googleapis.com/auth/calendar.readonly",
+            "https://www.googleapis.com/auth/meetings.space.created",
         ],
         redirect_uri=settings.GOOGLE_OAUTH2_REDIRECT_URI,
         state=state
