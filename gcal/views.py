@@ -69,6 +69,11 @@ def google_calendar_redirect(request):
 
     credentials = flow.credentials
 
+    # Ensure the user is marked as a coach before getting/creating the profile.
+    if not request.user.is_coach:
+        request.user.is_coach = True
+        request.user.save()
+
     # Get or create a CoachProfile for the current user
     coach_profile, created = CoachProfile.objects.get_or_create(user=request.user)
 
