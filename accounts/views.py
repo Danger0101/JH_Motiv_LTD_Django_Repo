@@ -93,7 +93,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         google_calendar_connected = False
         if self.request.user.is_coach:
             try:
-                coach_profile = self.request.user.coachprofile
+                coach_profile = self.request.user.coach_profile
                 google_calendar_connected = GoogleCredentials.objects.filter(coach=coach_profile).exists()
             except CoachProfile.DoesNotExist:
                 pass  # Coach profile doesn't exist, so no connection
