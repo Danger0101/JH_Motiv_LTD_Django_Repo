@@ -6,6 +6,7 @@ from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from django.utils import timezone
+from datetime import timezone as dt_timezone
 
 from .models import GoogleCredentials
 from accounts.models import CoachProfile
@@ -84,7 +85,7 @@ def google_calendar_redirect(request):
         defaults={
             'access_token': credentials.token,
             'refresh_token': credentials.refresh_token,
-            'token_expiry': credentials.expiry.replace(tzinfo=timezone.utc),
+            'token_expiry': credentials.expiry.replace(tzinfo=dt_timezone.utc),
             'scopes': ' '.join(credentials.scopes),
             'calendar_id': 'primary'  # Default to primary calendar
         }
