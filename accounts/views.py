@@ -21,6 +21,13 @@ class CustomLoginView(LoginView):
     effect by sending an HX-Redirect header, which tells HTMX to perform a full
     browser redirect.
     """
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        cart = get_or_create_cart(self.request)
+        summary = get_cart_summary_data(cart)
+        context['summary'] = summary
+        return context
+
     def form_valid(self, form):
         # Let the parent class handle the login logic.
         response = super().form_valid(form)

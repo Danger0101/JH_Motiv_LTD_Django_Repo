@@ -14,6 +14,8 @@ from accounts.models import CoachProfile
 
 @login_required
 def google_calendar_init(request):
+    if 'code' in request.GET:
+        return google_calendar_redirect(request)
     client_config = {
         "web": {
             "client_id": settings.GOOGLE_OAUTH2_CLIENT_ID,
