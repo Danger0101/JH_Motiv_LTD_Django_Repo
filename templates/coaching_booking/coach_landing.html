@@ -14,7 +14,7 @@ Coach Landing - {{ block.super }}
     <div class="text-center py-16 px-4">
         <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900">Find Your Path to Success</h1>
         <p class="mt-4 text-lg text-gray-600">Unlock your potential with our expert coaches.</p>
-        <a href="{% url 'coaching_booking:offer-list' %}" class="mt-8 inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300">Explore Offerings</a>
+        <a href="#coaching-offerings" class="mt-8 inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300">Explore Offerings</a>
     </div>
 
     <div class="py-16 bg-white">
@@ -57,7 +57,7 @@ Coach Landing - {{ block.super }}
 
     <div class="py-16 bg-gray-50">
         <div class="container mx-auto px-4">
-            <h2 class="text-3xl font-bold text-center text-gray-800">Our Coaching Offerings</h2>
+            <h2 id="coaching-offerings" class="text-3xl font-bold text-center text-gray-800 scroll-mt-20">Our Coaching Offerings</h2>
             <p class="mt-4 text-lg text-center text-gray-600">Find the perfect package to start your journey.</p>
             <div class="mt-12 grid md:grid-cols-3 gap-8">
                 {% for offering in offerings %}
@@ -208,5 +208,30 @@ Coach Landing - {{ block.super }}
             </div>
         </div>
     </div>
-</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Select all links with href starting with '#'
+    const smoothScrollLinks = document.querySelectorAll('a[href^="#"]');
+
+    smoothScrollLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            const targetId = this.getAttribute('href');
+            const targetElement = document.querySelector(targetId);
+
+            if (targetElement) {
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+});
+</script>
 {% endblock %}
