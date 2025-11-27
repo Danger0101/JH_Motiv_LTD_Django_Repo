@@ -84,7 +84,7 @@ def google_calendar_redirect(request):
         defaults={
             'access_token': credentials.token,
             'refresh_token': credentials.refresh_token,
-            'token_expiry': credentials.expiry,
+            'token_expiry': credentials.expiry.replace(tzinfo=timezone.utc),
             'scopes': ' '.join(credentials.scopes),
             'calendar_id': 'primary'  # Default to primary calendar
         }
@@ -99,7 +99,7 @@ def google_calendar_disconnect(request):
     Disconnects the user's Google Calendar by deleting their stored credentials.
     """
     try:
-        coach_profile = request.user.coachprofile
+        coach_profile = request.user.coach_profile
         if hasattr(coach_profile, 'google_credentials'):
             coach_profile.google_credentials.delete()
     except CoachProfile.DoesNotExist:
