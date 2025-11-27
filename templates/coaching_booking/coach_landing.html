@@ -59,22 +59,37 @@ Coach Landing - {{ block.super }}
         <div class="container mx-auto px-4">
             <h2 id="coaching-offerings" class="text-3xl font-bold text-center text-gray-800 scroll-mt-20">Our Coaching Offerings</h2>
             <p class="mt-4 text-lg text-center text-gray-600">Find the perfect package to start your journey.</p>
-            <div class="mt-12 grid md:grid-cols-3 gap-8">
-                {% for offering in offerings %}
-                <div class="bg-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition duration-300 flex flex-col">
-                    <h3 class="text-xl font-bold text-gray-800 mb-2">{{ offering.name }}</h3>
-                    <p class="text-3xl font-extrabold text-green-600 mb-4">£{{ offering.price|floatformat:2 }}</p>
-                    <p class="text-gray-600 text-sm mb-4 flex-grow">{{ offering.description|truncatechars:100 }}</p>
-                    <ul class="text-sm text-gray-500 mb-4 space-y-1">
-                        <li><i class="fas fa-clock text-green-500 mr-2"></i> Duration: {{ offering.display_length }}</li>
-                        <li><i class="fas fa-calendar-check text-green-500 mr-2"></i> Sessions: {{ offering.total_number_of_sessions }}</li>
-                        <li><i class="fas fa-users text-green-500 mr-2"></i> Coaches: {{ offering.coaches.count }}</li>
-                    </ul>
-                    <a href="{% url 'coaching_booking:offer-enroll' slug=offering.slug %}" class="mt-auto inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 text-center">View Details & Enroll</a>
+            <div x-data="carousel()" x-init="init()" class="relative w-full max-w-6xl mx-auto mt-12">
+                <div class="overflow-hidden">
+                    <div x-ref="track" class="flex transition-transform duration-500 ease-in-out" :style="'transform: translateX(-' + (currentIndex * (100 / slidesVisible)) + '%)'">
+                        {% for offering in offerings %}
+                        <div class="w-full flex-shrink-0" :style="'flex-basis: ' + (100 / slidesVisible) + '%'">
+                            <div class="p-4">
+                                <div class="bg-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition duration-300 flex flex-col h-full">
+                                    <h3 class="text-xl font-bold text-gray-800 mb-2">{{ offering.name }}</h3>
+                                    <p class="text-3xl font-extrabold text-green-600 mb-4">£{{ offering.price|floatformat:2 }}</p>
+                                    <p class="text-gray-600 text-sm mb-4 flex-grow">{{ offering.description|truncatechars:100 }}</p>
+                                    <ul class="text-sm text-gray-500 mb-4 space-y-1">
+                                        <li><i class="fas fa-clock text-green-500 mr-2"></i> Duration: {{ offering.display_length }}</li>
+                                        <li><i class="fas fa-calendar-check text-green-500 mr-2"></i> Sessions: {{ offering.total_number_of_sessions }}</li>
+                                        <li><i class="fas fa-users text-green-500 mr-2"></i> Coaches: {{ offering.coaches.count }}</li>
+                                    </ul>
+                                    <a href="{% url 'coaching_booking:offer-enroll' slug=offering.slug %}" class="mt-auto inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 text-center">View Details & Enroll</a>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-center text-gray-600 col-span-3">No active offerings available at the moment. Please check back soon!</p>
+                        {% endfor %}
+                    </div>
                 </div>
-                {% empty %}
-                <p class="text-center text-gray-600 col-span-3">No active offerings available at the moment. Please check back soon!</p>
-                {% endfor %}
+
+                <button @click="prev()" class="absolute top-1/2 left-0 transform -translate-y-1/2 bg-white bg-opacity-75 hover:bg-opacity-100 rounded-full p-2 ml-2 transition z-10">
+                    <i class="fas fa-chevron-left text-gray-800"></i>
+                </button>
+                <button @click="next()" class="absolute top-1/2 right-0 transform -translate-y-1/2 bg-white bg-opacity-75 hover:bg-opacity-100 rounded-full p-2 mr-2 transition z-10">
+                    <i class="fas fa-chevron-right text-gray-800"></i>
+                </button>
             </div>
             <div class="text-center mt-12">
                 <a href="{% url 'coaching_booking:offer-list' %}" class="inline-block text-green-500 hover:text-green-600 font-bold">See All Offerings &rarr;</a>
@@ -233,5 +248,47 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+function carousel() {
+    return {
+        currentIndex: 0,
+        totalSlides: {{ offerings|length }},
+        slidesVisible: 3,
+        init() {
+            this.updateSlidesVisible();
+            window.addEventListener('resize', () => this.updateSlidesVisible());
+            if (this.totalSlides <= this.slidesVisible) {
+                this.currentIndex = 0;
+            }
+        },
+        updateSlidesVisible() {
+            if (window.innerWidth < 768) {
+                this.slidesVisible = 1;
+            } else if (window.innerWidth < 1024) {
+                this.slidesVisible = 2;
+            } else {
+                this.slidesVisible = 3;
+            }
+        },
+        next() {
+            if (this.totalSlides > this.slidesVisible) {
+                if (this.currentIndex < this.totalSlides - this.slidesVisible) {
+                    this.currentIndex++;
+                } else {
+                    this.currentIndex = 0; // Loop back to start
+                }
+            }
+        },
+        prev() {
+            if (this.totalSlides > this.slidesVisible) {
+                if (this.currentIndex > 0) {
+                    this.currentIndex--;
+                } else {
+                    this.currentIndex = this.totalSlides - this.slidesVisible; // Loop to end
+                }
+            }
+        }
+    }
+}
 </script>
 {% endblock %}
