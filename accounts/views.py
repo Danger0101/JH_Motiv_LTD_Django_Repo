@@ -12,6 +12,8 @@ from cart.utils import get_or_create_cart, get_cart_summary_data
 from coaching_booking.models import ClientOfferingEnrollment, SessionBooking
 from coaching_core.models import Offering
 from accounts.models import CoachProfile # Assuming CoachProfile is in accounts.models or accessible
+from gcal.models import GoogleCredentials
+
 
 class CustomLoginView(LoginView):
     template_name = 'accounts/login.html'
@@ -88,6 +90,15 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         context['is_coach'] = self.request.user.is_coach
         context['is_staff'] = self.request.user.is_staff
 
+        google_calendar_connected = False
+        if self.request.user.is_coach:
+            try:
+                coach_profile = self.request.user.coachprofile
+                google_calendar_connected = GoogleCredentials.objects.filter(coach=coach_profile).exists()
+            except CoachProfile.DoesNotExist:
+                pass  # Coach profile doesn't exist, so no connection
+        context['google_calendar_connected'] = google_calendar_connected
+
         if self.request.user.is_coach:
             # Fetch upcoming sessions where the current user is the coach
             context['coach_upcoming_sessions'] = SessionBooking.objects.filter(
@@ -111,7 +122,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             expiration_date__gte=timezone.now()
         ).order_by('-enrolled_on')
         
-        context['active_tab'] = 'offerings' # Set default active tab
+        context['active_tab'] = 'integrations' # Set default active tab
         
         return context
 

@@ -92,6 +92,21 @@ def google_calendar_redirect(request):
 
     return redirect(reverse('accounts:account_profile'))
 
+
+@login_required
+def google_calendar_disconnect(request):
+    """
+    Disconnects the user's Google Calendar by deleting their stored credentials.
+    """
+    try:
+        coach_profile = request.user.coachprofile
+        if hasattr(coach_profile, 'google_credentials'):
+            coach_profile.google_credentials.delete()
+    except CoachProfile.DoesNotExist:
+        # If the user is not a coach, there's nothing to disconnect.
+        pass
+    return redirect(reverse('accounts:account_profile'))
+
 from django.http import JsonResponse
 from datetime import datetime, time
 

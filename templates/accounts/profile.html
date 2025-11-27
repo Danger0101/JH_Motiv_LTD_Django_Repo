@@ -167,9 +167,17 @@
                 <div class="bg-white p-6 rounded-lg shadow-lg">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">Google Calendar</h2>
                     <p class="text-gray-600 mb-4">Connect your Google Calendar to automatically sync your coaching sessions.</p>
-                    <a href="{% url 'gcal:google_calendar_init' %}" class="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-300">
-                        Connect to Google Calendar
-                    </a>
+                    
+                    {% if google_calendar_connected %}
+                        <p class="text-green-600 mb-4">Your Google Calendar is connected.</p>
+                        <a href="{% url 'gcal:google_calendar_disconnect' %}" class="w-full text-center bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full transition duration-300">
+                            Disconnect from Google Calendar
+                        </a>
+                    {% else %}
+                        <a href="{% url 'gcal:google_calendar_init' %}" class="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-300">
+                            Connect to Google Calendar
+                        </a>
+                    {% endif %}
                 </div>
             </div>
 
