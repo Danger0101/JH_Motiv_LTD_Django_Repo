@@ -1,23 +1,51 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+Coaching Offerings - {{ block.super }}
+{% endblock %}
 
 {% block content %}
-<div class="container mx-auto p-4">
-    <h1 class="text-3xl font-bold mb-6">Our Coaching Offerings</h1>
+<div class="bg-gray-50">
+    <div class="text-center py-16 px-4">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900">Our Coaching Offerings</h1>
+        <p class="mt-4 text-lg text-gray-600">Find the perfect package to start your journey.</p>
+    </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {% for offering in offerings %}
-            <div class="bg-white shadow-lg rounded-lg p-6">
-                <h2 class="text-2xl font-semibold mb-2">{{ offering.name }}</h2>
-                <p class="text-gray-600 mb-4">{{ offering.description }}</p>
-                <p class="text-xl font-bold text-indigo-600 mb-4">${{ offering.price }}</p>
-                <a href="{% url 'coaching_booking:offer-enroll' offering.slug %}"
-                   class="inline-block bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition duration-300">
-                    Enroll Now
-                </a>
+    <div class="py-16 bg-white">
+        <div class="container mx-auto px-4">
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {% for offering in offerings %}
+                <div class="bg-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition duration-300 flex flex-col h-full">
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">{{ offering.name }}</h3>
+                    <p class="text-3xl font-extrabold text-green-600 mb-4">£{{ offering.price|floatformat:2 }}</p>
+                    <p class="text-gray-600 text-sm mb-4 flex-grow">{{ offering.description|truncatechars:150 }}</p>
+                    <ul class="text-sm text-gray-500 mb-4 space-y-1">
+                        <li><i class="fas fa-clock text-green-500 mr-2"></i> Duration: {{ offering.display_length }}</li>
+                        <li><i class="fas fa-calendar-check text-green-500 mr-2"></i> Sessions: {{ offering.total_number_of_sessions }}</li>
+                    </ul>
+                    <div class="mt-4">
+                        <h4 class="text-md font-bold text-gray-700">Available Coaches:</h4>
+                        <div class="flex flex-wrap items-center mt-2">
+                            {% for coach in offering.coaches.all %}
+                                <div class="flex items-center mr-4 mb-2">
+                                    {% if coach.public_photo %}
+                                    <img src="{{ coach.public_photo.url }}" alt="{{ coach.user.get_full_name }}" class="w-8 h-8 rounded-full object-cover mr-2">
+                                    {% endif %}
+                                    <span class="text-sm text-gray-600">{{ coach.user.get_full_name }}</span>
+                                </div>
+                            {% empty %}
+                                <p class="text-sm text-gray-500">All our coaches are available for this offering.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <a href="{% url 'coaching_booking:offer-enroll' slug=offering.slug %}" class="mt-auto inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 text-center">View Details & Enroll</a>
+                </div>
+                {% empty %}
+                <p class="text-center text-gray-600 col-span-3">No active offerings available at the moment. Please check back soon!</p>
+                {% endfor %}
             </div>
-        {% empty %}
-            <p class="col-span-full text-gray-600">No coaching offerings are currently available.</p>
-        {% endfor %}
+        </div>
     </div>
 </div>
-{% endblock content %}
+{% endblock %}
