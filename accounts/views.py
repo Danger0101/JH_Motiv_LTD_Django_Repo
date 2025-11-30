@@ -21,7 +21,8 @@ from collections import defaultdict
 from django.views import View
 
 from coaching_availability.utils import get_coach_available_slots # Import the new utility function
-from datetime import timedelta, date # Import timedelta and date
+from datetime import timedelta, date, datetime
+import calendar # Import timedelta and date
 
 class CustomLoginView(LoginView):
     template_name = 'accounts/login.html'
@@ -113,6 +114,12 @@ class ProfileView(LoginRequiredMixin, TemplateView):
 
         user = self.request.user
         
+        # Initialize coach-specific context variables for all users
+        context['weekly_schedule_formset'] = None
+        context['vacation_form'] = None
+        context['override_form'] = None
+        context['days_of_week'] = None
+
         # Only load coach data if the user is a coach
         if hasattr(user, 'coach_profile'):
             coach_profile = user.coach_profile
