@@ -13,7 +13,8 @@ from coaching_booking.models import ClientOfferingEnrollment, SessionBooking
 from coaching_core.models import Offering
 from accounts.models import CoachProfile # Assuming CoachProfile is in accounts.models or accessible
 from gcal.models import GoogleCredentials
-from coaching_availability.forms import DateOverrideForm, CoachVacationForm, BaseWeeklyScheduleFormSet, WeeklyScheduleForm, DAYS_OF_WEEK
+from coaching_availability.forms import DateOverrideForm, CoachVacationForm, WeeklyScheduleForm, DAYS_OF_WEEK
+from django.forms import modelformset_factory
 from coaching_availability.models import CoachAvailability
 from django.db import transaction
 from collections import defaultdict
@@ -123,29 +124,19 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             context['vacation_form'] = CoachVacationForm()
 
             # Weekly schedule formset
-            initial_data = []
-            availabilities = CoachAvailability.objects.filter(coach=self.request.user).order_by('day_of_week', 'start_time')
-            
-            existing_data = defaultdict(list)
-            for availability in availabilities:
-                existing_data[availability.day_of_week].append({
-                    'start_time': availability.start_time,
-                    'end_time': availability.end_time,
-                })
+            # 1. Define the FormSet Factory
+            WeeklyScheduleFormSet = modelformset_factory(
+                CoachAvailability,
+                form=WeeklyScheduleForm,
+                extra=0,  # No empty rows, only existing days
+                can_delete=False
+            )
 
-            for day, day_name in DAYS_OF_WEEK:
-                day_availabilities = existing_data[day]
-                if day_availabilities:
-                    for availability in day_availabilities:
-                        initial_data.append({
-                            'day_of_week': day,
-                            'start_time': availability['start_time'],
-                            'end_time': availability['end_time'],
-                        })
-                else:
-                    initial_data.append({'day_of_week': day, 'start_time': None, 'end_time': None})
-            
-            context['weekly_schedule_formset'] = BaseWeeklyScheduleFormSet(initial=initial_data)
+            # 2. Get the data (Monday to Sunday)
+            availability_queryset = CoachAvailability.objects.filter(coach=self.request.user).order_by('day_of_week')
+
+            # 3. Instantiate the FormSet
+            context['weekly_schedule_formset'] = WeeklyScheduleFormSet(queryset=availability_queryset)
             context['days_of_week'] = DAYS_OF_WEEK
 
 
