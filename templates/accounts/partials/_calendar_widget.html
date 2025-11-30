@@ -31,14 +31,16 @@
                         {% if day == 0 %}
                             <td class="p-2 border"></td>
                         {% else %}
-                            {% with current_day_date=date(year, month, day) %}
                             <td class="p-2 border text-center">
-                                {% if current_day_date < today %}
+                                {% comment %} Logic for disabling past dates {% endcomment %}
+                                {% if year < today.year or \
+                                      (year == today.year and month < today.month) or \
+                                      (year == today.year and month == today.month and day < today.day) %}
                                     <button class="w-full h-full p-2 text-gray-400 cursor-not-allowed past-date" disabled>
                                         {{ day }}
                                     </button>
                                 {% else %}
-                                    <button class="w-full h-full p-2 rounded {% if current_day_date == today %}bg-blue-200 text-blue-800 font-bold{% else %}hover:bg-gray-200{% endif %}"
+                                    <button class="w-full h-full p-2 rounded {% if year == today.year and month == today.month and day == today.day %}bg-blue-200 text-blue-800 font-bold{% else %}hover:bg-gray-200{% endif %}"
                                             hx-get="{% url 'accounts:get_daily_slots' %}"
                                             hx-vals='{"date": "{{ year }}-{{ month|stringformat:"02d" }}-{{ day|stringformat:"02d" }}", "coach_id": "{{ coach_id|default_if_none:"" }}", "enrollment_id": "{{ enrollment_id|default_if_none:"" }}"}'
                                             hx-target="#time-slots-column" hx-swap="innerHTML">
@@ -46,7 +48,6 @@
                                     </button>
                                 {% endif %}
                             </td>
-                            {% endwith %}
                         {% endif %}
                     {% endfor %}
                 </tr>
