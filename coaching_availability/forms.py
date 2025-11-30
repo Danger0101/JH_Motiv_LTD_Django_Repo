@@ -58,4 +58,4 @@ class WeeklyScheduleForm(forms.Form):
 
         return cleaned_data
 
-BaseWeeklyScheduleFormSet = forms.formset_factory(WeeklyScheduleForm, extra=7)
+BaseWeeklyScheduleFormSet = forms.formset_factory(WeeklyScheduleForm, extra=0)
