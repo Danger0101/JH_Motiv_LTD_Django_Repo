@@ -4,7 +4,6 @@ from django.db import transaction
 from django.contrib.auth.mixins import LoginRequiredMixin
 from .forms import CoachAvailabilityForm, DateOverrideForm, CoachVacationForm
 from .models import CoachAvailability, DateOverride, CoachVacation
-from coaching_booking.models import Booking
 
 
 class SetRecurringScheduleView(LoginRequiredMixin, View):
@@ -43,7 +42,8 @@ class ManageVacationView(LoginRequiredMixin, View):
                 vacation = form.save(commit=False)
                 vacation.coach = request.user
                 vacation.save()
-
+                
+                from coaching_booking.models import Booking
                 conflicting_bookings = Booking.objects.filter(
                     coach=request.user,
                     start_time__date__range=(
