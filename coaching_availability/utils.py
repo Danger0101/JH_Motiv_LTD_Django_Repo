@@ -39,3 +39,5 @@ def get_availability_for_date(coach, date):
         return [(availability.start_time, availability.end_time)]
     except CoachAvailability.DoesNotExist:
         return []
+
+calculate_bookable_slots = get_availability_for_date
