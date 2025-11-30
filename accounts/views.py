@@ -347,3 +347,99 @@ def get_available_slots(request):
         'available_slots': available_slots_data,
         'error_message': error_message
     })
+
+@login_required
+def get_booking_calendar(request):
+    year = int(request.GET.get('year', date.today().year))
+    month = int(request.GET.get('month', date.today().month))
+    coach_id = request.GET.get('coach_id')
+    enrollment_id = request.GET.get('enrollment_id')
+
+    cal = calendar.Calendar()
+    month_days = cal.monthcalendar(year, month)
+
+    today = date.today()
+
+    # Calculate previous and next month/year for navigation
+    prev_month_date = date(year, month, 1) - timedelta(days=1)
+    next_month_date = date(year, month, 1) + timedelta(days=32) # Go beyond to ensure next month
+
+    context = {
+        'year': year,
+        'month': month,
+        'month_name': date(year, month, 1).strftime('%B'),
+        'month_days': month_days,
+        'today': today,
+        'coach_id': coach_id,
+        'enrollment_id': enrollment_id,
+        'prev_month': prev_month_date.month,
+        'prev_year': prev_month_date.year,
+        'next_month': next_month_date.month,
+        'next_year': next_month_date.year,
+    }
+    return render(request, 'accounts/partials/_calendar_widget.html', context)
+
+@login_required
+def get_daily_slots(request):
+    date_str = request.GET.get('date')
+    coach_id_str = request.GET.get('coach_id')
+    enrollment_id_str = request.GET.get('enrollment_id')
+
+    daily_slots_data = []
+    error_message = None
+
+    if not date_str or not coach_id_str or not enrollment_id_str:
+        error_message = "Missing date, coach_id, or enrollment_id."
+        return render(request, 'accounts/partials/_day_slots.html', {
+            'daily_slots': daily_slots_data,
+            'error_message': error_message
+        })
+    
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        coach_id = int(coach_id_str)
+        enrollment_id = int(enrollment_id_str)
+
+        coach_profile = CoachProfile.objects.get(id=coach_id)
+        enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id, client=request.user)
+        offering = enrollment.offering
+        session_length_minutes = offering.session_length_minutes
+
+        if session_length_minutes <= 0:
+            error_message = "Session length for the selected offering is invalid."
+        else:
+            # Optimize to check only for the specific date
+            generated_slots = calculate_bookable_slots(
+                coach_profile,
+                selected_date,
+                selected_date, # Start and end date are the same for daily slots
+                session_length_minutes,
+                offering_type='one_on_one' # Assuming this is always one_on_one for now
+            )
+
+            for slot_start_datetime in generated_slots:
+                slot_end_datetime = slot_start_datetime + timedelta(minutes=session_length_minutes)
+                daily_slots_data.append({
+                    'start_time': slot_start_datetime,
+                    'end_time': slot_end_datetime,
+                })
+            
+            if not daily_slots_data:
+                error_message = "No available slots for this day."
+
+    except ValueError as e:
+        error_message = f"Invalid ID format or date format: {e}"
+    except ClientOfferingEnrollment.DoesNotExist:
+        error_message = "Selected offering enrollment not found."
+    except CoachProfile.DoesNotExist:
+        error_message = "Selected coach not found."
+    except Exception as e:
+        error_message = f"An unexpected error occurred: {e}"
+
+    return render(request, 'accounts/partials/_day_slots.html', {
+        'daily_slots': daily_slots_data,
+        'error_message': error_message,
+        'selected_date': selected_date if 'selected_date' in locals() else None,
+        'coach_id': coach_id_str,
+        'enrollment_id': enrollment_id_str,
+    })

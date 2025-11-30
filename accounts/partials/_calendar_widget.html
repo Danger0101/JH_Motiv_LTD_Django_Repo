@@ -1,0 +1,49 @@
+<div id="calendar-widget">
+    <h3>{{ month_name }} {{ year }}</h3>
+    <div class="calendar-navigation">
+        <button hx-get="{% url 'accounts:get_booking_calendar' %}?year={{ prev_year }}&month={{ prev_month }}&coach_id={{ coach_id }}&enrollment_id={{ enrollment_id }}"
+                hx-target="#calendar-widget" hx-swap="outerHTML">
+            Prev
+        </button>
+        <button hx-get="{% url 'accounts:get_booking_calendar' %}?year={{ next_year }}&month={{ next_month }}&coach_id={{ coach_id }}&enrollment_id={{ enrollment_id }}"
+                hx-target="#calendar-widget" hx-swap="outerHTML">
+            Next
+        </button>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Mon</th>
+                <th>Tue</th>
+                <th>Wed</th>
+                <th>Thu</th>
+                <th>Fri</th>
+                <th>Sat</th>
+                <th>Sun</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for week in month_days %}
+                <tr>
+                    {% for day in week %}
+                        {% if day == 0 %}
+                            <td></td>
+                        {% else %}
+                            {% with current_date=year|stringformat:"04d" %}-{% endwith %}{{ month|stringformat:"02d" %}-{{ day|stringformat:"02d" }}
+                            <td {% if current_date == today %}class="today"{% endif %}>
+                                <button hx-get="{% url 'accounts:get_daily_slots' %}?date={{ year }}-{{ month }}-{{ day }}&coach_id={{ coach_id }}&enrollment_id={{ enrollment_id }}"
+                                        hx-target="#daily-slots-container" hx-swap="innerHTML">
+                                    {{ day }}
+                                </button>
+                            </td>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div id="daily-slots-container">
+    <!-- Daily slots will be loaded here -->
+</div>

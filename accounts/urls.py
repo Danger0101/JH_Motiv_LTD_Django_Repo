@@ -14,6 +14,8 @@ urlpatterns = [
     path('profile/book-session/', views.profile_book_session_partial, name='profile_book_session'),
     path('profile/get-coaches-for-offering/', views.get_coaches_for_offering, name='get_coaches_for_offering'),
     path('profile/get-available-slots/', views.get_available_slots, name='get_available_slots'),
+    path('profile/get-booking-calendar/', views.get_booking_calendar, name='get_booking_calendar'),
+    path('profile/get-daily-slots/', views.get_daily_slots, name='get_daily_slots'),
 
 
     # allauth urls (explicitly defined for namespacing)
