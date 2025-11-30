@@ -426,7 +426,7 @@ def get_daily_slots(request):
             error_message = "Session length for the selected offering is invalid."
         else:
             # Optimize to check only for the specific date
-            generated_slots = calculate_bookable_slots(
+            generated_slots = get_coach_available_slots(
                 coach_profile,
                 selected_date,
                 selected_date, # Start and end date are the same for daily slots
@@ -435,11 +435,7 @@ def get_daily_slots(request):
             )
 
             for slot_start_datetime in generated_slots:
-                slot_end_datetime = slot_start_datetime + timedelta(minutes=session_length_minutes)
-                daily_slots_data.append({
-                    'start_time': slot_start_datetime,
-                    'end_time': slot_end_datetime,
-                })
+                daily_slots_data.append(slot_start_datetime.strftime('%I:%M %p')) # Format to 'HH:MM AM/PM'
             
             if not daily_slots_data:
                 error_message = "No available slots for this day."

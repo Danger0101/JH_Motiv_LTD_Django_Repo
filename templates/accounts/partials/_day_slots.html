@@ -1,0 +1,21 @@
+<div class="day-slots-container">
+    {% if selected_date %}
+        <h3>Availability for {{ selected_date|date:"F d, Y" }}</h3>
+    {% endif %}
+
+    {% if error_message %}
+        <p class="error-message">{{ error_message }}</p>
+    {% endif %}
+
+    {% if daily_slots %}
+        <div class="time-slots-grid">
+            {% for slot in daily_slots %}
+                <button type="submit" name="time_slot" value="{{ slot }}" class="time-slot-button">
+                    {{ slot }}
+                </button>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No availability for the selected date.</p>
+    {% endif %}
+</div>
