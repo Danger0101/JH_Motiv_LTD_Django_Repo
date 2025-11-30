@@ -106,37 +106,31 @@ class ProfileView(LoginRequiredMixin, TemplateView):
                 pass  # Coach profile doesn't exist, so no connection
         context['google_calendar_connected'] = google_calendar_connected
 
-        if self.request.user.is_coach:
-            # Fetch upcoming sessions where the current user is the coach
-            context['coach_upcoming_sessions'] = SessionBooking.objects.filter(
-                coach=self.request.user.coach_profile, # Assuming a reverse relation from User to CoachProfile
-                start_datetime__gte=timezone.now()
-            ).order_by('start_datetime')
-
-            # Fetch clients assigned to this coach
-            # This assumes ClientOfferingEnrollment has a 'coach' field or can be linked via 'offering'
-            # For simplicity, let's get unique clients from sessions booked with this coach
-            context['coach_clients'] = ClientOfferingEnrollment.objects.filter(
-                offering__coaches=self.request.user.coach_profile, # Assuming 'offering' has a ManyToMany with 'coaches'
-            ).values_list('client__username', flat=True).distinct()
-
-            context['override_form'] = DateOverrideForm()
-            context['vacation_form'] = CoachVacationForm()
-
-            # Weekly schedule formset
-            # 1. Define the FormSet Factory
+        user = self.request.user
+        
+        # Only load coach data if the user is a coach
+        if hasattr(user, 'coach_profile'):
+            coach_profile = user.coach_profile
+            
+            # 1. Create the FormSet Class
             WeeklyScheduleFormSet = modelformset_factory(
                 CoachAvailability,
                 form=WeeklyScheduleForm,
-                extra=0,  # No empty rows, only existing days
+                extra=0,
                 can_delete=False
             )
-
-            # 2. Get the data (Monday to Sunday)
-            availability_queryset = CoachAvailability.objects.filter(coach=self.request.user).order_by('day_of_week')
-
-            # 3. Instantiate the FormSet
-            context['weekly_schedule_formset'] = WeeklyScheduleFormSet(queryset=availability_queryset)
+            
+            # 2. Create the QuerySet
+            queryset = CoachAvailability.objects.filter(coach=coach_profile).order_by('day_of_week')
+            
+            # 3. Instantiate and Add to Context
+            context['weekly_schedule_formset'] = WeeklyScheduleFormSet(queryset=queryset)
+            
+            # 4. Add other forms
+            context['vacation_form'] = CoachVacationForm()
+            context['override_form'] = DateOverrideForm()
+            
+            # 5. Add Days of Week (from Model)
             context['days_of_week'] = CoachAvailability.DAYS_OF_WEEK
 
 
