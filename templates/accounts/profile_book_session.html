@@ -1,15 +1,17 @@
 <div class="bg-white p-6 rounded-lg shadow-lg">
     <h2 class="text-2xl font-bold text-gray-800 mb-6">Book a New Session</h2>
 
-    <form hx-post="{% url 'accounts:get_available_slots' %}" hx-target="#available-slots-container" hx-swap="innerHTML">
-        {% csrf_token %}
+    {# Removed the form element and its hx-post #}
+    <div>
+        {% csrf_token %} {# Keep csrf token if there are other forms or for future use, though not directly used by these HTMX gets #}
         <div class="mb-4">
             <label for="enrollment_id" class="block text-sm font-medium text-gray-700">Select Offering:</label>
             <select id="enrollment_id" name="enrollment_id"
                     class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                    hx-get="{% url 'accounts:get_coaches_for_offering' %}"
-                    hx-target="#coach_id"
-                    hx-trigger="change">
+                    hx-get="{% url 'accounts:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}"
+                    hx-target="#calendar-container"
+                    hx-trigger="change"
+                    hx-include="#coach_id, #enrollment_id"> {# Include coach_id as well #}
                 <option value="">-- Select an Offering --</option>
                 {% for enrollment in user_offerings %}
                     {% if enrollment.remaining_sessions > 0 and enrollment.is_active and not enrollment.is_expired %}
@@ -25,10 +27,10 @@
             <label for="coach_id" class="block text-sm font-medium text-gray-700">Select Coach:</label>
             <select id="coach_id" name="coach_id"
                     class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                    hx-get="{% url 'accounts:get_available_slots' %}"
-                    hx-target="#available-slots-container"
-                    hx-trigger="change from:#coach_id, change from:#enrollment_id"
-                    hx-include="#enrollment_id">
+                    hx-get="{% url 'accounts:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}"
+                    hx-target="#calendar-container"
+                    hx-trigger="change"
+                    hx-include="#enrollment_id, #coach_id"> {# Include enrollment_id as well #}
                 <option value="">-- Select a Coach --</option>
                 {% if coaches %}
                     {% for coach in coaches %}
@@ -40,9 +42,12 @@
             </select>
         </div>
 
-        <div id="available-slots-container" class="mt-6" aria-live="polite">
-            {# Available slots will be loaded here via HTMX #}
-            <p class="text-gray-500">Select an offering and a coach to see available session slots.</p>
+        {# Container for the calendar widget. It will initially load the calendar. #}
+        <div id="calendar-container"
+             hx-trigger="load, change from:#enrollment_id, change from:#coach_id" {# Load on page load, or when selections change #}
+             hx-get="{% url 'accounts:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}&coach_id={{ selected_coach.id|default_if_none:'' }}&enrollment_id={{ selected_enrollment.id|default_if_none:'' }}"
+             hx-swap="innerHTML">
+            <p class="text-gray-500">Select an offering and a coach to load the calendar.</p>
         </div>
-    </form>
+    </div>
 </div>

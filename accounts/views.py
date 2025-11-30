@@ -220,12 +220,19 @@ def profile_book_session_partial(request):
     if selected_coach_id:
         selected_coach = get_object_or_404(CoachProfile, id=selected_coach_id)
 
+    # Initialize year and month for the calendar
+    today = date.today()
+    initial_year = today.year
+    initial_month = today.month
+
     return render(request, 'accounts/profile_book_session.html', {
         'user_offerings': user_offerings,
         'coaches': coaches,
         'selected_enrollment': selected_enrollment,
         'selected_coach': selected_coach,
-        'active_tab': 'book_session'
+        'active_tab': 'book_session',
+        'initial_year': initial_year,
+        'initial_month': initial_month,
     })
 
 @login_required
