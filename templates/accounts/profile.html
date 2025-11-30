@@ -33,16 +33,10 @@
                 </li>
                 {% endif %}
                 <li class="mr-2" role="presentation">
-                    <button class="inline-block p-4 border-b-2 rounded-t-lg" id="integrations-tab" type="button" role="tab" aria-controls="integrations" aria-selected="false" @click="activeTab = 'integrations'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'integrations', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'integrations' }">Integrations</button>
+                    <button class="inline-block p-4 border-b-2 rounded-t-lg" id="settings-tab" type="button" role="tab" aria-controls="settings" aria-selected="false" @click="activeTab = 'settings'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'settings', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'settings' }">Settings</button>
                 </li>
                 <li class="mr-2" role="presentation">
-                    <button class="inline-block p-4 border-b-2 rounded-t-lg" id="preferences-tab" type="button" role="tab" aria-controls="preferences" aria-selected="false" @click="activeTab = 'preferences'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'preferences', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'preferences' }">Preferences</button>
-                </li>
-                <li class="mr-2" role="presentation">
-                    <button class="inline-block p-4 border-b-2 rounded-t-lg" id="order-history-tab" type="button" role="tab" aria-controls="order-history" aria-selected="false" @click="activeTab = 'order-history'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'order-history', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'order-history' }">Order History</button>
-                </li>
-                <li class="mr-2" role="presentation">
-                    <button class="inline-block p-4 border-b-2 rounded-t-lg" id="saved-addresses-tab" type="button" role="tab" aria-controls="saved-addresses" aria-selected="false" @click="activeTab = 'saved-addresses'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'saved-addresses', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'saved-addresses' }">Saved Addresses</button>
+                    <button class="inline-block p-4 border-b-2 rounded-t-lg" id="shop-tab" type="button" role="tab" aria-controls="shop" aria-selected="false" @click="activeTab = 'shop'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'shop', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'shop' }">Shop</button>
                 </li>
             </ul>
         </div>
@@ -162,8 +156,8 @@
             </div>
             {% endif %}
 
-            <!-- Integrations Tab -->
-            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="integrations" role="tabpanel" aria-labelledby="integrations-tab" x-show="activeTab === 'integrations'">
+            <!-- Settings Tab -->
+            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="settings" role="tabpanel" aria-labelledby="settings-tab" x-show="activeTab === 'settings'">
                 <div class="bg-white p-6 rounded-lg shadow-lg">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">Google Calendar</h2>
                     <p class="text-gray-600 mb-4">Connect your Google Calendar to automatically sync your coaching sessions.</p>
@@ -179,11 +173,7 @@
                         </a>
                     {% endif %}
                 </div>
-            </div>
-
-            <!-- Preferences Tab -->
-            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="preferences" role="tabpanel" aria-labelledby="preferences-tab" x-show="activeTab === 'preferences'">
-                <div class="bg-white p-6 rounded-lg shadow-lg">
+                <div class="bg-white p-6 rounded-lg shadow-lg mt-4">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">Marketing Preferences</h2>
                     {% with marketing_preference=user.marketing_preference %}
                     <form hx-post="{% url 'account:update_marketing_preference' %}" 
@@ -213,18 +203,14 @@
                 </div>
             </div>
 
-            <!-- Order History Tab -->
-            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="order-history" role="tabpanel" aria-labelledby="order-history-tab" x-show="activeTab === 'order-history'">
+            <!-- Shop Tab -->
+            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="shop" role="tabpanel" aria-labelledby="shop-tab" x-show="activeTab === 'shop'">
                 <div class="bg-white p-6 rounded-lg shadow-lg">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">Order History</h2>
                     <p>Your past orders will be displayed here.</p>
                     {# TODO: Implement order history display #}
                 </div>
-            </div>
-
-            <!-- Saved Addresses Tab -->
-            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="saved-addresses" role="tabpanel" aria-labelledby="saved-addresses-tab" x-show="activeTab === 'saved-addresses'">
-                <div class="bg-white p-6 rounded-lg shadow-lg">
+                <div class="bg-white p-6 rounded-lg shadow-lg mt-4">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">Saved Addresses</h2>
                     <p>Your saved addresses will be managed here.</p>
                     {# TODO: Implement saved addresses management #}
