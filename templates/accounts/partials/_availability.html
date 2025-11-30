@@ -55,13 +55,15 @@
                     {% csrf_token %}
                     {{ weekly_schedule_formset.management_form }}
                     <div class="space-y-6">
-                        {% for day_name, forms in forms_by_day.items %}
+                        {% for day_code, day_name in days_of_week %}
                             <div class="p-4 border rounded-md bg-white">
                                 <h4 class="font-bold text-md mb-2">{{ day_name }}</h4>
-                                {% for form in forms %}
-                                    <div class="flex items-center space-x-2 mb-2">
-                                        {{ form.as_p }}
-                                    </div>
+                                {% for form in weekly_schedule_formset %}
+                                    {% if form.initial.day_of_week == day_code %}
+                                        <div class="flex items-center space-x-2 mb-2">
+                                            {{ form.as_p }}
+                                        </div>
+                                    {% endif %}
                                 {% endfor %}
                             </div>
                         {% endfor %}
