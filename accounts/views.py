@@ -410,7 +410,8 @@ def get_daily_slots(request):
         error_message = "Missing date, coach_id, or enrollment_id."
         return render(request, 'accounts/partials/_day_slots.html', {
             'daily_slots': daily_slots_data,
-            'error_message': error_message
+            'error_message': error_message,
+            'selected_date': None,
         })
     
     try:
