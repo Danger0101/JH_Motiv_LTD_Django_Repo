@@ -15,7 +15,7 @@ from accounts.models import CoachProfile # Assuming CoachProfile is in accounts.
 from gcal.models import GoogleCredentials
 from coaching_availability.forms import DateOverrideForm, CoachVacationForm, WeeklyScheduleForm
 from django.forms import modelformset_factory
-from coaching_availability.models import CoachAvailability
+from coaching_availability.models import CoachAvailability, CoachVacation, DateOverride
 from django.db import transaction
 from collections import defaultdict
 from django.views import View
@@ -70,6 +70,10 @@ class ProfileView(LoginRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        # Initialize coach-specific context variables to prevent KeyErrors for non-coaches
+        context['coach_upcoming_sessions'] = []
+        context['coach_clients'] = []
         
         cart = get_or_create_cart(self.request)
         summary = get_cart_summary_data(cart)
@@ -290,6 +294,44 @@ def get_available_slots(request):
 
 @login_required
 def profile_availability_partial(request):
-    context = get_weekly_schedule_context(request.user)
-    context['active_tab'] = 'availability' # Add active_tab back as it's specific to this view
+    context = {}
+    context['active_tab'] = 'availability'
+
+    user = request.user
+    if hasattr(user, 'coach_profile'):
+        # 1. Create the FormSet Class
+        WeeklyScheduleFormSet = modelformset_factory(
+            CoachAvailability,
+            form=WeeklyScheduleForm,
+            extra=0,
+            can_delete=False
+        )
+
+        # 2. Create the QuerySet
+        queryset = CoachAvailability.objects.filter(coach=user).order_by('day_of_week')
+
+        # 3. Instantiate and Add to Context
+        context['weekly_schedule_formset'] = WeeklyScheduleFormSet(queryset=queryset)
+
+        # 4. Add other forms
+        context['vacation_form'] = CoachVacationForm()
+        context['override_form'] = DateOverrideForm()
+
+        # 5. Add Days of Week (from Model)
+        context['days_of_week'] = CoachAvailability.DAYS_OF_WEEK
+    else:
+        # Provide empty formsets/forms for non-coach users to prevent VariableDoesNotExist errors
+        # if the template attempts to render them conditionally or unconditionally.
+        WeeklyScheduleFormSet = modelformset_factory(
+            CoachAvailability,
+            form=WeeklyScheduleForm,
+            extra=0,
+            can_delete=False
+        )
+        context['weekly_schedule_formset'] = WeeklyScheduleFormSet(queryset=CoachAvailability.objects.none())
+        context['vacation_form'] = CoachVacationForm()
+        context['override_form'] = DateOverrideForm()
+        context['days_of_week'] = CoachAvailability.DAYS_OF_WEEK # Still useful for non-coaches for displaying days
+
+
     return render(request, 'accounts/partials/_availability.html', context)
