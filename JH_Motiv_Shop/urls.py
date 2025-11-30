@@ -34,7 +34,7 @@ urlpatterns = [
     path('dashboard/', include('dashboard.urls', namespace='dashboard')),
     path('info/', include('coaching_client.urls')),
     path('admin/offers/', include('coaching_core.urls', namespace='coaching')),
-    path('coach/time/', include('coaching_availability.urls')),
+    path('coach/time/', include('coaching_availability.urls', namespace='coaching_availability')),
     path('oauth/', include('gcal.urls')),
 
     # Existing and Standard Apps

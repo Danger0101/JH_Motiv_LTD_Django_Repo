@@ -1,17 +1,20 @@
 from django import forms
-from .models import CoachAvailability, DAY_CHOICES
+from .models import CoachAvailability, DateOverride, CoachVacation
+
 
 class CoachAvailabilityForm(forms.ModelForm):
-    day_of_week = forms.MultipleChoiceField(
-        choices=DAY_CHOICES,
-        widget=forms.CheckboxSelectMultiple,
-        label="Select Days"
-    )
-
     class Meta:
         model = CoachAvailability
         fields = ['day_of_week', 'start_time', 'end_time']
-        widgets = {
-            'start_time': forms.TimeInput(attrs={'type': 'time'}),
-            'end_time': forms.TimeInput(attrs={'type': 'time'}),
-        }
+
+
+class DateOverrideForm(forms.ModelForm):
+    class Meta:
+        model = DateOverride
+        fields = ['date', 'is_available', 'start_time', 'end_time']
+
+
+class CoachVacationForm(forms.ModelForm):
+    class Meta:
+        model = CoachVacation
+        fields = ['start_date', 'end_date', 'existing_booking_handling']

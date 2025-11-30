@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}Set Your Availability{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-10">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Set Your Weekly Availability</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Form to set availability -->
+        <div class="bg-white p-6 rounded-lg shadow-lg">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Update Your Schedule</h2>
+            <form method="post">
+                {% csrf_token %}
+                <div class="space-y-4">
+                    {{ form.as_p }}
+                </div>
+                <button type="submit" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-300">
+                    Save Availability
+                </button>
+            </form>
+        </div>
+
+        <!-- Display current availability -->
+        <div class="bg-white p-6 rounded-lg shadow-lg">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Your Current Schedule</h2>
+            {% if availabilities %}
+                <ul class="space-y-2">
+                    {% for availability in availabilities %}
+                        <li class="p-4 bg-gray-100 rounded-lg">
+                            <span class="font-semibold">{{ availability.get_day_of_week_display }}</span>: 
+                            {{ availability.start_time|time:"H:i" }} - {{ availability.end_time|time:"H:i" }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-gray-600">You have not set any availability yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

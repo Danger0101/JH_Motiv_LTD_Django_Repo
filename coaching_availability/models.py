@@ -1,111 +1,78 @@
 from django.db import models
-from django.core.exceptions import ValidationError
-from django.utils import timezone
-from datetime import time, date
-from accounts.models import CoachProfile
+from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 
-# Choices for day of the week
-DAY_CHOICES = (
-    (0, 'Monday'),
-    (1, 'Tuesday'),
-    (2, 'Wednesday'),
-    (3, 'Thursday'),
-    (4, 'Friday'),
-    (5, 'Saturday'),
-    (6, 'Sunday'),
-)
 
 class CoachAvailability(models.Model):
     """
-    Defines a coach's recurring standard working hours for a specific day of the week.
+    Represents a recurring weekly schedule for a coach.
+    e.g., Every Monday 9-5.
     """
     coach = models.ForeignKey(
-        CoachProfile,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='availabilities',
-        verbose_name="Coach",
-        help_text="The coach to whom this availability belongs."
+        related_name='availabilities'
     )
     day_of_week = models.IntegerField(
-        choices=DAY_CHOICES,
-        verbose_name="Day of the Week",
-        help_text="The day of the week for this availability slot."
-    )
-    start_time = models.TimeField(
-        verbose_name="Start Time",
-        help_text="The start time of the availability slot."
-    )
-    end_time = models.TimeField(
-        verbose_name="End Time",
-        help_text="The end time of the availability slot."
-    )
+        validators=[MinValueValidator(0), MaxValueValidator(6)]
+    )  # 0=Monday, 6=Sunday
+    start_time = models.TimeField()
+    end_time = models.TimeField()
 
     class Meta:
-        verbose_name = "Coach Availability"
-        verbose_name_plural = "Coach Availabilities"
-        unique_together = ('coach', 'day_of_week', 'start_time', 'end_time')
-        ordering = ['coach', 'day_of_week', 'start_time']
+        unique_together = ('coach', 'day_of_week')
 
     def __str__(self):
-        return f"{self.coach.user.get_full_name()} - {self.get_day_of_week_display()}: {self.start_time.strftime('%H:%M')} - {self.end_time.strftime('%H:%M')}"
+        return f"{self.coach.username} - {self.get_day_of_week_display()} " \
+               f"({self.start_time}-{self.end_time})"
 
-    @classmethod
-    def get_available_time_ranges_for_day(cls, coach_id, day_int):
-        """
-        Returns a list of (start_time, end_time) tuples for a given coach and day.
-        """
-        availabilities = cls.objects.filter(coach_id=coach_id, day_of_week=day_int).order_by('start_time')
-        return [(a.start_time, a.end_time) for a in availabilities]
+
+class DateOverride(models.Model):
+    """
+    Represents a single date change to the recurring schedule.
+    e.g., Next Friday is valid, or Next Friday I am working extra hours.
+    """
+    coach = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='overrides'
+    )
+    date = models.DateField()
+    is_available = models.BooleanField(default=True)
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('coach', 'date')
+
+    def __str__(self):
+        return f"{self.coach.username} - {self.date} " \
+               f"({'Available' if self.is_available else 'Unavailable'})"
 
 
 class CoachVacation(models.Model):
     """
-    Defines periods when a coach is completely unavailable due to vacation.
+    Represents a block of time off for a coach.
     """
-    coach = models.ForeignKey(
-        CoachProfile,
-        on_delete=models.CASCADE,
-        related_name='vacations',
-        verbose_name="Coach",
-        help_text="The coach taking the vacation."
-    )
-    start_date = models.DateField(
-        verbose_name="Start Date",
-        help_text="The start date of the vacation period."
-    )
-    end_date = models.DateField(
-        verbose_name="End Date",
-        help_text="The end date of the vacation period."
-    )
-    cancel_bookings = models.BooleanField(
-        default=True,
-        verbose_name="Cancel Existing Bookings",
-        help_text="If checked, all bookings within this vacation period will be automatically cancelled."
+
+    BOOKING_HANDLING_CHOICES = (
+        ('keep', 'Keep'),
+        ('reschedule', 'Reschedule'),
+        ('cancel', 'Cancel'),
     )
 
-    class Meta:
-        verbose_name = "Coach Vacation"
-        verbose_name_plural = "Coach Vacations"
-        ordering = ['coach', 'start_date']
+    coach = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='vacations'
+    )
+    start_date = models.DateField()
+    end_date = models.DateField()
+    existing_booking_handling = models.CharField(
+        max_length=10,
+        choices=BOOKING_HANDLING_CHOICES,
+        default='reschedule'
+    )
 
     def __str__(self):
-        return f"{self.coach.user.get_full_name()} Vacation: {self.start_date} to {self.end_date}"
-
-    def clean(self):
-        """
-        Ensures that the end_date is not before the start_date.
-        """
-        if self.start_date and self.end_date and self.end_date < self.start_date:
-            raise ValidationError("End date cannot be before the start date.")
-
-    @classmethod
-    def is_coach_on_vacation(cls, coach_id, check_date):
-        """
-        Checks if a coach is on vacation on a specific date.
-        Returns True if the date falls within any vacation period for the coach.
-        """
-        return cls.objects.filter(
-            coach_id=coach_id,
-            start_date__lte=check_date,
-            end_date__gte=check_date
-        ).exists()
+        return f"{self.coach.username} - Vacation: {self.start_date} to {self.end_date}"

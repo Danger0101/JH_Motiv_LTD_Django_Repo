@@ -13,6 +13,7 @@ from coaching_booking.models import ClientOfferingEnrollment, SessionBooking
 from coaching_core.models import Offering
 from accounts.models import CoachProfile # Assuming CoachProfile is in accounts.models or accessible
 from gcal.models import GoogleCredentials
+from coaching_availability.forms import CoachAvailabilityForm, DateOverrideForm, CoachVacationForm
 
 
 class CustomLoginView(LoginView):
@@ -112,6 +113,10 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             context['coach_clients'] = ClientOfferingEnrollment.objects.filter(
                 offering__coaches=self.request.user.coach_profile, # Assuming 'offering' has a ManyToMany with 'coaches'
             ).values_list('client__username', flat=True).distinct()
+
+            context['availability_form'] = CoachAvailabilityForm()
+            context['override_form'] = DateOverrideForm()
+            context['vacation_form'] = CoachVacationForm()
 
         # For now, available_credits will be the same as user_offerings for simplicity
         # In a real scenario, this might be a separate model or a filtered queryset of enrollments

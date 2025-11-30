@@ -142,6 +142,33 @@
                         <p>No clients assigned yet.</p>
                     {% endif %}
                 </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-lg mt-4">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Set Recurring Weekly Schedule</h2>
+                    <form action="{% url 'coaching_availability:set_recurring_schedule' %}" method="post">
+                        {% csrf_token %}
+                        {{ availability_form.as_p }}
+                        <button type="submit" class="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-300">Save Recurring Schedule</button>
+                    </form>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-lg mt-4">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Set Date Override</h2>
+                    <form action="{% url 'coaching_availability:set_date_override' %}" method="post">
+                        {% csrf_token %}
+                        {{ override_form.as_p }}
+                        <button type="submit" class="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-300">Set Override</button>
+                    </form>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-lg mt-4">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Manage Vacation</h2>
+                    <form action="{% url 'coaching_availability:manage_vacation' %}" method="post">
+                        {% csrf_token %}
+                        {{ vacation_form.as_p }}
+                        <button type="submit" class="w-full text-center bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full transition duration-300">Set Vacation</button>
+                    </form>
+                </div>
             </div>
             {% endif %}
 

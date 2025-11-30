@@ -1,67 +1,63 @@
-from django.urls import reverse_lazy
-from django.views.generic import ListView, CreateView, DeleteView
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.utils import timezone
+from django.shortcuts import render, redirect
+from django.views import View
+from django.db import transaction
+from django.contrib.auth.mixins import LoginRequiredMixin
+from .forms import CoachAvailabilityForm, DateOverrideForm, CoachVacationForm
+from .models import CoachAvailability, DateOverride, CoachVacation
+from coaching_booking.models import Booking
 
-from .models import CoachAvailability, CoachVacation
-from .forms import CoachAvailabilityForm
 
-class CoachRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
-    """Mixin to ensure the user is a logged-in coach."""
-    def test_func(self):
-        # Assumes a related 'coachprofile' exists or an 'is_coach' boolean.
-        return hasattr(self.request.user, 'coachprofile') and self.request.user.is_coach
+class SetRecurringScheduleView(LoginRequiredMixin, View):
+    def post(self, request, *args, **kwargs):
+        form = CoachAvailabilityForm(request.POST)
+        if form.is_valid():
+            with transaction.atomic():
+                CoachAvailability.objects.filter(coach=request.user).delete()
+                # This is a simplified example. In a real application, you'd
+                # likely handle multiple day/time slots in a more complex form.
+                availability = form.save(commit=False)
+                availability.coach = request.user
+                availability.save()
+            return redirect('account:account_profile')
+        return render(request, 'your-template.html', {'form': form})
 
-# --- Coach Availability Views ---
 
-class AvailabilityListView(CoachRequiredMixin, ListView):
-    model = CoachAvailability
-    template_name = 'coaching_availability/availability_list.html'
-    context_object_name = 'availabilities'
+class SetDateOverrideView(LoginRequiredMixin, View):
+    def post(self, request, *args, **kwargs):
+        form = DateOverrideForm(request.POST)
+        if form.is_valid():
+            date_override, created = DateOverride.objects.update_or_create(
+                coach=request.user,
+                date=form.cleaned_data['date'],
+                defaults=form.cleaned_data
+            )
+            return redirect('account:account_profile')
+        return render(request, 'your-template.html', {'form': form})
 
-    def get_queryset(self):
-        """Only show availability for the currently logged-in coach."""
-        return CoachAvailability.objects.filter(coach=self.request.user.coachprofile)
 
-class AvailabilityCreateView(CoachRequiredMixin, CreateView):
-    model = CoachAvailability
-    form_class = CoachAvailabilityForm
-    template_name = 'coaching_availability/availability_form.html'
-    success_url = reverse_lazy('coaching_availability:availability-list')
+class ManageVacationView(LoginRequiredMixin, View):
+    def post(self, request, *args, **kwargs):
+        form = CoachVacationForm(request.POST)
+        if form.is_valid():
+            with transaction.atomic():
+                vacation = form.save(commit=False)
+                vacation.coach = request.user
+                vacation.save()
 
-    def form_valid(self, form):
-        availability = form.save(commit=False)
-        availability.coach = self.request.user.coachprofile
-        availability.save()
-        return super().form_valid(form)
+                conflicting_bookings = Booking.objects.filter(
+                    coach=request.user,
+                    start_time__date__range=(
+                        vacation.start_date,
+                        vacation.end_date
+                    ),
+                    status='confirmed'  # Assuming a 'confirmed' status
+                )
 
-class AvailabilityDeleteView(CoachRequiredMixin, DeleteView):
-    model = CoachAvailability
-    template_name = 'coaching_availability/availability_confirm_delete.html'
-    success_url = reverse_lazy('coaching_availability:availability-list')
+                if form.cleaned_data['existing_booking_handling'] == 'cancel':
+                    conflicting_bookings.update(status='cancelled')
+                elif form.cleaned_data['existing_booking_handling'] == 'reschedule':
+                    conflicting_bookings.update(status='needs_reschedule')
+                # 'keep' requires no action
 
-# --- Coach Vacation Views ---
-
-class VacationListView(CoachRequiredMixin, ListView):
-    model = CoachVacation
-    template_name = 'coaching_availability/vacation_list.html'
-    context_object_name = 'vacations'
-
-    def get_queryset(self):
-        """Only show future vacations for the currently logged-in coach."""
-        return CoachVacation.objects.filter(
-            coach=self.request.user.coachprofile,
-            end_date__gte=timezone.now().date()
-        )
-
-class VacationCreateView(CoachRequiredMixin, CreateView):
-    model = CoachVacation
-    fields = ['start_date', 'end_date', 'cancel_bookings']
-    template_name = 'coaching_availability/vacation_form.html'
-    success_url = reverse_lazy('coaching_availability:vacation-list')
-
-    def form_valid(self, form):
-        vacation = form.save(commit=False)
-        vacation.coach = self.request.user.coachprofile
-        vacation.save()
-        return super().form_valid(form)
+            return redirect('account:account_profile')
+        return render(request, 'your-template.html', {'form': form})
