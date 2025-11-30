@@ -370,7 +370,9 @@ def get_booking_calendar(request):
     enrollment_id = request.GET.get('enrollment_id')
 
     cal = calendar.Calendar(firstweekday=0) # Monday is 0
-    month_days = cal.monthdayscalendar(year, month)
+    # The `monthdayscalendar` method returns a list of lists of integers
+    # where each integer is a day of the month or 0 for days outside the month.
+    calendar_rows = cal.monthdayscalendar(year, month)
 
     today = date.today()
 
@@ -381,8 +383,8 @@ def get_booking_calendar(request):
     context = {
         'year': year,
         'month': month,
-        'month_name': date(year, month, 1).strftime('%B'),
-        'month_days': month_days,
+        'current_month_name': date(year, month, 1).strftime('%B'), # Renamed from month_name
+        'calendar_rows': calendar_rows, # Renamed from month_days
         'today': today,
         'coach_id': coach_id,
         'enrollment_id': enrollment_id,
@@ -390,6 +392,7 @@ def get_booking_calendar(request):
         'prev_year': prev_month_date.year,
         'next_month': next_month_date.month,
         'next_year': next_month_date.year,
+        'date': date, # Pass the date constructor for template logic
     }
     return render(request, 'accounts/partials/_calendar_widget.html', context)
 

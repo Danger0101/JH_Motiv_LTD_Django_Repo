@@ -1,0 +1,61 @@
+<div id="calendar-widget" class="calendar-responsive">
+    <h3 class="text-xl font-semibold mb-4">{{ current_month_name }} {{ year }}</h3>
+    <div class="flex justify-between items-center mb-4">
+        <button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                hx-get="{% url 'accounts:get_booking_calendar' %}?year={{ prev_year }}&month={{ prev_month }}&coach_id={{ coach_id }}&enrollment_id={{ enrollment_id }}"
+                hx-target="#calendar-container" hx-swap="innerHTML">
+            Prev
+        </button>
+        <button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                hx-get="{% url 'accounts:get_booking_calendar' %}?year={{ next_year }}&month={{ next_month }}&coach_id={{ coach_id }}&enrollment_id={{ enrollment_id }}"
+                hx-target="#calendar-container" hx-swap="innerHTML">
+            Next
+        </button>
+    </div>
+    <table class="w-full">
+        <thead>
+            <tr>
+                <th class="text-center py-2">Mon</th>
+                <th class="text-center py-2">Tue</th>
+                <th class="text-center py-2">Wed</th>
+                <th class="text-center py-2">Thu</th>
+                <th class="text-center py-2">Fri</th>
+                <th class="text-center py-2">Sat</th>
+                <th class="text-center py-2">Sun</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for week in calendar_rows %} {# Using calendar_rows as requested #}
+                <tr>
+                    {% for day in week %}
+                        {% if day == 0 %}
+                            <td class="p-2 border"></td>
+                        {% else %}
+                            {% with current_day_date=date(year, month, day) %}
+                            <td class="p-2 border text-center">
+                                {% if current_day_date < today %}
+                                    <button class="w-full h-full p-2 text-gray-400 cursor-not-allowed past-date" disabled>
+                                        {{ day }}
+                                    </button>
+                                {% else %}
+                                    <button class="w-full h-full p-2 rounded {% if current_day_date == today %}bg-blue-200 text-blue-800 font-bold{% else %}hover:bg-gray-200{% endif %}"
+                                            hx-get="{% url 'accounts:get_daily_slots' %}"
+                                            hx-vals='{"date": "{{ year }}-{{ month|stringformat:"02d" }}-{{ day|stringformat:"02d" }}", "coach_id": "{{ coach_id|default_if_none:"" }}", "enrollment_id": "{{ enrollment_id|default_if_none:"" }}"}'
+                                            hx-target="#time-slots-column" hx-swap="innerHTML">
+                                        {{ day }}
+                                    </button>
+                                {% endif %}
+                            </td>
+                            {% endwith %}
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# The time slots column will be loaded here, as per the target #}
+<div id="time-slots-column">
+    <p class="text-gray-500 mt-4">Select a date to see available time slots.</p>
+</div>
