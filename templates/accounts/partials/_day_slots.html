@@ -1,21 +1,29 @@
 <div class="day-slots-container">
     {% if selected_date %}
-        <h3>Availability for {{ selected_date|date:"F d, Y" }}</h3>
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Availability for {{ selected_date|date:"F d, Y" }}</h3>
     {% endif %}
 
     {% if error_message %}
-        <p class="error-message">{{ error_message }}</p>
+        <p class="text-red-600 text-sm mb-4">{{ error_message }}</p>
     {% endif %}
 
     {% if daily_slots %}
-        <div class="time-slots-grid">
+        <div class="grid grid-cols-2 gap-3"> {# Grid for 2 columns #}
             {% for slot in daily_slots %}
-                <button type="submit" name="time_slot" value="{{ slot }}" class="time-slot-button">
-                    {{ slot }}
-                </button>
+                <form hx-post="{% url 'accounts:book_session_confirm' %}" hx-confirm="Are you sure you want to book this session?">
+                    {% csrf_token %}
+                    <input type="hidden" name="date" value="{{ selected_date|date:"Y-m-d" }}">
+                    <input type="hidden" name="time" value="{{ slot }}">
+                    <input type="hidden" name="coach_id" value="{{ coach_id }}">
+                    <input type="hidden" name="enrollment_id" value="{{ enrollment_id }}">
+                    <button type="submit"
+                        class="w-full py-2 px-3 text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-md transition-colors">
+                        {{ slot }}
+                    </button>
+                </form>
             {% endfor %}
         </div>
     {% else %}
-        <p>No availability for the selected date.</p>
+        <p class="text-sm text-gray-500 italic">No availability for the selected date.</p>
     {% endif %}
 </div>
