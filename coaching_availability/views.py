@@ -1,141 +1,83 @@
-from django.shortcuts import render, redirect
-from django.views import View
+from datetime import time # Import time for default slot times
+from django.shortcuts import render, redirect # Ensure redirect is imported
+from django.http import HttpResponseRedirect # Ensure HttpResponseRedirect is imported
 from django.db import transaction
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponse # Ensure HttpResponse is imported
-from collections import defaultdict # Import defaultdict
-from django.forms import modelformset_factory # Import modelformset_factory
-from .forms import DateOverrideForm, CoachVacationForm, WeeklyScheduleForm # Removed BaseWeeklyScheduleFormSet
-from .models import CoachAvailability, DateOverride, CoachVacation
-from .utils import get_weekly_schedule_context
+from django.forms import modelformset_factory
 from django.contrib.auth.decorators import login_required
+from .forms import DateOverrideForm, CoachVacationForm, WeeklyScheduleForm
+from .models import CoachAvailability, DateOverride, CoachVacation, settings
 
 @login_required
 def profile_availability(request):
-    """
-    HTMX view to load the availability tab content.
-    """
-    coach_profile = request.user.coach_profile
+    # Ensure the user is a coach to access this view
+    if not hasattr(request.user, 'coach_profile'):
+        # Redirect non-coaches or show an error
+        # For HTMX, you might want to render an error partial or simply do nothing
+        return render(request, 'accounts/partials/_availability.html', {
+            'error': 'You must be a coach to manage availability.'
+        })
 
-    # 1. Define the FormSet Factory
     WeeklyScheduleFormSet = modelformset_factory(
         CoachAvailability,
         form=WeeklyScheduleForm,
-        extra=0,  # No empty rows, only existing days
-        can_delete=False
+        extra=0,
+        can_delete=True # Allow deletion of existing time slots
     )
 
-    # 2. Get the data (Monday to Sunday)
-    queryset = CoachAvailability.objects.filter(coach=request.user).order_by('day_of_week')
+    # Handle POST requests
+    if request.method == 'POST':
+        if 'add_slot_for_day' in request.POST:
+            day_code = int(request.POST.get('add_slot_for_day'))
+            CoachAvailability.objects.create(
+                coach=request.user,
+                day_of_week=day_code,
+                start_time=time(9, 0),  # Default start time
+                end_time=time(17, 0)   # Default end time
+            )
+            # For HTMX, re-render the partial
+            return HttpResponseRedirect(request.path) # Redirect to GET to re-render the entire availability block
 
-    # 3. Instantiate the FormSet
+        elif 'delete_slot' in request.POST:
+            slot_id = request.POST.get('delete_slot')
+            try:
+                CoachAvailability.objects.filter(pk=slot_id, coach=request.user).delete()
+            except CoachAvailability.DoesNotExist:
+                pass # Already deleted or not found
+            # For HTMX, re-render the partial
+            return HttpResponseRedirect(request.path) # Redirect to GET to re-render the entire availability block
+
+        else: # Process formset submission for updates/deletions
+            queryset = CoachAvailability.objects.filter(coach=request.user).order_by('day_of_week', 'start_time')
+            formset = WeeklyScheduleFormSet(request.POST, queryset=queryset)
+            if formset.is_valid():
+                with transaction.atomic():
+                    # Save existing instances and handle deletions
+                    formset.save()
+                    # Any new instances added via 'add_slot_for_day' would not be handled here,
+                    # as 'extra' is 0 for this formset. New instances are created directly above.
+                # For HTMX, re-render the partial with updated data
+                return HttpResponseRedirect(request.path) # Redirect to GET to re-render the entire availability block
+            else:
+                # If formset is invalid, re-render with errors
+                context = {
+                    'weekly_schedule_formset': formset, # Formset with errors
+                    'vacation_form': CoachVacationForm(),
+                    'override_form': DateOverrideForm(),
+                    'active_tab': 'availability',
+                    'days_of_week': CoachAvailability.DAYS_OF_WEEK,
+                }
+                return render(request, 'accounts/partials/_availability.html', context)
+
+    # Handle GET requests
+    queryset = CoachAvailability.objects.filter(coach=request.user).order_by('day_of_week', 'start_time')
     weekly_schedule_formset = WeeklyScheduleFormSet(queryset=queryset)
 
-    # 4. Instantiate other forms needed for the template
-    vacation_form = CoachVacationForm()
-    override_form = DateOverrideForm()
-
-    # 5. Build Context
     context = {
-        'weekly_schedule_formset': weekly_schedule_formset, # This was missing in your logs!
-        'vacation_form': vacation_form,
-        'override_form': override_form,
+        'weekly_schedule_formset': weekly_schedule_formset,
+        'vacation_form': CoachVacationForm(),
+        'override_form': DateOverrideForm(),
         'active_tab': 'availability',
-        'days_of_week': CoachAvailability.DAYS_OF_WEEK
+        'days_of_week': CoachAvailability.DAYS_OF_WEEK,
     }
-
     return render(request, 'accounts/partials/_availability.html', context)
-
-
-class SetRecurringScheduleView(LoginRequiredMixin, View):
-    def get(self, request, *args, **kwargs):
-        WeeklyScheduleFormSet = modelformset_factory(
-            CoachAvailability,
-            form=WeeklyScheduleForm,
-            extra=0,
-            can_delete=False
-        )
-        queryset = CoachAvailability.objects.filter(
-            coach=request.user
-        ).order_by('day_of_week')
-        weekly_schedule_formset = WeeklyScheduleFormSet(queryset=queryset)
-        context = get_weekly_schedule_context(request.user)
-        context['weekly_schedule_formset'] = weekly_schedule_formset
-        return render(request, 'accounts/partials/_availability.html', context)
-
-
-    def post(self, request, *args, **kwargs):
-        WeeklyScheduleFormSet = modelformset_factory(
-            CoachAvailability,
-            form=WeeklyScheduleForm,
-            extra=0,
-            can_delete=False
-        )
-        queryset = CoachAvailability.objects.filter(
-            coach=request.user
-        ).order_by('day_of_week')
-        weekly_schedule_formset = WeeklyScheduleFormSet(request.POST, queryset=queryset)
-        if weekly_schedule_formset.is_valid():
-            with transaction.atomic():
-                instances = weekly_schedule_formset.save(commit=False)
-                for instance in instances:
-                    instance.coach = request.user
-                    instance.save()
-            # Handle HTMX request: re-render partial or return empty response
-            if request.htmx:
-                context = get_weekly_schedule_context(request.user)
-                return render(request, 'accounts/partials/_availability.html', context)
-            else:
-                return redirect('accounts:account_profile')
-        
-        # If form is not valid and it's an HTMX request, re-render the partial with errors
-        if request.htmx:
-            context = get_weekly_schedule_context(request.user)
-            context['weekly_schedule_formset'] = weekly_schedule_formset # Pass the formset with errors
-            return render(request, 'accounts/partials/_availability.html', context)
-        else:
-            # If form is not valid and not HTMX, redirect back to profile, losing errors
-            return redirect('accounts:account_profile')
-
-
-class SetDateOverrideView(LoginRequiredMixin, View):
-    def post(self, request, *args, **kwargs):
-        form = DateOverrideForm(request.POST)
-        if form.is_valid():
-            date_override, created = DateOverride.objects.update_or_create(
-                coach=request.user,
-                date=form.cleaned_data['date'],
-                defaults=form.cleaned_data
-            )
-            return redirect('account:account_profile')
-        return render(request, 'your-template.html', {'form': form})
-
-
-class ManageVacationView(LoginRequiredMixin, View):
-    def post(self, request, *args, **kwargs):
-        form = CoachVacationForm(request.POST)
-        if form.is_valid():
-            with transaction.atomic():
-                vacation = form.save(commit=False)
-                vacation.coach = request.user
-                vacation.save()
-                
-                from coaching_booking.models import SessionBooking
-                conflicting_bookings = SessionBooking.objects.filter(
-                    coach=request.user,
-                    start_time__date__range=(
-                        vacation.start_date,
-                        vacation.end_date
-                    ),
-                    status='confirmed'  # Assuming a 'confirmed' status
-                )
-
-                if form.cleaned_data['existing_booking_handling'] == 'cancel':
-                    conflicting_bookings.update(status='cancelled')
-                elif form.cleaned_data['existing_booking_handling'] == 'reschedule':
-                    conflicting_bookings.update(status='needs_reschedule')
-                # 'keep' requires no action
-
-            return redirect('account:account_profile')
-        return render(request, 'your-template.html', {'form': form})
 

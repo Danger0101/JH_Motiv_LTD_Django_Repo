@@ -29,6 +29,11 @@ class CoachAvailability(models.Model):
     start_time = models.TimeField()
     end_time = models.TimeField()
 
+    class Meta:
+        ordering = ['day_of_week', 'start_time']
+
+
+
 
 
     def __str__(self):
