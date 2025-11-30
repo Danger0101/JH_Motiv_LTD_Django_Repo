@@ -24,6 +24,9 @@
                 </li>
                 {% if is_coach %}
                 <li class="mr-2" role="presentation">
+                    <button class="inline-block p-4 border-b-2 rounded-t-lg" id="availability-tab" type="button" role="tab" aria-controls="availability" aria-selected="false" @click="activeTab = 'availability'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'availability', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'availability' }">Availability</button>
+                </li>
+                <li class="mr-2" role="presentation">
                     <button class="inline-block p-4 border-b-2 rounded-t-lg" id="coach-tab" type="button" role="tab" aria-controls="coach" aria-selected="false" @click="activeTab = 'coach'" :class="{ 'border-blue-600 text-blue-600': activeTab === 'coach', 'hover:text-gray-600 hover:border-gray-300': activeTab !== 'coach' }">Coach Dashboard</button>
                 </li>
                 {% endif %}
@@ -114,9 +117,18 @@
                     <p>Loading session booking form...</p>
                 </div>
             </div>
+            
+            {% if is_coach %}
+            <!-- Availability Tab -->
+            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="availability" role="tabpanel" aria-labelledby="availability-tab" x-show="activeTab === 'availability'" hx-get="{% url 'accounts:profile_availability' %}" hx-trigger="load once" hx-swap="innerHTML">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Availability Settings</h2>
+                    <!-- Content will be loaded via HTMX -->
+                    <p>Loading availability settings...</p>
+                </div>
+            </div>
 
             <!-- Coach Dashboard Tab -->
-            {% if is_coach %}
             <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="coach" role="tabpanel" aria-labelledby="coach-tab" x-show="activeTab === 'coach'">
                 <div class="bg-white p-6 rounded-lg shadow-lg">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">Coach Dashboard Elements</h2>
@@ -142,33 +154,6 @@
                         <p>No clients assigned yet.</p>
                     {% endif %}
                 </div>
-
-                <div class="bg-white p-6 rounded-lg shadow-lg mt-4">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Set Recurring Weekly Schedule</h2>
-                    <form action="{% url 'coaching_availability:set_recurring_schedule' %}" method="post">
-                        {% csrf_token %}
-                        {{ availability_form.as_p }}
-                        <button type="submit" class="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-300">Save Recurring Schedule</button>
-                    </form>
-                </div>
-
-                <div class="bg-white p-6 rounded-lg shadow-lg mt-4">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Set Date Override</h2>
-                    <form action="{% url 'coaching_availability:set_date_override' %}" method="post">
-                        {% csrf_token %}
-                        {{ override_form.as_p }}
-                        <button type="submit" class="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-300">Set Override</button>
-                    </form>
-                </div>
-
-                <div class="bg-white p-6 rounded-lg shadow-lg mt-4">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Manage Vacation</h2>
-                    <form action="{% url 'coaching_availability:manage_vacation' %}" method="post">
-                        {% csrf_token %}
-                        {{ vacation_form.as_p }}
-                        <button type="submit" class="w-full text-center bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full transition duration-300">Set Vacation</button>
-                    </form>
-                </div>
             </div>
             {% endif %}
 
@@ -185,21 +170,6 @@
 
             <!-- Settings Tab -->
             <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="settings" role="tabpanel" aria-labelledby="settings-tab" x-show="activeTab === 'settings'">
-                <div class="bg-white p-6 rounded-lg shadow-lg">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Google Calendar</h2>
-                    <p class="text-gray-600 mb-4">Connect your Google Calendar to automatically sync your coaching sessions.</p>
-                    
-                    {% if google_calendar_connected %}
-                        <p class="text-green-600 mb-4">Your Google Calendar is connected.</p>
-                        <a href="{% url 'gcal:google_calendar_disconnect' %}" class="w-full text-center bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full transition duration-300">
-                            Disconnect from Google Calendar
-                        </a>
-                    {% else %}
-                        <a href="{% url 'gcal:google_calendar_init' %}" class="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-300">
-                            Connect to Google Calendar
-                        </a>
-                    {% endif %}
-                </div>
                 <div class="bg-white p-6 rounded-lg shadow-lg mt-4">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">Marketing Preferences</h2>
                     {% with marketing_preference=user.marketing_preference %}
@@ -249,4 +219,53 @@
 
 
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.body.addEventListener('htmx:afterSwap', function(event) {
+        if (event.detail.target.id === 'availability') {
+            initializeScheduleEditor();
+        }
+    });
+
+    function initializeScheduleEditor() {
+        let formIdx = document.querySelectorAll('.time-slot-form').length;
+        document.querySelector('input[name="form-TOTAL_FORMS"]').value = formIdx;
+
+        document.querySelectorAll('.add-time-slot').forEach(button => {
+            button.addEventListener('click', function() {
+                const dayIndex = this.dataset.dayIndex;
+                const formContainer = document.getElementById(`form-container-${dayIndex}`);
+                const template = document.getElementById('time-slot-template').firstElementChild.cloneNode(true);
+
+                template.querySelectorAll('input').forEach(input => {
+                    const nameAttr = `form-${formIdx}-${input.name.split('-')[2]}`;
+                    input.name = nameAttr;
+                    input.id = `id_${nameAttr}`;
+                });
+                
+                const dayOfWeekInput = document.createElement('input');
+                dayOfWeekInput.type = 'hidden';
+                dayOfWeekInput.name = `form-${formIdx}-day_of_week`;
+                dayOfWeekInput.value = dayIndex;
+                template.insertBefore(dayOfWeekInput, template.firstChild);
+
+                formContainer.appendChild(template);
+                formIdx++;
+                
+                document.querySelector('input[name="form-TOTAL_FORMS"]').value = formIdx;
+            });
+        });
+
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.closest('.remove-time-slot')) {
+                e.target.closest('.time-slot-form').remove();
+            }
+        });
+    }
+});
+</script>
 {% endblock %}
