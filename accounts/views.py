@@ -369,8 +369,8 @@ def get_booking_calendar(request):
     coach_id = request.GET.get('coach_id')
     enrollment_id = request.GET.get('enrollment_id')
 
-    cal = calendar.Calendar()
-    month_days = cal.monthcalendar(year, month)
+    cal = calendar.Calendar(firstweekday=0) # Monday is 0
+    month_days = cal.monthdayscalendar(year, month)
 
     today = date.today()
 
