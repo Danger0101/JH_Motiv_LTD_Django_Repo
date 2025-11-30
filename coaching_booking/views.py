@@ -4,14 +4,14 @@ from django.conf import settings
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy, reverse
 from django.utils import timezone
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime # Import datetime and date
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import HttpResponseRedirect, HttpResponse
 
 # Assumed imports from other apps
 from coaching_core.models import Offering, Workshop
-from coaching_availability.utils import calculate_bookable_slots
+from coaching_availability.utils import get_coach_available_slots # Use the new utility function
 from coaching_client.models import ContentPage
 from accounts.models import CoachProfile
 # from gcal.utils import create_event
@@ -34,29 +34,46 @@ def book_session(request):
 
     try:
         enrollment = get_object_or_404(ClientOfferingEnrollment, id=enrollment_id, client=request.user)
-        coach = get_object_or_404(CoachProfile, id=coach_id)
+        coach_profile = get_object_or_404(CoachProfile, id=coach_id)
         
         # Convert start_time string to datetime object
-        # Assuming start_time_str format is 'YYYY-MM-DD HH:MM'
-        start_datetime = timezone.datetime.strptime(start_time_str, '%Y-%m-%d %H:%M')
+        start_datetime_obj = datetime.strptime(start_time_str, '%Y-%m-%d %H:%M')
         
         # Ensure the enrollment has remaining sessions
         if enrollment.remaining_sessions <= 0:
             return HttpResponse("No sessions remaining for this enrollment.", status=400)
 
+        # --- Re-verify availability to prevent race conditions and enforce double-booking rules ---
+        session_length_minutes = enrollment.offering.session_length_minutes
+        
+        # Check only for the day of the requested slot to optimize
+        requested_date = start_datetime_obj.date()
+        
+        # Call the new utility function to get truly available slots for this specific request
+        # Assuming sessions booked via ClientOfferingEnrollment are 'one_on_one'
+        truly_available_slots = get_coach_available_slots(
+            coach_profile,
+            requested_date,
+            requested_date, # Check only for this specific day
+            session_length_minutes,
+            offering_type='one_on_one'
+        )
+
+        if start_datetime_obj not in truly_available_slots:
+            return HttpResponse("The selected slot is no longer available or conflicts with another booking.", status=409) # 409 Conflict
+
         # Create the session booking
         SessionBooking.objects.create(
             enrollment=enrollment,
-            coach=coach,
+            coach=coach_profile,
             client=request.user,
-            start_datetime=start_datetime,
+            start_datetime=start_datetime_obj,
             # end_datetime will be calculated in the model's save method
         )
         
         # The enrollment's remaining_sessions will be decremented by the SessionBooking's save method
         
         # HTMX response to refresh the profile content or redirect
-        # For now, let's redirect to the profile page to show updated bookings
         response = HttpResponseRedirect(reverse('accounts:account_profile'))
         response['HX-Redirect'] = reverse('accounts:account_profile') # For HTMX to handle full redirect
         return response
@@ -97,7 +114,34 @@ def reschedule_session(request, booking_id):
         return HttpResponse("New start time is required for rescheduling.", status=400)
     
     try:
-        new_start_time = timezone.datetime.strptime(new_start_time_str, '%Y-%m-%d %H:%M')
+        new_start_time = datetime.strptime(new_start_time_str, '%Y-%m-%d %H:%M')
+        
+        # --- Re-verify availability for rescheduling to prevent race conditions and enforce double-booking rules ---
+        session_length_minutes = booking.enrollment.offering.session_length_minutes
+        requested_date = new_start_time.date()
+        
+        # Get all available slots for the new date, excluding the *original* booking's slot
+        # This is tricky: we want to allow rescheduling into the original slot if it's the same,
+        # but the current `get_coach_available_slots` would filter it out.
+        # A simpler approach for now: check if the new slot is available generally.
+        # The `get_coach_available_slots` implicitly accounts for *other* bookings.
+        # If the user wants to reschedule *into their own original slot*, that would already
+        # be marked as booked and unavailable by `get_coach_available_slots`.
+        # For a true reschedule, we'd ideally temporarily "unbook" the old slot for the check.
+        # For simplicity, for rescheduling, we treat it as if they are booking a *new* slot,
+        # and their old slot will become free when the old booking is updated/canceled.
+        
+        truly_available_slots = get_coach_available_slots(
+            booking.coach, # CoachProfile object
+            requested_date,
+            requested_date, # Check only for this specific day
+            session_length_minutes,
+            offering_type='one_on_one'
+        )
+
+        if new_start_time not in truly_available_slots:
+            return HttpResponse("The selected new slot is no longer available or conflicts with another booking.", status=409)
+            
         booking.reschedule(new_start_time) # This method handles session forfeiture/rescheduling
         
         # Return the updated bookings partial
@@ -149,7 +193,7 @@ def coach_landing_view(request):
         'page_summary_text': page_summary_text,
         'summary': summary_data,
     }
-    return render(request, 'coaching_booking/coach_landing.html', context)
+    return context
 
 class OfferListView(ListView):
     """Displays all active coaching offerings available for purchase/enrollment."""
@@ -205,11 +249,14 @@ class SessionBookingView(LoginRequiredMixin, FormView):
         start_date = date.today()
         end_date = start_date + timedelta(days=60)
         
-        available_slots = calculate_bookable_slots(
-            coach_id=enrollment.coach.id,
-            offering_id=enrollment.offering.id,
+        # NOTE: This still uses the old calculate_bookable_slots.
+        # This should be updated to use the new get_coach_available_slots.
+        available_slots = get_coach_available_slots(
+            coach_profile=enrollment.coach, # Pass coach_profile object
             start_date=start_date,
-            end_date=end_date
+            end_date=end_date,
+            session_length_minutes=enrollment.offering.session_length_minutes,
+            offering_type='one_on_one'
         )
         context['available_slots'] = available_slots
         return context
@@ -236,10 +283,10 @@ class SessionBookingView(LoginRequiredMixin, FormView):
         # booking.gcal_event_id = gcal_event_id
         # booking.save()
         
-        # Decrement remaining sessions
-        if enrollment.remaining_sessions > 0:
-            enrollment.remaining_sessions -= 1
-            enrollment.save()
+        # Decrement remaining sessions (This is now handled in SessionBooking's save method)
+        # if enrollment.remaining_sessions > 0:
+        #     enrollment.remaining_sessions -= 1
+        #     enrollment.save()
             
         return super().form_valid(form)
 

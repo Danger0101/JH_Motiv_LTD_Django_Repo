@@ -20,7 +20,8 @@ from django.db import transaction
 from collections import defaultdict
 from django.views import View
 
-
+from coaching_availability.utils import get_coach_available_slots # Import the new utility function
+from datetime import timedelta, date # Import timedelta and date
 
 class CustomLoginView(LoginView):
     template_name = 'accounts/login.html'
@@ -247,21 +248,52 @@ def get_available_slots(request):
     enrollment_id = request.GET.get('enrollment_id')
     coach_id = request.GET.get('coach_id')
     
-    # Placeholder for actual logic to fetch available slots
-    # This would involve querying coaching_availability models and potentially Google Calendar
-    available_slots = [] 
+    available_slots_data = [] # List to hold dictionaries with start_time and end_time
+
     if enrollment_id and coach_id:
         try:
             enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id, client=request.user)
-            coach = CoachProfile.objects.get(id=coach_id)
+            coach_profile = CoachProfile.objects.get(id=coach_id)
+            offering = enrollment.offering
             
-            # TODO: Implement actual logic to get available slots based on coach availability and offering session length
-            # For now, return some dummy data or an empty list
-            available_slots = [
-                {'start_time': '2025-11-15 10:00', 'end_time': '2025-11-15 11:00'},
-                {'start_time': '2025-11-15 14:00', 'end_time': '2025-11-15 15:00'},
-            ]
-        except (ClientOfferingEnrollment.DoesNotExist, CoachProfile.DoesNotExist):
-            pass
+            session_length_minutes = offering.session_length_minutes
 
-    return render(request, 'accounts/partials/available_slots.html', {'available_slots': available_slots})
+            # Define the date range for availability checking
+            today = date.today()
+            # Allow passing start_date and end_date as query parameters
+            start_date_param = request.GET.get('start_date')
+            end_date_param = request.GET.get('end_date')
+
+            if start_date_param:
+                start_date = datetime.strptime(start_date_param, '%Y-%m-%d').date()
+            else:
+                start_date = today
+            
+            if end_date_param:
+                end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
+            else:
+                end_date = today + timedelta(days=30) # Default to next 30 days
+
+            # Call the new utility function
+            # Assuming sessions booked via ClientOfferingEnrollment are 'one_on_one'
+            generated_slots = get_coach_available_slots(
+                coach_profile,
+                start_date,
+                end_date,
+                session_length_minutes,
+                offering_type='one_on_one'
+            )
+
+            # Format the generated slots for the template
+            for slot_start_datetime in generated_slots:
+                slot_end_datetime = slot_start_datetime + timedelta(minutes=session_length_minutes)
+                available_slots_data.append({
+                    'start_time': slot_start_datetime,
+                    'end_time': slot_end_datetime,
+                })
+
+        except (ClientOfferingEnrollment.DoesNotExist, CoachProfile.DoesNotExist, ValueError):
+            # Handle potential errors like invalid IDs or date formats
+            pass 
+
+    return render(request, 'accounts/partials/available_slots.html', {'available_slots': available_slots_data})
