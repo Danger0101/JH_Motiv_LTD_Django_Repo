@@ -121,7 +121,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             )
             
             # 2. Create the QuerySet
-            queryset = CoachAvailability.objects.filter(coach=coach_profile).order_by('day_of_week')
+            queryset = CoachAvailability.objects.filter(coach=user).order_by('day_of_week')
             
             # 3. Instantiate and Add to Context
             context['weekly_schedule_formset'] = WeeklyScheduleFormSet(queryset=queryset)

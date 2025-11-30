@@ -26,7 +26,7 @@ def profile_availability(request):
     )
 
     # 2. Get the data (Monday to Sunday)
-    queryset = CoachAvailability.objects.filter(coach=coach_profile).order_by('day_of_week')
+    queryset = CoachAvailability.objects.filter(coach=request.user).order_by('day_of_week')
 
     # 3. Instantiate the FormSet
     weekly_schedule_formset = WeeklyScheduleFormSet(queryset=queryset)
@@ -55,7 +55,7 @@ class SetRecurringScheduleView(LoginRequiredMixin, View):
             can_delete=False
         )
         queryset = CoachAvailability.objects.filter(
-            coach=request.user.coach_profile
+            coach=request.user
         ).order_by('day_of_week')
         weekly_schedule_formset = WeeklyScheduleFormSet(queryset=queryset)
         context = get_weekly_schedule_context(request.user)
@@ -71,14 +71,14 @@ class SetRecurringScheduleView(LoginRequiredMixin, View):
             can_delete=False
         )
         queryset = CoachAvailability.objects.filter(
-            coach=request.user.coach_profile
+            coach=request.user
         ).order_by('day_of_week')
         weekly_schedule_formset = WeeklyScheduleFormSet(request.POST, queryset=queryset)
         if weekly_schedule_formset.is_valid():
             with transaction.atomic():
                 instances = weekly_schedule_formset.save(commit=False)
                 for instance in instances:
-                    instance.coach = request.user.coach_profile
+                    instance.coach = request.user
                     instance.save()
             # Handle HTMX request: re-render partial or return empty response
             if request.htmx:
