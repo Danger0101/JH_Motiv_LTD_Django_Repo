@@ -230,31 +230,57 @@ def profile_book_session_partial(request):
 
 @login_required
 def get_coaches_for_offering(request):
-    enrollment_id = request.GET.get('enrollment_id')
-    coaches = []
-    if enrollment_id:
-        try:
-            enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id, client=request.user)
-            # Get coaches associated with the offering of this enrollment
-            coaches = enrollment.offering.coaches.filter(user__is_active=True, is_available_for_new_clients=True)
-        except ClientOfferingEnrollment.DoesNotExist:
-            pass # Handle error or return empty list
+    enrollment_id_str = request.GET.get('enrollment_id')
+    coaches_to_display = []
     
-    # Render options for the coach select dropdown
-    return render(request, 'accounts/partials/coach_options.html', {'coaches': coaches})
+    html_options = '<option value="">-- Select a Coach --</option>'
+
+    if enrollment_id_str:
+        try:
+            enrollment_id = int(enrollment_id_str)
+            enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id, client=request.user)
+            
+            # Prioritize coach assigned directly to the enrollment
+            if enrollment.coach:
+                coaches_to_display = [enrollment.coach]
+            else:
+                # Fallback to coaches associated with the offering
+                coaches_to_display = enrollment.offering.coaches.filter(
+                    user__is_active=True, 
+                    is_available_for_new_clients=True
+                ).distinct() # Use distinct to avoid duplicates if a coach is linked multiple ways
+            
+            for coach in coaches_to_display:
+                html_options += f'<option value="{coach.id}">{coach.user.get_full_name() or coach.user.username}</option>'
+
+        except (ValueError, ClientOfferingEnrollment.DoesNotExist) as e:
+            # Log the error for debugging purposes
+            print(f"ERROR in get_coaches_for_offering: {e}")
+            # The default "Select a Coach" option will remain if an error occurs
+    
+    return HttpResponse(html_options)
 
 @login_required
 def get_available_slots(request):
-    enrollment_id = request.GET.get('enrollment_id')
-    coach_id = request.GET.get('coach_id')
+    enrollment_id_str = request.GET.get('enrollment_id')
+    coach_id_str = request.GET.get('coach_id')
     
-    available_slots_data = [] # List to hold dictionaries with start_time and end_time
+    available_slots_data = []
     error_message = None
 
-    print(f"DEBUG: get_available_slots called with enrollment_id={enrollment_id}, coach_id={coach_id}")
+    print(f"DEBUG: get_available_slots called with enrollment_id_str='{enrollment_id_str}', coach_id_str='{coach_id_str}'")
 
-    if enrollment_id and coach_id:
+    if not enrollment_id_str:
+        error_message = "Please select an offering first."
+        print(f"ERROR: {error_message}")
+    elif not coach_id_str:
+        error_message = "Please select a coach first."
+        print(f"ERROR: {error_message}")
+    else:
         try:
+            enrollment_id = int(enrollment_id_str)
+            coach_id = int(coach_id_str)
+
             enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id, client=request.user)
             coach_profile = CoachProfile.objects.get(id=coach_id)
             offering = enrollment.offering
@@ -266,64 +292,56 @@ def get_available_slots(request):
             if session_length_minutes <= 0:
                 error_message = "Session length for the selected offering is invalid."
                 print(f"ERROR: {error_message}")
-                return render(request, 'accounts/partials/available_slots.html', {'error_message': error_message})
-
-            # Define the date range for availability checking
-            today = date.today()
-            # Allow passing start_date and end_date as query parameters
-            start_date_param = request.GET.get('start_date')
-            end_date_param = request.GET.get('end_date')
-
-            if start_date_param:
-                start_date = datetime.strptime(start_date_param, '%Y-%m-%d').date()
             else:
-                start_date = today
-            
-            if end_date_param:
-                end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
-            else:
-                end_date = today + timedelta(days=30) # Default to next 30 days
-            
-            print(f"DEBUG: Checking availability from {start_date} to {end_date}")
+                # Define the date range for availability checking
+                today = date.today()
+                start_date_param = request.GET.get('start_date')
+                end_date_param = request.GET.get('end_date')
 
-            # Call the new utility function
-            # Assuming sessions booked via ClientOfferingEnrollment are 'one_on_one'
-            generated_slots = get_coach_available_slots(
-                coach_profile,
-                start_date,
-                end_date,
-                session_length_minutes,
-                offering_type='one_on_one'
-            )
+                if start_date_param:
+                    start_date = datetime.strptime(start_date_param, '%Y-%m-%d').date()
+                else:
+                    start_date = today
+                
+                if end_date_param:
+                    end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
+                else:
+                    end_date = today + timedelta(days=30)
+                
+                print(f"DEBUG: Checking availability from {start_date} to {end_date}")
 
-            print(f"DEBUG: Generated {len(generated_slots)} slots.")
+                generated_slots = get_coach_available_slots(
+                    coach_profile,
+                    start_date,
+                    end_date,
+                    session_length_minutes,
+                    offering_type='one_on_one'
+                )
 
-            # Format the generated slots for the template
-            for slot_start_datetime in generated_slots:
-                slot_end_datetime = slot_start_datetime + timedelta(minutes=session_length_minutes)
-                available_slots_data.append({
-                    'start_time': slot_start_datetime,
-                    'end_time': slot_end_datetime,
-                })
+                print(f"DEBUG: Generated {len(generated_slots)} slots.")
 
-            if not available_slots_data:
-                error_message = "No available slots found for the selected criteria. Please check coach's availability."
+                for slot_start_datetime in generated_slots:
+                    slot_end_datetime = slot_start_datetime + timedelta(minutes=session_length_minutes)
+                    available_slots_data.append({
+                        'start_time': slot_start_datetime,
+                        'end_time': slot_end_datetime,
+                    })
 
+                if not available_slots_data:
+                    error_message = "No available slots found for the selected criteria. Please check coach's availability."
+
+        except ValueError as e:
+            error_message = f"Invalid ID format: {e}"
+            print(f"ERROR: {error_message}")
         except ClientOfferingEnrollment.DoesNotExist:
             error_message = "Selected offering enrollment not found."
-            print(f"ERROR: {error_message} (ID: {enrollment_id})")
+            print(f"ERROR: {error_message} (ID: {enrollment_id_str})")
         except CoachProfile.DoesNotExist:
             error_message = "Selected coach not found."
-            print(f"ERROR: {error_message} (ID: {coach_id})")
-        except ValueError as e:
-            error_message = f"Invalid date format or other value error: {e}"
-            print(f"ERROR: {error_message}")
+            print(f"ERROR: {error_message} (ID: {coach_id_str})")
         except Exception as e:
             error_message = f"An unexpected error occurred: {e}"
             print(f"ERROR: {error_message}")
-    else:
-        error_message = "Please select both an offering and a coach to see available slots."
-        print(f"ERROR: {error_message}")
 
     return render(request, 'accounts/partials/available_slots.html', {
         'available_slots': available_slots_data,
