@@ -18,6 +18,7 @@ from coaching_availability.models import CoachAvailability
 from django.db import transaction
 from collections import defaultdict
 from django.views import View
+from coaching_availability.utils import get_weekly_schedule_context
 
 
 class CustomLoginView(LoginView):
@@ -304,43 +305,6 @@ def get_available_slots(request):
 
 @login_required
 def profile_availability_partial(request):
-    # Weekly schedule formset
-    initial_data = []
-    availabilities = CoachAvailability.objects.filter(coach=request.user).order_by('day_of_week', 'start_time')
-    
-    existing_data = defaultdict(list)
-    for availability in availabilities:
-        existing_data[availability.day_of_week].append({
-            'start_time': availability.start_time,
-            'end_time': availability.end_time,
-        })
-
-    for day, day_name in DAYS_OF_WEEK:
-        day_availabilities = existing_data[day]
-        if day_availabilities:
-            for availability in day_availabilities:
-                initial_data.append({
-                    'day_of_week': day,
-                    'start_time': availability['start_time'],
-                    'end_time': availability['end_time'],
-                })
-        else:
-            initial_data.append({'day_of_week': day, 'start_time': None, 'end_time': None})
-
-    google_calendar_connected = False
-    if request.user.is_coach:
-        try:
-            coach_profile = request.user.coach_profile
-            google_calendar_connected = GoogleCredentials.objects.filter(coach=coach_profile).exists()
-        except CoachProfile.DoesNotExist:
-            pass
-            
-    context = {
-        'weekly_schedule_formset': BaseWeeklyScheduleFormSet(initial=initial_data),
-        'days_of_week': DAYS_OF_WEEK,
-        'override_form': DateOverrideForm(),
-        'vacation_form': CoachVacationForm(),
-        'google_calendar_connected': google_calendar_connected,
-        'active_tab': 'availability'
-    }
+    context = get_weekly_schedule_context(request.user)
+    context['active_tab'] = 'availability' # Add active_tab back as it's specific to this view
     return render(request, 'accounts/partials/_availability.html', context)

@@ -6,6 +6,7 @@ from django.http import HttpResponse # Ensure HttpResponse is imported
 from collections import defaultdict # Import defaultdict
 from .forms import DateOverrideForm, CoachVacationForm, BaseWeeklyScheduleFormSet, DAYS_OF_WEEK
 from .models import CoachAvailability, DateOverride, CoachVacation
+from .utils import get_weekly_schedule_context
 
 
 class SetRecurringScheduleView(LoginRequiredMixin, View):
@@ -29,55 +30,15 @@ class SetRecurringScheduleView(LoginRequiredMixin, View):
                         )
             # Handle HTMX request: re-render partial or return empty response
             if request.htmx:
-                # Re-fetch initial data to render the formset correctly
-                from collections import defaultdict
-                from coaching_availability.forms import DAYS_OF_WEEK
-
-                initial_data = []
-                availabilities = CoachAvailability.objects.filter(coach=request.user).order_by('day_of_week', 'start_time')
-                
-                existing_data = defaultdict(list)
-                for availability in availabilities:
-                    existing_data[availability.day_of_week].append({
-                        'start_time': availability.start_time,
-                        'end_time': availability.end_time,
-                    })
-
-                for day, day_name in DAYS_OF_WEEK:
-                    day_availabilities = existing_data[day]
-                    if day_availabilities:
-                        for availability in day_availabilities:
-                            initial_data.append({
-                                'day_of_week': day,
-                                'start_time': availability['start_time'],
-                                'end_time': availability['end_time'],
-                            })
-                    else:
-                        initial_data.append({'day_of_week': day, 'start_time': None, 'end_time': None})
-                
-                context = {
-                    'weekly_schedule_formset': BaseWeeklyScheduleFormSet(initial=initial_data),
-                    'days_of_week': DAYS_OF_WEEK,
-                    'override_form': DateOverrideForm(), 
-                    'vacation_form': CoachVacationForm(),
-                    'google_calendar_connected': False, 
-                }
+                context = get_weekly_schedule_context(request.user)
                 return render(request, 'accounts/partials/_availability.html', context)
             else:
                 return redirect('accounts:account_profile')
         
         # If form is not valid and it's an HTMX request, re-render the partial with errors
         if request.htmx:
-            from collections import defaultdict
-            from coaching_availability.forms import DAYS_OF_WEEK
-            
-            context = {
-                'weekly_schedule_formset': formset, 
-                'days_of_week': DAYS_OF_WEEK,
-                'override_form': DateOverrideForm(), 
-                'vacation_form': CoachVacationForm(),
-                'google_calendar_connected': False, 
-            }
+            context = get_weekly_schedule_context(request.user)
+            context['weekly_schedule_formset'] = formset # Pass the formset with errors
             return render(request, 'accounts/partials/_availability.html', context)
         else:
             # If form is not valid and not HTMX, redirect back to profile, losing errors
