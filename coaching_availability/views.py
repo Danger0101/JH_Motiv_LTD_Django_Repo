@@ -40,7 +40,8 @@ def profile_availability(request):
         'weekly_schedule_formset': weekly_schedule_formset, # This was missing in your logs!
         'vacation_form': vacation_form,
         'override_form': override_form,
-        'active_tab': 'availability'
+        'active_tab': 'availability',
+        'days_of_week': CoachAvailability.DAYS_OF_WEEK
     }
 
     return render(request, 'accounts/partials/_availability.html', context)
