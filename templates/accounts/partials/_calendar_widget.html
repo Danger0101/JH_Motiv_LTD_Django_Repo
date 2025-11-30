@@ -32,21 +32,22 @@
                             <td class="p-2 border"></td>
                         {% else %}
                             <td class="p-2 border text-center">
-                                {% comment %} Logic for disabling past dates {% endcomment %}
-                                {% if year < today.year or \
-                                      (year == today.year and month < today.month) or \
-                                      (year == today.year and month == today.month and day < today.day) %}
-                                    <button class="w-full h-full p-2 text-gray-400 cursor-not-allowed past-date" disabled>
-                                        {{ day }}
-                                    </button>
-                                {% else %}
-                                    <button class="w-full h-full p-2 rounded {% if year == today.year and month == today.month and day == today.day %}bg-blue-200 text-blue-800 font-bold{% else %}hover:bg-gray-200{% endif %}"
-                                            hx-get="{% url 'accounts:get_daily_slots' %}"
-                                            hx-vals='{"date": "{{ year }}-{{ month|stringformat:"02d" }}-{{ day|stringformat:"02d" }}", "coach_id": "{{ coach_id|default_if_none:"" }}", "enrollment_id": "{{ enrollment_id|default_if_none:"" }}"}'
-                                            hx-target="#time-slots-column" hx-swap="innerHTML">
-                                        {{ day }}
-                                    </button>
-                                {% endif %}
+                                {% with date_str=year|stringformat:"%s-"|add:month|stringformat:"%02d-"|add:day|stringformat:"%02d" %}
+                                <button type="button"
+                                    class="p-2 rounded-full transition w-full h-full
+                                        {% if year < today.year or (year == today.year and month < today.month) or (year == today.year and month == today.month and day < today.day) %} opacity-50 cursor-not-allowed text-gray-300
+                                        {% else %} text-gray-700 hover:bg-indigo-50 focus:bg-indigo-600 focus:text-white {% endif %}"
+                                    {% if year < today.year or (year == today.year and month < today.month) or (year == today.year and month == today.month and day < today.day) %}
+                                        disabled
+                                    {% else %}
+                                        hx-get="{% url 'accounts:get_daily_slots' %}"
+                                        hx-vals='{"date": "{{ date_str }}", "coach_id": "{{ coach_id|default_if_none:"" }}", "enrollment_id": "{{ enrollment_id|default_if_none:"" }}"}'
+                                        hx-target="#time-slots-column" hx-swap="innerHTML"
+                                    {% endif %}
+                                >
+                                    {{ day }}
+                                </button>
+                                {% endwith %}
                             </td>
                         {% endif %}
                     {% endfor %}
