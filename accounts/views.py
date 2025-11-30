@@ -19,7 +19,7 @@ from coaching_availability.models import CoachAvailability, CoachVacation, DateO
 from django.db import transaction
 from collections import defaultdict
 from django.views import View
-from coaching_availability.utils import get_weekly_schedule_context
+
 
 
 class CustomLoginView(LoginView):
@@ -121,7 +121,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
                 CoachAvailability,
                 form=WeeklyScheduleForm,
                 extra=0,
-                can_delete=False
+                can_delete=True
             )
             
             # 2. Create the QuerySet
@@ -151,33 +151,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         
         return context
 
-class SetRecurringScheduleView(LoginRequiredMixin, View):
-    def post(self, request, *args, **kwargs):
-        formset = BaseWeeklyScheduleFormSet(request.POST, request.FILES)
-        if formset.is_valid():
-            with transaction.atomic():
-                CoachAvailability.objects.filter(coach=request.user).delete()
-                for form in formset:
-                    cleaned_data = form.cleaned_data
-                    start_time = cleaned_data.get('start_time')
-                    end_time = cleaned_data.get('end_time')
-                    day_of_week = cleaned_data.get('day_of_week')
 
-                    if start_time and end_time:
-                        CoachAvailability.objects.create(
-                            coach=request.user,
-                            day_of_week=day_of_week,
-                            start_time=start_time,
-                            end_time=end_time
-                        )
-            return redirect('accounts:account_profile')
-        
-        # If form is not valid, re-render the profile page with the formset containing errors
-        # This part is tricky as we are not in the ProfileView. 
-        # A better approach would be to handle this with HTMX, returning only the form part.
-        # For now, we will redirect back to the profile page, losing the errors.
-        # A better implementation would pass the invalid formset back to the template.
-        return redirect('accounts:account_profile')
 
 @login_required
 def update_marketing_preference(request):

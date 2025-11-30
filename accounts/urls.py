@@ -7,14 +7,14 @@ app_name = 'accounts'
 urlpatterns = [
     path('update-marketing-preference/', views.update_marketing_preference, name='update_marketing_preference'),
     path('profile/', views.ProfileView.as_view(), name='account_profile'),
-    path('profile/set-recurring-schedule/', views.SetRecurringScheduleView.as_view(), name='set_recurring_schedule'),
+
 
     path('profile/offerings/', views.profile_offerings_partial, name='profile_offerings'),
     path('profile/bookings/', views.profile_bookings_partial, name='profile_bookings'),
     path('profile/book-session/', views.profile_book_session_partial, name='profile_book_session'),
     path('profile/get-coaches-for-offering/', views.get_coaches_for_offering, name='get_coaches_for_offering'),
     path('profile/get-available-slots/', views.get_available_slots, name='get_available_slots'),
-    path('profile/availability/', views.profile_availability_partial, name='profile_availability'),
+
 
     # allauth urls (explicitly defined for namespacing)
     path('login/', views.CustomLoginView.as_view(), name='login'),
