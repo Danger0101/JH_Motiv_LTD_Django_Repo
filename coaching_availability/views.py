@@ -4,39 +4,46 @@ from django.db import transaction
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse # Ensure HttpResponse is imported
 from collections import defaultdict # Import defaultdict
-from .forms import DateOverrideForm, CoachVacationForm, BaseWeeklyScheduleFormSet, DAYS_OF_WEEK
+from django.forms import modelformset_factory # Import modelformset_factory
+from .forms import DateOverrideForm, CoachVacationForm, WeeklyScheduleForm # Removed BaseWeeklyScheduleFormSet
 from .models import CoachAvailability, DateOverride, CoachVacation
 from .utils import get_weekly_schedule_context
 
 
 class SetRecurringScheduleView(LoginRequiredMixin, View):
-    def post(self, request, *args, **kwargs):
-        formset = BaseWeeklyScheduleFormSet(request.POST, request.FILES)
-        if formset.is_valid():
-            with transaction.atomic():
-                print(f"DEBUG: Deleting all existing availability for user {request.user}")
-                CoachAvailability.objects.filter(coach=request.user).delete()
-                for form in formset:
-                    cleaned_data = form.cleaned_data
-                    print(f"DEBUG: Processing form cleaned_data: {cleaned_data}")
-                    start_time = cleaned_data.get('start_time')
-                    end_time = cleaned_data.get('end_time')
-                    day_of_week = cleaned_data.get('day_of_week')
+    def get(self, request, *args, **kwargs):
+        WeeklyScheduleFormSet = modelformset_factory(
+            CoachAvailability,
+            form=WeeklyScheduleForm,
+            extra=0,
+            can_delete=False
+        )
+        queryset = CoachAvailability.objects.filter(
+            coach=request.user.coachprofile
+        ).order_by('day_of_week')
+        weekly_schedule_formset = WeeklyScheduleFormSet(queryset=queryset)
+        context = get_weekly_schedule_context(request.user)
+        context['weekly_schedule_formset'] = weekly_schedule_formset
+        return render(request, 'accounts/partials/_availability.html', context)
 
-                    if start_time and end_time:
-                        CoachAvailability.objects.create(
-                            coach=request.user,
-                            day_of_week=day_of_week,
-                            start_time=start_time,
-                            end_time=end_time
-                        )
-                        print(f"DEBUG: Created CoachAvailability for {day_of_week} from {start_time} to {end_time}")
-                
-                # After the transaction, verify what's in the DB
-                current_availabilities = CoachAvailability.objects.filter(coach=request.user)
-                print(f"DEBUG: After transaction, {current_availabilities.count()} CoachAvailability objects exist for {request.user}")
-                for ca in current_availabilities:
-                    print(f"DEBUG:   - {ca.day_of_week}: {ca.start_time}-{ca.end_time}")
+
+    def post(self, request, *args, **kwargs):
+        WeeklyScheduleFormSet = modelformset_factory(
+            CoachAvailability,
+            form=WeeklyScheduleForm,
+            extra=0,
+            can_delete=False
+        )
+        queryset = CoachAvailability.objects.filter(
+            coach=request.user.coachprofile
+        ).order_by('day_of_week')
+        weekly_schedule_formset = WeeklyScheduleFormSet(request.POST, queryset=queryset)
+        if weekly_schedule_formset.is_valid():
+            with transaction.atomic():
+                instances = weekly_schedule_formset.save(commit=False)
+                for instance in instances:
+                    instance.coach = request.user.coachprofile
+                    instance.save()
             # Handle HTMX request: re-render partial or return empty response
             if request.htmx:
                 context = get_weekly_schedule_context(request.user)
@@ -47,7 +54,7 @@ class SetRecurringScheduleView(LoginRequiredMixin, View):
         # If form is not valid and it's an HTMX request, re-render the partial with errors
         if request.htmx:
             context = get_weekly_schedule_context(request.user)
-            context['weekly_schedule_formset'] = formset # Pass the formset with errors
+            context['weekly_schedule_formset'] = weekly_schedule_formset # Pass the formset with errors
             return render(request, 'accounts/partials/_availability.html', context)
         else:
             # If form is not valid and not HTMX, redirect back to profile, losing errors
