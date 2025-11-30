@@ -43,8 +43,8 @@ class ManageVacationView(LoginRequiredMixin, View):
                 vacation.coach = request.user
                 vacation.save()
                 
-                from coaching_booking.models import Booking
-                conflicting_bookings = Booking.objects.filter(
+                from coaching_booking.models import SessionBooking
+                conflicting_bookings = SessionBooking.objects.filter(
                     coach=request.user,
                     start_time__date__range=(
                         vacation.start_date,

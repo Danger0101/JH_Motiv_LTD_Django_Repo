@@ -5,6 +5,8 @@ from .views import (
     ManageVacationView
 )
 
+app_name = 'coaching_availability'
+
 urlpatterns = [
     path(
         'schedule/recurring/',
