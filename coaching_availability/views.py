@@ -8,6 +8,42 @@ from django.forms import modelformset_factory # Import modelformset_factory
 from .forms import DateOverrideForm, CoachVacationForm, WeeklyScheduleForm # Removed BaseWeeklyScheduleFormSet
 from .models import CoachAvailability, DateOverride, CoachVacation
 from .utils import get_weekly_schedule_context
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def profile_availability(request):
+    """
+    HTMX view to load the availability tab content.
+    """
+    coach_profile = request.user.coachprofile
+
+    # 1. Define the FormSet Factory
+    WeeklyScheduleFormSet = modelformset_factory(
+        CoachAvailability,
+        form=WeeklyScheduleForm,
+        extra=0,  # No empty rows, only existing days
+        can_delete=False
+    )
+
+    # 2. Get the data (Monday to Sunday)
+    queryset = CoachAvailability.objects.filter(coach=coach_profile).order_by('day_of_week')
+
+    # 3. Instantiate the FormSet
+    weekly_schedule_formset = WeeklyScheduleFormSet(queryset=queryset)
+
+    # 4. Instantiate other forms needed for the template
+    vacation_form = CoachVacationForm()
+    override_form = DateOverrideForm()
+
+    # 5. Build Context
+    context = {
+        'weekly_schedule_formset': weekly_schedule_formset, # This was missing in your logs!
+        'vacation_form': vacation_form,
+        'override_form': override_form,
+        'active_tab': 'availability'
+    }
+
+    return render(request, 'accounts/partials/_availability.html', context)
 
 
 class SetRecurringScheduleView(LoginRequiredMixin, View):

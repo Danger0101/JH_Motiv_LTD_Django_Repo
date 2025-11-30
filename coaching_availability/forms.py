@@ -1,6 +1,5 @@
 from django import forms
-from django.forms import formset_factory
-from .models import CoachAvailability, DateOverride, CoachVacation, CoachAvailability
+from .models import CoachAvailability, DateOverride, CoachVacation
 
 class WeeklyScheduleForm(forms.ModelForm):
     class Meta:
@@ -32,8 +31,5 @@ class CoachVacationForm(forms.ModelForm):
         fields = ['start_date', 'end_date', 'existing_booking_handling']
         widgets = {
             'start_date': forms.DateInput(attrs={'type': 'date'}),
-            'end_date': forms.TimeInput(attrs={'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'type': 'date'}),
         }
-
-BaseWeeklyScheduleFormSet = formset_factory(WeeklyScheduleForm, extra=0)
-DAYS_OF_WEEK = CoachAvailability.DAYS_OF_WEEK
