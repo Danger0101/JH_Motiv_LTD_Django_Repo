@@ -13,7 +13,7 @@ from coaching_booking.models import ClientOfferingEnrollment, SessionBooking
 from coaching_core.models import Offering
 from accounts.models import CoachProfile # Assuming CoachProfile is in accounts.models or accessible
 from gcal.models import GoogleCredentials
-from coaching_availability.forms import DateOverrideForm, CoachVacationForm, WeeklyScheduleForm, DAYS_OF_WEEK
+from coaching_availability.forms import DateOverrideForm, CoachVacationForm, WeeklyScheduleForm
 from django.forms import modelformset_factory
 from coaching_availability.models import CoachAvailability
 from django.db import transaction
@@ -137,7 +137,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
 
             # 3. Instantiate the FormSet
             context['weekly_schedule_formset'] = WeeklyScheduleFormSet(queryset=availability_queryset)
-            context['days_of_week'] = DAYS_OF_WEEK
+            context['days_of_week'] = CoachAvailability.DAYS_OF_WEEK
 
 
         # For now, available_credits will be the same as user_offerings for simplicity
