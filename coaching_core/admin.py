@@ -1,9 +1,10 @@
 from django.contrib import admin
-from .models import Offering
+from .models import Offering, Workshop
 from accounts.models import CoachProfile
 
 # Note: The inline configuration below assumes that your 'Offering' model
 # has a ManyToManyField named 'coaches'. If you have a custom 'through'
+
 # model, you should specify it directly in the inline.
 
 class CoachAssignmentInline(admin.TabularInline):
@@ -32,3 +33,26 @@ class OfferingAdmin(admin.ModelAdmin):
     )
     readonly_fields = ('created_at',)
     inlines = [CoachAssignmentInline]
+
+
+@admin.register(Workshop)
+class WorkshopAdmin(admin.ModelAdmin):
+    list_display = ('name', 'coach', 'date', 'start_time', 'price', 'total_attendees', 'active_status')
+    list_filter = ('active_status', 'is_free', 'coach', 'date')
+    search_fields = ['name', 'description', 'coach__user__first_name', 'coach__user__last_name']
+    fieldsets = (
+        ('Workshop Details', {
+            'fields': ('name', 'coach', 'description')
+        }),
+        ('Time and Date', {
+            'fields': ('date', 'start_time', 'end_time')
+        }),
+        ('Pricing and Capacity', {
+            'fields': ('price', 'is_free', 'total_attendees')
+        }),
+        ('Status & Audit', {
+            'fields': ('active_status', 'created_by', 'created_at')
+        }),
+    )
+    readonly_fields = ('created_at',)
+    autocomplete_fields = ['coach']

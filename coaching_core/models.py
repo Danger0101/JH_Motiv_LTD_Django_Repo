@@ -118,3 +118,100 @@ class Offering(models.Model):
         unit = self.get_duration_type_display()
         plural = 's' if self.total_length_units > 1 else ''
         return f"{self.total_length_units} {unit}{plural}"
+
+
+class Workshop(models.Model):
+    """
+    Defines a group workshop event with a specific date, time, and capacity.
+    """
+    coach = models.ForeignKey(
+        CoachProfile,
+        on_delete=models.CASCADE,
+        related_name='workshops',
+        help_text="The coach hosting the workshop."
+    )
+    name = models.CharField(
+        max_length=255,
+        help_text="The Workshop's Name/Title."
+    )
+    slug = models.SlugField(
+        unique=True,
+        editable=False,
+        help_text="Unique slug for URL purposes, auto-generated from name."
+    )
+    description = models.TextField(
+        help_text="Detailed description of the workshop."
+    )
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Cost for attending the workshop."
+    )
+    date = models.DateField(
+        help_text="The date of the workshop."
+    )
+    start_time = models.TimeField(
+        help_text="The start time of the workshop."
+    )
+    end_time = models.TimeField(
+        help_text="The end time of the workshop."
+    )
+    total_attendees = models.IntegerField(
+        help_text="Maximum number of attendees allowed."
+    )
+    attendees = models.ManyToManyField(
+        User,
+        related_name='attended_workshops',
+        blank=True,
+        help_text="Users who have booked this workshop."
+    )
+    is_free = models.BooleanField(
+        default=False,
+        help_text="Is this a free workshop?"
+    )
+    active_status = models.BooleanField(
+        default=True,
+        help_text="Is the workshop currently active and bookable?"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='workshops_created'
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='workshops_updated'
+    )
+
+    class Meta:
+        ordering = ['date', 'start_time']
+        verbose_name = "Workshop"
+        verbose_name_plural = "Workshops"
+
+    def __str__(self):
+        return f"{self.name} on {self.date.strftime('%Y-%m-%d')}"
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(f"{self.name}-{self.date.strftime('%Y-%m-%d')}")
+        super().save(*args, **kwargs)
+
+    @property
+    def remaining_spaces(self):
+        """
+        Calculates the number of remaining spaces for the workshop.
+        """
+        return self.total_attendees - self.attendees.count()
+
+    @property
+    def is_full(self):
+        """
+        Returns True if the workshop has no remaining spaces.
+        """
+        return self.remaining_spaces <= 0

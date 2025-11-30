@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST
 from django.http import HttpResponseRedirect, HttpResponse
 
 # Assumed imports from other apps
-from coaching_core.models import Offering
+from coaching_core.models import Offering, Workshop
 from coaching_availability.utils import calculate_bookable_slots
 from coaching_client.models import ContentPage
 from accounts.models import CoachProfile
@@ -121,6 +121,9 @@ def coach_landing_view(request):
     # Fetch active offerings
     offerings = Offering.objects.filter(active_status=True).prefetch_related('coaches')
     
+    # Fetch active workshops
+    workshops = Workshop.objects.filter(active_status=True)
+
     # 2. Define Knowledge Categories (Expanded list)
     # The categories are hardcoded as requested, to avoid adding a model.
     KNOWLEDGE_CATEGORIES = [
@@ -140,6 +143,7 @@ def coach_landing_view(request):
     context = {
         'coaches': coaches,
         'offerings': offerings,
+        'workshops': workshops,
         'knowledge_pages': knowledge_pages,
         'knowledge_categories': KNOWLEDGE_CATEGORIES[1:], # Exclude 'All Coaches' for the tab bar
         'page_summary_text': page_summary_text,
