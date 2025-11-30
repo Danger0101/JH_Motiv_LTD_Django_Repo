@@ -243,12 +243,15 @@ def get_coaches_for_offering(request):
     # Render options for the coach select dropdown
     return render(request, 'accounts/partials/coach_options.html', {'coaches': coaches})
 
-@login_required
+    @login_required
 def get_available_slots(request):
     enrollment_id = request.GET.get('enrollment_id')
     coach_id = request.GET.get('coach_id')
     
     available_slots_data = [] # List to hold dictionaries with start_time and end_time
+    error_message = None
+
+    print(f"DEBUG: get_available_slots called with enrollment_id={enrollment_id}, coach_id={coach_id}")
 
     if enrollment_id and coach_id:
         try:
@@ -257,6 +260,13 @@ def get_available_slots(request):
             offering = enrollment.offering
             
             session_length_minutes = offering.session_length_minutes
+
+            print(f"DEBUG: Offering session length: {session_length_minutes} minutes")
+
+            if session_length_minutes <= 0:
+                error_message = "Session length for the selected offering is invalid."
+                print(f"ERROR: {error_message}")
+                return render(request, 'accounts/partials/available_slots.html', {'error_message': error_message})
 
             # Define the date range for availability checking
             today = date.today()
@@ -273,6 +283,8 @@ def get_available_slots(request):
                 end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
             else:
                 end_date = today + timedelta(days=30) # Default to next 30 days
+            
+            print(f"DEBUG: Checking availability from {start_date} to {end_date}")
 
             # Call the new utility function
             # Assuming sessions booked via ClientOfferingEnrollment are 'one_on_one'
@@ -284,6 +296,8 @@ def get_available_slots(request):
                 offering_type='one_on_one'
             )
 
+            print(f"DEBUG: Generated {len(generated_slots)} slots.")
+
             # Format the generated slots for the template
             for slot_start_datetime in generated_slots:
                 slot_end_datetime = slot_start_datetime + timedelta(minutes=session_length_minutes)
@@ -292,8 +306,26 @@ def get_available_slots(request):
                     'end_time': slot_end_datetime,
                 })
 
-        except (ClientOfferingEnrollment.DoesNotExist, CoachProfile.DoesNotExist, ValueError):
-            # Handle potential errors like invalid IDs or date formats
-            pass 
+            if not available_slots_data:
+                error_message = "No available slots found for the selected criteria. Please check coach's availability."
 
-    return render(request, 'accounts/partials/available_slots.html', {'available_slots': available_slots_data})
+        except ClientOfferingEnrollment.DoesNotExist:
+            error_message = "Selected offering enrollment not found."
+            print(f"ERROR: {error_message} (ID: {enrollment_id})")
+        except CoachProfile.DoesNotExist:
+            error_message = "Selected coach not found."
+            print(f"ERROR: {error_message} (ID: {coach_id})")
+        except ValueError as e:
+            error_message = f"Invalid date format or other value error: {e}"
+            print(f"ERROR: {error_message}")
+        except Exception as e:
+            error_message = f"An unexpected error occurred: {e}"
+            print(f"ERROR: {error_message}")
+    else:
+        error_message = "Please select both an offering and a coach to see available slots."
+        print(f"ERROR: {error_message}")
+
+    return render(request, 'accounts/partials/available_slots.html', {
+        'available_slots': available_slots_data,
+        'error_message': error_message
+    })
