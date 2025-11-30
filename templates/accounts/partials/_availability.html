@@ -1,96 +1,46 @@
-<div class="bg-white p-6 rounded-lg shadow-lg">
-    <h2 class="text-2xl font-bold text-gray-800 mb-6">Availability Settings</h2>
+<div id="availability-section">
+    <form method="POST" action="{% url 'coaching_availability:set_recurring_schedule' %}">
+        {% csrf_token %}
+        
+        {{ weekly_schedule_formset.management_form }}
 
-    <!-- Google Calendar Integration Status -->
-    <div class="mb-6 p-4 rounded-lg {% if google_calendar_connected %}bg-green-100 border-l-4 border-green-500{% else %}bg-yellow-100 border-l-4 border-yellow-500{% endif %}">
-        <div class="flex items-center">
-            <div class="flex-shrink-0">
-                <!-- Heroicon: check-circle for connected, exclamation for not -->
-                {% if google_calendar_connected %}
-                <svg class="h-6 w-6 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {% else %}
-                <svg class="h-6 w-6 text-yellow-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                {% endif %}
-            </div>
-            <div class="ml-3">
-                <p class="text-sm {% if google_calendar_connected %}text-green-700{% else %}text-yellow-700{% endif %}">
-                    {% if google_calendar_connected %}
-                        Your Google Calendar is connected. Bookings will be synced automatically.
-                    {% else %}
-                        Connect your Google Calendar to sync your availability and avoid booking conflicts.
-                        <a href="{% url 'gcal:google_login' %}" class="font-semibold underline">Connect Now</a>
-                    {% endif %}
-                </p>
-            </div>
-        </div>
-    </div>
+        <div class="space-y-4">
+            {% for form in weekly_schedule_formset %}
+                <div class="flex items-center justify-between p-4 bg-white border rounded-lg shadow-sm">
+                    
+                    {{ form.id }}
+                    {{ form.day_of_week.as_hidden }}
 
-
-    <div x-data="{ availabilityTab: 'schedule' }">
-        <!-- Tabs -->
-        <div class="mb-4 border-b border-gray-200">
-            <ul class="flex flex-wrap -mb-px">
-                <li class="mr-2">
-                    <a href="#" @click.prevent="availabilityTab = 'schedule'" :class="{ 'text-blue-600 border-blue-600': availabilityTab === 'schedule' }" class="inline-block p-4 border-b-2 rounded-t-lg">Recurring Schedule</a>
-                </li>
-                <li class="mr-2">
-                    <a href="#" @click.prevent="availabilityTab = 'override'" :class="{ 'text-blue-600 border-blue-600': availabilityTab === 'override' }" class="inline-block p-4 border-b-2 rounded-t-lg">Add Override</a>
-                </li>
-                <li class="mr-2">
-                    <a href="#" @click.prevent="availabilityTab = 'vacation'" :class="{ 'text-blue-600 border-blue-600': availabilityTab === 'vacation' }" class="inline-block p-4 border-b-2 rounded-t-lg">Manage Vacation</a>
-                </li>
-            </ul>
-        </div>
-
-        <!-- Tab Content -->
-        <div>
-            <!-- Recurring Schedule -->
-            <div x-show="availabilityTab === 'schedule'" class="p-4 rounded-lg bg-gray-50">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Set Recurring Weekly Schedule</h3>
-                <form method="post" action="{% url 'coaching_availability:set_recurring_schedule' %}">
-                    {% csrf_token %}
-                    {{ weekly_schedule_formset.management_form }}
-                    <div class="space-y-6">
-                        {% for day_code, day_name in days_of_week %}
-                            <div class="p-4 border rounded-md bg-white">
-                                <h4 class="font-bold text-md mb-2">{{ day_name }}</h4>
-                                {% for form in weekly_schedule_formset %}
-                                    {% if form.initial.day_of_week == day_code %}
-                                        <div class="flex items-center space-x-2 mb-2">
-                                            {{ form.as_p }}
-                                        </div>
-                                    {% endif %}
-                                {% endfor %}
-                            </div>
-                        {% endfor %}
+                    <div class="w-1/3">
+                        <span class="font-bold text-gray-700">
+                            {{ form.instance.get_day_of_week_display }}
+                        </span>
                     </div>
-                    <button type="submit" class="mt-6 px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">Save Schedule</button>
-                </form>
-            </div>
 
-            <!-- Add Override -->
-            <div x-show="availabilityTab === 'override'" class="p-4 rounded-lg bg-gray-50">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Override a Specific Date</h3>
-                <form method="post" action="{% url 'coaching_availability:set_date_override' %}">
-                    {% csrf_token %}
-                    {{ override_form.as_p }}
-                    <button type="submit" class="mt-4 px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">Add Override</button>
-                </form>
-            </div>
+                    <div class="flex space-x-2 w-2/3 justify-end">
+                        <div class="flex flex-col">
+                            <label class="text-xs text-gray-500">Start</label>
+                            {{ form.start_time }} 
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-xs text-gray-500">End</label>
+                            {{ form.end_time }}
+                        </div>
+                    </div>
 
-            <!-- Manage Vacation -->
-            <div x-show="availabilityTab === 'vacation'" class="p-4 rounded-lg bg-gray-50">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Set Vacation / Time Off</h3>
-                <form method="post" action="{% url 'coaching_availability:manage_vacation' %}">
-                    {% csrf_token %}
-                    {{ vacation_form.as_p }}
-                    <button type="submit" class="mt-4 px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">Save Vacation</button>
-                </form>
-            </div>
+                    {% if form.errors %}
+                        <div class="text-red-500 text-sm">
+                            {{ form.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
         </div>
-    </div>
+
+        <div class="mt-6">
+            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+                Update Weekly Schedule
+            </button>
+        </div>
+    </form>
 </div>

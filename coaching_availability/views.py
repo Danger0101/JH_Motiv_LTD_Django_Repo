@@ -14,9 +14,11 @@ class SetRecurringScheduleView(LoginRequiredMixin, View):
         formset = BaseWeeklyScheduleFormSet(request.POST, request.FILES)
         if formset.is_valid():
             with transaction.atomic():
+                print(f"DEBUG: Deleting all existing availability for user {request.user}")
                 CoachAvailability.objects.filter(coach=request.user).delete()
                 for form in formset:
                     cleaned_data = form.cleaned_data
+                    print(f"DEBUG: Processing form cleaned_data: {cleaned_data}")
                     start_time = cleaned_data.get('start_time')
                     end_time = cleaned_data.get('end_time')
                     day_of_week = cleaned_data.get('day_of_week')
@@ -28,6 +30,13 @@ class SetRecurringScheduleView(LoginRequiredMixin, View):
                             start_time=start_time,
                             end_time=end_time
                         )
+                        print(f"DEBUG: Created CoachAvailability for {day_of_week} from {start_time} to {end_time}")
+                
+                # After the transaction, verify what's in the DB
+                current_availabilities = CoachAvailability.objects.filter(coach=request.user)
+                print(f"DEBUG: After transaction, {current_availabilities.count()} CoachAvailability objects exist for {request.user}")
+                for ca in current_availabilities:
+                    print(f"DEBUG:   - {ca.day_of_week}: {ca.start_time}-{ca.end_time}")
             # Handle HTMX request: re-render partial or return empty response
             if request.htmx:
                 context = get_weekly_schedule_context(request.user)
