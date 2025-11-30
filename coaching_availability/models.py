@@ -8,12 +8,22 @@ class CoachAvailability(models.Model):
     Represents a recurring weekly schedule for a coach.
     e.g., Every Monday 9-5.
     """
+    DAYS_OF_WEEK = (
+        (0, 'Monday'),
+        (1, 'Tuesday'),
+        (2, 'Wednesday'),
+        (3, 'Thursday'),
+        (4, 'Friday'),
+        (5, 'Saturday'),
+        (6, 'Sunday'),
+    )
     coach = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='availabilities'
     )
     day_of_week = models.IntegerField(
+        choices=DAYS_OF_WEEK,
         validators=[MinValueValidator(0), MaxValueValidator(6)]
     )  # 0=Monday, 6=Sunday
     start_time = models.TimeField()

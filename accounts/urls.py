@@ -14,6 +14,7 @@ urlpatterns = [
     path('profile/book-session/', views.profile_book_session_partial, name='profile_book_session'),
     path('profile/get-coaches-for-offering/', views.get_coaches_for_offering, name='get_coaches_for_offering'),
     path('profile/get-available-slots/', views.get_available_slots, name='get_available_slots'),
+    path('profile/availability/', views.profile_availability_partial, name='profile_availability'),
 
     # allauth urls (explicitly defined for namespacing)
     path('login/', views.CustomLoginView.as_view(), name='login'),

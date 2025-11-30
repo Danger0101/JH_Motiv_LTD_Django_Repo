@@ -301,3 +301,47 @@ def get_available_slots(request):
             pass
 
     return render(request, 'accounts/partials/available_slots.html', {'available_slots': available_slots})
+
+@login_required
+def profile_availability_partial(request):
+    # Weekly schedule formset
+    initial_data = []
+    availabilities = CoachAvailability.objects.filter(coach=request.user).order_by('day_of_week', 'start_time')
+    
+    existing_data = defaultdict(list)
+    for availability in availabilities:
+        existing_data[availability.day_of_week].append({
+            'start_time': availability.start_time,
+            'end_time': availability.end_time,
+        })
+
+    forms_by_day = defaultdict(list)
+    for day, day_name in DAYS_OF_WEEK:
+        day_availabilities = existing_data[day]
+        if day_availabilities:
+            for availability in day_availabilities:
+                forms_by_day[day_name].append(WeeklyScheduleForm(initial={
+                    'day_of_week': day,
+                    'start_time': availability['start_time'],
+                    'end_time': availability['end_time'],
+                }))
+        else:
+            forms_by_day[day_name].append(WeeklyScheduleForm(initial={'day_of_week': day}))
+
+    google_calendar_connected = False
+    if request.user.is_coach:
+        try:
+            coach_profile = request.user.coach_profile
+            google_calendar_connected = GoogleCredentials.objects.filter(coach=coach_profile).exists()
+        except CoachProfile.DoesNotExist:
+            pass
+            
+    context = {
+        'forms_by_day': forms_by_day,
+        'weekly_schedule_formset': BaseWeeklyScheduleFormSet(),
+        'override_form': DateOverrideForm(),
+        'vacation_form': CoachVacationForm(),
+        'google_calendar_connected': google_calendar_connected,
+        'active_tab': 'availability'
+    }
+    return render(request, 'accounts/partials/_availability.html', context)
