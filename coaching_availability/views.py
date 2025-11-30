@@ -61,3 +61,4 @@ class ManageVacationView(LoginRequiredMixin, View):
 
             return redirect('account:account_profile')
         return render(request, 'your-template.html', {'form': form})
+

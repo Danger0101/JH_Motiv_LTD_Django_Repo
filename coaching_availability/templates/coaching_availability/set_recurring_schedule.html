@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}Set Recurring Weekly Schedule{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6">Set Your Weekly Recurring Schedule</h1>
+
+    {% if formset.non_form_errors %}
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <strong class="font-bold">Error!</strong>
+            <span class="block sm:inline">{{ formset.non_form_errors }}</span>
+        </div>
+    {% endif %}
+
+    <form method="post" id="schedule-form">
+        {% csrf_token %}
+        {{ formset.management_form }}
+
+        <div class="space-y-8">
+            {% for day_name, day_forms in forms_by_day.items %}
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-semibold mb-4">{{ day_name }}</h2>
+                    <div id="form-container-{{ forloop.counter0 }}" class="space-y-4">
+                        {% for form in day_forms %}
+                            <div class="flex items-center space-x-4 p-4 border rounded-md time-slot-form">
+                                {{ form.day_of_week }}
+                                <div class="flex-1">
+                                    <label class="block text-sm font-medium text-gray-700">Start Time</label>
+                                    {{ form.start_time }}
+                                    {% if form.start_time.errors %}
+                                        <p class="text-red-500 text-xs italic">{{ form.start_time.errors|join:", " }}</p>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-1">
+                                    <label class="block text-sm font-medium text-gray-700">End Time</label>
+                                    {{ form.end_time }}
+                                    {% if form.end_time.errors %}
+                                        <p class="text-red-500 text-xs italic">{{ form.end_time.errors|join:", " }}</p>
+                                    {% endif %}
+                                </div>
+                                <button type="button" class="text-red-500 hover:text-red-700 remove-time-slot">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded add-time-slot" data-day-index="{{ forloop.counter0 }}">
+                        <i class="fas fa-plus"></i> Add Time Slot
+                    </button>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="mt-8">
+            <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                Save Schedule
+            </button>
+        </div>
+    </form>
+</div>
+
+<div id="time-slot-template" class="hidden">
+    <div class="flex items-center space-x-4 p-4 border rounded-md time-slot-form">
+        <div class="flex-1">
+            <label class="block text-sm font-medium text-gray-700">Start Time</label>
+            <input type="time" name="" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+        </div>
+        <div class="flex-1">
+            <label class="block text-sm font-medium text-gray-700">End Time</label>
+            <input type="time" name="" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+        </div>
+        <button type="button" class="text-red-500 hover:text-red-700 remove-time-slot">
+            <i class="fas fa-trash"></i>
+        </button>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+{{ super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let formIdx = {{ formset.total_form_count }};
+
+    document.querySelectorAll('.add-time-slot').forEach(button => {
+        button.addEventListener('click', function() {
+            const dayIndex = this.dataset.dayIndex;
+            const formContainer = document.getElementById(`form-container-${dayIndex}`);
+            const template = document.getElementById('time-slot-template').firstElementChild.cloneNode(true);
+
+            template.querySelectorAll('input').forEach(input => {
+                const nameAttr = `form-${formIdx}-${input.name.split('-')[2]}`;
+                input.name = nameAttr;
+                input.id = `id_${nameAttr}`;
+            });
+            
+            // Set day_of_week hidden input
+            const dayOfWeekInput = document.createElement('input');
+            dayOfWeekInput.type = 'hidden';
+            dayOfWeekInput.name = `form-${formIdx}-day_of_week`;
+            dayOfWeekInput.value = dayIndex;
+            template.insertBefore(dayOfWeekInput, template.firstChild);
+
+            formContainer.appendChild(template);
+            formIdx++;
+            
+            // Update management form
+            document.querySelector('input[name="form-TOTAL_FORMS"]').value = formIdx;
+        });
+    });
+
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.closest('.remove-time-slot')) {
+            e.target.closest('.time-slot-form').remove();
+        }
+    });
+});
+</script>
+{% endblock %}

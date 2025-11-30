@@ -19,8 +19,7 @@ class CoachAvailability(models.Model):
     start_time = models.TimeField()
     end_time = models.TimeField()
 
-    class Meta:
-        unique_together = ('coach', 'day_of_week')
+
 
     def __str__(self):
         return f"{self.coach.username} - {self.get_day_of_week_display()} " \

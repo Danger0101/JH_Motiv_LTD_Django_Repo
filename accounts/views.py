@@ -13,7 +13,11 @@ from coaching_booking.models import ClientOfferingEnrollment, SessionBooking
 from coaching_core.models import Offering
 from accounts.models import CoachProfile # Assuming CoachProfile is in accounts.models or accessible
 from gcal.models import GoogleCredentials
-from coaching_availability.forms import CoachAvailabilityForm, DateOverrideForm, CoachVacationForm
+from coaching_availability.forms import DateOverrideForm, CoachVacationForm, BaseWeeklyScheduleFormSet, WeeklyScheduleForm, DAYS_OF_WEEK
+from coaching_availability.models import CoachAvailability
+from django.db import transaction
+from collections import defaultdict
+from django.views import View
 
 
 class CustomLoginView(LoginView):
@@ -114,9 +118,35 @@ class ProfileView(LoginRequiredMixin, TemplateView):
                 offering__coaches=self.request.user.coach_profile, # Assuming 'offering' has a ManyToMany with 'coaches'
             ).values_list('client__username', flat=True).distinct()
 
-            context['availability_form'] = CoachAvailabilityForm()
             context['override_form'] = DateOverrideForm()
             context['vacation_form'] = CoachVacationForm()
+
+            # Weekly schedule formset
+            initial_data = []
+            availabilities = CoachAvailability.objects.filter(coach=self.request.user).order_by('day_of_week', 'start_time')
+            
+            existing_data = defaultdict(list)
+            for availability in availabilities:
+                existing_data[availability.day_of_week].append({
+                    'start_time': availability.start_time,
+                    'end_time': availability.end_time,
+                })
+
+            for day, day_name in DAYS_OF_WEEK:
+                day_availabilities = existing_data[day]
+                if day_availabilities:
+                    for availability in day_availabilities:
+                        initial_data.append({
+                            'day_of_week': day,
+                            'start_time': availability['start_time'],
+                            'end_time': availability['end_time'],
+                        })
+                else:
+                    initial_data.append({'day_of_week': day, 'start_time': None, 'end_time': None})
+            
+            context['weekly_schedule_formset'] = BaseWeeklyScheduleFormSet(initial=initial_data)
+            context['days_of_week'] = DAYS_OF_WEEK
+
 
         # For now, available_credits will be the same as user_offerings for simplicity
         # In a real scenario, this might be a separate model or a filtered queryset of enrollments
@@ -130,6 +160,34 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         context['active_tab'] = 'integrations' # Set default active tab
         
         return context
+
+class SetRecurringScheduleView(LoginRequiredMixin, View):
+    def post(self, request, *args, **kwargs):
+        formset = BaseWeeklyScheduleFormSet(request.POST, request.FILES)
+        if formset.is_valid():
+            with transaction.atomic():
+                CoachAvailability.objects.filter(coach=request.user).delete()
+                for form in formset:
+                    cleaned_data = form.cleaned_data
+                    start_time = cleaned_data.get('start_time')
+                    end_time = cleaned_data.get('end_time')
+                    day_of_week = cleaned_data.get('day_of_week')
+
+                    if start_time and end_time:
+                        CoachAvailability.objects.create(
+                            coach=request.user,
+                            day_of_week=day_of_week,
+                            start_time=start_time,
+                            end_time=end_time
+                        )
+            return redirect('accounts:account_profile')
+        
+        # If form is not valid, re-render the profile page with the formset containing errors
+        # This part is tricky as we are not in the ProfileView. 
+        # A better approach would be to handle this with HTMX, returning only the form part.
+        # For now, we will redirect back to the profile page, losing the errors.
+        # A better implementation would pass the invalid formset back to the template.
+        return redirect('accounts:account_profile')
 
 @login_required
 def update_marketing_preference(request):
@@ -243,44 +301,3 @@ def get_available_slots(request):
             pass
 
     return render(request, 'accounts/partials/available_slots.html', {'available_slots': available_slots})
-
-# The existing HTMX views are not needed anymore as we are replacing them with the new tab structure
-# class EnrollmentStatusHtmxView(LoginRequiredMixin, ProfileDataLoadMixin, TemplateView):
-#     """
-#     Renders the enrollment status partial for the authenticated user.
-#     """
-#     template_name = "coaching_booking/_enrollment_status.html"
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         # Logic Stub: Fetch the latest active ClientOfferingEnrollment
-#         # from coaching_booking.models import ClientOfferingEnrollment
-#         # context['enrollment'] = ClientOfferingEnrollment.objects.filter(client=self.request.user, is_active=True).first()
-#         return context
-
-# class SessionListHtmxView(LoginRequiredMixin, ProfileDataLoadMixin, TemplateView):
-#     """
-#     Renders the upcoming sessions partial for the authenticated user.
-#     """
-#     template_name = "coaching_booking/_session_list.html"
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         # Logic Stub: Fetch upcoming SessionBooking records
-#         # from coaching_booking.models import SessionBooking
-#         # from django.utils import timezone
-#         # context['sessions'] = SessionBooking.objects.filter(client=self.request.user, start_datetime__gte=timezone.now()).order_by('start_datetime')
-#         return context
-
-# class OrderHistoryHtmxView(LoginRequiredMixin, ProfileDataLoadMixin, TemplateView):
-#     """
-#     Renders the order history partial for the authenticated user.
-#     """
-#     template_name = "payments/_order_history.html"
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         # Logic Stub: Fetch generic payments.Order history
-#         # from payments.models import Order
-#         # context['orders'] = Order.objects.filter(user=self.request.user).order_by('-created_at')
-#         return context

@@ -7,6 +7,7 @@ app_name = 'accounts'
 urlpatterns = [
     path('update-marketing-preference/', views.update_marketing_preference, name='update_marketing_preference'),
     path('profile/', views.ProfileView.as_view(), name='account_profile'),
+    path('profile/set-recurring-schedule/', views.SetRecurringScheduleView.as_view(), name='set_recurring_schedule'),
 
     path('profile/offerings/', views.profile_offerings_partial, name='profile_offerings'),
     path('profile/bookings/', views.profile_bookings_partial, name='profile_bookings'),
