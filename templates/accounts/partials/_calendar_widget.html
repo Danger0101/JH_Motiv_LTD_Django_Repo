@@ -1,6 +1,4 @@
-<div id="calendar-container" class="bg-white rounded-lg shadow p-4">
-    
-    <div class="flex justify-between items-center mb-4">
+<div class="flex justify-between items-center mb-4">
         <button type="button"
                 class="text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 rounded hover:bg-indigo-50 transition-colors"
                 hx-get="{% url 'accounts:get_booking_calendar' %}"
@@ -70,8 +68,3 @@
             {% endfor %}
         </tbody>
     </table>
-</div>
-
-<div id="time-slots-column" class="mt-4">
-    <p class="text-sm text-gray-500 text-center italic py-4">Select a date above to see available times.</p>
-</div>

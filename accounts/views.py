@@ -404,6 +404,7 @@ def get_daily_slots(request):
 
     daily_slots_data = []
     error_message = None
+    selected_date = None
 
     if not date_str or not coach_id_str or not enrollment_id_str:
         error_message = "Missing date, coach_id, or enrollment_id."
@@ -452,7 +453,7 @@ def get_daily_slots(request):
     return render(request, 'accounts/partials/_day_slots.html', {
         'daily_slots': daily_slots_data,
         'error_message': error_message,
-        'selected_date': selected_date if 'selected_date' in locals() else None,
+        'selected_date': selected_date,
         'coach_id': coach_id_str,
         'enrollment_id': enrollment_id_str,
     })
