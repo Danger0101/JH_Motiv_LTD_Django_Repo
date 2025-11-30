@@ -1,6 +1,5 @@
 from datetime import time
 from .models import CoachAvailability, DateOverride, CoachVacation
-from .forms import BaseWeeklyScheduleFormSet, DateOverrideForm, CoachVacationForm, DAYS_OF_WEEK
 from collections import defaultdict
 from gcal.models import GoogleCredentials
 from accounts.models import CoachProfile # Assuming CoachProfile is in accounts.models or accessible
@@ -61,7 +60,7 @@ def get_weekly_schedule_context(request_user):
             'end_time': availability.end_time,
         })
 
-    for day, day_name in DAYS_OF_WEEK:
+    for day, day_name in CoachAvailability.DAYS_OF_WEEK:
         day_availabilities = existing_data[day]
         if day_availabilities:
             for availability in day_availabilities:
@@ -82,10 +81,6 @@ def get_weekly_schedule_context(request_user):
             pass
             
     context = {
-        'weekly_schedule_formset': BaseWeeklyScheduleFormSet(initial=initial_data),
-        'days_of_week': DAYS_OF_WEEK,
-        'override_form': DateOverrideForm(),
-        'vacation_form': CoachVacationForm(),
         'google_calendar_connected': google_calendar_connected,
     }
     return context
