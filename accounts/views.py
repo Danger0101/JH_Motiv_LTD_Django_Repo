@@ -243,7 +243,7 @@ def get_coaches_for_offering(request):
     # Render options for the coach select dropdown
     return render(request, 'accounts/partials/coach_options.html', {'coaches': coaches})
 
-    @login_required
+@login_required
 def get_available_slots(request):
     enrollment_id = request.GET.get('enrollment_id')
     coach_id = request.GET.get('coach_id')
