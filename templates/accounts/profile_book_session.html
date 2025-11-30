@@ -27,7 +27,8 @@
                     class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
                     hx-get="{% url 'accounts:get_available_slots' %}"
                     hx-target="#available-slots-container"
-                    hx-trigger="change from:#coach_id, change from:#enrollment_id">
+                    hx-trigger="change from:#coach_id, change from:#enrollment_id"
+                    hx-include="#enrollment_id">
                 <option value="">-- Select a Coach --</option>
                 {% if coaches %}
                     {% for coach in coaches %}
