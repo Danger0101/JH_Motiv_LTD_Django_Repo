@@ -15,7 +15,7 @@ def profile_availability(request):
     """
     HTMX view to load the availability tab content.
     """
-    coach_profile = request.user.coachprofile
+    coach_profile = request.user.coach_profile
 
     # 1. Define the FormSet Factory
     WeeklyScheduleFormSet = modelformset_factory(
@@ -55,7 +55,7 @@ class SetRecurringScheduleView(LoginRequiredMixin, View):
             can_delete=False
         )
         queryset = CoachAvailability.objects.filter(
-            coach=request.user.coachprofile
+            coach=request.user.coach_profile
         ).order_by('day_of_week')
         weekly_schedule_formset = WeeklyScheduleFormSet(queryset=queryset)
         context = get_weekly_schedule_context(request.user)
@@ -71,14 +71,14 @@ class SetRecurringScheduleView(LoginRequiredMixin, View):
             can_delete=False
         )
         queryset = CoachAvailability.objects.filter(
-            coach=request.user.coachprofile
+            coach=request.user.coach_profile
         ).order_by('day_of_week')
         weekly_schedule_formset = WeeklyScheduleFormSet(request.POST, queryset=queryset)
         if weekly_schedule_formset.is_valid():
             with transaction.atomic():
                 instances = weekly_schedule_formset.save(commit=False)
                 for instance in instances:
-                    instance.coach = request.user.coachprofile
+                    instance.coach = request.user.coach_profile
                     instance.save()
             # Handle HTMX request: re-render partial or return empty response
             if request.htmx:
