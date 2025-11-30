@@ -32,8 +32,8 @@ DAYS_OF_WEEK = [
 
 class WeeklyScheduleForm(forms.Form):
     day_of_week = forms.ChoiceField(choices=DAYS_OF_WEEK, widget=forms.HiddenInput)
-    start_time = forms.TimeField(widget=TimeInput(attrs={'type': 'time'}), required=False)
-    end_time = forms.TimeField(widget=TimeInput(attrs={'type': 'time'}), required=False)
+    start_time = forms.TimeField(widget=TimeInput(attrs={'type': 'time', 'step': 900}), required=False)
+    end_time = forms.TimeField(widget=TimeInput(attrs={'type': 'time', 'step': 900}), required=False)
 
     def clean(self):
         cleaned_data = super().clean()
