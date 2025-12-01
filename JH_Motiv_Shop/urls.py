@@ -31,7 +31,6 @@ urlpatterns = [
     # Coaching System Apps
     path('', include('core.urls', namespace='core')),
     path('coach/', include('coaching_booking.urls')),
-    path('dashboard/', include('dashboard.urls', namespace='dashboard')),
     path('info/', include('coaching_client.urls')),
     path('admin/offers/', include('coaching_core.urls', namespace='coaching')),
     path('coach/time/', include('coaching_availability.urls', namespace='coaching_availability')),

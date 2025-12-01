@@ -3,6 +3,7 @@ from django.utils import timezone
 from datetime import timedelta
 from accounts.models import User
 from coaching_core.models import CoachProfile, Offering
+from dateutil.relativedelta import relativedelta
 
 SESSION_STATUS_CHOICES = (
     ('BOOKED', 'Booked'),
@@ -10,8 +11,6 @@ SESSION_STATUS_CHOICES = (
     ('CANCELED', 'Canceled'),
     ('RESCHEDULED', 'Rescheduled'),
 )
-
-from dateutil.relativedelta import relativedelta
 
 class ClientOfferingEnrollment(models.Model):
     """
@@ -25,7 +24,7 @@ class ClientOfferingEnrollment(models.Model):
     )
     offering = models.ForeignKey(
         Offering,
-        on_delete=models.PROTECT, # Don't delete enrollment if offering is deleted
+        on_delete=models.PROTECT,
         related_name='enrollments',
         verbose_name="Offering"
     )
@@ -105,7 +104,7 @@ class SessionBooking(models.Model):
         on_delete=models.CASCADE,
         related_name='bookings',
         verbose_name="Enrollment",
-        null=True, blank=True # Can be null for taster sessions
+        null=True, blank=True 
     )
     coach = models.ForeignKey(
         CoachProfile,
@@ -144,6 +143,88 @@ class SessionBooking(models.Model):
         verbose_name_plural = "Session Bookings"
         unique_together = ('coach', 'start_datetime')
         ordering = ['start_datetime']
+
+    def __str__(self):
+        return f"Session for {self.client.get_full_name()} with {self.coach.user.get_full_name()} at {self.start_datetime.strftime('%Y-%m-%d %H:%M')}"
+
+    def get_duration_minutes(self):
+        """Calculates the duration of the session in minutes."""
+        if self.start_datetime and self.end_datetime:
+            duration = self.end_datetime - self.start_datetime
+            return int(duration.total_seconds() / 60)
+        return 0
+
+    def save(self, *args, **kwargs):
+        # Automatically set client and coach from enrollment if not provided
+        if self.enrollment and not self.client_id:
+            self.client = self.enrollment.client
+        if self.enrollment and not self.coach_id:
+            self.coach = self.enrollment.coach
+        
+        # Automatically calculate end_datetime if not provided
+        if self.start_datetime and not self.end_datetime:
+            if self.enrollment:
+                session_minutes = self.enrollment.offering.session_length_minutes
+                self.end_datetime = self.start_datetime + timedelta(minutes=session_minutes)
+            elif hasattr(self, 'taster_session') and self.taster_session:
+                self.end_datetime = self.start_datetime + timedelta(minutes=90)
+            else:
+                 # Fallback default if no enrollment or taster link yet
+                 self.end_datetime = self.start_datetime + timedelta(minutes=60)
+
+        if not self.pk and self.enrollment: # If new booking with enrollment, decrement remaining sessions
+            self.enrollment.remaining_sessions -= 1
+            self.enrollment.save()
+            
+        super().save(*args, **kwargs)
+
+    def cancel(self):
+        """Cancels the session and handles session forfeiture."""
+        if self.enrollment:
+            cancellation_cutoff = self.start_datetime - timedelta(hours=24)
+            if timezone.now() >= cancellation_cutoff:
+                # Late cancellation, session is forfeited
+                self.status = 'CANCELED'
+                self.save()
+                return False 
+            else:
+                # Not a late cancellation, restore session
+                self.enrollment.remaining_sessions += 1
+                self.enrollment.save()
+                self.status = 'CANCELED'
+                self.save()
+                return True 
+        elif hasattr(self, 'taster_session') and self.taster_session:
+            self.taster_session.status = 'APPROVED'
+            self.taster_session.save()
+            self.status = 'CANCELED'
+            self.save()
+            return True 
+
+    def reschedule(self, new_start_time):
+        """Reschedules the session and handles session forfeiture."""
+        if self.enrollment:
+            reschedule_cutoff = self.start_datetime - timedelta(hours=24)
+            if timezone.now() >= reschedule_cutoff:
+                # Late rescheduling, session is forfeited
+                self.status = 'RESCHEDULED'
+                self.save()
+                return False 
+            else:
+                # Not a late rescheduling, update session time
+                self.start_datetime = new_start_time
+                session_minutes = self.enrollment.offering.session_length_minutes
+                self.end_datetime = new_start_time + timedelta(minutes=session_minutes)
+                self.status = 'RESCHEDULED'
+                self.save()
+                return True 
+        elif hasattr(self, 'taster_session') and self.taster_session:
+            self.start_datetime = new_start_time
+            self.end_datetime = new_start_time + timedelta(minutes=90)
+            self.status = 'RESCHEDULED'
+            self.save()
+            return True 
+
 
 TASTER_SESSION_STATUS_CHOICES = (
     ('PENDING', 'Pending'),
@@ -201,79 +282,5 @@ class TasterSession(models.Model):
         return timezone.now().date() > self.booking_expiry_date
 
     def __str__(self):
-        return f"Session for {self.client.get_full_name()} with {self.coach.user.get_full_name()} at {self.start_datetime.strftime('%Y-%m-%d %H:%M')}"
-
-    def get_duration_minutes(self):
-        """Calculates the duration of the session in minutes."""
-        if self.start_datetime and self.end_datetime:
-            duration = self.end_datetime - self.start_datetime
-            return int(duration.total_seconds() / 60)
-        return 0
-
-    def save(self, *args, **kwargs):
-        # Automatically set client and coach from enrollment if not provided
-        if self.enrollment and not self.client_id:
-            self.client = self.enrollment.client
-        if self.enrollment and not self.coach_id:
-            self.coach = self.enrollment.coach
-        
-        # Automatically calculate end_datetime if not provided
-        if self.start_datetime and not self.end_datetime:
-            if self.enrollment:
-                session_minutes = self.enrollment.offering.session_length_minutes
-                self.end_datetime = self.start_datetime + timedelta(minutes=session_minutes)
-            elif hasattr(self, 'taster_session') and self.taster_session:
-                self.end_datetime = self.start_datetime + timedelta(minutes=90)
-
-        if not self.pk and self.enrollment: # If new booking with enrollment, decrement remaining sessions
-            self.enrollment.remaining_sessions -= 1
-            self.enrollment.save()
-            
-        super().save(*args, **kwargs)
-
-    def cancel(self):
-        """Cancels the session and handles session forfeiture."""
-        if self.enrollment:
-            cancellation_cutoff = self.start_datetime - timedelta(hours=24)
-            if timezone.now() >= cancellation_cutoff:
-                # Late cancellation, session is forfeited
-                self.status = 'CANCELED'
-                self.save()
-                return False # Indicates session was forfeited
-            else:
-                # Not a late cancellation, restore session
-                self.enrollment.remaining_sessions += 1
-                self.enrollment.save()
-                self.status = 'CANCELED'
-                self.save()
-                return True # Indicates session was restored
-        elif hasattr(self, 'taster_session') and self.taster_session:
-            self.taster_session.status = 'APPROVED'
-            self.taster_session.save()
-            self.status = 'CANCELED'
-            self.save()
-            return True # Indicates taster session is available for re-booking
-
-    def reschedule(self, new_start_time):
-        """Reschedules the session and handles session forfeiture."""
-        if self.enrollment:
-            reschedule_cutoff = self.start_datetime - timedelta(hours=24)
-            if timezone.now() >= reschedule_cutoff:
-                # Late rescheduling, session is forfeited
-                self.status = 'RESCHEDULED'
-                self.save()
-                return False # Indicates session was forfeited
-            else:
-                # Not a late rescheduling, update session time
-                self.start_datetime = new_start_time
-                session_minutes = self.enrollment.offering.session_length_minutes
-                self.end_datetime = new_start_time + timedelta(minutes=session_minutes)
-                self.status = 'RESCHEDULED'
-                self.save()
-                return True # Indicates session was successfully rescheduled
-        elif hasattr(self, 'taster_session') and self.taster_session:
-            self.start_datetime = new_start_time
-            self.end_datetime = new_start_time + timedelta(minutes=90)
-            self.status = 'RESCHEDULED'
-            self.save()
-            return True # Indicates taster session was successfully rescheduled
+        # TasterSession does not have start_datetime, so we refer to the request date
+        return f"Taster request for {self.client.get_full_name()} with {self.coach.user.get_full_name()} on {self.requested_on.strftime('%Y-%m-%d')}"
