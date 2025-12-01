@@ -7,8 +7,8 @@
             {% for slot in available_slots %}
                 <li class="flex justify-between items-center p-3 bg-gray-50 rounded-md">
                     <span>{{ slot.start_time|date:"DATETIME_FORMAT" }} - {{ slot.end_time|date:"TIME_FORMAT" }}</span>
-                    <button hx-post="{% url 'accounts:book_session_confirm' %}"
-                            hx-vals='{"enrollment_id": "{{ request.GET.enrollment_id }}", "coach_id": "{{ request.GET.coach_id }}", "start_time": "{{ slot.start_time|date:"c" }}"}' {# Pass start_time in ISO 8601 format #}
+                    <button hx-post="{% url 'coaching_booking:book_session' %}"
+                            hx-vals='{"enrollment_id": "{{ request.GET.enrollment_id }}", "coach_id": "{{ request.GET.coach_id }}", "start_time": "{{ slot.start_time|date:"Y-m-d H:i" }}"}'
                             hx-confirm="Are you sure you want to book the session for {{ slot.start_time|date:"DATETIME_FORMAT" }}?"
                             hx-target="#profile-content" hx-swap="innerHTML"
                             class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">

@@ -247,3 +247,140 @@ class OfferEnrollmentStartView(LoginRequiredMixin, DetailView):
         context['summary'] = get_cart_summary_data(cart)
         
         return context
+
+# ... existing imports and views ...
+
+@login_required
+def profile_book_session_partial(request):
+    """
+    Renders the initial 'Book Session' tab content (dropdowns for offering/coach).
+    """
+    # Fetch active enrollments for the user
+    user_offerings = ClientOfferingEnrollment.objects.filter(
+        client=request.user,
+        remaining_sessions__gt=0,
+        is_active=True,
+        expiration_date__gte=timezone.now()
+    ).select_related('offering')
+
+    # Fetch all available coaches
+    coaches = CoachProfile.objects.filter(
+        user__is_active=True,
+        is_available_for_new_clients=True
+    ).select_related('user')
+    
+    today = timezone.now().date()
+
+    context = {
+        'user_offerings': user_offerings,
+        'coaches': coaches,
+        'initial_year': today.year,
+        'initial_month': today.month,
+    }
+    return render(request, 'coaching_booking/profile_book_session.html', context)
+
+@login_required
+def get_booking_calendar(request):
+    """
+    Returns the HTML for the calendar widget (HTMX).
+    """
+    # Get parameters
+    try:
+        year = int(request.GET.get('year', timezone.now().year))
+        month = int(request.GET.get('month', timezone.now().month))
+    except ValueError:
+        year = timezone.now().year
+        month = timezone.now().month
+
+    coach_id = request.GET.get('coach_id')
+    enrollment_id = request.GET.get('enrollment_id')
+
+    # Calculate Month Navigation
+    date_obj = date(year, month, 1)
+    
+    # Previous Month
+    prev_date = date_obj - timedelta(days=1)
+    prev_month = prev_date.month
+    prev_year = prev_date.year
+    
+    # Next Month
+    # careful with December
+    if month == 12:
+        next_month = 1
+        next_year = year + 1
+    else:
+        next_month = month + 1
+        next_year = year
+
+    # Generate Calendar Grid
+    cal = calendar.Calendar(firstweekday=0) # 0 = Monday
+    calendar_rows = cal.monthdayscalendar(year, month)
+    
+    current_month_name = date_obj.strftime('%B')
+
+    context = {
+        'calendar_rows': calendar_rows,
+        'year': year,
+        'month': month,
+        'current_month_name': current_month_name,
+        'prev_month': prev_month,
+        'prev_year': prev_year,
+        'next_month': next_month,
+        'next_year': next_year,
+        'today': timezone.now().date(),
+        'coach_id': coach_id,
+        'enrollment_id': enrollment_id,
+    }
+    return render(request, 'coaching_booking/partials/_calendar_widget.html', context)
+
+@login_required
+def get_daily_slots(request):
+    """
+    Returns the available time slots for a specific date (HTMX).
+    """
+    date_str = request.GET.get('date')
+    coach_id = request.GET.get('coach_id')
+    enrollment_id = request.GET.get('enrollment_id')
+
+    if not all([date_str, coach_id, enrollment_id]):
+        return render(request, 'coaching_booking/partials/available_slots.html', {
+            'error_message': 'Please select an offering and a coach first.'
+        })
+
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        coach_profile = CoachProfile.objects.get(id=coach_id)
+        enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id, client=request.user)
+        
+        # Get session length from the offering
+        session_length = enrollment.offering.session_length_minutes
+        
+        # Calculate slots
+        available_slots = get_coach_available_slots(
+            coach_profile,
+            selected_date,
+            selected_date, # Check just this one day
+            session_length,
+            offering_type='one_on_one'
+        )
+        
+        # available_slots is a list of datetime objects.
+        # We need to construct objects that templates can easily use if needed, 
+        # but the list of datetimes is usually sufficient for the template loop.
+        formatted_slots = []
+        for slot in available_slots:
+            formatted_slots.append({
+                'start_time': slot,
+                'end_time': slot + timedelta(minutes=session_length)
+            })
+
+        context = {
+            'available_slots': formatted_slots,
+            'selected_date': selected_date,
+        }
+    except (ValueError, CoachProfile.DoesNotExist, ClientOfferingEnrollment.DoesNotExist):
+        context = {'error_message': 'Invalid request data.'}
+    except Exception as e:
+        context = {'error_message': f'Error fetching slots: {str(e)}'}
+
+    return render(request, 'coaching_booking/partials/available_slots.html', context)
