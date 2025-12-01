@@ -276,6 +276,9 @@ def profile_book_session_partial(request):
         'coaches': coaches,
         'initial_year': today.year,
         'initial_month': today.month,
+        # Explicitly add these to context to prevent "VariableDoesNotExist" log errors
+        'selected_enrollment': None,
+        'selected_coach': None, 
     }
     return render(request, 'coaching_booking/profile_book_session.html', context)
 
