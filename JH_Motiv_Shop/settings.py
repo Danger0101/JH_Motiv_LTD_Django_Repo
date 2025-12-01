@@ -59,7 +59,6 @@ INSTALLED_APPS = [
     'coaching_booking',
     'coaching_availability',
     'coaching_client',
-    'dashboard',
 ]
 
 MIDDLEWARE = [

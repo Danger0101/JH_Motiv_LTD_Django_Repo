@@ -12,7 +12,7 @@ urlpatterns = [
     path('profile/offerings/', views.profile_offerings_partial, name='profile_offerings'),
     path('profile/bookings/', views.profile_bookings_partial, name='profile_bookings'),
     path('profile/get-coaches-for-offering/', views.get_coaches_for_offering, name='get_coaches_for_offering'),
-    path('profile/get-available-slots/', views.get_available_slots, name='get_available_slots'),
+    
 
 
     # allauth urls (explicitly defined for namespacing)
