@@ -450,15 +450,15 @@ def get_daily_slots(request):
                         offering_type='one_on_one'
                     )
 
-            for slot_start_datetime in generated_slots:
-                # Calculate end_datetime for the slot
-                slot_end_datetime = slot_start_datetime + timedelta(minutes=session_length_minutes)
-                daily_slots_data.append({
-                    'display_time': slot_start_datetime.strftime('%I:%M %p'),
-                    'start_datetime_iso': slot_start_datetime.isoformat(), # YYYY-MM-DDTHH:MM:SS format
-                    'end_datetime_iso': slot_end_datetime.isoformat(),
-                })
-                    
+                    for slot_start_datetime in generated_slots:
+                        # Calculate end_datetime for the slot
+                        slot_end_datetime = slot_start_datetime + timedelta(minutes=session_length_minutes)
+                        daily_slots_data.append({
+                            'display_time': slot_start_datetime.strftime('%I:%M %p'),
+                            'start_datetime_iso': slot_start_datetime.isoformat(), # YYYY-MM-DDTHH:MM:SS format
+                            'end_datetime_iso': slot_end_datetime.isoformat(),
+                        })
+                        
                     if not daily_slots_data:
                         error_message = "No available slots for this day."
 
