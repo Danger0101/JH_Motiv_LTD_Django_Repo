@@ -382,6 +382,7 @@ def get_daily_slots(request):
         context = {
             'available_slots': formatted_slots,
             'selected_date': selected_date,
+            'error_message': None,
         }
     except (ValueError, CoachProfile.DoesNotExist, ClientOfferingEnrollment.DoesNotExist):
         context = {'error_message': 'Invalid request data.'}
