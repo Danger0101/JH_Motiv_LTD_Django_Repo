@@ -400,86 +400,70 @@ def get_booking_calendar(request):
 @login_required
 def get_daily_slots(request):
     date_str = request.GET.get('date')
-    
+    coach_id_str = request.GET.get('coach_id')
+    enrollment_id_str = request.GET.get('enrollment_id')
+
     try:
         selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
     except (ValueError, TypeError):
-        selected_date = date.today() # Fallback
-
-    coach_id_str = request.GET.get('coach_id')
-    enrollment_id_str = request.GET.get('enrollment_id')
+        selected_date = date.today() # Fallback to today if parsing fails
 
     daily_slots_data = []
     error_message = None
     
-    # Initialize coach_id and enrollment_id to None for context
-    coach_id = None
-    enrollment_id = None
-
-    # Now, proceed with the logic that depends on selected_date
-    can_fetch_slots = True
+    # These are passed to the template context regardless of success/failure
+    coach_id = coach_id_str
+    enrollment_id = enrollment_id_str
 
     if not coach_id_str or not coach_id_str.isdigit():
-        error_message = "Please select a coach."
-        can_fetch_slots = False
+        error_message = "Please select a coach to see available times."
+    elif not enrollment_id_str or not enrollment_id_str.isdigit():
+        error_message = "Please select an offering to see available times."
     else:
-        coach_id = int(coach_id_str)
-
-    if not enrollment_id_str or not enrollment_id_str.isdigit():
-        if error_message: 
-            error_message += " Also, please select an offering."
-        else:
-            error_message = "Please select an offering."
-        can_fetch_slots = False
-    else:
-        enrollment_id = int(enrollment_id_str)
-
-    if can_fetch_slots:
-        try: 
-            coach_profile = CoachProfile.objects.get(id=coach_id)
-            enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id, client=request.user)
-            offering = enrollment.offering
-            session_length_minutes = offering.session_length_minutes
+        try:
+            # All IDs are present, proceed to fetch data
+            coach_profile = CoachProfile.objects.get(id=int(coach_id_str))
+            enrollment = ClientOfferingEnrollment.objects.get(id=int(enrollment_id_str), client=request.user)
+            
+            session_length_minutes = enrollment.offering.session_length_minutes
 
             if session_length_minutes <= 0:
-                error_message = "Session length for the selected offering is invalid."
+                error_message = "The session length for this offering is not configured correctly."
             else:
+                # Fetch available slots from the utility function
                 generated_slots = get_coach_available_slots(
                     coach_profile,
                     selected_date,
                     selected_date,
                     session_length_minutes,
-                    offering_type='one_on_one'
+                    offering_type='one_on_one'  # As determined by business logic
                 )
 
+                # Format the slots for the template
                 for slot_start_datetime in generated_slots:
-                    slot_end_datetime = slot_start_datetime + timedelta(minutes=session_length_minutes)
                     daily_slots_data.append({
                         'display_time': slot_start_datetime.strftime('%I:%M %p'),
                         'start_datetime_iso': slot_start_datetime.isoformat(),
-                        'end_datetime_iso': slot_end_datetime.isoformat(),
                     })
                 
-                # FIX INDENTATION HERE
+                # **CRUCIAL FIX**: Check for empty slots *after* the loop has finished
                 if not daily_slots_data:
                     error_message = "No available slots for this day."
 
-        except ValueError as e:
-            error_message = f"Invalid ID format: {e}"
-        except ClientOfferingEnrollment.DoesNotExist:
-            error_message = "Selected offering enrollment not found."
         except CoachProfile.DoesNotExist:
-            error_message = "Selected coach not found."
+            error_message = "The selected coach could not be found."
+        except ClientOfferingEnrollment.DoesNotExist:
+            error_message = "The selected offering enrollment could not be found for your account."
         except Exception as e:
+            # Generic error for unexpected issues, good for security to not expose details
             error_message = f"An unexpected error occurred: {e}"
-
 
     context = {
         'daily_slots': daily_slots_data,
         'error_message': error_message,
         'selected_date': selected_date, 
-        'coach_id': coach_id_str, 
-        'enrollment_id': enrollment_id_str,
+        'coach_id': coach_id, 
+        'enrollment_id': enrollment_id,
     }
     return render(request, 'accounts/partials/_day_slots.html', context)
 
