@@ -12,13 +12,12 @@
             {% for slot in daily_slots %}
                 <form hx-post="{% url 'accounts:book_session_confirm' %}" hx-confirm="Are you sure you want to book this session?">
                     {% csrf_token %}
-                    <input type="hidden" name="date" value="{{ selected_date|date:"Y-m-d" }}">
-                    <input type="hidden" name="time" value="{{ slot }}">
+                    <input type="hidden" name="start_datetime" value="{{ slot.start_datetime_iso }}">
                     <input type="hidden" name="coach_id" value="{{ coach_id }}">
                     <input type="hidden" name="enrollment_id" value="{{ enrollment_id }}">
                     <button type="submit"
                         class="w-full py-2 px-3 text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-md transition-colors">
-                        {{ slot }}
+                        {{ slot.display_time }}
                     </button>
                 </form>
             {% endfor %}

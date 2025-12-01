@@ -1,6 +1,7 @@
-# accounts/views.py (Updated)
-
 from django.shortcuts import render, get_object_or_404
+from django.views.decorators.http import require_POST
+from django.contrib import messages
+from django.urls import reverse
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
 from django.http import HttpResponse, JsonResponse
@@ -481,3 +482,44 @@ def get_daily_slots(request):
         'enrollment_id': enrollment_id_str,
     }
     return render(request, 'accounts/partials/_day_slots.html', context)
+
+@login_required
+@require_POST
+def book_session_confirm(request):
+    enrollment_id = request.POST.get('enrollment_id')
+    coach_id = request.POST.get('coach_id')
+    start_datetime_str = request.POST.get('start_datetime')
+
+    try:
+        enrollment = get_object_or_404(ClientOfferingEnrollment, id=enrollment_id, client=request.user)
+        coach = get_object_or_404(CoachProfile, id=coach_id)
+        
+        # Parse ISO string
+        start_datetime = datetime.fromisoformat(start_datetime_str)
+        
+        # Create Booking
+        SessionBooking.objects.create(
+            client=request.user,
+            coach=coach,
+            offering=enrollment.offering,
+            start_datetime=start_datetime,
+            status='confirmed' # Or 'pending'
+        )
+        
+        # Deduct Session
+        if enrollment.remaining_sessions > 0:
+            enrollment.remaining_sessions -= 1
+            enrollment.save()
+            
+        messages.success(request, f"Session confirmed for {start_datetime.strftime('%B %d at %I:%M %p')}")
+        
+        # HTMX Redirect to refresh page
+        response = HttpResponse(status=204)
+        response['HX-Redirect'] = reverse('accounts:profile')
+        return response
+
+    except Exception as e:
+        messages.error(request, f"Error booking session: {e}")
+        response = HttpResponse(status=204)
+        response['HX-Redirect'] = reverse('accounts:profile')
+        return response
