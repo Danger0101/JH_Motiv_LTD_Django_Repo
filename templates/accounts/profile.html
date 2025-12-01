@@ -173,13 +173,13 @@
                 <div class="bg-white p-6 rounded-lg shadow-lg mt-4">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">Marketing Preferences</h2>
                     {% with marketing_preference=user.marketing_preference %}
-                    <form hx-post="{% url 'account:update_marketing_preference' %}" 
+                    <form hx-post="{% url 'accounts:update_marketing_preference' %}" 
                           hx-target="#marketing-preference-status-wrapper" hx-swap="innerHTML">
                         {% csrf_token %}
                         <div class="flex items-center space-x-2">
                             <input type="checkbox" name="is_subscribed" id="marketing_opt_in"
                                    {% if marketing_preference.is_subscribed %}checked{% endif %}
-                                   hx-post="{% url 'account:update_marketing_preference' %}"
+                                   hx-post="{% url 'accounts:update_marketing_preference' %}"
                                    hx-trigger="change"
                                    hx-target="#marketing-preference-status-wrapper"
                                    hx-swap="innerHTML"
