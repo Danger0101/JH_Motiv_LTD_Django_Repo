@@ -67,7 +67,7 @@
                     {% if client_upcoming_sessions %}
                         <ul class="list-disc list-inside space-y-1">
                             {% for session in client_upcoming_sessions %}
-                                <li>{{ session.start_datetime|date:"M d, H:i" }} with {{ session.coach.get_full_name|default:session.coach.username }}</li>
+                                <li>{{ session.start_datetime|date:"M d, H:i" }} with {{ session.coach.user.get_full_name|default:session.coach.user.username }}</li>
                             {% endfor %}
                         </ul>
                     {% else %}
@@ -78,7 +78,7 @@
                     {% if client_past_sessions %}
                         <ul class="list-disc list-inside space-y-1">
                             {% for session in client_past_sessions %}
-                                <li>{{ session.start_datetime|date:"M d, H:i" }} with {{ session.coach.get_full_name|default:session.coach.username }}</li>
+                                <li>{{ session.start_datetime|date:"M d, H:i" }} with {{ session.coach.user.get_full_name|default:session.coach.user.username }}</li>
                             {% endfor %}
                         </ul>
                     {% else %}
