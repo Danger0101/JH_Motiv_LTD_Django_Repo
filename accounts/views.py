@@ -99,6 +99,11 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             start_datetime__lt=now
         ).order_by('-start_datetime') # Order past sessions by most recent first
 
+        # ADD THIS: Combined queryset for the profile_bookings.html partial
+        context['user_bookings'] = SessionBooking.objects.filter(
+            client=self.request.user
+        ).order_by('start_datetime')
+
         # Add flags for dashboard elements
         context['is_coach'] = self.request.user.is_coach
         context['is_staff'] = self.request.user.is_staff

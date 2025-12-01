@@ -1,20 +1,28 @@
-<div class="bg-white p-6 rounded-lg shadow-lg">
-    <h2 class="text-2xl font-bold text-gray-800 mb-6">Reschedule Session</h2>
-    <p class="text-gray-600 mb-4">Current session: {{ booking.start_datetime|date:"M d, Y H:i" }} with {{ booking.coach.user.get_full_name }}</p>
+<div class="bg-white p-6 rounded-lg shadow-lg border border-indigo-100">
+    <h2 class="text-xl font-bold text-gray-800 mb-4">Reschedule Session</h2>
+    <p class="text-gray-600 mb-4">
+        Current session: <strong>{{ booking.start_datetime|date:"M d, Y H:i" }}</strong> 
+        with {{ booking.coach.user.get_full_name }}
+    </p>
 
-    <form hx-post="{% url 'coaching_booking:reschedule_session' booking.id %}" hx-target="#profile-content" hx-swap="innerHTML">
+    <form hx-post="{% url 'coaching_booking:reschedule_session' booking.id %}" 
+          hx-target="#profile-bookings" 
+          hx-swap="innerHTML">
         {% csrf_token %}
         <div class="mb-4">
             <label for="new_start_time" class="block text-sm font-medium text-gray-700">New Start Time:</label>
             <input type="datetime-local" id="new_start_time" name="new_start_time" required
                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
         </div>
-        <div class="flex space-x-4">
+        <div class="flex space-x-3">
             <button type="submit"
                     class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                 Confirm Reschedule
             </button>
-            <button type="button" hx-get="{% url 'accounts:profile_bookings' %}" hx-target="#profile-content" hx-swap="innerHTML"
+            <button type="button" 
+                    hx-get="{% url 'accounts:profile_bookings' %}" 
+                    hx-target="#profile-bookings" 
+                    hx-swap="innerHTML"
                     class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                 Cancel
             </button>

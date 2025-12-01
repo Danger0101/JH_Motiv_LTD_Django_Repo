@@ -60,32 +60,13 @@
 
             <!-- My Coaching Tab -->
             <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="my-coaching" role="tabpanel" aria-labelledby="my-coaching-tab" x-show="activeTab === 'my-coaching'">
-                <div class="bg-white p-6 rounded-lg shadow-lg">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">My Coaching Sessions</h2>
-
-                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Upcoming Sessions</h3>
-                    {% if client_upcoming_sessions %}
-                        <ul class="list-disc list-inside space-y-1">
-                            {% for session in client_upcoming_sessions %}
-                                <li>{{ session.start_datetime|date:"M d, H:i" }} with {{ session.coach.user.get_full_name|default:session.coach.user.username }}</li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <p>No upcoming sessions.</p>
-                    {% endif %}
-
-                    <h3 class="text-lg font-semibold text-gray-700 mt-4 mb-2">Past Sessions</h3>
-                    {% if client_past_sessions %}
-                        <ul class="list-disc list-inside space-y-1">
-                            {% for session in client_past_sessions %}
-                                <li>{{ session.start_datetime|date:"M d, H:i" }} with {{ session.coach.user.get_full_name|default:session.coach.user.username }}</li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <p>No past sessions.</p>
-                    {% endif %}
-
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4 mt-8">My Coaching Offerings</h2>
+    
+                <div id="profile-bookings">
+                    {% include 'accounts/profile_bookings.html' %}
+                </div>
+            
+                <div class="bg-white p-6 rounded-lg shadow-lg mt-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">My Coaching Offerings</h2>
                     {% if user_offerings %}
                         <ul class="list-disc list-inside space-y-1">
                             {% for offering in user_offerings %}
@@ -95,7 +76,7 @@
                     {% else %}
                         <p>You have not purchased any coaching offerings yet.</p>
                     {% endif %}
-
+            
                     <h3 class="text-lg font-semibold text-gray-700 mt-4 mb-2">Available Credits</h3>
                     {% if available_credits %}
                         <ul class="list-disc list-inside space-y-1">
