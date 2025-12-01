@@ -8,7 +8,7 @@
             <label for="enrollment_id" class="block text-sm font-medium text-gray-700">Select Offering:</label>
             <select id="enrollment_id" name="enrollment_id"
                     class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                    hx-get="{% url 'accounts:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}"
+                    hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}"
                     hx-target="#calendar-container"
                     hx-trigger="change"
                     hx-include="#coach_id, #enrollment_id"> {# Include coach_id as well #}
@@ -27,7 +27,7 @@
             <label for="coach_id" class="block text-sm font-medium text-gray-700">Select Coach:</label>
             <select id="coach_id" name="coach_id"
                     class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                    hx-get="{% url 'accounts:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}"
+                    hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}"
                     hx-target="#calendar-container"
                     hx-trigger="change"
                     hx-include="#enrollment_id, #coach_id"> {# Include enrollment_id as well #}
@@ -46,7 +46,7 @@
         <div class="flex flex-col md:flex-row gap-6 mt-6">
             <div id="calendar-container" class="md:w-2/3"
                  hx-trigger="load, change from:#enrollment_id, change from:#coach_id" {# Load on page load, or when selections change #}
-                 hx-get="{% url 'accounts:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}&coach_id={{ selected_coach.id|default_if_none:'' }}&enrollment_id={{ selected_enrollment.id|default_if_none:'' }}"
+                 hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}&coach_id={{ selected_coach.id|default_if_none:'' }}&enrollment_id={{ selected_enrollment.id|default_if_none:'' }}"
                  hx-swap="innerHTML">
                 <p class="text-gray-500">Select an offering and a coach to load the calendar.</p>
             </div>
