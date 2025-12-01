@@ -11,9 +11,41 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import HttpResponseRedirect, HttpResponse
+from django.core.paginator import Paginator
+from django.db.models import Q
 
 # Assumed imports from other apps
 from coaching_core.models import Offering, Workshop
+# ... (rest of the file)
+def _get_paginated_bookings_for_tab(request, user, active_tab):
+    now = timezone.now()
+    bookings_qs = SessionBooking.objects.filter(client=user)
+
+    if active_tab == 'upcoming':
+        bookings_list = bookings_qs.filter(
+            status__in=['BOOKED', 'RESCHEDULED'],
+            start_datetime__gte=now
+        ).order_by('start_datetime')
+    elif active_tab == 'past':
+        bookings_list = bookings_qs.filter(
+            Q(status='COMPLETED') |
+            Q(status__in=['BOOKED', 'RESCHEDULED'], start_datetime__lt=now)
+        ).order_by('-start_datetime')
+    elif active_tab == 'canceled':
+        bookings_list = bookings_qs.filter(status='CANCELED').order_by('-start_datetime')
+    else: # Default to upcoming
+        active_tab = 'upcoming'
+        bookings_list = bookings_qs.filter(
+            status__in=['BOOKED', 'RESCHEDULED'],
+            start_datetime__gte=now
+        ).order_by('start_datetime')
+
+    paginator = Paginator(bookings_list, 10)
+    page_number = request.GET.get('page')
+    user_bookings_page = paginator.get_page(page_number)
+
+    return user_bookings_page, active_tab
+
 from coaching_availability.utils import get_coach_available_slots # Use the new utility function
 from coaching_client.models import ContentPage
 from accounts.models import CoachProfile
@@ -110,11 +142,23 @@ def book_session(request):
 @require_POST
 def cancel_session(request, booking_id):
     booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
-    booking.cancel() # This method handles session forfeiture/restoration
     
-    # Return the updated bookings partial
-    user_bookings = SessionBooking.objects.filter(client=request.user).order_by('start_datetime')
-    return render(request, 'accounts/profile_bookings.html', {'user_bookings': user_bookings})
+    is_credit_restored = booking.cancel()
+    
+    if is_credit_restored:
+        messages.success(request, "Session canceled. Your booking credit has been restored.")
+    else:
+        messages.warning(request, "Session canceled. Because this was within 24 hours, the credit was forfeited per our Terms of Service.")
+    
+    # After action, re-fetch the list for the correct tab
+    active_tab = request.GET.get('tab', 'canceled') # Default to canceled tab after cancellation
+    user_bookings_page, active_tab = _get_paginated_bookings_for_tab(request, request.user, active_tab)
+
+    context = {
+        'user_bookings_page': user_bookings_page,
+        'active_tab': active_tab,
+    }
+    return render(request, 'accounts/partials/_booking_list.html', context)
 
 @login_required
 def reschedule_session_form(request, booking_id):
@@ -125,51 +169,43 @@ def reschedule_session_form(request, booking_id):
 @require_POST
 def reschedule_session(request, booking_id):
     booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
-    
-    # For rescheduling, we need a new start time. This example assumes it's passed via POST.
-    # In a real scenario, you'd likely render a form to select a new time.
-    new_start_time_str = request.POST.get('new_start_time') 
-    if not new_start_time_str:
-        return HttpResponse("New start time is required for rescheduling.", status=400)
-    
-    try:
-        new_start_time = datetime.strptime(new_start_time_str, '%Y-%m-%d %H:%M')
-        
-        # --- Re-verify availability for rescheduling to prevent race conditions and enforce double-booking rules ---
-        session_length_minutes = booking.enrollment.offering.session_length_minutes
-        requested_date = new_start_time.date()
-        
-        # Get all available slots for the new date, excluding the *original* booking's slot
-        # This is tricky: we want to allow rescheduling into the original slot if it's the same,
-        # but the current `get_coach_available_slots` would filter it out.
-        # A simpler approach for now: check if the new slot is available generally.
-        # The `get_coach_available_slots` implicitly accounts for *other* bookings.
-        # If the user wants to reschedule *into their own original slot*, that would already
-        # be marked as booked and unavailable by `get_coach_available_slots`.
-        # For a true reschedule, we'd ideally temporarily "unbook" the old slot for the check.
-        # For simplicity, for rescheduling, we treat it as if they are booking a *new* slot,
-        # and their old slot will become free when the old booking is updated/canceled.
-        
-        truly_available_slots = get_coach_available_slots(
-            booking.coach, # CoachProfile object
-            requested_date,
-            requested_date, # Check only for this specific day
-            session_length_minutes,
-            offering_type='one_on_one'
-        )
+    new_start_time_str = request.POST.get('new_start_time')
+    active_tab = request.GET.get('tab', 'upcoming') # Keep track of the original tab
 
-        if new_start_time not in truly_available_slots:
-            return HttpResponse("The selected new slot is no longer available or conflicts with another booking.", status=409)
+    if not new_start_time_str:
+        messages.error(request, "Please select a new time.")
+    else:
+        try:
+            new_start_time = datetime.strptime(new_start_time_str, '%Y-%m-%dT%H:%M')
             
-        booking.reschedule(new_start_time) # This method handles session forfeiture/rescheduling
-        
-        # Return the updated bookings partial
-        user_bookings = SessionBooking.objects.filter(client=request.user).order_by('start_datetime')
-        return render(request, 'accounts/profile_bookings.html', {'user_bookings': user_bookings})
-    except ValueError:
-        return HttpResponse("Invalid new start time format.", status=400)
-    except Exception as e:
-        return HttpResponse(f"An error occurred during rescheduling: {e}", status=500)
+            session_length = booking.enrollment.offering.session_length_minutes
+            available_slots = get_coach_available_slots(
+                booking.coach, new_start_time.date(), new_start_time.date(), session_length, 'one_on_one'
+            )
+            
+            if new_start_time not in available_slots:
+                messages.error(request, "That time slot is no longer available. Please choose another.")
+            else:
+                result = booking.reschedule(new_start_time)
+                if result == 'LATE':
+                    messages.error(request, "Sessions cannot be rescheduled within 24 hours of the start time.")
+                else:
+                    messages.success(request, f"Session successfully rescheduled to {new_start_time.strftime('%B %d, %H:%M')}.")
+                    # If reschedule is successful, the tab should be 'upcoming'
+                    active_tab = 'upcoming'
+
+        except ValueError:
+            messages.error(request, "Invalid date format.")
+        except Exception as e:
+            messages.error(request, f"An error occurred: {e}")
+
+    # After action, re-fetch the list for the correct tab
+    user_bookings_page, active_tab = _get_paginated_bookings_for_tab(request, request.user, active_tab)
+    context = {
+        'user_bookings_page': user_bookings_page,
+        'active_tab': active_tab,
+    }
+    return render(request, 'accounts/partials/_booking_list.html', context)
 
 def coach_landing_view(request):
     """Renders the coach landing page, fetching all active coaches and offerings."""

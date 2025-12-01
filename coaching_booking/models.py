@@ -179,51 +179,56 @@ class SessionBooking(models.Model):
         super().save(*args, **kwargs)
 
     def cancel(self):
-        """Cancels the session and handles session forfeiture."""
-        if self.enrollment:
-            cancellation_cutoff = self.start_datetime - timedelta(hours=24)
-            if timezone.now() >= cancellation_cutoff:
-                # Late cancellation, session is forfeited
-                self.status = 'CANCELED'
-                self.save()
-                return False 
-            else:
-                # Not a late cancellation, restore session
+        """
+        Cancels the session. 
+        Returns True if credit was restored (Early Cancel).
+        Returns False if credit was forfeited (Late Cancel).
+        """
+        now = timezone.now()
+        cutoff = self.start_datetime - timedelta(hours=24)
+
+        if now < cutoff:
+            # EARLY CANCELLATION (> 24 hours)
+            # Restore the credit to the enrollment
+            if self.enrollment:
                 self.enrollment.remaining_sessions += 1
                 self.enrollment.save()
-                self.status = 'CANCELED'
-                self.save()
-                return True 
-        elif hasattr(self, 'taster_session') and self.taster_session:
-            self.taster_session.status = 'APPROVED'
-            self.taster_session.save()
+            
             self.status = 'CANCELED'
             self.save()
-            return True 
+            return True # Refunded credit
+        else:
+            # LATE CANCELLATION (< 24 hours)
+            # Credit is FORFEITED (not restored)
+            self.status = 'CANCELED' 
+            self.save()
+            return False # Forfeited
 
     def reschedule(self, new_start_time):
-        """Reschedules the session and handles session forfeiture."""
+        """
+        Reschedules the session.
+        Returns 'SUCCESS' if moved.
+        Returns 'LATE' if within 24 hour window (cannot move).
+        """
+        now = timezone.now()
+        cutoff = self.start_datetime - timedelta(hours=24)
+
+        if now >= cutoff:
+            # Too late to reschedule
+            return 'LATE'
+
+        # Update times
+        self.start_datetime = new_start_time
         if self.enrollment:
-            reschedule_cutoff = self.start_datetime - timedelta(hours=24)
-            if timezone.now() >= reschedule_cutoff:
-                # Late rescheduling, session is forfeited
-                self.status = 'RESCHEDULED'
-                self.save()
-                return False 
-            else:
-                # Not a late rescheduling, update session time
-                self.start_datetime = new_start_time
-                session_minutes = self.enrollment.offering.session_length_minutes
-                self.end_datetime = new_start_time + timedelta(minutes=session_minutes)
-                self.status = 'RESCHEDULED'
-                self.save()
-                return True 
-        elif hasattr(self, 'taster_session') and self.taster_session:
-            self.start_datetime = new_start_time
-            self.end_datetime = new_start_time + timedelta(minutes=90)
-            self.status = 'RESCHEDULED'
-            self.save()
-            return True 
+            session_minutes = self.enrollment.offering.session_length_minutes
+            self.end_datetime = new_start_time + timedelta(minutes=session_minutes)
+        else:
+            # Fallback for taster sessions or other defaults
+            self.end_datetime = new_start_time + timedelta(minutes=60)
+            
+        self.status = 'RESCHEDULED'
+        self.save()
+        return 'SUCCESS' 
 
 
 TASTER_SESSION_STATUS_CHOICES = (

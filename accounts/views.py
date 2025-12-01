@@ -7,6 +7,8 @@ from django.views.generic import TemplateView
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+from django.core.paginator import Paginator
+from django.db.models import Q
 from .models import MarketingPreference
 from allauth.account.views import LoginView, SignupView, PasswordResetView, PasswordChangeView, PasswordSetView, LogoutView, PasswordResetDoneView, PasswordResetDoneView
 from cart.utils import get_or_create_cart, get_cart_summary_data
@@ -88,21 +90,9 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         # Fetch user's coaching offerings (enrollments)
         context['user_offerings'] = ClientOfferingEnrollment.objects.filter(client=self.request.user).order_by('-enrolled_on')
 
-        # Fetch user's upcoming and past booked sessions as a client
-        now = timezone.now()
-        context['client_upcoming_sessions'] = SessionBooking.objects.filter(
-            client=self.request.user,
-            start_datetime__gte=now
-        ).order_by('start_datetime')
-        context['client_past_sessions'] = SessionBooking.objects.filter(
-            client=self.request.user,
-            start_datetime__lt=now
-        ).order_by('-start_datetime') # Order past sessions by most recent first
+        # NOTE: All session booking data is now loaded dynamically via HTMX into the
+        # `profile_bookings.html` partial, so we no longer load it here.
 
-        # ADD THIS: Combined queryset for the profile_bookings.html partial
-        context['user_bookings'] = SessionBooking.objects.filter(
-            client=self.request.user
-        ).order_by('start_datetime')
 
         # Add flags for dashboard elements
         context['is_coach'] = self.request.user.is_coach
@@ -206,11 +196,47 @@ def profile_offerings_partial(request):
 
 @login_required
 def profile_bookings_partial(request):
-    user_bookings = SessionBooking.objects.filter(client=request.user).order_by('start_datetime')
-    return render(request, 'accounts/profile_bookings.html', {
-        'user_bookings': user_bookings,
-        'active_tab': 'bookings'
-    })
+    """
+    Handles rendering the content for the session booking tabs (Upcoming, Past, Canceled)
+    with pagination. This view is intended to be called via HTMX.
+    """
+    now = timezone.now()
+    active_tab = request.GET.get('tab', 'upcoming')
+
+    bookings_qs = SessionBooking.objects.filter(client=request.user)
+
+    if active_tab == 'upcoming':
+        # Booked or Rescheduled sessions that are in the future
+        bookings_list = bookings_qs.filter(
+            status__in=['BOOKED', 'RESCHEDULED'],
+            start_datetime__gte=now
+        ).order_by('start_datetime')
+    elif active_tab == 'past':
+        # Completed sessions, or booked/rescheduled sessions that are now in the past
+        bookings_list = bookings_qs.filter(
+            Q(status='COMPLETED') |
+            Q(status__in=['BOOKED', 'RESCHEDULED'], start_datetime__lt=now)
+        ).order_by('-start_datetime')
+    elif active_tab == 'canceled':
+        bookings_list = bookings_qs.filter(status='CANCELED').order_by('-start_datetime')
+    else:
+        active_tab = 'upcoming'
+        bookings_list = bookings_qs.filter(
+            status__in=['BOOKED', 'RESCHEDULED'],
+            start_datetime__gte=now
+        ).order_by('start_datetime')
+
+    paginator = Paginator(bookings_list, 10)  # 10 bookings per page
+    page_number = request.GET.get('page')
+    user_bookings_page = paginator.get_page(page_number)
+
+    context = {
+        'user_bookings_page': user_bookings_page,
+        'active_tab': active_tab,
+    }
+    
+    # This renders JUST the list and pagination controls into a partial
+    return render(request, 'accounts/partials/_booking_list.html', context)
 
 @login_required
 def get_coaches_for_offering(request):
