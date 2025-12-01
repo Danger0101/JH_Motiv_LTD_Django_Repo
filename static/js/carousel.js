@@ -1,7 +1,18 @@
-
 document.addEventListener('DOMContentLoaded', function () {
   const track = document.querySelector('.carousel-track');
+  
+  // FIX: Exit function if the carousel track doesn't exist on this page
+  if (!track) {
+    return;
+  }
+
   const slides = Array.from(track.children);
+  
+  // FIX: Safety check to prevent errors if track exists but is empty
+  if (slides.length === 0) {
+    return;
+  }
+
   const slideWidth = slides[0].getBoundingClientRect().width;
 
   // Clone slides for infinite loop
