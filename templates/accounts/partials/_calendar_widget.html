@@ -36,33 +36,30 @@
             {% for week in calendar_rows %}
                 <tr>
                     {% for day in week %}
-                        {% if day == 0 %}
-                            <td class="p-1 text-center bg-gray-50/50">
+                        <td class="p-1 text-center {% if day == 0 %}bg-gray-50/50{% endif %}">
+                            {% if day == 0 %}
                                 <div class="w-8 h-8 mx-auto"></div>
-                            </td>
-                        {% else %}
-                            <td class="p-1 text-center">
-                                {% if year < today.year or year == today.year and month < today.month or year == today.year and month == today.month and day < today.day %}
-                                    
+                            {% else %}
+                                {# Check if the date is in the past #}
+                                {% if year < today.year or (year == today.year and month < today.month) or (year == today.year and month == today.month and day < today.day) %}
+                                    {# Past date button (disabled) #}
                                     <button type="button" disabled
-                                        class="w-8 h-8 flex items-center justify-center rounded-full text-gray-300 cursor-not-allowed mx-auto">
+                                            class="w-8 h-8 flex items-center justify-center rounded-full text-gray-300 cursor-not-allowed mx-auto">
                                         {{ day }}
                                     </button>
-
                                 {% else %}
-                                    
+                                    {# Future/Today date button (active) #}
                                     <button type="button"
-                                        class="w-8 h-8 flex items-center justify-center rounded-full text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 focus:bg-indigo-600 focus:text-white font-medium mx-auto transition-all duration-200"
-                                        hx-get="{% url 'accounts:get_daily_slots' %}"
-                                        hx-vals='{"date": "{{ year }}-{{ month }}-{{ day }}", "coach_id": "{{ coach_id|default_if_none:"" }}", "enrollment_id": "{{ enrollment_id|default_if_none:"" }}"}'
-                                        hx-target="#time-slots-column"
-                                        hx-swap="innerHTML">
+                                            class="w-8 h-8 flex items-center justify-center rounded-full text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 focus:bg-indigo-600 focus:text-white font-medium mx-auto transition-all duration-200"
+                                            hx-get="{% url 'accounts:get_daily_slots' %}"
+                                            hx-vals='{"date": "{{ year }}-{{ month }}-{{ day }}", "coach_id": "{{ coach_id|default_if_none:"" }}", "enrollment_id": "{{ enrollment_id|default_if_none:"" }}"}'
+                                            hx-target="#time-slots-column"
+                                            hx-swap="innerHTML">
                                         {{ day }}
                                     </button>
-
                                 {% endif %}
-                            </td>
-                        {% endif %}
+                            {% endif %}
+                        </td>
                     {% endfor %}
                 </tr>
             {% endfor %}
