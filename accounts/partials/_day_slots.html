@@ -7,10 +7,10 @@
             {% for slot in daily_slots %}
                 <button class="slot-button"
                         hx-post="{% url 'coaching_booking:create_session_booking' %}"
-                        hx-vals='{"start_datetime": "{{ slot.start_time|date:"Y-m-d H:i:s" }}", "end_datetime": "{{ slot.end_time|date:"Y-m-d H:i:s" }}", "coach_id": "{{ coach_id }}", "enrollment_id": "{{ enrollment_id }}"}'
+                        hx-vals='{"start_datetime": "{{ slot.start_datetime_iso }}", "end_datetime": "{{ slot.end_datetime_iso }}", "coach_id": "{{ coach_id }}", "enrollment_id": "{{ enrollment_id }}"}'
                         hx-target="#session-booking-form-container"
                         hx-swap="outerHTML">
-                    {{ slot.start_time|date:"H:i" }} - {{ slot.end_time|date:"H:i" }}
+                    {{ slot.display_time }}
                 </button>
             {% endfor %}
         </div>
