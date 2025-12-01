@@ -1,21 +1,16 @@
 <div class="bg-white p-6 rounded-lg shadow-lg">
     <h2 class="text-2xl font-bold text-gray-800 mb-6">Book a New Session</h2>
 
-    {# Removed the form element and its hx-post #}
     <div>
-        {% csrf_token %} {# Keep csrf token if there are other forms or for future use, though not directly used by these HTMX gets #}
+        {% csrf_token %}
         <div class="mb-4">
             <label for="enrollment_id" class="block text-sm font-medium text-gray-700">Select Offering:</label>
             <select id="enrollment_id" name="enrollment_id"
-                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                    hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}"
-                    hx-target="#calendar-container"
-                    hx-trigger="change"
-                    hx-include="#coach_id, #enrollment_id"> {# Include coach_id as well #}
+                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
                 <option value="">-- Select an Offering --</option>
                 {% for enrollment in user_offerings %}
                     {% if enrollment.remaining_sessions > 0 and enrollment.is_active and not enrollment.is_expired %}
-                        <option value="{{ enrollment.id }}" {% if selected_enrollment and selected_enrollment.id == enrollment.id %}selected{% endif %}>
+                        <option value="{{ enrollment.id }}" {% if selected_enrollment_id == enrollment.id|stringformat:"s" %}selected{% endif %}>
                             {{ enrollment.offering.name }} ({{ enrollment.remaining_sessions }} sessions remaining)
                         </option>
                     {% endif %}
@@ -26,15 +21,11 @@
         <div class="mb-4">
             <label for="coach_id" class="block text-sm font-medium text-gray-700">Select Coach:</label>
             <select id="coach_id" name="coach_id"
-                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                    hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}"
-                    hx-target="#calendar-container"
-                    hx-trigger="change"
-                    hx-include="#enrollment_id, #coach_id"> {# Include enrollment_id as well #}
+                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
                 <option value="">-- Select a Coach --</option>
                 {% if coaches %}
                     {% for coach in coaches %}
-                        <option value="{{ coach.id }}" {% if selected_coach and selected_coach.id == coach.id %}selected{% endif %}>
+                        <option value="{{ coach.id }}" {% if selected_coach_id == coach.id|stringformat:"s" %}selected{% endif %}>
                             {{ coach.user.get_full_name }}
                         </option>
                     {% endfor %}
@@ -42,11 +33,13 @@
             </select>
         </div>
 
-        {# Container for the calendar widget. It will initially load the calendar. #}
+        {# Changed ID to 'calendar-wrapper' to avoid conflict with the inner widget's ID #}
+        {# Added hx-include to send the dropdown values #}
         <div class="flex flex-col md:flex-row gap-6 mt-6">
-            <div id="calendar-container" class="md:w-2/3"
-                 hx-trigger="load, change from:#enrollment_id, change from:#coach_id" {# Load on page load, or when selections change #}
-                 hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}&coach_id={{ selected_coach_id|default:'' }}&enrollment_id={{ selected_enrollment_id|default:'' }}"
+            <div id="calendar-wrapper" class="md:w-2/3"
+                 hx-trigger="load, change from:#enrollment_id, change from:#coach_id"
+                 hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}"
+                 hx-include="#enrollment_id, #coach_id"
                  hx-swap="innerHTML">
                 <p class="text-gray-500">Select an offering and a coach to load the calendar.</p>
             </div>
