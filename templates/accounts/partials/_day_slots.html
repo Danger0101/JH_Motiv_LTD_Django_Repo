@@ -1,28 +1,20 @@
-<div class="day-slots-container">
-    {% if selected_date %}
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Availability for {{ selected_date|date:"F d, Y" }}</h3>
-    {% endif %}
-
-    {% if error_message %}
-        <p class="text-red-600 text-sm mb-4">{{ error_message }}</p>
-    {% endif %}
-
+{% if error_message %}
+    <p class="error">{{ error_message }}</p>
+{% else %}
+    <h3>Slots for {{ selected_date|date:"l, F j, Y" }}</h3>
     {% if daily_slots %}
-        <div class="grid grid-cols-2 gap-3"> {# Grid for 2 columns #}
+        <div class="daily-slots-grid">
             {% for slot in daily_slots %}
-                <form hx-post="{% url 'accounts:book_session_confirm' %}" hx-confirm="Are you sure you want to book this session?">
-                    {% csrf_token %}
-                    <input type="hidden" name="start_datetime" value="{{ slot.start_datetime_iso }}">
-                    <input type="hidden" name="coach_id" value="{{ coach_id }}">
-                    <input type="hidden" name="enrollment_id" value="{{ enrollment_id }}">
-                    <button type="submit"
-                        class="w-full py-2 px-3 text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-md transition-colors">
-                        {{ slot.display_time }}
-                    </button>
-                </form>
+                <button class="slot-button"
+                        hx-get="{% url 'accounts:profile_book_session' %}"
+                        hx-vals='{"date": "{{ selected_date|date:'Y-m-d' }}", "time": "{{ slot.start_datetime_iso|date:'H:i' }}", "coach_id": "{{ coach_id }}", "enrollment_id": "{{ enrollment_id }}"}'
+                        hx-target="#session-booking-form-container"
+                        hx-swap="outerHTML">
+                    {{ slot.display_time }}
+                </button>
             {% endfor %}
         </div>
     {% else %}
-        <p class="text-sm text-gray-500 italic">No availability for the selected date.</p>
+        <p>No available slots for this day.</p>
     {% endif %}
-</div>
+{% endif %}

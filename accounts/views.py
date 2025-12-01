@@ -470,40 +470,47 @@ def get_daily_slots(request):
 @login_required
 @require_POST
 def book_session_confirm(request):
+    """
+    Handles the confirmation of a session booking. This view is triggered by a POST
+    request, typically from an HTMX form.
+    """
     enrollment_id = request.POST.get('enrollment_id')
     coach_id = request.POST.get('coach_id')
-    start_datetime_str = request.POST.get('start_datetime')
+    start_datetime_iso = request.POST.get('start_datetime')
 
     try:
+        # Validate input and fetch objects
         enrollment = get_object_or_404(ClientOfferingEnrollment, id=enrollment_id, client=request.user)
         coach = get_object_or_404(CoachProfile, id=coach_id)
-        
-        # Parse ISO string
-        start_datetime = datetime.fromisoformat(start_datetime_str)
-        
-        # Create Booking
-        SessionBooking.objects.create(
-            client=request.user,
-            coach=coach,
-            offering=enrollment.offering,
-            start_datetime=start_datetime,
-            status='confirmed' # Or 'pending'
-        )
-        
-        # Deduct Session
-        if enrollment.remaining_sessions > 0:
-            enrollment.remaining_sessions -= 1
-            enrollment.save()
-            
-        messages.success(request, f"Session confirmed for {start_datetime.strftime('%B %d at %I:%M %p')}")
-        
-        # HTMX Redirect to refresh page
-        response = HttpResponse(status=204)
-        response['HX-Redirect'] = reverse('accounts:profile')
-        return response
+        start_datetime = datetime.fromisoformat(start_datetime_iso)
 
+        # Check for sufficient credits
+        if enrollment.remaining_sessions <= 0:
+            messages.error(request, "You have no remaining sessions for this offering.")
+        else:
+            # Use a transaction to ensure atomicity
+            with transaction.atomic():
+                # Create the booking
+                SessionBooking.objects.create(
+                    client=request.user,
+                    coach=coach,
+                    offering=enrollment.offering,
+                    start_datetime=start_datetime,
+                    status='confirmed'
+                )
+                
+                # Decrement the session count
+                enrollment.remaining_sessions -= 1
+                enrollment.save()
+
+            messages.success(request, f"Session confirmed for {start_datetime.strftime('%B %d, %Y at %I:%M %p')}.")
+
+    except (ValueError, TypeError):
+        messages.error(request, "Invalid booking time submitted.")
     except Exception as e:
-        messages.error(request, f"Error booking session: {e}")
-        response = HttpResponse(status=204)
-        response['HX-Redirect'] = reverse('accounts:profile')
-        return response
+        messages.error(request, f"An error occurred while booking the session: {e}")
+
+    # For HTMX, redirect on success or failure to show messages
+    response = HttpResponse(status=204)
+    response['HX-Redirect'] = reverse('accounts:profile')
+    return response
