@@ -29,10 +29,10 @@
                         {% if day == 0 %}
                             <td></td>
                         {% else %}
-                            {% with current_date=year|stringformat:"04d" %}-{% endwith %}{{ month|stringformat:"02d" %}-{{ day|stringformat:"02d" }}
-                            <td {% if current_date == today %}class="today"{% endif %}>
-                                <button hx-get="{% url 'accounts:get_daily_slots' %}?date={{ year }}-{{ month }}-{{ day }}&coach_id={{ coach_id }}&enrollment_id={{ enrollment_id }}"
-                                        hx-target="#daily-slots-container" hx-swap="innerHTML">
+                            <td class="{% if day == today.day and month == today.month and year == today.year %}today{% endif %}">
+                                <button hx-get="{% url 'accounts:get_daily_slots' %}?date={{ year }}-{{ month|stringformat:'02d' }}-{{ day|stringformat:'02d' }}&coach_id={{ coach_id }}&enrollment_id={{ enrollment_id }}"
+                                        hx-target="#daily-slots-container" 
+                                        hx-swap="innerHTML">
                                     {{ day }}
                                 </button>
                             </td>
@@ -45,5 +45,4 @@
 </div>
 
 <div id="daily-slots-container">
-    <!-- Daily slots will be loaded here -->
-</div>
+    </div>
