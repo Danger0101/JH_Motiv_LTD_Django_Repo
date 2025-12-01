@@ -212,7 +212,7 @@ def coach_landing_view(request):
         'page_summary_text': page_summary_text,
         'summary': summary_data,
     }
-    return context
+    return render(request, 'coaching_booking/coach_landing.html', context)
 
 class OfferListView(ListView):
     """Displays all active coaching offerings available for purchase/enrollment."""
