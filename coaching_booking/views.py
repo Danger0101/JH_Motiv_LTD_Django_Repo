@@ -253,7 +253,7 @@ class OfferEnrollmentStartView(LoginRequiredMixin, DetailView):
 @login_required
 def profile_book_session_partial(request):
     """
-    Renders the initial 'Book Session' tab content (dropdowns for offering/coach).
+    Renders the initial 'Book Session' tab content.
     """
     # Fetch active enrollments for the user
     user_offerings = ClientOfferingEnrollment.objects.filter(
@@ -276,9 +276,11 @@ def profile_book_session_partial(request):
         'coaches': coaches,
         'initial_year': today.year,
         'initial_month': today.month,
-        # Explicitly add these to context to prevent "VariableDoesNotExist" log errors
+        # Update these lines:
         'selected_enrollment': None,
-        'selected_coach': None, 
+        'selected_coach': None,
+        'selected_enrollment_id': '', # Add this safe primitive
+        'selected_coach_id': '',      # Add this safe primitive
     }
     return render(request, 'coaching_booking/profile_book_session.html', context)
 
