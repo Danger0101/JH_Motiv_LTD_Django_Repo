@@ -263,38 +263,41 @@ def profile_bookings_partial(request):
 
 @login_required
 def coach_clients_partial(request):
+    """
+    HTMX view to fetch the list of active clients for the coach.
+    Includes clients explicitly assigned AND clients with upcoming bookings.
+    """
     # Ensure user is a coach
     if not hasattr(request.user, 'coach_profile'):
         return HttpResponse("Unauthorized", status=401)
 
     coach_profile = request.user.coach_profile
+    now = timezone.now()
     
     # 1. Enrollments explicitly assigned to this coach
-    direct_enrollments = ClientOfferingEnrollment.objects.filter(
-        coach=coach_profile
-    ).filter(
-        Q(is_active=True) |
-        Q(deactivated_on__gte=timezone.now() - timedelta(days=30))
+    #    (Matches clients who bought a package specifically with you)
+    direct_enrollments_query = Q(coach=coach_profile) & (
+        Q(is_active=True) | 
+        Q(expiration_date__gte=now)
     )
 
     # 2. Enrollments linked via upcoming sessions (Implied relationship)
-    #    This catches clients who have booked you but aren't "assigned" to you.
+    #    (Matches clients who booked you, even if the enrollment isn't assigned to you)
     session_enrollment_ids = SessionBooking.objects.filter(
         coach=coach_profile,
-        start_datetime__gte=timezone.now(),
-        status__in=['BOOKED', 'RESCHEDULED']
+        start_datetime__gte=now,
+        status__in=['BOOKED', 'RESCHEDULED'],
+        enrollment__isnull=False
     ).values_list('enrollment_id', flat=True).distinct()
 
-    implied_enrollments = ClientOfferingEnrollment.objects.filter(
-        id__in=session_enrollment_ids,
-        is_active=True
-    )
+    implied_enrollments_query = Q(id__in=session_enrollment_ids) & Q(is_active=True)
 
-    # Combine queries using union (pipe operator) and distinct()
-    client_enrollments_qs = (direct_enrollments | implied_enrollments).distinct()\
-        .select_related('client', 'offering')\
-        .order_by('client__last_name')
+    # Combine queries: Fetch Enrollments that match EITHER criteria
+    client_enrollments_qs = ClientOfferingEnrollment.objects.filter(
+        direct_enrollments_query | implied_enrollments_query
+    ).distinct().select_related('client', 'offering').order_by('client__last_name')
 
+    # Pagination
     paginator = Paginator(client_enrollments_qs, 10) 
     page_number = request.GET.get('page')
     coach_clients_page = paginator.get_page(page_number)
