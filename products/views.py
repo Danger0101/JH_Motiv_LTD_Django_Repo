@@ -6,7 +6,12 @@ class ProductListView(ListView):
     model = Product
     template_name = 'products/product_list.html'
     context_object_name = 'products'
-    # Add other pagination/filtering logic here
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['search_query'] = self.request.GET.get('q', '')
+        context['per_page'] = self.request.GET.get('per_page', '12') # Default to 12 or whatever your default is
+        return context
 
 # ----------------------------------------------------------------------
 
