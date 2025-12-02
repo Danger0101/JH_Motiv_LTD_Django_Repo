@@ -13,7 +13,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
-
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = False
@@ -24,11 +23,10 @@ CSRF_TRUSTED_ORIGINS = ['https://jhmotiv-shop-ltd-official-040e4cbd5800.herokuap
 
 # Application definition
 INSTALLED_APPS = [
-    # Cloudinary
+    # Cloudinary apps must be before django.contrib.staticfiles
     'cloudinary_storage',
     'cloudinary',
-    
-    # Django Apps
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -159,37 +157,36 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files
-STATIC_URL = 'static/'
+# =======================================================
+# STATIC & MEDIA FILES (Updated for Django 5.x + Cloudinary)
+# =======================================================
+
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
-# Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Django 4.2+ Storage Configuration
+# Define Storages (Django 5.x Standard)
 STORAGES = {
     "default": {
-        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage" if os.getenv('CLOUDINARY_CLOUD_NAME') else "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        # Use WhiteNoise for serving static files in production
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
 
-# If CLOUDINARY_CLOUD_NAME is found (Production), configure Cloudinary
-if os.getenv('CLOUDINARY_CLOUD_NAME'):
-    CLOUDINARY_STORAGE = {
-        'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
-        'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
-        'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
-    }
-else:
-    # For local development, switch back to default file storages
-    STORAGES['default']['BACKEND'] = 'django.core.files.storage.FileSystemStorage'
-    STORAGES['staticfiles']['BACKEND'] = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+# Legacy Fallbacks (Required for 3rd party libs like django-cloudinary-storage that haven't updated to Django 5)
+DEFAULT_FILE_STORAGE = STORAGES["default"]["BACKEND"]
+STATICFILES_STORAGE = STORAGES["staticfiles"]["BACKEND"]
+
+# Cloudinary Specific Config
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
+    'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
+}
 
 
 # Default primary key field type
@@ -235,7 +232,6 @@ STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET') # For verifying webhook signatures
 PRINTFUL_API_KEY = os.environ.get('PRINTFUL_API_KEY')
-
 
 
 LOGGING = {
@@ -301,5 +297,3 @@ SOCIALACCOUNT_PROVIDERS = {
         # }
     }
 }
-
-print("--- SETTINGS FILE LOADED SUCCESSFULLY ---")
