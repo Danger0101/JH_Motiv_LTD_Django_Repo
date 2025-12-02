@@ -22,6 +22,7 @@ class ClientOfferingEnrollment(models.Model):
     purchase_date = models.DateTimeField(auto_now_add=True, verbose_name="Purchase Date")
     expiration_date = models.DateTimeField(null=True, blank=True, verbose_name="Expiration Date", help_text="The date when the enrollment expires.")
     is_active = models.BooleanField(default=True, verbose_name="Is Active", help_text="True if the enrollment is current and has sessions remaining.")
+    deactivated_on = models.DateTimeField(null=True, blank=True, verbose_name="Deactivated On", help_text="The date and time when the enrollment became inactive (e.g., sessions ran out).")
     enrolled_on = models.DateTimeField(auto_now_add=True, verbose_name="Enrolled On")
 
     class Meta:
@@ -33,9 +34,34 @@ class ClientOfferingEnrollment(models.Model):
         return f"{self.client.get_full_name()} - {self.offering.name}"
 
     def save(self, *args, **kwargs):
+        # Store original values if object already exists
+        if self.pk:
+            original_enrollment = ClientOfferingEnrollment.objects.get(pk=self.pk)
+            # We only care if is_active changes, so we don't need all original fields
+            original_is_active = original_enrollment.is_active
+            # It's important to get the current state of remaining_sessions from the DB
+            # before potentially modifying it.
+            original_remaining_sessions = original_enrollment.remaining_sessions
+        else:
+            original_is_active = None
+            original_remaining_sessions = None
+
+        # Initialize total and remaining sessions on creation
         if not self.pk:
             self.total_sessions = self.offering.total_number_of_sessions
             self.remaining_sessions = self.offering.total_number_of_sessions
+
+        # Logic for managing is_active and deactivated_on
+        # Check if the enrollment is becoming inactive
+        if self.remaining_sessions <= 0 and self.is_active:
+            self.is_active = False
+            if self.deactivated_on is None: # Only set if not already set
+                self.deactivated_on = timezone.now()
+        # Check if the enrollment is becoming active again (e.g., sessions added back)
+        elif self.remaining_sessions > 0 and not self.is_active:
+            self.is_active = True
+            self.deactivated_on = None
+
         super().save(*args, **kwargs)
 
     def add_session(self):

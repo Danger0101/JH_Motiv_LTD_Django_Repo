@@ -133,10 +133,12 @@ class ProfileView(LoginRequiredMixin, TemplateView):
 
             # 2. Fetch active enrollments assigned to this coach
             # This provides Client Name, Offering Name, and Remaining Sessions
-            context['coach_clients'] = ClientOfferingEnrollment.objects.filter(
-                coach=coach_profile,
-                is_active=True
-            ).select_related('client', 'offering').order_by('client__last_name')
+            # context['coach_clients'] = ClientOfferingEnrollment.objects.filter(
+            #     coach=coach_profile
+            # ).filter(
+            #     Q(is_active=True) |
+            #     Q(deactivated_on__gte=timezone.now() - timedelta(days=30))
+            # ).select_related('client', 'offering').order_by('client__last_name')
 
             # ---------------------------------------------
             
@@ -258,6 +260,26 @@ def profile_bookings_partial(request):
     
     # This renders JUST the list and pagination controls into a partial
     return render(request, 'accounts/partials/_booking_list.html', context)
+
+@login_required
+def coach_clients_partial(request):
+    coach_profile = request.user.coach_profile
+    
+    client_enrollments_qs = ClientOfferingEnrollment.objects.filter(
+        coach=coach_profile
+    ).filter(
+        Q(is_active=True) |
+        Q(deactivated_on__gte=timezone.now() - timedelta(days=30))
+    ).select_related('client', 'offering').order_by('client__last_name')
+
+    paginator = Paginator(client_enrollments_qs, 10)  # 10 clients per page
+    page_number = request.GET.get('page')
+    coach_clients_page = paginator.get_page(page_number)
+
+    context = {
+        'coach_clients_page': coach_clients_page,
+    }
+    return render(request, 'accounts/partials/_coach_clients_list.html', context)
 
 @login_required
 def get_coaches_for_offering(request):

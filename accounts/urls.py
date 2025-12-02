@@ -12,6 +12,7 @@ urlpatterns = [
     path('profile/offerings/', views.profile_offerings_partial, name='profile_offerings'),
     path('profile/bookings/', views.profile_bookings_partial, name='profile_bookings'),
     path('profile/get-coaches-for-offering/', views.get_coaches_for_offering, name='get_coaches_for_offering'),
+    path('profile/coach-clients-partial/', views.coach_clients_partial, name='coach_clients_partial'),
     
 
 
