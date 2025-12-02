@@ -1,5 +1,6 @@
 import uuid
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from django.conf import settings
@@ -88,14 +89,17 @@ def create_calendar_event(coach_profile, summary, description, start_time, end_t
         }
     }
 
-    created_event = service.events().insert(
-        calendarId=calendar_id,
-        body=event,
-        sendNotifications=True,
-        conferenceDataVersion=1
-    ).execute()
-
-    return created_event
+    try:
+        created_event = service.events().insert(
+            calendarId=calendar_id,
+            body=event,
+            sendNotifications=True,
+            conferenceDataVersion=1
+        ).execute()
+        return created_event
+    except HttpError as e:
+        print(f"Error creating event: {e}")
+        return None
 
 
 def update_calendar_event(coach_profile, event_id, summary, description, start_time, end_time, attendees=None):
@@ -108,7 +112,7 @@ def update_calendar_event(coach_profile, event_id, summary, description, start_t
 
     calendar_id = coach_profile.google_credentials.calendar_id or 'primary'
 
-    event = {
+    event_body = {
         'summary': summary,
         'description': description,
         'start': {
@@ -122,15 +126,24 @@ def update_calendar_event(coach_profile, event_id, summary, description, start_t
         'attendees': attendees if attendees else [],
     }
 
-    updated_event = service.events().update(
-        calendarId=calendar_id,
-        eventId=event_id,
-        body=event,
-        sendNotifications=True,
-        conferenceDataVersion=1
-    ).execute()
-
-    return updated_event
+    try:
+        updated_event = service.events().update(
+            calendarId=calendar_id,
+            eventId=event_id,
+            body=event_body,
+            sendNotifications=True,
+            conferenceDataVersion=1
+        ).execute()
+        return updated_event
+        
+    except HttpError as e:
+        # If event is not found (404) or gone (410), recreate it
+        if e.resp.status in [404, 410]:
+            return create_calendar_event(
+                coach_profile, summary, description, start_time, end_time, attendees
+            )
+        print(f"Error updating event: {e}")
+        return None
 
 
 def delete_calendar_event(coach_profile, event_id):
@@ -143,8 +156,15 @@ def delete_calendar_event(coach_profile, event_id):
 
     calendar_id = coach_profile.google_credentials.calendar_id or 'primary'
 
-    service.events().delete(
-        calendarId=calendar_id,
-        eventId=event_id,
-        sendNotifications=True
-    ).execute()
+    try:
+        service.events().delete(
+            calendarId=calendar_id,
+            eventId=event_id,
+            sendNotifications=True
+        ).execute()
+    except HttpError as e:
+        # If it's already deleted (404/410), that's fine. Ignore it.
+        if e.resp.status in [404, 410]:
+            pass
+        else:
+            print(f"Error deleting event: {e}")

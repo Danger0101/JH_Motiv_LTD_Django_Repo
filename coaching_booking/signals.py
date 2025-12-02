@@ -27,8 +27,8 @@ def handle_session_booking_save(sender, instance, created, **kwargs):
             ]
         )
         if event:
-            instance.gcal_event_id = event.get('id')
-            instance.save()
+            # We must use .update() here to avoid triggering the post_save signal again (recursion)
+            SessionBooking.objects.filter(pk=instance.pk).update(gcal_event_id=event.get('id'))
     else:
         # Update or delete the calendar event
         if instance.gcal_event_id:
@@ -38,7 +38,7 @@ def handle_session_booking_save(sender, instance, created, **kwargs):
                     event_id=instance.gcal_event_id
                 )
             else:
-                update_calendar_event(
+                updated_or_created_event = update_calendar_event(
                     coach_profile=instance.coach,
                     event_id=instance.gcal_event_id,
                     summary=f"Coaching Session with {instance.client.get_full_name()}",
@@ -50,6 +50,9 @@ def handle_session_booking_save(sender, instance, created, **kwargs):
                         {'email': instance.coach.user.email}
                     ]
                 )
+                # If the event was recreated (new ID), update the DB without triggering signals
+                if updated_or_created_event and updated_or_created_event.get('id') != instance.gcal_event_id:
+                     SessionBooking.objects.filter(pk=instance.pk).update(gcal_event_id=updated_or_created_event.get('id'))
 
 @receiver(post_delete, sender=SessionBooking)
 def handle_session_booking_delete(sender, instance, **kwargs):
