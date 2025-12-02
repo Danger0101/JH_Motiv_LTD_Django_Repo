@@ -74,7 +74,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         
         # 2. Cart & Marketing
         cart = get_or_create_cart(self.request)
-        context['summary'] = get_cart_summary_data(cart)
+        summary = get_cart_summary_data(cart)
         preference, created = MarketingPreference.objects.get_or_create(user=user)
         context['marketing_preference'] = preference
 
@@ -171,7 +171,7 @@ def profile_offerings_partial(request):
         is_active=True,
         expiration_date__gte=timezone.now().date()
     ).order_by('-enrolled_on')
-    return render(request, 'accounts/profile_offerings.html', {
+    return render(request, 'accounts/partials/profile_offerings_list.html', {
         'user_offerings': user_offerings,
         'available_credits': available_credits,
         'active_tab': 'offerings'
@@ -237,3 +237,43 @@ def get_coaches_for_offering(request):
             pass
     
     return HttpResponse(html_options)
+
+@login_required
+def coach_clients_partial(request):
+    # Ensure user is a coach
+    if not hasattr(request.user, 'coach_profile'):
+        return HttpResponse("Unauthorized", status=401)
+
+    coach_profile = request.user.coach_profile
+    now = timezone.now()
+    
+    # 1. Enrollments explicitly assigned to this coach
+    direct_query = Q(coach=coach_profile) & (
+        Q(is_active=True) | 
+        Q(expiration_date__gte=now)
+    )
+
+    # 2. Enrollments linked via upcoming sessions
+    session_enrollment_ids = SessionBooking.objects.filter(
+        coach=coach_profile,
+        start_datetime__gte=now,
+        status__in=['BOOKED', 'RESCHEDULED'],
+        enrollment__isnull=False
+    ).values_list('enrollment_id', flat=True).distinct()
+
+    implied_query = Q(id__in=session_enrollment_ids) & Q(is_active=True)
+
+    # Combine queries
+    client_enrollments_qs = ClientOfferingEnrollment.objects.filter(
+        direct_query | implied_query
+    ).distinct().select_related('client', 'offering').order_by('client__last_name')
+
+    # Pagination
+    paginator = Paginator(client_enrollments_qs, 10) 
+    page_number = request.GET.get('page')
+    coach_clients_page = paginator.get_page(page_number)
+
+    context = {
+        'coach_clients_page': coach_clients_page,
+    }
+    return render(request, 'accounts/partials/_coach_clients_list.html', context)
