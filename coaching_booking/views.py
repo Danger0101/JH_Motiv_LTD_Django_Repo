@@ -28,45 +28,37 @@ def book_session(request):
     coach_id = request.POST.get('coach_id')
     start_time_str = request.POST.get('start_time')
 
-    if not all([enrollment_id, coach_id, start_time_str]):
-        messages.error(request, "Missing booking information.")
-        response = HttpResponse(status=400)
+    # Helper to return error response via HTMX (often a redirect)
+    def htmx_error_redirect(msg):
+        messages.error(request, msg)
+        response = HttpResponse(status=200) # Return 200 so HTMX processes the redirect
         response['HX-Redirect'] = reverse('accounts:account_profile')
         return response
 
+    if not all([enrollment_id, coach_id, start_time_str]):
+        return htmx_error_redirect("Missing booking information.")
+
     try:
         enrollment = get_object_or_404(ClientOfferingEnrollment, id=enrollment_id, client=request.user)
-        coach_profile = get_object_or_404(CoachProfile, id=coach_id)
+        coach_profile = get_object_or_04(CoachProfile, id=coach_id)
         
-        # Parse and ensure timezone awareness
         start_datetime_naive = datetime.strptime(start_time_str, '%Y-%m-%d %H:%M')
         start_datetime_obj = timezone.make_aware(start_datetime_naive)
         
-        # Check Limits
         now = timezone.now()
         if start_datetime_obj < now:
-            messages.error(request, "Cannot book a session in the past.")
-            response = HttpResponse(status=400)
-            response['HX-Redirect'] = reverse('accounts:account_profile')
-            return response
+            return htmx_error_redirect("Cannot book a session in the past.")
             
         if start_datetime_obj > now + timedelta(days=BOOKING_WINDOW_DAYS):
-            messages.error(request, f"Cannot book more than {BOOKING_WINDOW_DAYS} days in advance.")
-            response = HttpResponse(status=400)
-            response['HX-Redirect'] = reverse('accounts:account_profile')
-            return response
+            return htmx_error_redirect(f"Cannot book more than {BOOKING_WINDOW_DAYS} days in advance.")
 
         if enrollment.remaining_sessions <= 0:
-            messages.error(request, "No sessions remaining for this enrollment.")
-            response = HttpResponse(status=400)
-            response['HX-Redirect'] = reverse('accounts:account_profile')
-            return response
+            return htmx_error_redirect("No sessions remaining for this enrollment.")
 
         with transaction.atomic():
             session_length_minutes = enrollment.offering.session_length_minutes
             requested_date = start_datetime_obj.date()
             
-            # Double check availability
             truly_available_slots = get_coach_available_slots(
                 coach_profile,
                 requested_date,
@@ -75,7 +67,6 @@ def book_session(request):
                 offering_type='one_on_one'
             )
             
-            # Check if requested time exists in available slots (comparing as aware datetimes)
             is_available = False
             for slot in truly_available_slots:
                 slot_aware = slot if timezone.is_aware(slot) else timezone.make_aware(slot)
@@ -84,10 +75,7 @@ def book_session(request):
                     break
 
             if not is_available:
-                messages.error(request, "The selected slot is no longer available.")
-                response = HttpResponse(status=409) 
-                response['HX-Redirect'] = reverse('accounts:account_profile')
-                return response
+                return htmx_error_redirect("The selected slot is no longer available.")
 
             SessionBooking.objects.create(
                 enrollment=enrollment,
@@ -102,10 +90,7 @@ def book_session(request):
         return response
 
     except Exception as e:
-        messages.error(request, f"An error occurred: {e}")
-        response = HttpResponse(status=500)
-        response['HX-Redirect'] = reverse('accounts:account_profile')
-        return response
+        return htmx_error_redirect(f"An error occurred: {e}")
 
 @login_required
 @require_POST
@@ -308,14 +293,11 @@ def get_booking_calendar(request):
 
 @login_required
 def get_daily_slots(request):
-    """
-    Returns the available time slots for a specific date (HTMX).
-    """
     date_str = request.GET.get('date')
     coach_id = request.GET.get('coach_id')
     enrollment_id = request.GET.get('enrollment_id')
 
-    # Base context with IDs to prevent Template Errors even on failure
+    # Initialize context with IDs so template doesn't crash on KeyError
     context = {
         'coach_id': coach_id,
         'enrollment_id': enrollment_id,
@@ -330,18 +312,18 @@ def get_daily_slots(request):
 
     try:
         selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        context['selected_date'] = selected_date
+        
         now = timezone.now()
         max_date = now.date() + timedelta(days=BOOKING_WINDOW_DAYS)
-        
-        context['selected_date'] = selected_date
 
         if selected_date < now.date():
             context['error_message'] = 'Cannot book dates in the past.'
             return render(request, 'coaching_booking/partials/available_slots.html', context)
         
         if selected_date > max_date:
-             context['error_message'] = 'This date is too far in the future.'
-             return render(request, 'coaching_booking/partials/available_slots.html', context)
+            context['error_message'] = 'This date is too far in the future.'
+            return render(request, 'coaching_booking/partials/available_slots.html', context)
 
         coach_profile = CoachProfile.objects.get(id=coach_id)
         enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id, client=request.user)
@@ -358,7 +340,6 @@ def get_daily_slots(request):
         formatted_slots = []
         for slot in available_slots:
             slot_aware = slot if timezone.is_aware(slot) else timezone.make_aware(slot)
-            
             if slot_aware > now:
                 formatted_slots.append({
                     'start_time': slot_aware,
