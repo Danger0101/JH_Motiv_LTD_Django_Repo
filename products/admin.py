@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.db.models import Sum
+# Added StockItem to imports
 from .models import Product, Variant, StockPool, StockItem
 
 # =======================================================
@@ -90,10 +91,15 @@ class ProductAdmin(admin.ModelAdmin):
     current_stock_status.short_description = 'Stock Status'
 
 # =======================================================
-# 4. StockItem Admin (New)
+# 4. Stock Item Admin (NEW - Fixes Staff Dashboard Error)
 # =======================================================
 @admin.register(StockItem)
 class StockItemAdmin(admin.ModelAdmin):
+    """
+    Admin interface for specific StockItems (Variant + Pool link).
+    Required for the 'Low Stock Alerts' link in the Staff Dashboard.
+    """
     list_display = ('variant', 'pool', 'quantity', 'updated_at')
     list_filter = ('pool', 'updated_at')
-    search_fields = ('variant__name', 'variant__product__name')
+    search_fields = ('variant__name', 'variant__product__name', 'pool__name')
+    autocomplete_fields = ['variant', 'pool'] # Optional: improves UI if you have many products
