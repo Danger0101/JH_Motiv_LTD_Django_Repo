@@ -1,7 +1,3 @@
-from products.models import StockItem, ProductVariant
-from payments.models import Order
-from dreamers.models import Dreamer
-from coaching_client.models import TasterSessionRequest
 from django.conf import settings
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_POST
@@ -17,7 +13,7 @@ from django.db.models import Q
 from .models import MarketingPreference
 from allauth.account.views import LoginView, SignupView, PasswordResetView, PasswordChangeView, PasswordSetView, LogoutView, PasswordResetDoneView, PasswordResetDoneView
 from cart.utils import get_or_create_cart, get_cart_summary_data
-from coaching_booking.models import ClientOfferingEnrollment, SessionBooking, TasterSession
+from coaching_booking.models import ClientOfferingEnrollment, SessionBooking
 from coaching_core.models import Offering
 from accounts.models import CoachProfile 
 from gcal.models import GoogleCredentials
@@ -28,21 +24,40 @@ from django.db import transaction
 from collections import defaultdict
 from django.views import View
 from django.contrib.auth import get_user_model
+from datetime import timedelta, date, datetime
 
-# Add these imports for staff dashboard
-from payments.models import Order
-from dreamers.models import Dreamer
-from products.models import ProductVariant
+# --- FIX IMPORTS HERE ---
+# Use try/except to handle potential circular imports or missing apps during migration
+try:
+    from dreamers.models import Dreamer
+except ImportError:
+    Dreamer = None
+
+try:
+    from products.models import StockItem
+except ImportError:
+    StockItem = None
+
+try:
+    from payments.models import Order
+except ImportError:
+    Order = None
+
+try:
+    from coaching_client.models import TasterSessionRequest
+except ImportError:
+    TasterSessionRequest = None
+# ------------------------
 
 from coaching_availability.utils import get_coach_available_slots 
-from datetime import timedelta, date, datetime
+
 
 class CustomLoginView(LoginView):
     template_name = 'accounts/login.html'
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         cart = get_or_create_cart(self.request)
-        summary = get_cart_summary_data(cart)
+        context['summary'] = get_cart_summary_data(cart)
         context['ACCOUNT_ALLOW_REGISTRATION'] = getattr(settings, 'ACCOUNT_ALLOW_REGISTRATION', True) 
         return context
 
@@ -83,27 +98,30 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             context['coach_upcoming_sessions'] = SessionBooking.objects.filter(
                 coach=coach_profile,
                 start_datetime__gte=timezone.now(),
-                # Fixed typo: 'RESCHEDULEED' -> 'RESCHEDULED'
                 status__in=['BOOKED', 'RESCHEDULED']
             ).select_related('client').order_by('start_datetime')
 
         # Initialized as empty; loaded via HTMX
         context['coach_clients'] = []
         
-        # --- STAFF DASHBOARD DATA (New) ---
+        # --- STAFF DASHBOARD DATA ---
         context['is_staff'] = self.request.user.is_staff
         if self.request.user.is_staff:
             # 1. Pending Taster Requests (Leads)
-            context['staff_pending_tasters'] = TasterSessionRequest.objects.filter(status='PENDING').count()
+            if TasterSessionRequest:
+                context['staff_pending_tasters'] = TasterSessionRequest.objects.filter(status='PENDING').count()
             
             # 2. Recent Orders (Sales Pulse)
-            context['staff_recent_orders'] = Order.objects.select_related('user').order_by('-created')[:5]
+            if Order:
+                context['staff_recent_orders'] = Order.objects.select_related('user').order_by('-created')[:5]
             
             # 3. Low Stock Alerts (Inventory Risk)
-            context['staff_low_stock'] = StockItem.objects.filter(quantity__lt=5).select_related('variant__product', 'pool')[:5]
+            if StockItem:
+                context['staff_low_stock'] = StockItem.objects.filter(quantity__lt=5).select_related('variant__product', 'pool')[:5]
             
             # 4. Community Stats
-            context['staff_dreamer_count'] = Dreamer.objects.count()
+            if Dreamer:
+                context['staff_dreamer_count'] = Dreamer.objects.count()
 
         # --- EXISTING CONTEXT ---
         cart = get_or_create_cart(self.request)

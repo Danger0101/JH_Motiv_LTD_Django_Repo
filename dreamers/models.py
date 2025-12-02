@@ -1,5 +1,16 @@
 from django.db import models
 
+class Dreamer(models.Model):
+    # Basic fields for a newsletter subscriber/community member
+    email = models.EmailField(unique=True)
+    first_name = models.CharField(max_length=150, blank=True)
+    last_name = models.CharField(max_length=150, blank=True)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.email
+
 class DreamerProfile(models.Model):
     """Represents an individual or entity on the Wall of Dreamers."""
     
