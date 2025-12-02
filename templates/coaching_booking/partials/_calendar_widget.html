@@ -44,7 +44,8 @@
                             {% else %}
                                 {% with m=month|stringformat:"02d" d=day|stringformat:"02d" %}
                                     
-                                    {% if year < today.year or year == today.year and month < today.month or year == today.year and month == today.month and day < today.day %}
+                                    {# Logic to disable Past OR Far Future dates #}
+                                    {% if year < today.year or year == today.year and month < today.month or year == today.year and month == today.month and day < today.day or year > max_date.year or year == max_date.year and month > max_date.month or year == max_date.year and month == max_date.month and day > max_date.day %}
                                         
                                         <button type="button" disabled
                                             class="w-8 h-8 flex items-center justify-center rounded-full text-gray-300 cursor-not-allowed mx-auto">
@@ -72,6 +73,3 @@
         </tbody>
     </table>
 </div>
-
-<div id="time-slots-column" class="mt-4">
-    </div>
