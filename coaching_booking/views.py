@@ -1,13 +1,16 @@
-from django.shortcuts import get_object_or_404, render
+from django.views.generic import ListView, DetailView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.conf import settings
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
+from datetime import date, timedelta, datetime
+import calendar
+from django.db import transaction
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import HttpResponse
-from django.urls import reverse
-from django.utils import timezone
-from django.db import transaction
-from django.contrib import messages
-from datetime import date, timedelta, datetime
-import calendar
 from django.views.generic import ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.conf import settings
