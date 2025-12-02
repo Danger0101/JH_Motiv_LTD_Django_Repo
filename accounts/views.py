@@ -27,7 +27,6 @@ from django.contrib.auth import get_user_model
 from datetime import timedelta, date, datetime
 
 # --- FIX IMPORTS HERE ---
-# Use try/except to handle potential circular imports or missing apps during migration
 try:
     from dreamers.models import Dreamer
 except ImportError:
@@ -113,7 +112,8 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             
             # 2. Recent Orders (Sales Pulse)
             if Order:
-                context['staff_recent_orders'] = Order.objects.select_related('user').order_by('-created')[:5]
+                # FIX: Changed '-created' to '-created_at' to match Order model
+                context['staff_recent_orders'] = Order.objects.select_related('user').order_by('-created_at')[:5]
             
             # 3. Low Stock Alerts (Inventory Risk)
             if StockItem:
