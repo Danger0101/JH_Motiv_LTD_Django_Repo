@@ -114,9 +114,7 @@ def cancel_session(request, booking_id):
     else:
         messages.warning(request, "Session canceled. Credit forfeited (less than 24h notice).")
     
-    # Refresh the list
-    user_bookings = SessionBooking.objects.filter(client=request.user).order_by('start_datetime')
-    return render(request, 'accounts/profile_bookings.html', {'user_bookings': user_bookings})
+    return render(request, 'accounts/profile_bookings.html', {'active_tab': 'canceled'})
 
 @login_required
 def reschedule_session_form(request, booking_id):
@@ -170,8 +168,7 @@ def reschedule_session(request, booking_id):
     except Exception as e:
         messages.error(request, f"Error: {e}")
 
-    user_bookings = SessionBooking.objects.filter(client=request.user).order_by('start_datetime')
-    return render(request, 'accounts/profile_bookings.html', {'user_bookings': user_bookings})
+    return render(request, 'accounts/profile_bookings.html', {'active_tab': 'upcoming'})
 
 def coach_landing_view(request):
     """Renders the coach landing page."""

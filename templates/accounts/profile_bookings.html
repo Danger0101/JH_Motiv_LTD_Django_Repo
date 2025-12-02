@@ -1,7 +1,6 @@
 <div class="bg-white p-6 rounded-lg shadow-lg">
     <h2 class="text-xl font-semibold text-gray-800 mb-4">My Booked Sessions</h2>
 
-    <!-- Tab Headers -->
     <div class="border-b border-gray-200 mb-4">
         <nav class="-mb-px flex space-x-8" aria-label="Tabs">
             <a href="#" 
@@ -28,9 +27,8 @@
         </nav>
     </div>
 
-    <!-- Tab Content Container -->
     <div id="session-list-container" 
-         hx-get="{% url 'accounts:profile_bookings' %}?tab=upcoming" 
+         hx-get="{% url 'accounts:profile_bookings' %}?tab={{ active_tab|default:'upcoming' }}" 
          hx-trigger="load"
          hx-swap="innerHTML">
         <p class="text-gray-500 italic py-4">Loading sessions...</p>
