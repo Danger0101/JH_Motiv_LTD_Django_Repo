@@ -315,25 +315,33 @@ def get_daily_slots(request):
     coach_id = request.GET.get('coach_id')
     enrollment_id = request.GET.get('enrollment_id')
 
+    # Base context with IDs to prevent Template Errors even on failure
+    context = {
+        'coach_id': coach_id,
+        'enrollment_id': enrollment_id,
+        'selected_date': None,
+        'error_message': None,
+        'available_slots': []
+    }
+
     if not all([date_str, coach_id, enrollment_id]):
-        return render(request, 'coaching_booking/partials/available_slots.html', {
-            'error_message': 'Please select an offering and a coach first.'
-        })
+        context['error_message'] = 'Please select an offering and a coach first.'
+        return render(request, 'coaching_booking/partials/available_slots.html', context)
 
     try:
         selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         now = timezone.now()
         max_date = now.date() + timedelta(days=BOOKING_WINDOW_DAYS)
+        
+        context['selected_date'] = selected_date
 
         if selected_date < now.date():
-            return render(request, 'coaching_booking/partials/available_slots.html', {
-                'error_message': 'Cannot book dates in the past.'
-            })
+            context['error_message'] = 'Cannot book dates in the past.'
+            return render(request, 'coaching_booking/partials/available_slots.html', context)
         
         if selected_date > max_date:
-            return render(request, 'coaching_booking/partials/available_slots.html', {
-                'error_message': 'This date is too far in the future.'
-            })
+             context['error_message'] = 'This date is too far in the future.'
+             return render(request, 'coaching_booking/partials/available_slots.html', context)
 
         coach_profile = CoachProfile.objects.get(id=coach_id)
         enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id, client=request.user)
@@ -357,14 +365,11 @@ def get_daily_slots(request):
                     'end_time': slot_aware + timedelta(minutes=session_length)
                 })
 
-        context = {
-            'available_slots': formatted_slots,
-            'selected_date': selected_date,
-            'error_message': None,
-        }
+        context['available_slots'] = formatted_slots
+
     except (ValueError, CoachProfile.DoesNotExist, ClientOfferingEnrollment.DoesNotExist):
-        context = {'error_message': 'Invalid request data.'}
+        context['error_message'] = 'Invalid request data.'
     except Exception as e:
-        context = {'error_message': f'Error fetching slots: {str(e)}'}
+        context['error_message'] = f'Error fetching slots: {str(e)}'
 
     return render(request, 'coaching_booking/partials/available_slots.html', context)
