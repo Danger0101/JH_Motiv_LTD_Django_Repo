@@ -8,6 +8,9 @@ from django.db import transaction
 from django.contrib import messages
 from datetime import date, timedelta, datetime
 import calendar
+from django.views.generic import ListView, DetailView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.conf import settings
 
 from .models import ClientOfferingEnrollment, SessionBooking
 from accounts.models import CoachProfile
