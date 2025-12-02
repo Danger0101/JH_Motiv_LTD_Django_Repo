@@ -209,6 +209,7 @@ FIELD_ENCRYPTION_KEY = os.getenv('FIELD_ENCRYPTION_KEY')
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET') # For verifying webhook signatures
+PRINTFUL_API_KEY = os.environ.get('PRINTFUL_API_KEY')
 
 
 

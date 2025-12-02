@@ -34,6 +34,7 @@ class Product(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     product_type = models.CharField(max_length=20, choices=PRODUCT_TYPE_CHOICES)
+    printful_product_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID from Printful Sync Product")
     featured_image = models.ImageField(upload_to='product_images/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
