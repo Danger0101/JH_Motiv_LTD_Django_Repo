@@ -112,7 +112,36 @@
             <!-- Coach Dashboard Tab -->
             <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="coach" role="tabpanel" aria-labelledby="coach-tab" x-show="activeTab === 'coach'">
                 <div class="bg-white p-6 rounded-lg shadow-lg">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Coach Dashboard Elements</h2>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Coach Dashboard</h2>
+                    
+                    <div class="mb-8 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                                    <img src="https://www.gstatic.com/images/branding/product/1x/calendar_48dp.png" alt="GCal" class="w-6 h-6 mr-2">
+                                    Google Calendar & Meet
+                                </h3>
+                                <p class="text-sm text-gray-600 mt-1">Connect your calendar to automatically sync bookings and generate Google Meet links.</p>
+                            </div>
+                            
+                            <div>
+                                {% if user.coach_profile.google_credentials %}
+                                    <div class="flex items-center space-x-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                                            Connected
+                                        </span>
+                                        <a href="{% url 'gcal:google_calendar_disconnect' %}" class="text-sm text-red-600 hover:text-red-800 font-medium">Disconnect</a>
+                                    </div>
+                                {% else %}
+                                    <a href="{% url 'gcal:google_calendar_init' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                        Connect Calendar
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
                     <h3 class="text-lg font-semibold text-gray-700 mb-2">Upcoming Sessions</h3>
                     {% if coach_upcoming_sessions %}
                         <ul class="list-disc list-inside space-y-1">
