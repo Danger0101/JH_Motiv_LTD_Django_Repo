@@ -1,13 +1,19 @@
 {% load i18n allauth socialaccount %}
 
+{# 1. Determine inheritance based on HTMX #}
 {% if not request.htmx %}
-{% extends "base.html" %}
+    {% extends "base.html" %}
+{% endif %}
+
 {% block title %}{% trans "Account Connections" %}{% endblock %}
+
 {% block content %}
+{% if not request.htmx %}
 <div class="max-w-md mx-auto py-8 px-4 sm:px-6 lg:px-8">
     <div class="p-6 bg-white shadow-lg rounded-lg border">
         <h2 class="text-2xl font-bold mb-6 text-gray-900">{% translate "Account Connections" %}</h2>
 {% endif %}
+
         {% if form.accounts %}
         <p class="text-gray-700 mb-4">
             {% blocktrans %}You are currently connected to the following social networks:{% endblocktrans %}
@@ -41,5 +47,5 @@
 {% if not request.htmx %}
     </div>
 </div>
-{% endblock %}
 {% endif %}
+{% endblock %}
