@@ -23,7 +23,7 @@ from coaching_availability.models import CoachAvailability, CoachVacation, DateO
 from django.db import transaction
 from collections import defaultdict
 from django.views import View
-
+from django.contrib.auth import get_user_model # ADDED
 from coaching_availability.utils import get_coach_available_slots # Import the new utility function
 from datetime import timedelta, date, datetime
 
@@ -77,103 +77,83 @@ class ProfileView(LoginRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        user = self.request.user
 
-        # Initialize coach-specific context variables to prevent KeyErrors for non-coaches
+        # 1. Initialize defaults
         context['coach_upcoming_sessions'] = []
         context['coach_clients'] = []
         
+        # 2. Standard Context (Cart, Marketing, etc.)
         cart = get_or_create_cart(self.request)
-        summary = get_cart_summary_data(cart)
-        context['summary'] = summary
-        
-        # Fetch marketing preferences
-        preference, created = MarketingPreference.objects.get_or_create(user=self.request.user)
+        context['summary'] = get_cart_summary_data(cart)
+        preference, created = MarketingPreference.objects.get_or_create(user=user)
         context['marketing_preference'] = preference
-
-        # Fetch user's coaching offerings (enrollments)
-        context['user_offerings'] = ClientOfferingEnrollment.objects.filter(client=self.request.user).order_by('-enrolled_on')
-
-        # NOTE: All session booking data is now loaded dynamically via HTMX into the
-        # `profile_bookings.html` partial, so we no longer load it here.
-
-
-        # Add flags for dashboard elements
-        context['is_coach'] = self.request.user.is_coach
-        context['is_staff'] = self.request.user.is_staff
-
-        google_calendar_connected = False
-        if self.request.user.is_coach:
-            try:
-                coach_profile = self.request.user.coach_profile
-                google_calendar_connected = GoogleCredentials.objects.filter(coach=coach_profile).exists()
-            except CoachProfile.DoesNotExist:
-                pass  # Coach profile doesn't exist, so no connection
-        context['google_calendar_connected'] = google_calendar_connected
-
-        user = self.request.user
+        context['user_offerings'] = ClientOfferingEnrollment.objects.filter(client=user).order_by('-enrolled_on')
         
-        # Initialize coach-specific context variables for all users
-        context['weekly_schedule_formset'] = None
-        context['vacation_form'] = None
-        context['override_form'] = None
-        context['days_of_week'] = None
+        context['is_coach'] = getattr(user, 'is_coach', False)
+        context['is_staff'] = user.is_staff
 
-        # Only load coach data if the user is a coach
+        # 3. Coach Dashboard Logic
+        context['google_calendar_connected'] = False
+        
         if hasattr(user, 'coach_profile'):
             coach_profile = user.coach_profile
             
-            # --- ADDED: Fetch Coach Sessions & Clients ---
-            
-            # 1. Fetch upcoming sessions for this coach
-            context['coach_upcoming_sessions'] = SessionBooking.objects.filter(
-                coach=coach_profile,
-                start_datetime__gte=timezone.now(),
-                status__in=['BOOKED', 'RESCHEDULED']
-            ).select_related('client').order_by('start_datetime')
+            # Check GCal Connection
+            try:
+                context['google_calendar_connected'] = GoogleCredentials.objects.filter(coach=coach_profile).exists()
+            except Exception:
+                pass
 
-            # 2. Fetch active enrollments assigned to this coach
-            # This provides Client Name, Offering Name, and Remaining Sessions
-            # context['coach_clients'] = ClientOfferingEnrollment.objects.filter(
-            #     coach=coach_profile
-            # ).filter(
-            #     Q(is_active=True) |
-            #     Q(deactivated_on__gte=timezone.now() - timedelta(days=30))
-            # ).select_related('client', 'offering').order_by('client__last_name')
-
-            # ---------------------------------------------
-            
-            # 1. Create the FormSet Class
+            # --- START ADDED SECTION: Availability Forms ---
             WeeklyScheduleFormSet = modelformset_factory(
                 CoachAvailability,
                 form=WeeklyScheduleForm,
                 extra=0,
                 can_delete=True
             )
-            
-            # 2. Create the QuerySet
             queryset = CoachAvailability.objects.filter(coach=user).order_by('day_of_week')
-            
-            # 3. Instantiate and Add to Context
             context['weekly_schedule_formset'] = WeeklyScheduleFormSet(queryset=queryset)
-            
-            # 4. Add other forms
             context['vacation_form'] = CoachVacationForm()
             context['override_form'] = DateOverrideForm()
-            
-            # 5. Add Days of Week (from Model)
             context['days_of_week'] = CoachAvailability.DAYS_OF_WEEK
 
+            # --- START ADDED SECTION: Fetch Real Data ---
+            
+            # A. Fetch Upcoming Sessions
+            context['coach_upcoming_sessions'] = SessionBooking.objects.filter(
+                coach=coach_profile,
+                start_datetime__gte=timezone.now(),
+                status__in=['BOOKED', 'RESCHEDULED']
+            ).select_related('client').order_by('start_datetime')
 
-        # For now, available_credits will be the same as user_offerings for simplicity
-        # In a real scenario, this might be a separate model or a filtered queryset of enrollments
+            # B. Fetch Active Clients (Unique users from enrollments or bookings)
+            enrollment_client_ids = ClientOfferingEnrollment.objects.filter(
+                coach=coach_profile, 
+                is_active=True
+            ).values_list('client_id', flat=True)
+            
+            booking_client_ids = SessionBooking.objects.filter(
+                coach=coach_profile,
+                start_datetime__gte=timezone.now()
+            ).values_list('client_id', flat=True)
+
+            client_ids = set(list(enrollment_client_ids) + list(booking_client_ids))
+            User = get_user_model()
+            context['coach_clients'] = User.objects.filter(id__in=client_ids).distinct()
+            
+            # --- END ADDED SECTION ---
+
+        # 4. Book Session Data (Available credits)
         context['available_credits'] = ClientOfferingEnrollment.objects.filter(
-            client=self.request.user,
+            client=user,
             remaining_sessions__gt=0,
             is_active=True,
             expiration_date__gte=timezone.now()
         ).order_by('-enrolled_on')
         
-        context['active_tab'] = 'integrations' # Set default active tab
+        # Default tab
+        context['active_tab'] = 'account' 
         
         return context
 
