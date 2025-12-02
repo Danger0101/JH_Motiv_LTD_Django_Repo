@@ -85,28 +85,41 @@ def book_session(request):
         return htmx_error("Missing booking information. Please try again.")
 
     try:
-        enrollment = get_object_or_404(ClientOfferingEnrollment, id=enrollment_id, client=request.user)
-        coach_profile = get_object_or_404(CoachProfile, id=coach_id)
-        
-        try:
-            start_datetime_naive = datetime.strptime(start_time_str, '%Y-%m-%d %H:%M')
-            start_datetime_obj = timezone.make_aware(start_datetime_naive)
-        except ValueError:
-            start_datetime_naive = datetime.fromisoformat(start_time_str)
-            start_datetime_obj = timezone.make_aware(start_datetime_naive)
-
-        now = timezone.now()
-
-        if start_datetime_obj < now:
-            return htmx_error("Cannot book a session in the past.")
-        
-        if start_datetime_obj > now + timedelta(days=BOOKING_WINDOW_DAYS):
-            return htmx_error(f"Cannot book more than {BOOKING_WINDOW_DAYS} days in advance.")
-
-        if enrollment.remaining_sessions <= 0:
-            return htmx_error("No sessions remaining for this enrollment.")
-
+        # Start transaction BEFORE fetching the enrollment to lock it
         with transaction.atomic():
+            # LOCKING: select_for_update() prevents other requests from reading this 
+            # specific enrollment until this transaction finishes.
+            enrollment = get_object_or_404(
+                ClientOfferingEnrollment.objects.select_for_update(), 
+                id=enrollment_id, 
+                client=request.user
+            )
+            
+            # Now check sessions safely
+            if enrollment.remaining_sessions <= 0:
+                messages.error(request, "No sessions remaining for this enrollment.")
+                response = HttpResponse(status=400)
+                response['HX-Redirect'] = reverse('accounts:account_profile')
+                return response
+
+            coach_profile = get_object_or_404(CoachProfile, id=coach_id)
+            
+            try:
+                start_datetime_naive = datetime.strptime(start_time_str, '%Y-%m-%d %H:%M')
+                start_datetime_obj = timezone.make_aware(start_datetime_naive)
+            except ValueError:
+                start_datetime_naive = datetime.fromisoformat(start_time_str)
+                start_datetime_obj = timezone.make_aware(start_datetime_naive)
+
+            now = timezone.now()
+
+            if start_datetime_obj < now:
+                return htmx_error("Cannot book a session in the past.")
+            
+            if start_datetime_obj > now + timedelta(days=BOOKING_WINDOW_DAYS):
+                return htmx_error(f"Cannot book more than {BOOKING_WINDOW_DAYS} days in advance.")
+
+            # Availability check
             session_length = enrollment.offering.session_length_minutes
             available_slots = get_coach_available_slots(
                 coach_profile,
@@ -132,7 +145,8 @@ def book_session(request):
                 client=request.user,
                 start_datetime=start_datetime_obj,
             )
-
+        
+        # Success response...
         messages.success(request, f"Session confirmed for {start_datetime_obj.strftime('%B %d, %Y at %I:%M %p')}.")
         response = HttpResponse(status=204)
         response['HX-Redirect'] = reverse('accounts:account_profile')
@@ -144,11 +158,15 @@ def book_session(request):
 
 @login_required
 @require_POST
+@transaction.atomic  # ADD THIS DECORATOR
 def cancel_session(request, booking_id):
+    # Locking isn't strictly necessary here for safety, but atomic is good practice
+    # to ensure the session count and status update happen together.
     booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
-    is_credit_restored = booking.cancel()
     
-    if is_credit_restored:
+    is_refunded = booking.cancel()
+    
+    if is_refunded:
         messages.success(request, "Session canceled successfully. Your credit has been restored.")
     else:
         messages.warning(request, "Session canceled. Because this was within 24 hours, the credit was forfeited per our Terms of Service.")
