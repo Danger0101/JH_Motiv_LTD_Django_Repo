@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_POST
 from django.contrib import messages
@@ -38,7 +39,9 @@ class CustomLoginView(LoginView):
         context = super().get_context_data(**kwargs)
         cart = get_or_create_cart(self.request)
         summary = get_cart_summary_data(cart)
-        context['summary'] = summary
+        
+        # Add this line to fix the template error
+        context['ACCOUNT_ALLOW_REGISTRATION'] = getattr(settings, 'ACCOUNT_ALLOW_REGISTRATION', True) 
         return context
 
     def form_valid(self, form):
