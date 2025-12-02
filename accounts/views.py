@@ -122,6 +122,24 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         if hasattr(user, 'coach_profile'):
             coach_profile = user.coach_profile
             
+            # --- ADDED: Fetch Coach Sessions & Clients ---
+            
+            # 1. Fetch upcoming sessions for this coach
+            context['coach_upcoming_sessions'] = SessionBooking.objects.filter(
+                coach=coach_profile,
+                start_datetime__gte=timezone.now(),
+                status__in=['BOOKED', 'RESCHEDULED']
+            ).select_related('client').order_by('start_datetime')
+
+            # 2. Fetch active enrollments assigned to this coach
+            # This provides Client Name, Offering Name, and Remaining Sessions
+            context['coach_clients'] = ClientOfferingEnrollment.objects.filter(
+                coach=coach_profile,
+                is_active=True
+            ).select_related('client', 'offering').order_by('client__last_name')
+
+            # ---------------------------------------------
+            
             # 1. Create the FormSet Class
             WeeklyScheduleFormSet = modelformset_factory(
                 CoachAvailability,
