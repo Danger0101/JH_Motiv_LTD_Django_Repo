@@ -37,11 +37,14 @@
         {# Added hx-include to send the dropdown values #}
         <div class="flex flex-col md:flex-row gap-6 mt-6">
             <div id="calendar-wrapper" class="md:w-2/3"
-                 hx-trigger="load, change from:#enrollment_id, change from:#coach_id"
+                 hx-trigger="change from:#enrollment_id, change from:#coach_id"
                  hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}"
                  hx-include="#enrollment_id, #coach_id"
                  hx-swap="innerHTML">
-                <p class="text-gray-500">Select an offering and a coach to load the calendar.</p>
+                
+                <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                    <p class="text-gray-500 font-medium">Select an Offering and a Coach to view the booking calendar.</p>
+                </div>
             </div>
 
             <div id="time-slots-column" class="md:w-1/3 border-l pl-6">

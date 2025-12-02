@@ -28,54 +28,63 @@ def book_session(request):
     coach_id = request.POST.get('coach_id')
     start_time_str = request.POST.get('start_time')
 
-    # Helper to return error response via HTMX (often a redirect)
-    def htmx_error_redirect(msg):
+    # Helper to handle HTMX redirects on error
+    def htmx_error(msg):
         messages.error(request, msg)
-        response = HttpResponse(status=200) # Return 200 so HTMX processes the redirect
+        response = HttpResponse(status=200)
         response['HX-Redirect'] = reverse('accounts:account_profile')
         return response
 
     if not all([enrollment_id, coach_id, start_time_str]):
-        return htmx_error_redirect("Missing booking information.")
+        return htmx_error("Missing booking information. Please try again.")
 
     try:
         enrollment = get_object_or_404(ClientOfferingEnrollment, id=enrollment_id, client=request.user)
-        coach_profile = get_object_or_04(CoachProfile, id=coach_id)
+        coach_profile = get_object_or_404(CoachProfile, id=coach_id)
         
-        start_datetime_naive = datetime.strptime(start_time_str, '%Y-%m-%d %H:%M')
-        start_datetime_obj = timezone.make_aware(start_datetime_naive)
-        
+        # Parse and Make Timezone Aware
+        try:
+            start_datetime_naive = datetime.strptime(start_time_str, '%Y-%m-%d %H:%M')
+            start_datetime_obj = timezone.make_aware(start_datetime_naive)
+        except ValueError:
+            # Try ISO format just in case
+            start_datetime_naive = datetime.fromisoformat(start_time_str)
+            start_datetime_obj = timezone.make_aware(start_datetime_naive)
+
         now = timezone.now()
+
+        # Validate Constraints
         if start_datetime_obj < now:
-            return htmx_error_redirect("Cannot book a session in the past.")
-            
+            return htmx_error("Cannot book a session in the past.")
+        
         if start_datetime_obj > now + timedelta(days=BOOKING_WINDOW_DAYS):
-            return htmx_error_redirect(f"Cannot book more than {BOOKING_WINDOW_DAYS} days in advance.")
+            return htmx_error(f"Cannot book more than {BOOKING_WINDOW_DAYS} days in advance.")
 
         if enrollment.remaining_sessions <= 0:
-            return htmx_error_redirect("No sessions remaining for this enrollment.")
+            return htmx_error("No sessions remaining for this enrollment.")
 
+        # Atomic Booking Creation
         with transaction.atomic():
-            session_length_minutes = enrollment.offering.session_length_minutes
-            requested_date = start_datetime_obj.date()
-            
-            truly_available_slots = get_coach_available_slots(
+            session_length = enrollment.offering.session_length_minutes
+            # Re-check availability
+            available_slots = get_coach_available_slots(
                 coach_profile,
-                requested_date,
-                requested_date,
-                session_length_minutes,
+                start_datetime_obj.date(),
+                start_datetime_obj.date(),
+                session_length,
                 offering_type='one_on_one'
             )
             
+            # Verify slot is still free (compare as aware datetimes)
             is_available = False
-            for slot in truly_available_slots:
+            for slot in available_slots:
                 slot_aware = slot if timezone.is_aware(slot) else timezone.make_aware(slot)
                 if slot_aware == start_datetime_obj:
                     is_available = True
                     break
-
+            
             if not is_available:
-                return htmx_error_redirect("The selected slot is no longer available.")
+                return htmx_error("That time slot is no longer available.")
 
             SessionBooking.objects.create(
                 enrollment=enrollment,
@@ -83,14 +92,14 @@ def book_session(request):
                 client=request.user,
                 start_datetime=start_datetime_obj,
             )
-        
+
         messages.success(request, f"Session confirmed for {start_datetime_obj.strftime('%B %d, %Y at %I:%M %p')}.")
         response = HttpResponse(status=204)
         response['HX-Redirect'] = reverse('accounts:account_profile')
         return response
 
     except Exception as e:
-        return htmx_error_redirect(f"An error occurred: {e}")
+        return htmx_error(f"An error occurred: {str(e)}")
 
 @login_required
 @require_POST
@@ -244,7 +253,15 @@ def profile_book_session_partial(request):
 def get_booking_calendar(request):
     """
     Returns the HTML for the calendar widget (HTMX).
+    Only renders if BOTH coach_id and enrollment_id are provided.
     """
+    coach_id = request.GET.get('coach_id')
+    enrollment_id = request.GET.get('enrollment_id')
+
+    # 1. VISIBILITY FIX: Return empty if missing selections
+    if not coach_id or not enrollment_id:
+        return HttpResponse('<div class="text-gray-500 italic p-4 text-center">Please select both an offering and a coach to view availability.</div>')
+
     try:
         year = int(request.GET.get('year', timezone.now().year))
         month = int(request.GET.get('month', timezone.now().month))
@@ -252,12 +269,9 @@ def get_booking_calendar(request):
         year = timezone.now().year
         month = timezone.now().month
 
-    coach_id = request.GET.get('coach_id')
-    enrollment_id = request.GET.get('enrollment_id')
-
     date_obj = date(year, month, 1)
     
-    # Prev/Next logic
+    # Month Navigation
     prev_date = date_obj - timedelta(days=1)
     prev_month = prev_date.month
     prev_year = prev_date.year
@@ -293,17 +307,20 @@ def get_booking_calendar(request):
 
 @login_required
 def get_daily_slots(request):
+    """
+    Returns the available time slots for a specific date (HTMX).
+    """
     date_str = request.GET.get('date')
     coach_id = request.GET.get('coach_id')
     enrollment_id = request.GET.get('enrollment_id')
 
-    # Initialize context with IDs so template doesn't crash on KeyError
+    # 2. CONTEXT FIX: Always pass IDs so the template form can use them
     context = {
         'coach_id': coach_id,
         'enrollment_id': enrollment_id,
         'selected_date': None,
-        'error_message': None,
-        'available_slots': []
+        'available_slots': [],
+        'error_message': None
     }
 
     if not all([date_str, coach_id, enrollment_id]):
@@ -340,6 +357,7 @@ def get_daily_slots(request):
         formatted_slots = []
         for slot in available_slots:
             slot_aware = slot if timezone.is_aware(slot) else timezone.make_aware(slot)
+            
             if slot_aware > now:
                 formatted_slots.append({
                     'start_time': slot_aware,
