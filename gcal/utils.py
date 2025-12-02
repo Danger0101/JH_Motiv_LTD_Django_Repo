@@ -104,7 +104,8 @@ def create_calendar_event(coach_profile, summary, description, start_time, end_t
 
 def update_calendar_event(coach_profile, event_id, summary, description, start_time, end_time, attendees=None):
     """
-    Updates an existing event in the coach's Google Calendar.
+    Updates an existing event. Uses patch to preserve existing Meet links, 
+    and attempts to add one if missing.
     """
     service = get_calendar_service(coach_profile)
     if not service:
@@ -124,10 +125,22 @@ def update_calendar_event(coach_profile, event_id, summary, description, start_t
             'timeZone': 'UTC',
         },
         'attendees': attendees if attendees else [],
+        # Adding conferenceData here ensures that if the event LOST its link 
+        # (or never had one), a new one is generated. 
+        # If one already exists, this createRequest is safely ignored by Google.
+        'conferenceData': {
+            'createRequest': {
+                'requestId': str(uuid.uuid4()),
+                'conferenceSolutionKey': {
+                    'type': 'hangoutsMeet'
+                }
+            }
+        }
     }
 
     try:
-        updated_event = service.events().update(
+        # Changed from .update() to .patch() to avoid overwriting unrelated fields
+        updated_event = service.events().patch(
             calendarId=calendar_id,
             eventId=event_id,
             body=event_body,
@@ -137,7 +150,7 @@ def update_calendar_event(coach_profile, event_id, summary, description, start_t
         return updated_event
         
     except HttpError as e:
-        # If event is not found (404) or gone (410), recreate it
+        # If event is not found (404) or gone (410), recreate it (Recover from manual deletion)
         if e.resp.status in [404, 410]:
             return create_calendar_event(
                 coach_profile, summary, description, start_time, end_time, attendees
@@ -163,7 +176,7 @@ def delete_calendar_event(coach_profile, event_id):
             sendNotifications=True
         ).execute()
     except HttpError as e:
-        # If it's already deleted (404/410), that's fine. Ignore it.
+        # If it's already deleted (404/410), that's fine.
         if e.resp.status in [404, 410]:
             pass
         else:
