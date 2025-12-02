@@ -67,9 +67,21 @@ class ProfileView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # Initialize as empty lists to prevent 500 errors. 
-        # These will be populated by HTMX calls.
+        # --- RESTORE THIS LOGIC ---
+        # Initialize list
         context['coach_upcoming_sessions'] = []
+        
+        # If user is a coach, fetch their upcoming sessions
+        if hasattr(self.request.user, 'coach_profile'):
+            coach_profile = self.request.user.coach_profile
+            context['coach_upcoming_sessions'] = SessionBooking.objects.filter(
+                coach=coach_profile,
+                start_datetime__gte=timezone.now(),
+                status__in=['BOOKED', 'RESCHEDULEED']
+            ).select_related('client').order_by('start_datetime')
+        # ---------------------------
+
+        # Keep this empty, as it is loaded via HTMX now
         context['coach_clients'] = []
         
         cart = get_or_create_cart(self.request)
