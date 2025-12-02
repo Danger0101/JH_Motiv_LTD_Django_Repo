@@ -214,6 +214,115 @@
         </div>
         {% endif %}
 
+        {% if is_staff %}
+            <div x-show="activeTab === 'staff'" class="space-y-6">
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex items-center">
+                        <div class="p-3 bg-pink-100 rounded-full text-pink-600 mr-4">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">Dreamers</p>
+                            <p class="text-2xl font-bold text-gray-800">{{ staff_dreamer_count }}</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex items-center">
+                        <div class="p-3 bg-blue-100 rounded-full text-blue-600 mr-4">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">Active Clients</p>
+                            <p class="text-2xl font-bold text-gray-800">{{ staff_active_enrollments }}</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex items-center">
+                        <div class="p-3 bg-yellow-100 rounded-full text-yellow-600 mr-4">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">Pending Tasters</p>
+                            <p class="text-2xl font-bold text-gray-800">{{ staff_pending_tasters }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold text-gray-800">Recent Paid Orders</h3>
+                            <a href="{% url 'admin:payments_order_changelist' %}" class="text-xs text-blue-600 hover:underline font-medium">View All in Admin &rarr;</a>
+                        </div>
+                        {% if staff_recent_orders %}
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full text-left text-sm">
+                                    <thead class="bg-gray-50 text-gray-500">
+                                        <tr>
+                                            <th class="px-4 py-2 font-medium">Order #</th>
+                                            <th class="px-4 py-2 font-medium">User</th>
+                                            <th class="px-4 py-2 font-medium text-right">Total</th>
+                                            <th class="px-4 py-2 font-medium">Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100">
+                                        {% for order in staff_recent_orders %}
+                                        <tr class="hover:bg-gray-50 transition">
+                                            <td class="px-4 py-3 font-medium text-gray-900">#{{ order.id }}</td>
+                                            <td class="px-4 py-3 text-gray-600">{{ order.user.username|default:"Guest" }}</td>
+                                            <td class="px-4 py-3 text-right font-medium text-gray-900">£{{ order.get_total_cost }}</td>
+                                            <td class="px-4 py-3 text-gray-500 text-xs">{{ order.created|date:"M d" }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-sm text-gray-500 italic">No recent orders found.</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="bg-gradient-to-r from-gray-800 to-gray-900 p-6 rounded-2xl shadow-sm text-white">
+                            <h3 class="text-lg font-bold mb-4">Admin Shortcuts</h3>
+                            <div class="grid grid-cols-2 gap-3">
+                                <a href="{% url 'admin:products_product_changelist' %}" class="block px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition text-center">
+                                    Manage Products
+                                </a>
+                                <a href="{% url 'admin:coaching_booking_sessionbooking_changelist' %}" class="block px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition text-center">
+                                    Manage Sessions
+                                </a>
+                                <a href="{% url 'admin:core_faq_changelist' %}" class="block px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition text-center">
+                                    Update FAQs
+                                </a>
+                                <a href="{% url 'admin:dreamers_dreamer_changelist' %}" class="block px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition text-center">
+                                    View Leads
+                                </a>
+                            </div>
+                        </div>
+
+                        {% if staff_low_stock %}
+                        <div class="bg-red-50 border border-red-100 p-5 rounded-2xl">
+                            <h3 class="text-red-800 font-bold text-sm uppercase tracking-wide mb-3 flex items-center">
+                                <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                                Low Stock Alerts
+                            </h3>
+                            <ul class="space-y-2">
+                                {% for variant in staff_low_stock %}
+                                <li class="text-sm text-red-700 flex justify-between">
+                                    <span>{{ variant.product.name }} ({{ variant.name }})</span>
+                                    <a href="{% url 'admin:products_product_change' variant.product.id %}" class="font-bold hover:underline">Edit</a>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
                 <div x-show="activeTab === 'profile'" 
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 transform scale-95"

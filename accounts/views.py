@@ -13,7 +13,7 @@ from django.db.models import Q
 from .models import MarketingPreference
 from allauth.account.views import LoginView, SignupView, PasswordResetView, PasswordChangeView, PasswordSetView, LogoutView, PasswordResetDoneView, PasswordResetDoneView
 from cart.utils import get_or_create_cart, get_cart_summary_data
-from coaching_booking.models import ClientOfferingEnrollment, SessionBooking
+from coaching_booking.models import ClientOfferingEnrollment, SessionBooking, TasterSession
 from coaching_core.models import Offering
 from accounts.models import CoachProfile 
 from gcal.models import GoogleCredentials
@@ -24,6 +24,11 @@ from django.db import transaction
 from collections import defaultdict
 from django.views import View
 from django.contrib.auth import get_user_model
+
+# Add these imports for staff dashboard
+from payments.models import Order
+from dreamers.models import Dreamer
+from products.models import ProductVariant
 
 from coaching_availability.utils import get_coach_available_slots 
 from datetime import timedelta, date, datetime
@@ -97,6 +102,23 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         # Add flags for dashboard elements
         context['is_coach'] = self.request.user.is_coach
         context['is_staff'] = self.request.user.is_staff
+
+        if self.request.user.is_staff:
+            # 1. Recent Orders (Last 5, paid)
+            context['staff_recent_orders'] = Order.objects.filter(paid=True).order_by('-created')[:5]
+            
+            # 2. Dreamers Count
+            context['staff_dreamer_count'] = Dreamer.objects.filter(active=True).count()
+            
+            # 3. Coaching Stats
+            context['staff_pending_tasters'] = TasterSession.objects.filter(status='PENDING').count()
+            context['staff_active_enrollments'] = ClientOfferingEnrollment.objects.filter(is_active=True).count()
+            
+            # 4. Low Stock Alerts (Variants with < 5 items in any pool)
+            # Note: This depends on your specific StockPool logic, simplified here
+            context['staff_low_stock'] = ProductVariant.objects.filter(
+                stock_items__quantity__lt=5
+            ).distinct()[:5]
 
         # Check GCal connection safely
         google_calendar_connected = False
