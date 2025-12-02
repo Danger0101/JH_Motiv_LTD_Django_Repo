@@ -164,26 +164,33 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Use WhiteNoise's storage backend in production
-if not DEBUG:
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
 # Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# If CLOUDINARY_URL is found (Production), use Cloudinary
-if os.getenv('CLOUDINARY_URL'):
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+# Django 4.2+ Storage Configuration
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        # Use WhiteNoise for serving static files in production
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+# If CLOUDINARY_CLOUD_NAME is found (Production), configure Cloudinary
+if os.getenv('CLOUDINARY_CLOUD_NAME'):
     CLOUDINARY_STORAGE = {
         'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
         'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
         'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
     }
-
 else:
-    # Local development fallback
-    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+    # For local development, switch back to default file storages
+    STORAGES['default']['BACKEND'] = 'django.core.files.storage.FileSystemStorage'
+    STORAGES['staticfiles']['BACKEND'] = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
