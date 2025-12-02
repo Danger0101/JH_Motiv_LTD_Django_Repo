@@ -1,3 +1,7 @@
+from products.models import StockItem, ProductVariant
+from payments.models import Order
+from dreamers.models import Dreamer
+from coaching_client.models import TasterSessionRequest
 from django.conf import settings
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_POST
@@ -72,55 +76,45 @@ class ProfileView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # --- RESTORE THIS LOGIC ---
-        # Initialize list
+        # --- COACHING DASHBOARD DATA ---
         context['coach_upcoming_sessions'] = []
-        
-        # If user is a coach, fetch their upcoming sessions
         if hasattr(self.request.user, 'coach_profile'):
             coach_profile = self.request.user.coach_profile
             context['coach_upcoming_sessions'] = SessionBooking.objects.filter(
                 coach=coach_profile,
                 start_datetime__gte=timezone.now(),
-                status__in=['BOOKED', 'RESCHEDULEED']
+                # Fixed typo: 'RESCHEDULEED' -> 'RESCHEDULED'
+                status__in=['BOOKED', 'RESCHEDULED']
             ).select_related('client').order_by('start_datetime')
-        # ---------------------------
 
-        # Keep this empty, as it is loaded via HTMX now
+        # Initialized as empty; loaded via HTMX
         context['coach_clients'] = []
         
+        # --- STAFF DASHBOARD DATA (New) ---
+        context['is_staff'] = self.request.user.is_staff
+        if self.request.user.is_staff:
+            # 1. Pending Taster Requests (Leads)
+            context['staff_pending_tasters'] = TasterSessionRequest.objects.filter(status='PENDING').count()
+            
+            # 2. Recent Orders (Sales Pulse)
+            context['staff_recent_orders'] = Order.objects.select_related('user').order_by('-created')[:5]
+            
+            # 3. Low Stock Alerts (Inventory Risk)
+            context['staff_low_stock'] = StockItem.objects.filter(quantity__lt=5).select_related('variant__product', 'pool')[:5]
+            
+            # 4. Community Stats
+            context['staff_dreamer_count'] = Dreamer.objects.count()
+
+        # --- EXISTING CONTEXT ---
         cart = get_or_create_cart(self.request)
         context['summary'] = get_cart_summary_data(cart)
         
-        # Fetch marketing preferences
         preference, created = MarketingPreference.objects.get_or_create(user=self.request.user)
         context['marketing_preference'] = preference
-
-        # Fetch user's coaching offerings (enrollments)
         context['user_offerings'] = ClientOfferingEnrollment.objects.filter(client=self.request.user).order_by('-enrolled_on')
 
-        # Add flags for dashboard elements
         context['is_coach'] = self.request.user.is_coach
-        context['is_staff'] = self.request.user.is_staff
-
-        if self.request.user.is_staff:
-            # 1. Recent Orders (Last 5, paid)
-            context['staff_recent_orders'] = Order.objects.filter(paid=True).order_by('-created')[:5]
-            
-            # 2. Dreamers Count
-            context['staff_dreamer_count'] = Dreamer.objects.filter(active=True).count()
-            
-            # 3. Coaching Stats
-            context['staff_pending_tasters'] = TasterSession.objects.filter(status='PENDING').count()
-            context['staff_active_enrollments'] = ClientOfferingEnrollment.objects.filter(is_active=True).count()
-            
-            # 4. Low Stock Alerts (Variants with < 5 items in any pool)
-            # Note: This depends on your specific StockPool logic, simplified here
-            context['staff_low_stock'] = ProductVariant.objects.filter(
-                stock_items__quantity__lt=5
-            ).distinct()[:5]
-
-        # Check GCal connection safely
+        
         google_calendar_connected = False
         if self.request.user.is_coach:
             try:
@@ -130,7 +124,6 @@ class ProfileView(LoginRequiredMixin, TemplateView):
                 pass 
         context['google_calendar_connected'] = google_calendar_connected
 
-        # Initialize coach-specific forms
         context['weekly_schedule_formset'] = None
         context['vacation_form'] = None
         context['override_form'] = None
@@ -138,7 +131,6 @@ class ProfileView(LoginRequiredMixin, TemplateView):
 
         if hasattr(self.request.user, 'coach_profile'):
             coach_profile = self.request.user.coach_profile
-            
             WeeklyScheduleFormSet = modelformset_factory(
                 CoachAvailability,
                 form=WeeklyScheduleForm,
@@ -146,13 +138,11 @@ class ProfileView(LoginRequiredMixin, TemplateView):
                 can_delete=True
             )
             queryset = CoachAvailability.objects.filter(coach=self.request.user).order_by('day_of_week')
-            
             context['weekly_schedule_formset'] = WeeklyScheduleFormSet(queryset=queryset)
             context['vacation_form'] = CoachVacationForm()
             context['override_form'] = DateOverrideForm()
             context['days_of_week'] = CoachAvailability.DAYS_OF_WEEK
 
-        # Credits logic
         context['available_credits'] = ClientOfferingEnrollment.objects.filter(
             client=self.request.user,
             remaining_sessions__gt=0,
@@ -160,8 +150,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             expiration_date__gte=timezone.now()
         ).order_by('-enrolled_on')
         
-        context['active_tab'] = 'account' # Default tab
-        
+        context['active_tab'] = 'account'
         return context
 
 @login_required
