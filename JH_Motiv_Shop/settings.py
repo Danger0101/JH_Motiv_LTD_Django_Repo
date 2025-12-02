@@ -23,10 +23,6 @@ CSRF_TRUSTED_ORIGINS = ['https://jhmotiv-shop-ltd-official-040e4cbd5800.herokuap
 
 # Application definition
 INSTALLED_APPS = [
-    # Cloudinary apps must be before django.contrib.staticfiles
-    'cloudinary',
-    'cloudinary_storage',
-
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -35,6 +31,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'django.contrib.humanize',
+    
+    # Cloudinary apps must be before django.contrib.staticfiles
+    'cloudinary',
+    'cloudinary_storage',
     
     # Accounts
     'accounts',
