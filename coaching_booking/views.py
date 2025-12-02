@@ -114,6 +114,7 @@ def cancel_session(request, booking_id):
     else:
         messages.warning(request, "Session canceled. Credit forfeited (less than 24h notice).")
     
+    # Fixed: Pass 'active_tab' context to prevent template error
     return render(request, 'accounts/profile_bookings.html', {'active_tab': 'canceled'})
 
 @login_required
@@ -168,6 +169,7 @@ def reschedule_session(request, booking_id):
     except Exception as e:
         messages.error(request, f"Error: {e}")
 
+    # Fixed: Pass 'active_tab' context to prevent template error
     return render(request, 'accounts/profile_bookings.html', {'active_tab': 'upcoming'})
 
 def coach_landing_view(request):
@@ -257,7 +259,11 @@ def get_booking_calendar(request):
 
     # 1. VISIBILITY FIX: Return empty if missing selections
     if not coach_id or not enrollment_id:
-        return HttpResponse('<div class="text-gray-500 italic p-4 text-center">Please select both an offering and a coach to view availability.</div>')
+        return HttpResponse(
+            '&lt;div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center h-full flex flex-col justify-center items-center"&gt;'
+            '&lt;p class="text-gray-500 font-medium"&gt;Select an Offering and a Coach to view availability.&lt;/p&gt;'
+            '&lt;/div&gt;'
+        )
 
     try:
         year = int(request.GET.get('year', timezone.now().year))
