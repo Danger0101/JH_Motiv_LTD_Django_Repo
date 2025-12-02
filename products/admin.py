@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.db.models import Sum
-from .models import Product, Variant, StockPool
+from .models import Product, Variant, StockPool, StockItem
 
 # =======================================================
 # 1. Stock Pool Admin
@@ -88,3 +88,12 @@ class ProductAdmin(admin.ModelAdmin):
         return format_html(f'<span style="color: {status_data["color"]};">● {status_data["status"]}</span>')
         
     current_stock_status.short_description = 'Stock Status'
+
+# =======================================================
+# 4. StockItem Admin (New)
+# =======================================================
+@admin.register(StockItem)
+class StockItemAdmin(admin.ModelAdmin):
+    list_display = ('variant', 'pool', 'quantity', 'updated_at')
+    list_filter = ('pool', 'updated_at')
+    search_fields = ('variant__name', 'variant__product__name')
