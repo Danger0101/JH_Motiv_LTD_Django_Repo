@@ -56,8 +56,7 @@
                                         
                                         <button type="button"
                                             class="w-8 h-8 flex items-center justify-center rounded-full text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 focus:bg-indigo-600 focus:text-white font-medium mx-auto transition-all duration-200 {% if day == today.day and month == today.month and year == today.year %}ring-2 ring-indigo-500{% endif %}"
-                                            hx-get="{% url 'coaching_booking:get_daily_slots' %}"
-                                            hx-vals='{"date": "{{ year }}-{{ m }}-{{ d }}", "coach_id": "{{ coach_id|default_if_none:"" }}", "enrollment_id": "{{ enrollment_id|default_if_none:"" }}"}'
+                                            hx-get="{% url 'coaching_booking:get_daily_slots' %}?date={{ year }}-{{ m }}-{{ d }}&coach_id={{ coach_id }}&enrollment_id={{ enrollment_id }}"
                                             hx-target="#time-slots-column"
                                             hx-swap="innerHTML">
                                             {{ day }}
