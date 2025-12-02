@@ -4,6 +4,7 @@ from datetime import timedelta
 from accounts.models import User
 from coaching_core.models import CoachProfile, Offering
 from dateutil.relativedelta import relativedelta
+from django.core.exceptions import ValidationError
 
 SESSION_STATUS_CHOICES = (
     ('BOOKED', 'Booked'),
@@ -56,7 +57,7 @@ class SessionBooking(models.Model):
     enrollment = models.ForeignKey(ClientOfferingEnrollment, on_delete=models.CASCADE, related_name='bookings', verbose_name="Enrollment", null=True, blank=True)
     coach = models.ForeignKey(CoachProfile, on_delete=models.CASCADE, related_name='bookings', verbose_name="Coach")
     client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bookings', verbose_name="Client")
-    start_datetime = models.DateTimeField(verbose_name="Start Time")
+    start_datetime = models.DateTimeField(verbose_name="Start Time", db_index=True)
     end_datetime = models.DateTimeField(verbose_name="End Time")
     status = models.CharField(max_length=20, choices=SESSION_STATUS_CHOICES, default='BOOKED', verbose_name="Status")
     gcal_event_id = models.CharField(max_length=255, blank=True, null=True, verbose_name="Google Calendar Event ID", help_text="The unique ID for the event in Google Calendar.")
@@ -66,6 +67,22 @@ class SessionBooking(models.Model):
         verbose_name_plural = "Session Bookings"
         unique_together = ('coach', 'start_datetime')
         ordering = ['start_datetime']
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.start_datetime and self.end_datetime and self.coach:
+            # Check for overlapping sessions for the same coach
+            # Exclude self from query for updates
+            query = SessionBooking.objects.filter(
+                coach=self.coach,
+                start_datetime__lt=self.end_datetime,
+                end_datetime__gt=self.start_datetime,
+            )
+            if self.pk:
+                query = query.exclude(pk=self.pk)
+
+            if query.exists():
+                raise ValidationError("This session overlaps with an existing session for this coach.")
 
     def __str__(self):
         return f"Session for {self.client.get_full_name()} with {self.coach.user.get_full_name()} at {self.start_datetime.strftime('%Y-%m-%d %H:%M')}"
