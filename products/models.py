@@ -123,3 +123,33 @@ class Variant(models.Model):
     # Ensure uniqueness across product options (e.g., only one Large/Red variant per product)
     class Meta:
         unique_together = ('product', 'color', 'size')
+
+# =========================================================================
+# NEW: StockItem Model (Add this at the end of the file)
+# =========================================================================
+
+class StockItem(models.Model):
+    """
+    Represents the specific inventory connection between a Variant and a StockPool.
+    This allows tracking the actual quantity of items.
+    """
+    variant = models.ForeignKey(
+        'Variant',  # Use string reference to avoid circular import issues
+        on_delete=models.CASCADE,
+        related_name='stock_items'
+    )
+    pool = models.ForeignKey(
+        'StockPool',
+        on_delete=models.CASCADE,
+        related_name='stock_items'
+    )
+    quantity = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('variant', 'pool')
+        verbose_name = "Stock Item"
+        verbose_name_plural = "Stock Items"
+
+    def __str__(self):
+        return f"{self.variant} in {self.pool} ({self.quantity})"

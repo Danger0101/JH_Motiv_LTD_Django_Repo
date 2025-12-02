@@ -91,7 +91,17 @@ class ProductAdmin(admin.ModelAdmin):
     current_stock_status.short_description = 'Stock Status'
 
 # =======================================================
-# 4. Stock Item Admin (NEW - Fixes Staff Dashboard Error)
+# 4. Variant Admin (NEW - to support autocomplete_fields)
+# =======================================================
+@admin.register(Variant)
+class VariantAdmin(admin.ModelAdmin):
+    list_display = ('product', 'name', 'color', 'size', 'price', 'stock_pool')
+    list_filter = ('product', 'color', 'size', 'stock_pool')
+    search_fields = ('name', 'product__name', 'color', 'size')
+    raw_id_fields = ('product',) # Use raw_id_fields for product if many products exist
+
+# =======================================================
+# 5. Stock Item Admin (NEW - Fixes Staff Dashboard Error)
 # =======================================================
 @admin.register(StockItem)
 class StockItemAdmin(admin.ModelAdmin):
