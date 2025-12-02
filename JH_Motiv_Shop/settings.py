@@ -33,7 +33,7 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     
     # Cloudinary apps must be before django.contrib.staticfiles
-    'cloudinary',
+    # 'cloudinary',
     'cloudinary_storage',
     
     # Accounts
