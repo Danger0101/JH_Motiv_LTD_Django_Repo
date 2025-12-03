@@ -22,7 +22,7 @@ from coaching_availability.utils import get_coach_available_slots
 from coaching_core.models import Offering, Workshop
 from coaching_client.models import ContentPage, TasterSessionRequest # Ensure this import is correct and not duplicated
 from cart.utils import get_or_create_cart, get_cart_summary_data
-from coaching_client.forms import TasterRequestForm # Make sure this import is correct
+from coaching_client.forms import TasterRequestForm, GuestTasterRequestForm # Make sure this import is correct
 
 BOOKING_WINDOW_DAYS = 90
 
@@ -72,7 +72,7 @@ class CoachLandingView(TemplateView):
                  context['form'] = None
         else:
             context['has_pending_request'] = False
-            context['form'] = TasterRequestForm() # No initial data needed for simplified form
+            context['form'] = GuestTasterRequestForm() 
             
         return context
 
