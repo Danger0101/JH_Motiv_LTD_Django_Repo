@@ -1,12 +1,12 @@
-{% extends 'emails/base_email.html' %}
+{% extends "emails/base_email.html" %}
 
 {% block content %}
-  <h1>Taster Session Request Update</h1>
-  <p>Hi {{ client.first_name|default:'there' }},</p>
-  <p>Thank you for your interest in a taster session. After reviewing your request, we are unfortunately unable to offer you a session at this time.</p>
-  {% if notes %}
-    <p><strong>Notes from our team:</strong></p>
-    <p>{{ notes }}</p>
-  {% endif %}
-  <p>We appreciate your understanding and wish you the best in your endeavors.</p>
+<h2>Update on Your Taster Session Request</h2>
+<p>Hi {{ request.full_name }},</p>
+<p>Thank you for your interest in a taster session. After reviewing your request, we are unfortunately unable to approve it at this time.</p>
+<p>This can happen for a variety of reasons, including high demand or a mismatch in coaching focus. We encourage you to explore our other coaching offerings to see if another option might be a good fit for you.</p>
+<p>You can view our offerings here:</p>
+<p><a href="{{ offer_list_url }}">View Coaching Offerings</a></p>
+<p>We appreciate your understanding.</p>
+<p>Sincerely,<br>The JH Motiv LTD Team</p>
 {% endblock %}

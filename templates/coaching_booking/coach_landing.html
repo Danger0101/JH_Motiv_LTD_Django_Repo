@@ -17,6 +17,19 @@ Coach Landing - {{ block.super }}
         <a href="#coaching-offerings" class="mt-8 inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300">Explore Offerings</a>
     </div>
 
+    <div id="taster-session-form" class="py-16 bg-white">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-12 scroll-mt-20">Request a Free Taster Session</h2>
+            
+            {% if user.is_authenticated %}
+                {% include "coaching_client/taster_request_form.html" %}
+            {% else %}
+                <p class="text-center text-gray-600 mb-4">Log in to submit a request, or use the form below as a guest.</p>
+                {% include "coaching_client/taster_request_form.html" %}
+            {% endif %}
+        </div>
+    </div>
+
     <div class="py-16 bg-white">
         <div class="container mx-auto px-4">
             <h2 class="text-3xl font-bold text-center text-gray-800 mb-12">Coaching vs. Mentorship: Find Your Fit</h2>

@@ -1,9 +1,15 @@
-{% extends 'emails/base_email.html' %}
-
+{% extends "emails/base_email.html" %}
 {% block content %}
-  <h1>Taster Session Request Received</h1>
-  <p>Hi {{ user.first_name|default:'there' }},</p>
-  <p>We have received your request for a taster session. We are excited to have you on board!</p>
-  <p>Our team will review your request and get back to you shortly with the next steps.</p>
-  <p>Thank you for your interest in our coaching services.</p>
+<h2>Taster Session Request Received</h2>
+<p>Hi {{ request.full_name }},</p>
+<p>Thank you for your interest in a taster session with JH Motiv LTD. We have received your request and will review it shortly.</p>
+<p>Here are the details you submitted:</p>
+<ul>
+    <li><strong>Name:</strong> {{ request.full_name }}</li>
+    <li><strong>Email:</strong> {{ request.email }}</li>
+    <li><strong>Phone:</strong> {{ request.phone_number|default:"N/A" }}</li>
+    <li><strong>Goal:</strong> {{ request.goal_summary }}</li>
+</ul>
+<p>We'll get back to you soon!</p>
+<p>Sincerely,<br>The JH Motiv LTD Team</p>
 {% endblock %}

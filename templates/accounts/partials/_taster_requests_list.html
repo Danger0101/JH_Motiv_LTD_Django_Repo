@@ -1,0 +1,33 @@
+<div class="space-y-4" id="taster-request-list">
+    {% if taster_requests %}
+        {% for req in taster_requests %}
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-800">{{ req.full_name }}</h3>
+                        <p class="text-sm text-gray-600">{{ req.email }}</p>
+                        <p class="text-sm text-gray-600">{{ req.phone_number|default:"N/A" }}</p>
+                    </div>
+                    <div class="text-xs text-gray-500">
+                        {{ req.requested_at|date:"F d, Y P" }}
+                    </div>
+                </div>
+                <p class="mt-4 text-sm text-gray-700">{{ req.goal_summary|truncatechars:150 }}</p>
+                <div class="mt-4 flex space-x-2">
+                    <form method="post"
+                          hx-post="{% url 'coaching_client:taster_action' pk=req.pk %}"
+                          hx-target="#taster-request-list"
+                          hx-swap="outerHTML">
+                        {% csrf_token %}
+                        <button type="submit" name="action" value="accept" class="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-md shadow-sm transition">Accept & Email</button>
+                        <button type="submit" name="action" value="deny" class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-md shadow-sm transition">Deny & Email</button>
+                    </form>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="bg-blue-50 border border-blue-200 text-blue-800 rounded-lg p-4 text-center">
+            <p>No pending taster session requests found.</p>
+        </div>
+    {% endif %}
+</div>

@@ -67,13 +67,24 @@ class ExternalLink(models.Model):
 class TasterSessionRequest(models.Model):
     """
     Manages client requests for the free 90-minute taster session.
+    Can be submitted by both authenticated users and guest visitors.
     """
-    client = models.OneToOneField(
+    # For authenticated users, can be null for guests
+    client = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='taster_session_request',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='taster_session_requests',
         verbose_name="Client"
     )
+    # Fields for guest submissions
+    full_name = models.CharField(max_length=100, verbose_name="Full Name", default='')
+    email = models.EmailField(verbose_name="Email Address", default='default@example.com')
+    phone_number = models.CharField(max_length=20, blank=True, verbose_name="Phone Number", default='')
+    goal_summary = models.TextField(verbose_name="Goal Summary", default='')
+
+    # Tracking fields
     requested_at = models.DateTimeField(auto_now_add=True, verbose_name="Requested At")
     status = models.CharField(
         max_length=10,
@@ -100,10 +111,7 @@ class TasterSessionRequest(models.Model):
     class Meta:
         verbose_name = "Taster Session Request"
         verbose_name_plural = "Taster Session Requests"
-        # The unique=True on the 'client' field already enforces the constraint.
-        # If you needed a multi-column constraint, you would use:
-        # unique_together = [('client',)]
         ordering = ['-requested_at']
 
     def __str__(self):
-        return f"Taster request from {self.client.get_full_name()} - {self.status}"
+        return f"Taster request from {self.full_name} ({self.email}) - {self.status}"
