@@ -26,43 +26,28 @@
             <p class="text-muted small">Click 'Submit Request' to confirm. We will contact you via email within 24 hours.</p>
 
         {% else %}
-            {# State: Logged Out - Fallback to Manual Form #}
-            <div class="alert alert-info">
-                Please fill out your details below to submit your request.
+            {# State: Logged Out - Inform user they need to log in #}
+            <div class="alert alert-warning">
+                Please <strong>log in or create an account</strong> first to submit your taster session request.
             </div>
-
-            {# Display all fields from the passed form object #}
-            {% if form %}
-                <div class="space-y-4">
-                    {{ form.full_name }}
-                    {{ form.email }}
-                    {{ form.phone_number }}
-                    {{ form.goal_summary }}
-                </div>
-            {% else %}
-                 <p class="text-danger">Error: Form object not found in context.</p>
-            {% endif %}
-
         {% endif %}
 
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        
-        {% if request.user.is_authenticated or form %}
-            {# Show submit button if logged in OR if the manual form fields are available #}
-            <button type="submit" class="btn btn-primary" id="submit-taster-btn">Submit Request</button>
-        {% else %}
-            {# Fallback if something went wrong with the form context #}
-            <a href="{% url 'account_login' %}" class="btn btn-primary">Go to Login</a>
-        {% endif %}
+        <button type="submit" class="btn btn-primary" id="submit-taster-btn" {% if not request.user.is_authenticated %}disabled{% endif %}>Submit Request</button>
     </div>
 </form>
 
 <script>
     // Simple JS to prevent double submission
-    document.getElementById('taster-request-form').addEventListener('submit', function() {
-        this.querySelector('#submit-taster-btn').disabled = true;
-        this.querySelector('#submit-taster-btn').textContent = 'Submitting...';
+    document.getElementById('taster-request-form').addEventListener('submit', function(event) {
+        var submitBtn = document.getElementById('submit-taster-btn');
+        if (submitBtn.disabled) {
+            event.preventDefault(); // Stop submission if button is disabled
+            return;
+        }
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
     });
 </script>
