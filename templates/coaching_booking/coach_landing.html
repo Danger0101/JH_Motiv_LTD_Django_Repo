@@ -183,7 +183,7 @@ PROVEN RESULTS (KNOWLEDGE BASE): Social proof.
         <h2 class="display-5 fw-bold text-center mb-5">Proven Results in the Industry</h2>
         <div class="row g-4">
             {% for fact in facts %}
-            {% with fact.statistic_description.split'|' as stat_desc %}
+            {% with fact.statistic_description|split:"|" as stat_desc %}
             <div class="col-lg-4">
                 <div class="card text-center h-100 shadow-sm p-4">
                     <p class="display-4 fw-bold text-success">{{ stat_desc.0 }}</p>
