@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'django_htmx',
     'django_unicorn',
     'crispy_forms',
+    'crispy_bootstrap5',
+    
 
     # Allauth Apps
     'allauth',
