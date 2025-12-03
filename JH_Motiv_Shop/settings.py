@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'encrypted_model_fields',
     'django_htmx',
     'django_unicorn',
+    'crispy_forms'
 
     # Allauth Apps
     'allauth',
@@ -312,3 +313,8 @@ SOCIALACCOUNT_PROVIDERS = {
         # }
     }
 }
+
+
+# Configure the template pack for modern styling
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5" # Or "uni-form", "bootstrap4", etc.
+CRISPY_TEMPLATE_PACK = "bootstrap5"

@@ -4,7 +4,7 @@ from . import views
 app_name = 'gcal'
 
 urlpatterns = [
-    path('init/', views.google_calendar_init, name='google_calendar_init'),
-    path('redirect/', views.google_calendar_redirect, name='google_calendar_redirect'),
-    path('disconnect/', views.google_calendar_disconnect, name='google_calendar_disconnect'),
+    path('oauth/start/', views.oauth_start, name='oauth_start'),
+    path('oauth/callback/', views.oauth_callback, name='oauth_callback'),
+    path('disconnect/', views.google_calendar_disconnect, name='disconnect'),
 ]
