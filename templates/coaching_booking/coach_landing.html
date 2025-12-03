@@ -31,20 +31,28 @@ HERO SECTION: Main call to action for the taster session.
         <h1 class="display-3 fw-bold">Unlock Your Full Potential</h1>
         <p class="lead my-4 col-md-8 mx-auto">Our expert coaches are here to guide you on your journey to success. Start today with a complimentary, no-obligation taster session.</p>
         <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-            <button 
-                type="button" 
-                class="btn btn-lg {% if has_pending_request %}btn-secondary disabled{% else %}btn-success{% endif %} fw-bold shadow-lg px-4 gap-3" 
-                data-bs-toggle="modal" 
-                data-bs-target="#tasterSessionModal"
-                title="{% if has_pending_request %}You already have a pending request{% else %}Request your free session now{% endif %}"
-                {% if has_pending_request %}disabled{% endif %}
-            >
-                {% if has_pending_request %}
-                    Request Pending ⏳
-                {% else %}
-                    Request Your FREE Taster Session <i class="fas fa-arrow-right ms-2"></i>
-                {% endif %}
-            </button>
+            {% if has_pending_request %}
+                {# State: LOGGED IN, ALREADY APPLIED (GREY/DISABLED) - Cannot apply twice #}
+                <button 
+                    type="button" 
+                    class="btn btn-lg btn-secondary disabled fw-bold shadow-lg" 
+                    title="You already have a pending or approved request. Please check your profile tab for status updates."
+                >
+                    Request Pending (Check Profile) ⏳
+                </button>
+            
+            {% else %}
+                {# State: LOGGED OUT or LOGGED IN, ELIGIBLE (GREEN/ACTIVE) - Always opens tasterSessionModal #}
+                <button 
+                    type="button" 
+                    class="btn btn-lg btn-success fw-bold shadow-lg" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#tasterSessionModal"
+                    title="Request your free session now"
+                >
+                    Request Your FREE Taster Session Today ✅
+                </button>
+            {% endif %}
             <a href="#coaching-offerings" class="btn btn-outline-light btn-lg px-4">Explore Offerings</a>
         </div>
     </div>
@@ -173,10 +181,7 @@ PROVEN RESULTS (KNOWLEDGE BASE): Social proof.
     <div class="container">
         <h2 class="display-5 fw-bold text-center mb-5">Proven Results in the Industry</h2>
         <div class="row g-4">
-            {% with '70%|of individuals report improved work performance|ICF Global Coaching Study|https://www.icf-cf.com/wp-content/uploads/2021/03/ICF-Fact-Sheet.pdf' as fact1 %}
-            {% with '80%|of people who receive coaching report increased self-confidence|Institute of Coaching|https://instituteofcoaching.org/coaching-overview/coaching-benefits' as fact2 %}
-            {% with '7x|average return on investment for companies spending on coaching|ICF Global Coaching Study|https://coachingfederation.org/research/global-coaching-client-study' as fact3 %}
-            {% for fact_str in fact1,fact2,fact3 %}
+            {% with '70%|of individuals report improved work performance|ICF Global Coaching Study|https://www.icf-cf.com/wp-content/uploads/2021/03/ICF-Fact-Sheet.pdf' as fact_str %}
                 {% with fact_str.split'|' as fact %}
                 <div class="col-lg-4">
                     <div class="card text-center h-100 shadow-sm p-4">
@@ -186,8 +191,29 @@ PROVEN RESULTS (KNOWLEDGE BASE): Social proof.
                     </div>
                 </div>
                 {% endwith %}
-            {% endfor %}
-            {% endwith %}{% endwith %}{% endwith %}
+            {% endwith %}
+            {% with '80%|of people who receive coaching report increased self-confidence|Institute of Coaching|https://instituteofcoaching.org/coaching-overview/coaching-benefits' as fact_str %}
+                {% with fact_str.split'|' as fact %}
+                <div class="col-lg-4">
+                    <div class="card text-center h-100 shadow-sm p-4">
+                        <p class="display-4 fw-bold text-success">{{ fact.0 }}</p>
+                        <p class="h5 fw-normal mt-2">{{ fact.1 }}</p>
+                        <a href="{{ fact.3 }}" target="_blank" rel="noopener" class="text-muted small mt-3">Source: {{ fact.2 }} <i class="fas fa-external-link-alt fa-xs"></i></a>
+                    </div>
+                </div>
+                {% endwith %}
+            {% endwith %}
+            {% with '7x|average return on investment for companies spending on coaching|ICF Global Coaching Study|https://coachingfederation.org/research/global-coaching-client-study' as fact_str %}
+                {% with fact_str.split'|' as fact %}
+                <div class="col-lg-4">
+                    <div class="card text-center h-100 shadow-sm p-4">
+                        <p class="display-4 fw-bold text-success">{{ fact.0 }}</p>
+                        <p class="h5 fw-normal mt-2">{{ fact.1 }}</p>
+                        <a href="{{ fact.3 }}" target="_blank" rel="noopener" class="text-muted small mt-3">Source: {{ fact.2 }} <i class="fas fa-external-link-alt fa-xs"></i></a>
+                    </div>
+                </div>
+                {% endwith %}
+            {% endwith %}
         </div>
     </div>
 </div>
@@ -200,7 +226,7 @@ MODALS & SCRIPTS: Kept at the bottom for clarity.
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow-lg">
             {# The improved partial is included here #}
-            {% include "coaching_client/partials/_taster_request_content.html" %}
+            {% include "coaching_client/partials/_taster_request_content.html" with form=taster_request_form %}
         </div>
     </div>
 </div>

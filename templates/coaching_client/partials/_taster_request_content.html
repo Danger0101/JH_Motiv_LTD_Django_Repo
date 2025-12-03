@@ -1,86 +1,78 @@
 {% load static %}
-{% load socialaccount %} 
+{% url 'coaching_client:taster_request' as taster_request_url %}
 
-{# This partial now renders COMPLETELY different content based on auth status for a better UX #}
-
-{% if request.user.is_authenticated %}
-    {# === AUTHENTICATED USER: One-Click Application Form === #}
-    <form method="post" action="{% url 'coaching_client:taster_request' %}" id="taster-request-form">
+<div class="modal-header">
+    <h5 class="modal-title" id="tasterModalLabel">Request Your Free Taster Session 🚀</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<form method="post" action="{{ taster_request_url }}" id="taster-request-form">
+    <div class="modal-body">
         {% csrf_token %}
-        <div class="modal-header bg-success text-white">
-            <h5 class="modal-title" id="tasterModalLabel">Request Your Free Taster Session 🚀</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-            <p class="mb-3">You're logged in! We'll use your profile details for a quick, one-click application.</p>
-            
-            <div class="card p-3 bg-light border">
-                <div class="d-flex align-items-center">
-                    {% get_social_accounts request.user as social_accounts %}
-                    {% with social_accounts.google.0.get_avatar_url as avatar_url %}
-                        {% if avatar_url %}
-                            <img src="{{ avatar_url }}" alt="Your avatar" class="rounded-circle me-3" style="width: 50px; height: 50px;">
-                        {% else %}
-                            <div class="rounded-circle me-3 bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                                <span class="fw-bold fs-5">{{ request.user.email.0|upper }}</span>
-                            </div>
-                        {% endif %}
-                    {% endwith %}
-                    <div>
-                        <strong class="d-block">{{ request.user.get_full_name }}</strong>
-                        <small class="text-muted">{{ request.user.email }}</small>
-                    </div>
-                </div>
+        
+        {% if request.user.is_authenticated %}
+            {# State: Logged In, Ready for One-Click Submit #}
+            <div class="alert alert-success py-2">
+                We're ready to submit your request instantly using your profile details:
+                <br>
+                <strong>Name:</strong> {{ request.user.get_full_name }}
+                <br>
+                <strong>Email:</strong> {{ request.user.email }}
             </div>
             
-            <input type="hidden" name="goal_summary" value="User submitted a one-click taster session request via the coach page. Goals to be determined in the first contact." />
-            <p class="text-muted small mt-3">Click 'Submit Request' to confirm. We'll contact you via email within 24 hours.</p>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            <button type="submit" class="btn btn-success" id="submit-taster-btn">
-                <i class="fas fa-paper-plane me-2"></i>Submit Request
-            </button>
-        </div>
-    </form>
-    <script>
-        // JS to prevent double submission
-        document.getElementById('taster-request-form').addEventListener('submit', function(event) {
-            var submitBtn = document.getElementById('submit-taster-btn');
-            if (submitBtn.disabled) {
-                event.preventDefault();
-                return;
-            }
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Submitting...';
-        });
-    </script>
+            <input type="hidden" 
+                   name="goal_summary" 
+                   value="User submitted a one-click taster session request via the coach page. Goals to be determined in the first contact." />
 
-{% else %}
-    {# === GUEST USER: Login/Signup Prompt === #}
-    <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title" id="tasterModalLabel">Get Your Free Taster Session</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-    </div>
-    <div class="modal-body text-center py-4">
-        <i class="fas fa-lock fa-3x text-primary mb-3"></i>
-        <h4 class="mb-3">Log In to Continue</h4>
-        <p class="text-muted">To request your free session, please log in or create an account. It's quick and ensures we can manage your request properly.</p>
-        
-        <div class="mt-4">
-            <a href="{% provider_login_url 'google' %}?next={{ request.path }}" class="btn btn-outline-dark w-100 mb-2">
-                <img src="{% static 'images/google-logo.svg' %}" alt="Google logo" style="width: 20px; height: 20px;" class="me-2">
-                Continue with Google
-            </a>
-            <a href="{% url 'account_login' %}?next={{ request.path }}" class="btn btn-primary w-100 mb-2">
-                <i class="fas fa-envelope me-2"></i>Log In with Email
-            </a>
-            <p class="text-muted small mt-3">
-                New here? <a href="{% url 'account_signup' %}?next={{ request.path }}">Create an Account</a>
-            </p>
-        </div>
+            <p class="text-muted small">Click 'Submit Request' to confirm. We will contact you via email within 24 hours.</p>
+
+        {% else %}
+            {# State: Logged Out - Show Manual Form Fields #}
+            <div class="alert alert-info">
+                Please fill out your details below to submit your request.
+            </div>
+            
+            {# NOTE: This assumes your Django view passes the form object as 'form' #}
+            {% if form %}
+                <div class="space-y-4">
+                    {{ form.full_name }}
+                    {{ form.email }}
+                    {{ form.phone_number }}
+                    {{ form.goal_summary }}
+                </div>
+                {# Manual display of errors for the form fields #}
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ error }}</p>
+                    {% endfor %}
+                {% endfor %}
+                {% if form.non_field_errors %}
+                    {% for error in form.non_field_errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ error }}</p>
+                    {% endfor %}
+                {% endif %}
+            {% else %}
+                 <p class="text-danger">Error: Form fields could not be loaded. Please ensure a 'form' object is passed to this template.</p>
+            {% endif %}
+
+        {% endif %}
+
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        
+        {% if request.user.is_authenticated or form %}
+            {# Submit button for both logged-in (one-click) AND logged-out (manual form) users #}
+            <button type="submit" class="btn btn-primary" id="submit-taster-btn">Submit Request</button>
+        {% else %}
+            <a href="{% url 'account_login' %}" class="btn btn-primary">Go to Login</a>
+        {% endif %}
     </div>
-{% endif %}
+</form>
+
+<script>
+    // Simple JS to prevent double submission
+    document.getElementById('taster-request-form').addEventListener('submit', function() {
+        this.querySelector('#submit-taster-btn').disabled = true;
+        this.querySelector('#submit-taster-btn').textContent = 'Submitting...';
+    });
+</script>
