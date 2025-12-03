@@ -9,15 +9,23 @@
         <p class="mt-4 text-lg text-gray-600">Unlock your potential with our expert coaches.</p>
         <a href="#coaching-offerings" class="mt-8 inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300">Explore Offerings</a>
     </div>
-    <section id="hero-cta" class="py-5 bg-dark text-white text-center">
-        <div class="container">
-            <h1 class="display-4">Ready to Unlock Your Potential?</h1>
-            <p class="lead mb-4">The first step is always free. Request a personalized session to start.</p>
-            <button type="button" class="btn btn-lg btn-warning fw-bold shadow-lg text-dark" data-bs-toggle="modal" data-bs-target="#tasterSessionModal">
-                Request Your FREE Taster Session Today &gt;
-            </button>
+    <div class="bg-white">
+        <div class="container mx-auto px-4 py-16 text-center">
+            <h2 class="text-3xl font-bold text-gray-800">Ready to Unlock Your Potential?</h2>
+            <p class="mt-4 text-lg text-gray-600">The first step is always free. Request a personalized taster session to start.</p>
+            <div class="mt-8">
+                {% if has_pending_request %}
+                    <button class="bg-gray-400 text-white font-bold py-3 px-8 rounded-lg cursor-not-allowed" disabled>
+                        Taster Session Request Pending
+                    </button>
+                {% else %}
+                    <button data-bs-toggle="modal" data-bs-target="#tasterSessionModal" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300">
+                        Apply for a FREE Taster Session
+                    </button>
+                {% endif %}
+            </div>
         </div>
-    </section>
+    </div>
     <div class="modal fade" id="tasterSessionModal" tabindex="-1" aria-labelledby="tasterModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
