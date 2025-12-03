@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'encrypted_model_fields',
     'django_htmx',
     'django_unicorn',
-    'crispy_forms'
+    'crispy_forms',
 
     # Allauth Apps
     'allauth',
