@@ -5,12 +5,6 @@ from django.conf import settings
 # Using string reference for the CustomUser model
 # from accounts.models import CustomUser
 
-REQUEST_STATUS_CHOICES = (
-    ('PENDING', 'Pending'),
-    ('APPROVED', 'Approved'),
-    ('DENIED', 'Denied'),
-)
-
 class ContentPage(models.Model):
     """
     Stores static knowledge base content, studies, and downloadable workbooks.
@@ -62,70 +56,3 @@ class ExternalLink(models.Model):
 
     def __str__(self):
         return self.title
-
-
-class TasterSessionRequest(models.Model):
-    """
-    Manages client requests for the free 90-minute taster session.
-    Can be submitted by both authenticated users and guest visitors.
-    """
-    # For authenticated users, can be null for guests
-    client = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='taster_session_requests',
-        verbose_name="Client"
-    )
-    # Fields for guest submissions
-    full_name = models.CharField(max_length=100, verbose_name="Full Name", default='')
-    email = models.EmailField(verbose_name="Email Address", default='default@example.com')
-    phone_number = models.CharField(max_length=20, blank=True, verbose_name="Phone Number", default='')
-    goal_summary = models.TextField(verbose_name="Goal Summary", default='')
-
-    # Tracking fields
-    requested_at = models.DateTimeField(auto_now_add=True, verbose_name="Requested At")
-    status = models.CharField(
-        max_length=20,
-        choices=REQUEST_STATUS_CHOICES,
-        default='PENDING',
-        verbose_name="Status"
-    )
-    STATUS_PENDING = 'PENDING'
-    STATUS_APPROVED = 'APPROVED'
-
-    approver = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        related_name='approved_tasters',
-        null=True,
-        blank=True,
-        verbose_name="Approver",
-        help_text="The staff member who approved or denied the request."
-    )
-    decision_at = models.DateTimeField(null=True, blank=True, verbose_name="Decision At")
-    notes = models.TextField(
-        blank=True,
-        verbose_name="Internal Notes",
-        help_text="Notes for why the request was approved or denied."
-    )
-
-    @classmethod
-    def has_active_request(cls, user):
-        """Checks if a user has a PENDING or APPROVED request."""
-        if not user.is_authenticated:
-            return False
-        # Only block if the request is pending review or approved for booking
-        return cls.objects.filter(
-            client=user,
-            status__in=[cls.STATUS_PENDING, cls.STATUS_APPROVED]
-        ).exists()
-
-    class Meta:
-        verbose_name = "Taster Session Request"
-        verbose_name_plural = "Taster Session Requests"
-        ordering = ['-requested_at']
-
-    def __str__(self):
-        return f"Taster request from {self.full_name} ({self.email}) - {self.status}"

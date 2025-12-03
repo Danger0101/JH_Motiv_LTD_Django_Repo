@@ -10,28 +10,6 @@
         <a href="#coaching-offerings" class="mt-8 inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300">Explore Offerings</a>
     </div>
     <div class="bg-white">
-        <div class="container mx-auto px-4 py-16 text-center">
-            <h2 class="text-3xl font-bold text-gray-800">Ready to Unlock Your Potential?</h2>
-            <p class="mt-4 text-lg text-gray-600">The first step is always free. Request a personalized taster session to start.</p>
-            <div class="mt-8">
-                {% if has_pending_request %}
-                    <button class="bg-gray-400 text-white font-bold py-3 px-8 rounded-lg cursor-not-allowed" disabled>
-                        Taster Session Request Pending
-                    </button>
-                {% else %}
-                    <button data-bs-toggle="modal" data-bs-target="#tasterSessionModal" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300">
-                        Apply for a FREE Taster Session
-                    </button>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    <div class="modal fade" id="tasterSessionModal" tabindex="-1" aria-labelledby="tasterModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                {% include "coaching_client/partials/_taster_request_content.html" with form=taster_request_form %}
-            </div>
-        </div>
     </div>
     <div class="py-16 bg-white">
         <div class="container mx-auto px-4">
