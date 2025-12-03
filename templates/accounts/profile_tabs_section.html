@@ -32,21 +32,7 @@
                     Book a Session
                 </a>
             </li>
-            <li>
-                <a hx-get="{% url 'accounts:profile_taster_requests' %}" hx-target="#profile-content" hx-swap="innerHTML"
-                   class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm {% if active_tab == 'taster_requests' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}"
-                   aria-current="{% if active_tab == 'taster_requests' %}page{% else %}false{% endif %}"
-                   role="tab"
-                   aria-controls="profile-taster-requests-panel"
-                   id="profile-taster-requests-tab">
-                    Taster Requests
-                    {% with pending_count=request.user|pending_taster_count %}
-                        {% if pending_count > 0 %}
-                            <span class="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">{{ pending_count }}</span>
-                        {% endif %}
-                    {% endwith %}
-                </a>
-            </li>
+
         </ul>
     </div>
 
@@ -59,8 +45,6 @@
             {% include 'accounts/profile_bookings.html' %}
         {% elif active_tab == 'book_session' %}
             {% include 'coaching_booking/profile_book_session.html' %}
-        {% elif active_tab == 'taster_requests' %}
-            {% include 'accounts/partials/_taster_requests_list.html' %}
         {% endif %}
     </div>
 </div>

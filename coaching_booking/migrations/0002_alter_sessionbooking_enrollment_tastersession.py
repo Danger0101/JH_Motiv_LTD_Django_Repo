@@ -19,17 +19,5 @@ class Migration(migrations.Migration):
             name='enrollment',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='bookings', to='coaching_booking.clientofferingenrollment', verbose_name='Enrollment'),
         ),
-        migrations.CreateModel(
-            name='TasterSession',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('status', models.CharField(choices=[('PENDING', 'Pending'), ('APPROVED', 'Approved'), ('REJECTED', 'Rejected'), ('BOOKED', 'Booked')], default='PENDING', max_length=20)),
-                ('requested_on', models.DateTimeField(auto_now_add=True)),
-                ('approved_on', models.DateTimeField(blank=True, null=True)),
-                ('booking_expiry_date', models.DateField(blank=True, null=True)),
-                ('client', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='taster_sessions', to=settings.AUTH_USER_MODEL)),
-                ('coach', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='taster_sessions', to='accounts.coachprofile')),
-                ('session_booking', models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='taster_session', to='coaching_booking.sessionbooking')),
-            ],
-        ),
+
     ]

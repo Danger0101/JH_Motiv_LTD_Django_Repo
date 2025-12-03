@@ -130,8 +130,6 @@ class SessionBooking(models.Model):
             if self.enrollment:
                 session_minutes = self.enrollment.offering.session_length_minutes
                 self.end_datetime = self.start_datetime + timedelta(minutes=session_minutes)
-            elif hasattr(self, 'taster_session') and self.taster_session:
-                self.end_datetime = self.start_datetime + timedelta(minutes=90)
             else:
                 self.end_datetime = self.start_datetime + timedelta(minutes=60)
 
@@ -188,36 +186,3 @@ class SessionBooking(models.Model):
         self.status = 'RESCHEDULED'
         self.save()
         return 'SUCCESS'
-
-
-TASTER_SESSION_STATUS_CHOICES = (
-    ('PENDING', 'Pending'),
-    ('APPROVED', 'Approved'),
-    ('REJECTED', 'Rejected'),
-    ('BOOKED', 'Booked'),
-)
-
-class TasterSession(models.Model):
-    client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='taster_sessions')
-    coach = models.ForeignKey(CoachProfile, on_delete=models.CASCADE, related_name='taster_sessions')
-    status = models.CharField(max_length=20, choices=TASTER_SESSION_STATUS_CHOICES, default='PENDING')
-    requested_on = models.DateTimeField(auto_now_add=True)
-    approved_on = models.DateTimeField(null=True, blank=True)
-    booking_expiry_date = models.DateField(null=True, blank=True)
-    session_booking = models.OneToOneField(SessionBooking, on_delete=models.SET_NULL, null=True, blank=True, related_name='taster_session')
-
-    def approve(self):
-        self.status = 'APPROVED'
-        self.approved_on = timezone.now()
-        self.booking_expiry_date = self.approved_on.date() + relativedelta(months=+12)
-        self.save()
-
-    def reject(self):
-        self.status = 'REJECTED'
-        self.save()
-
-    @property
-    def is_expired(self):
-        if not self.booking_expiry_date:
-            return False
-        return timezone.now().date() > self.booking_expiry_date

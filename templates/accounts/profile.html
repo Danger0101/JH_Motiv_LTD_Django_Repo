@@ -41,19 +41,7 @@
             </button>
             {% endif %}
 
-            {% if is_coach or is_staff %}
-            <button @click="activeTab = 'taster_requests'" 
-                    :class="{ 'bg-white text-green-600 shadow': activeTab === 'taster_requests', 'text-gray-500 hover:text-gray-700': activeTab !== 'taster_requests' }"
-                    class="flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap flex justify-center items-center">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
-                Taster Requests
-                {% with pending_count=request.user|pending_taster_count %}
-                    {% if pending_count > 0 %}
-                        <span class="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">{{ pending_count }}</span>
-                    {% endif %}
-                {% endwith %}
-            </button>
-            {% endif %}
+
 
             <button @click="activeTab = 'profile'" 
                     :class="{ 'bg-white text-gray-800 shadow': activeTab === 'profile', 'text-gray-500 hover:text-gray-700': activeTab !== 'profile' }"
@@ -229,34 +217,13 @@
         </div>
         {% endif %}
 
-        {% if is_coach or is_staff %}
-        <div x-show="activeTab === 'taster_requests'" 
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0 transform scale-95"
-             x-transition:enter-end="opacity-100 transform scale-100"
-             class="space-y-8">
-            <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                 <h3 class="text-xl font-bold text-gray-800 mb-6 border-b pb-2">Pending Taster Session Requests</h3>
-                 <div hx-get="{% url 'accounts:profile_taster_requests' %}" hx-trigger="load" hx-swap="innerHTML">
-                    <p class="text-gray-500 animate-pulse">Loading taster requests...</p>
-                 </div>
-            </div>
-        </div>
-        {% endif %}
+
 
         {% if is_staff %}
         <div x-show="activeTab === 'staff'" class="space-y-8">
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500">Pending Tasters</p>
-                        <p class="text-3xl font-bold text-gray-800 mt-1">{{ staff_pending_tasters }}</p>
-                    </div>
-                    <div class="h-12 w-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                    </div>
-                </div>
+
 
                 <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between">
                     <div>
@@ -272,9 +239,7 @@
                     <a href="{% url 'admin:index' %}" target="_blank" class="w-full text-center px-4 py-2 bg-gray-800 hover:bg-black text-white text-sm font-medium rounded-lg transition">
                         Go to Django Admin
                     </a>
-                    <a href="{% url 'admin:coaching_client_tastersessionrequest_changelist' %}" target="_blank" class="w-full text-center px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition">
-                        Manage Taster Requests
-                    </a>
+
                 </div>
             </div>
 
