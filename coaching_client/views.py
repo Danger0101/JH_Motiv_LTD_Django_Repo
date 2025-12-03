@@ -34,10 +34,11 @@ class TasterRequestView(View):
         if form.is_valid():
             taster_request = form.save(commit=False)
             taster_request.client = request.user
-            # Auto-populate data from the authenticated user's account
+            
+            # CRITICAL: Auto-populate the required fields from the authenticated user
             taster_request.full_name = request.user.get_full_name()
             taster_request.email = request.user.email
-            # Phone number is only passed if the field was available in the form/template
+            # phone_number is left empty or requires a separate method if mandatory
             
             taster_request.save()
             
