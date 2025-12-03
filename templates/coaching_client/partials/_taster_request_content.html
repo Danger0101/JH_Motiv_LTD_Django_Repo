@@ -19,10 +19,6 @@
                 <strong>Email:</strong> {{ request.user.email }}
             </div>
             
-            {# 
-               The mandatory 'goal_summary' field is included as a hidden field
-               with a default value, achieving the "no input needed" goal.
-            #}
             <input type="hidden" 
                    name="goal_summary" 
                    value="User submitted a one-click taster session request via the coach page. Goals to be determined in the first contact." />
@@ -30,19 +26,34 @@
             <p class="text-muted small">Click 'Submit Request' to confirm. We will contact you via email within 24 hours.</p>
 
         {% else %}
-            {# State: Logged Out (Should be blocked by the button, but this is a fail-safe) #}
-            <div class="alert alert-warning">
-                Please **log in** first to submit your application instantly!
+            {# State: Logged Out - Fallback to Manual Form #}
+            <div class="alert alert-info">
+                Please fill out your details below to submit your request.
             </div>
+
+            {# Display all fields from the passed form object #}
+            {% if form %}
+                <div class="space-y-4">
+                    {{ form.full_name }}
+                    {{ form.email }}
+                    {{ form.phone_number }}
+                    {{ form.goal_summary }}
+                </div>
+            {% else %}
+                 <p class="text-danger">Error: Form object not found in context.</p>
+            {% endif %}
+
         {% endif %}
 
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         
-        {% if request.user.is_authenticated %}
+        {% if request.user.is_authenticated or form %}
+            {# Show submit button if logged in OR if the manual form fields are available #}
             <button type="submit" class="btn btn-primary" id="submit-taster-btn">Submit Request</button>
         {% else %}
+            {# Fallback if something went wrong with the form context #}
             <a href="{% url 'account_login' %}" class="btn btn-primary">Go to Login</a>
         {% endif %}
     </div>

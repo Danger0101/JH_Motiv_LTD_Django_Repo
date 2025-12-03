@@ -11,6 +11,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from django.contrib import messages
+
 # --- Public Facing View ---
 class TasterRequestView(View):
     """Handles the public submission of a Taster Session Request."""
@@ -19,37 +21,55 @@ class TasterRequestView(View):
         return render(request, 'coaching_client/taster_request_form.html', {'form': form})
 
     def post(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            # Should be blocked by frontend button, but this is the backend guardrail
-            messages.error(request, "You must be logged in to submit a taster session request.")
-            return redirect(reverse('account_login')) # Redirect to login page
+        form = TasterRequestForm(request.POST)
+
+        if request.user.is_authenticated:
+            # --- LOGGED-IN USER LOGIC ---
+            if TasterSessionRequest.has_active_request(request.user):
+                messages.warning(request, "You already have a pending or approved taster session request.")
+                return redirect(reverse('accounts:account_profile'))
+
+            if form.is_valid():
+                taster_request = form.save(commit=False)
+                taster_request.client = request.user
+                taster_request.full_name = request.user.get_full_name()
+                taster_request.email = request.user.email
+                # Phone number might be optional or collected from profile if available
+                taster_request.save()
+                
+                messages.success(request, "Your request has been submitted successfully!")
+                return redirect(reverse('coaching_client:taster_success'))
+        else:
+            # --- GUEST USER LOGIC ---
+            if form.is_valid():
+                # Form is valid, save it without a client instance
+                form.save()
+                messages.success(request, "Your request has been submitted successfully!")
+                return redirect(reverse('coaching_client:taster_success'))
+
+        # --- FORM INVALID LOGIC (applies to both) ---
+        # If we reach here, the form was invalid for either a guest or logged-in user.
+        error_message = "There was an error in your submission. Please check the details and try again."
+        
+        # We need to add the errors to the messages framework to be displayed on the redirected page.
+        # It's tricky to show specific form errors on a different page after a redirect.
+        # A simple error message is often the most practical solution.
+        # For a better UX, one might store the form errors in the session and re-display them,
+        # but that adds significant complexity.
+        
+        # Concatenate form errors into a single string for display, if any.
+        error_details = []
+        for field, errors in form.errors.items():
+            for error in errors:
+                field_name = field.replace('_', ' ').title()
+                error_details.append(f"{field_name}: {error}")
+        
+        if error_details:
+            error_message += " " + " ".join(error_details)
             
-        # Check for existing request (One-Application Limit)
-        if TasterSessionRequest.has_active_request(request.user):
-            messages.warning(request, "You already have a pending or approved taster session request. We will contact you soon!")
-            return redirect(reverse('accounts:account_profile')) 
-            
-        # Initialize form with POST data and the request object
-        form = TasterRequestForm(request.POST) # Removed request=request as it's not needed by the simplified form
-        if form.is_valid():
-            taster_request = form.save(commit=False)
-            taster_request.client = request.user
-            
-            # CRITICAL: Auto-populate the required fields from the authenticated user
-            taster_request.full_name = request.user.get_full_name()
-            taster_request.email = request.user.email
-            # phone_number is left empty or requires a separate method if mandatory
-            
-            taster_request.save()
-            
-            # Send acknowledgement email to client (using core.email_utils)
-            # send_transactional_email(...) 
-            
-            messages.success(request, "Your taster session request has been submitted successfully and is under review.")
-            return redirect(reverse('coaching_client:taster_success'))
-            
-        # If form validation fails, redirect back to the coach page with an error message
-        messages.error(request, "There was an error in your submission. Please check the details and try again.")
+        messages.error(request, error_message)
+        
+        # Redirect back to the landing page where the modal is.
         return redirect(reverse('coaching_booking:coach_landing'))
 
 class TasterRequestSuccessView(TemplateView):

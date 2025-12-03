@@ -63,12 +63,12 @@ class CoachLandingView(TemplateView):
 
             # 3. Form Initialization (Only pass initial data for logged-in users)
             if not has_active_request:
-                context['taster_request_form'] = TasterRequestForm() # No initial data needed for simplified form
+                context['form'] = TasterRequestForm() # No initial data needed for simplified form
             else:
-                 context['taster_request_form'] = None
+                 context['form'] = None
         else:
             context['has_pending_request'] = False
-            context['taster_request_form'] = TasterRequestForm() # No initial data needed for simplified form
+            context['form'] = TasterRequestForm() # No initial data needed for simplified form
             
         return context
 
