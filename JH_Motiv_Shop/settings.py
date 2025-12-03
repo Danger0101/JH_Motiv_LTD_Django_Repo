@@ -195,14 +195,23 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # =======================================================
 
 if not DEBUG:
-    # Production: SendGrid
+    # Production: Google/Gmail SMTP (Using App Password)
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = 'smtp.sendgrid.net'
-    EMAIL_HOST_USER = 'apikey'  # This is literally the string 'apikey'
-    EMAIL_HOST_PASSWORD = os.environ.get('SENDGRID_API_KEY')
+    
+    # Google's SMTP Server Settings
+    EMAIL_HOST = 'smtp.gmail.com'
     EMAIL_PORT = 587
     EMAIL_USE_TLS = True
-    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'support@jhmotiv.shop')
+    
+    # Credentials (pulled from Heroku Config Vars)
+    # This must be your full Gmail/Workspace address (e.g., coach@jhmotiv.shop)
+    EMAIL_HOST_USER = os.environ.get('GMAIL_HOST_USER') 
+    # This must be the 16-character App Password, NOT your main password
+    EMAIL_HOST_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD')
+    
+    # Set the default 'from' email, falling back to the host user
+    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER) 
+
 else:
     # Development: Console
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
@@ -214,12 +223,20 @@ GOOGLE_OAUTH2_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH2_CLIENT_SECRET')
 GOOGLE_OAUTH2_REDIRECT_URI = os.getenv('GOOGLE_OAUTH2_REDIRECT_URI')
 
 if not DEBUG:
+    # --- PRODUCTION ENVIRONMENT CHECKS ---
+    # Ensure all required external service credentials are set in production
     if not GOOGLE_OAUTH2_CLIENT_ID:
         raise ImproperlyConfigured("GOOGLE_OAUTH2_CLIENT_ID is not set in the environment variables.")
     if not GOOGLE_OAUTH2_CLIENT_SECRET:
         raise ImproperlyConfigured("GOOGLE_OAUTH2_CLIENT_SECRET is not set in the environment variables.")
     if not GOOGLE_OAUTH2_REDIRECT_URI:
         raise ImproperlyConfigured("GOOGLE_OAUTH2_REDIRECT_URI is not set in the environment variables.")
+        
+    # Gmail SMTP checks for production email
+    if not EMAIL_HOST_USER:
+         raise ImproperlyConfigured("GMAIL_HOST_USER is not set in the environment variables for production email.")
+    if not EMAIL_HOST_PASSWORD:
+         raise ImproperlyConfigured("GMAIL_APP_PASSWORD is not set in the environment variables for production email.")
 
 #Encryption:
 FIELD_ENCRYPTION_KEY = os.getenv('FIELD_ENCRYPTION_KEY')
