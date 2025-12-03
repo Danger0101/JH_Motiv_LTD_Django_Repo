@@ -22,6 +22,7 @@ from coaching_availability.utils import get_coach_available_slots
 from coaching_core.models import Offering, Workshop
 from coaching_client.models import ContentPage
 from cart.utils import get_or_create_cart, get_cart_summary_data
+from coaching_client.models import ContentPage
 
 BOOKING_WINDOW_DAYS = 90
 
