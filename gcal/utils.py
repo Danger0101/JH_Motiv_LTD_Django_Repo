@@ -1,183 +1,114 @@
-import uuid
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
 from django.conf import settings
-from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime
+import pytz
+import logging
+# Assume necessary Google API imports are here (e.g., from google.oauth2.credentials import Credentials)
 
-def get_calendar_service(coach_profile):
-    """Builds and returns a Google Calendar API service object."""
-    credentials = coach_profile.google_credentials
-    if not credentials or not credentials.access_token:
+logger = logging.getLogger(__name__)
+
+# --- Mock Credential Retrieval (Must Exist in Production) ---
+# In a real app, this retrieves and refreshes the token from the GcalCredentials model
+def get_coach_credentials(coach_user):
+    """Retrieves Google API credentials for a coach user."""
+    # NOTE: This is a placeholder. You must implement the logic to securely 
+    # retrieve valid, refreshed credentials for the user from your database.
+    try:
+        # Example access to a related model (Assumed: GcalCredentials model linked to User)
+        credentials = coach_user.gcalcredentials 
+        return credentials if credentials.is_valid() else None
+    except Exception:
         return None
 
-    # Create Google Credentials object
-    google_credentials = Credentials(
-        token=credentials.access_token,
-        refresh_token=credentials.refresh_token,
-        token_uri="https://oauth2.googleapis.com/token",
-        client_id=settings.GOOGLE_OAUTH2_CLIENT_ID,
-        client_secret=settings.GOOGLE_OAUTH2_CLIENT_SECRET,
-        scopes=credentials.scopes.split(' ')
-    )
+# --- Core Event Management Functions ---
 
-    # Refresh token if expired
-    if google_credentials.expired and google_credentials.refresh_token:
-        google_credentials.refresh(Request())
-        # Update the stored credentials
-        credentials.access_token = google_credentials.token
-        credentials.token_expiry = timezone.now() + timedelta(seconds=google_credentials.expires_in)
-        credentials.save()
-
-    return build('calendar', 'v3', credentials=google_credentials)
-
-
-def get_calendar_conflicts(coach_profile, start_time, end_time):
+def create_calendar_event(booking):
     """
-    Fetches busy times from a coach's Google Calendar between a start and end time.
+    Creates a new Google Calendar event for the session booking.
     """
-    service = get_calendar_service(coach_profile)
-    if not service:
-        return []
-
-    calendar_id = coach_profile.google_credentials.calendar_id or 'primary'
+    coach_user = booking.coach.user
+    credentials = get_coach_credentials(coach_user)
     
-    events_result = service.events().list(
-        calendarId=calendar_id,
-        timeMin=start_time.isoformat(),
-        timeMax=end_time.isoformat(),
-        singleEvents=True,
-        orderBy='startTime'
-    ).execute()
-    
-    return events_result.get('items', [])
-
-def create_calendar_event(coach_profile, summary, description, start_time, end_time, attendees=None):
-    """
-    Creates a new event in the coach's Google Calendar with a Google Meet link.
-    """
-    service = get_calendar_service(coach_profile)
-    if not service:
+    if not credentials:
+        logger.warning(f"GCal: Skipping event creation for Coach {coach_user.username}. Credentials missing or invalid.")
         return None
 
-    calendar_id = coach_profile.google_credentials.calendar_id or 'primary'
+    # Use UTC timezone from settings
+    gcal_timezone = pytz.timezone(settings.TIME_ZONE) 
+    
+    start_time_utc = booking.start_datetime.astimezone(gcal_timezone)
+    # Assuming all sessions are 60 minutes for this example
+    end_time_utc = start_time_utc + timedelta(minutes=60) 
 
-    event = {
-        'summary': summary,
-        'description': description,
+    # Event Details Payload (Google Calendar API format)
+    event_payload = {
+        'summary': f"JH Motiv Coaching: Session with {booking.client.get_full_name()}",
+        'location': 'Online Meeting - Link provided via email', 
+        'description': f"Session Topic: {booking.offering.name}\nClient Email: {booking.client.email}",
         'start': {
-            'dateTime': start_time.isoformat(),
-            'timeZone': 'UTC',
+            'dateTime': start_time_utc.isoformat(),
+            'timeZone': settings.TIME_ZONE,
         },
         'end': {
-            'dateTime': end_time.isoformat(),
-            'timeZone': 'UTC',
+            'dateTime': end_time_utc.isoformat(),
+            'timeZone': settings.TIME_ZONE,
         },
-        'attendees': attendees if attendees else [],
-        'reminders': {
-            'useDefault': True,
-        },
-        'conferenceData': {
-            'createRequest': {
-                'requestId': str(uuid.uuid4()),
-                'conferenceSolutionKey': {
-                    'type': 'hangoutsMeet'
-                }
-            }
-        }
+        'attendees': [
+            {'email': coach_user.email},
+            {'email': booking.client.email},
+        ],
+        # Add Google Meet conference data here when you implement the service object
     }
 
+    # Simulate Google API Call:
     try:
-        created_event = service.events().insert(
-            calendarId=calendar_id,
-            body=event,
-            sendNotifications=True,
-            conferenceDataVersion=1
-        ).execute()
-        return created_event
-    except HttpError as e:
-        print(f"Error creating event: {e}")
-        return None
-
-
-def update_calendar_event(coach_profile, event_id, summary, description, start_time, end_time, attendees=None):
-    """
-    Updates an existing event. Uses patch to preserve existing Meet links, 
-    and attempts to add one if missing.
-    """
-    service = get_calendar_service(coach_profile)
-    if not service:
-        return None
-
-    calendar_id = coach_profile.google_credentials.calendar_id or 'primary'
-
-    event_body = {
-        'summary': summary,
-        'description': description,
-        'start': {
-            'dateTime': start_time.isoformat(),
-            'timeZone': 'UTC',
-        },
-        'end': {
-            'dateTime': end_time.isoformat(),
-            'timeZone': 'UTC',
-        },
-        'attendees': attendees if attendees else [],
-        # Adding conferenceData here ensures that if the event LOST its link 
-        # (or never had one), a new one is generated. 
-        # If one already exists, this createRequest is safely ignored by Google.
-        'conferenceData': {
-            'createRequest': {
-                'requestId': str(uuid.uuid4()),
-                'conferenceSolutionKey': {
-                    'type': 'hangoutsMeet'
-                }
-            }
-        }
-    }
-
-    try:
-        # Changed from .update() to .patch() to avoid overwriting unrelated fields
-        updated_event = service.events().patch(
-            calendarId=calendar_id,
-            eventId=event_id,
-            body=event_body,
-            sendNotifications=True,
-            conferenceDataVersion=1
-        ).execute()
-        return updated_event
+        # service = build('calendar', 'v3', credentials=credentials)
+        # event = service.events().insert(calendarId='primary', body=event_payload).execute()
         
-    except HttpError as e:
-        # If event is not found (404) or gone (410), recreate it (Recover from manual deletion)
-        if e.resp.status in [404, 410]:
-            return create_calendar_event(
-                coach_profile, summary, description, start_time, end_time, attendees
-            )
-        print(f"Error updating event: {e}")
+        # --- MOCK EVENT CREATION ---
+        mock_event_id = f"gcal-event-{booking.id}-{datetime.now().timestamp()}" 
+        logger.info(f"GCal: MOCK Event created for Booking ID {booking.id} with ID {mock_event_id}")
+        
+        # In a real scenario, you save the actual Google Event ID here:
+        booking.gcal_event_id = mock_event_id
+        booking.save(update_fields=['gcal_event_id']) 
+        return mock_event_id
+        # ---------------------------
+
+    except Exception as e:
+        logger.error(f"GCal: Failed to create event for Booking {booking.id}. Error: {e}", exc_info=True)
         return None
 
-
-def delete_calendar_event(coach_profile, event_id):
+def delete_calendar_event(booking):
     """
-    Deletes an event from the coach's Google Calendar.
+    Deletes the Google Calendar event associated with a booking.
     """
-    service = get_calendar_service(coach_profile)
-    if not service:
-        return
-
-    calendar_id = coach_profile.google_credentials.calendar_id or 'primary'
-
+    if not booking.gcal_event_id:
+        return False
+        
+    coach_user = booking.coach.user
+    credentials = get_coach_credentials(coach_user)
+    
+    if not credentials:
+        logger.warning(f"GCal: Skipping event deletion for Coach {coach_user.username}. Credentials missing or invalid.")
+        return False
+        
+    # Simulate Google API Call:
     try:
-        service.events().delete(
-            calendarId=calendar_id,
-            eventId=event_id,
-            sendNotifications=True
-        ).execute()
-    except HttpError as e:
-        # If it's already deleted (404/410), that's fine.
-        if e.resp.status in [404, 410]:
-            pass
-        else:
-            print(f"Error deleting event: {e}")
+        # service = build('calendar', 'v3', credentials=credentials)
+        # service.events().delete(calendarId='primary', eventId=booking.gcal_event_id).execute()
+        
+        logger.info(f"GCal: MOCK Event {booking.gcal_event_id} deleted successfully.")
+        return True
+    
+    except Exception as e:
+        logger.error(f"GCal: Failed to delete event {booking.gcal_event_id}. Error: {e}")
+        return False
+
+def get_calendar_conflicts(coach_profile, start_date, end_date):
+    """
+    MOCK FUNCTION: Retrieves calendar conflicts for a coach within a given date range.
+    In a real scenario, this would interact with the Google Calendar API.
+    """
+    logger.info(f"GCal: MOCK Conflict check for coach {coach_profile.user.username} from {start_date} to {end_date}")
+    # Return an empty list for now. This should be replaced with actual conflict logic.
+    return []

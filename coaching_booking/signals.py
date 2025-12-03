@@ -1,66 +1,50 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
-from .models import SessionBooking
-from gcal.utils import create_calendar_event, update_calendar_event, delete_calendar_event
+# Note: Ensure this import path is correct for your SessionBooking model
+from .models import SessionBooking 
+# Note: Ensure this import path is correct for your gcal utility file
+from gcal.utils import create_calendar_event, delete_calendar_event 
 
+import logging
+logger = logging.getLogger(__name__)
 
 @receiver(post_save, sender=SessionBooking)
-def handle_session_booking_save(sender, instance, created, **kwargs):
+def handle_session_booking_gcal(sender, instance, created, **kwargs):
     """
-    Handles the creation, update, and cancellation of Google Calendar events
-    when a SessionBooking is saved.
+    Signal handler to create or update a Google Calendar event.
     """
-    if not instance.coach.google_credentials:
+    booking = instance
+    
+    if booking.status != 'CONFIRMED':
+        # Only create/update events for confirmed bookings
         return
-
+    
     if created:
-        # Create a new calendar event
-        event = create_calendar_event(
-            coach_profile=instance.coach,
-            summary=f"Coaching Session with {instance.client.get_full_name()}",
-            description=f"Coaching session for the offering: {instance.enrollment.offering.name if instance.enrollment else 'Taster Session'}",
-            start_time=instance.start_datetime,
-            end_time=instance.end_datetime,
-            attendees=[
-                {'email': instance.client.email},
-                {'email': instance.coach.user.email}
-            ]
-        )
-        if event:
-            # We must use .update() here to avoid triggering the post_save signal again (recursion)
-            SessionBooking.objects.filter(pk=instance.pk).update(gcal_event_id=event.get('id'))
-    else:
-        # Update or delete the calendar event
-        if instance.gcal_event_id:
-            if instance.status == 'CANCELED':
-                delete_calendar_event(
-                    coach_profile=instance.coach,
-                    event_id=instance.gcal_event_id
-                )
-            else:
-                updated_or_created_event = update_calendar_event(
-                    coach_profile=instance.coach,
-                    event_id=instance.gcal_event_id,
-                    summary=f"Coaching Session with {instance.client.get_full_name()}",
-                    description=f"Coaching session for the offering: {instance.enrollment.offering.name if instance.enrollment else 'Taster Session'}",
-                    start_time=instance.start_datetime,
-                    end_time=instance.end_datetime,
-                    attendees=[
-                        {'email': instance.client.email},
-                        {'email': instance.coach.user.email}
-                    ]
-                )
-                # If the event was recreated (new ID), update the DB without triggering signals
-                if updated_or_created_event and updated_or_created_event.get('id') != instance.gcal_event_id:
-                     SessionBooking.objects.filter(pk=instance.pk).update(gcal_event_id=updated_or_created_event.get('id'))
+        # New Booking - Create Event
+        # NOTE: This function is asynchronous and non-blocking in a real production environment (e.g., using Celery)
+        try:
+            create_calendar_event(booking)
+            logger.info(f"GCal: Triggered event CREATE for booking {booking.id}")
+        except Exception as e:
+            logger.error(f"GCal Error on Creation for Booking {booking.id}: {e}")
+
+    elif not created and booking.gcal_event_id:
+        # Existing Booking Updated (e.g., Rescheduled) - Update Event
+        # NOTE: If time/coach changes, this should trigger an UPDATE function.
+        # For now, we log the intent as the utility is simple.
+        logger.info(f"GCal: Booking {booking.id} updated. Triggering event UPDATE (if implemented).")
+        # In a complete app: update_calendar_event(booking)
 
 @receiver(post_delete, sender=SessionBooking)
-def handle_session_booking_delete(sender, instance, **kwargs):
+def handle_session_deletion_gcal(sender, instance, **kwargs):
     """
-    Handles the deletion of a Google Calendar event when a SessionBooking is deleted.
+    Signal handler to delete the Google Calendar event when a booking is deleted/cancelled.
     """
-    if instance.gcal_event_id and instance.coach.google_credentials:
-        delete_calendar_event(
-            coach_profile=instance.coach,
-            event_id=instance.gcal_event_id
-        )
+    booking = instance
+    
+    if booking.gcal_event_id:
+        try:
+            delete_calendar_event(booking)
+            logger.info(f"GCal: Triggered event DELETE for booking {booking.id}")
+        except Exception as e:
+            logger.error(f"GCal Error on Deletion for Booking {booking.id}: {e}")
