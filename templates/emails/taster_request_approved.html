@@ -1,16 +1,23 @@
-{% extends "emails/base_email.html" %}
 {% load static %}
-
-{% block content %}
-    <p>Dear {{ request.full_name }},</p>
-    <p>Great news! Your request for a free taster session with JH Motiv LTD has been approved.</p>
-    <p>Our coach has reviewed your goals and is excited to connect with you. To proceed, please follow the link below to book your session at a time that suits you:</p>
-    
-    <p style="text-align: center; margin: 20px 0;">
-        <a href="{{ request.booking_link }}" style="background-color: #28a745; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Book Your Session Now</a>
-    </p>
-
-    <p>We look forward to helping you achieve your goals!</p>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Your Taster Session Request Approved!</title>
+</head>
+<body>
+    <p>Hi {{ request.full_name }},</p>
+    <p>Great news! Your request for a free taster session has been approved by our coach.</p>
+    <p>We're excited to help you on your journey. Please click the link below to sign up and book your full coaching session:</p>
+    <p><a href="YOUR_BOOKING_LINK_HERE">Book Your Session Now!</a></p>
+    <p>During your first session, we'll dive deeper into your goals:</p>
+    <ul>
+        <li>Name: {{ request.full_name }}</li>
+        <li>Email: {{ request.email }}</li>
+        <li>Phone: {{ request.phone_number }}</li>
+        <li>Goal Summary: {{ request.goal_summary }}</li>
+    </ul>
+    <p>We look forward to working with you!</p>
     <p>Best regards,</p>
-    <p>The JH Motiv LTD Team</p>
-{% endblock %}
+    <p>The JH Motiv Team</p>
+</body>
+</html>

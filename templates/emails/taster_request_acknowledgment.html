@@ -1,21 +1,21 @@
-{% extends "emails/base_email.html" %}
 {% load static %}
-
-{% block content %}
-    <p>Dear {{ request.full_name }},</p>
-    <p>Thank you for requesting a free taster session with JH Motiv LTD.</p>
-    <p>We have received your request and our team will review it shortly. You will receive another email once your request has been approved or denied.</p>
-    
-    <p><strong>Your Request Details:</strong></p>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Your Taster Session Request</title>
+</head>
+<body>
+    <p>Hi {{ request.full_name }},</p>
+    <p>Thank you for requesting a free taster session with us! We have received your request and our team will review it shortly.</p>
+    <p>We'll be in touch soon to let you know the outcome of your request.</p>
+    <p>Here are the details you submitted:</p>
     <ul>
-        <li><strong>Name:</strong> {{ request.full_name }}</li>
-        <li><strong>Email:</strong> {{ request.email }}</li>
-        <li><strong>Phone Number:</strong> {{ request.phone_number }}</li>
-        <li><strong>Goal Summary:</strong> {{ request.goal_summary }}</li>
-        <li><strong>Requested On:</strong> {{ request.requested_on|date:"F j, Y, P" }}</li>
+        <li>Name: {{ request.full_name }}</li>
+        <li>Email: {{ request.email }}</li>
+        <li>Phone: {{ request.phone_number }}</li>
+        <li>Goal Summary: {{ request.goal_summary }}</li>
     </ul>
-
-    <p>We appreciate your patience and look forward to helping you unlock your potential!</p>
     <p>Best regards,</p>
-    <p>The JH Motiv LTD Team</p>
-{% endblock %}
+    <p>The JH Motiv Team</p>
+</body>
+</html>

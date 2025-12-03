@@ -1,14 +1,16 @@
-{% extends "emails/base_email.html" %}
 {% load static %}
-
-{% block content %}
-    <p>Dear {{ request.full_name }},</p>
-    <p>Thank you for your interest in a free taster session with JH Motiv LTD.</p>
-    <p>After careful consideration, we regret to inform you that we are unable to proceed with your taster session request at this time. This decision may be due to various factors, such as availability, alignment with our current coaching programs, or the information provided in your request.</p>
-    
-    <p>We understand this may be disappointing. We encourage you to explore our <a href="{% url 'core:faq' %}" style="color: #007bff; text-decoration: none;">FAQ section</a> or our full range of <a href="{% url 'coaching_booking:offer-list' %}" style="color: #007bff; text-decoration: none;">coaching offerings</a> which might be a better fit for your goals.</p>
-
-    <p>We wish you the best in your journey!</p>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Update on Your Taster Session Request</title>
+</head>
+<body>
+    <p>Hi {{ request.full_name }},</p>
+    <p>Thank you for your interest in a free taster session. We have reviewed your request, and unfortunately, we are unable to proceed with a taster session at this time.</p>
+    <p>This could be for various reasons, such as current coach availability or alignment with our program's focus. We encourage you to explore other options on our website or reach out if you have further questions.</p>
+    <p>You can find more information here: [Link to FAQ or relevant page]</p>
+    <p>We appreciate your understanding.</p>
     <p>Best regards,</p>
-    <p>The JH Motiv LTD Team</p>
-{% endblock %}
+    <p>The JH Motiv Team</p>
+</body>
+</html>
