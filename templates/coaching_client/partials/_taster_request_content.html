@@ -1,0 +1,30 @@
+{% load crispy_forms_tags %}
+{% load static %}
+
+<div class="modal-header">
+    <h5 class="modal-title" id="tasterModalLabel">Request Your Free Taster Session 🚀</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<form method="post" action="{% url 'coaching_client:taster_request' %}" id="taster-request-form">
+    <div class="modal-body">
+        {% csrf_token %}
+        <p class="text-muted small">Fill out this quick form and our coach will review your goals. You will receive an email confirmation shortly after submission.</p>
+
+        {{ form.full_name|as_crispy_field }}
+        {{ form.email|as_crispy_field }}
+        {{ form.phone_number|as_crispy_field }}
+        {{ form.goal_summary|as_crispy_field }}
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="submit" class="btn btn-primary">Submit Request</button>
+    </div>
+</form>
+
+<script>
+    // Prevent double-submission and provide feedback
+    document.getElementById('taster-request-form').addEventListener('submit', function() {
+        this.querySelector('button[type="submit"]').disabled = true;
+        this.querySelector('button[type="submit"]').textContent = 'Sending...';
+    });
+</script>

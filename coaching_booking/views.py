@@ -22,6 +22,7 @@ from coaching_availability.utils import get_coach_available_slots
 from coaching_core.models import Offering, Workshop
 from coaching_client.models import ContentPage
 from cart.utils import get_or_create_cart, get_cart_summary_data
+from coaching_client.forms import TasterRequestForm # Make sure this import is correct
 
 BOOKING_WINDOW_DAYS = 90
 
@@ -42,6 +43,7 @@ def coach_landing_view(request):
         'knowledge_categories': KNOWLEDGE_CATEGORIES[1:],
         'page_summary_text': "Welcome to our coaching services!",
         'summary': get_cart_summary_data(cart),
+        'taster_request_form': TasterRequestForm() 
     }
     return render(request, 'coaching_booking/coach_landing.html', context)
 
