@@ -55,6 +55,8 @@ INSTALLED_APPS = [
     'dreamers',
     'team',
     'gcal',
+    'facts',
+    
     # Coaching Apps
     'coaching_core',
     'coaching_booking',

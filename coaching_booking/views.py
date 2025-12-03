@@ -28,6 +28,8 @@ BOOKING_WINDOW_DAYS = 90
 
 # --- EXISTING VIEWS (Preserved) ---
 
+from facts.models import Fact
+
 class CoachLandingView(TemplateView):
     template_name = "coaching_booking/coach_landing.html"
 
@@ -40,6 +42,7 @@ class CoachLandingView(TemplateView):
         offerings = Offering.objects.filter(active_status=True).prefetch_related('coaches')
         workshops = Workshop.objects.filter(active_status=True)
         knowledge_pages = ContentPage.objects.filter(is_published=True).order_by('title')[:3]
+        facts = Fact.objects.all()
         KNOWLEDGE_CATEGORIES = [('all', 'Business Coaches')] # This seems like a placeholder, adjust as needed
         cart = get_or_create_cart(self.request)
 
@@ -48,6 +51,7 @@ class CoachLandingView(TemplateView):
             'offerings': offerings,
             'workshops': workshops,
             'knowledge_pages': knowledge_pages,
+            'facts': facts,
             'knowledge_categories': KNOWLEDGE_CATEGORIES[1:],
             'page_summary_text': "Welcome to our coaching services!",
             'summary': get_cart_summary_data(cart),
