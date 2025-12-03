@@ -1,27 +1,57 @@
+{% load static %}
+{% url 'coaching_client:taster_request' as taster_request_url %}
+
 <div class="modal-header">
     <h5 class="modal-title" id="tasterModalLabel">Request Your Free Taster Session 🚀</h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
-<form method="post" action="{% url 'coaching_client:taster_request' %}" id="taster-request-form">
+<form method="post" action="{{ taster_request_url }}" id="taster-request-form">
     <div class="modal-body">
         {% csrf_token %}
-        <p class="text-muted small">Fill out this quick form and our coach will review your goals. You will receive an email confirmation shortly after submission.</p>
+        
+        {% if request.user.is_authenticated %}
+            {# State: Logged In, Ready for One-Click Submit #}
+            <div class="alert alert-success py-2">
+                We're ready to submit your request instantly using your profile details:
+                <br>
+                <strong>Name:</strong> {{ request.user.get_full_name }}
+                <br>
+                <strong>Email:</strong> {{ request.user.email }}
+            </div>
+            
+            {# 
+               The mandatory 'goal_summary' field is included as a hidden field
+               with a default value, achieving the "no input needed" goal.
+            #}
+            <input type="hidden" 
+                   name="goal_summary" 
+                   value="User submitted a one-click taster session request via the coach page. Goals to be determined in the first contact." />
 
-        {{ form.full_name|as_crispy_field }}
-        {{ form.email|as_crispy_field }}
-        {{ form.phone_number|as_crispy_field }}
-        {{ form.goal_summary|as_crispy_field }}
+            <p class="text-muted small">Click 'Submit Request' to confirm. We will contact you via email within 24 hours.</p>
+
+        {% else %}
+            {# State: Logged Out (Should be blocked by the button, but this is a fail-safe) #}
+            <div class="alert alert-warning">
+                Please **log in** first to submit your application instantly!
+            </div>
+        {% endif %}
+
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="submit" class="btn btn-primary">Submit Request</button>
+        
+        {% if request.user.is_authenticated %}
+            <button type="submit" class="btn btn-primary" id="submit-taster-btn">Submit Request</button>
+        {% else %}
+            <a href="{% url 'account_login' %}" class="btn btn-primary">Go to Login</a>
+        {% endif %}
     </div>
 </form>
 
 <script>
-    // Prevent double-submission and provide feedback
+    // Simple JS to prevent double submission
     document.getElementById('taster-request-form').addEventListener('submit', function() {
-        this.querySelector('button[type="submit"]').disabled = true;
-        this.querySelector('button[type="submit"]').textContent = 'Sending...';
+        this.querySelector('#submit-taster-btn').disabled = true;
+        this.querySelector('#submit-taster-btn').textContent = 'Submitting...';
     });
 </script>
