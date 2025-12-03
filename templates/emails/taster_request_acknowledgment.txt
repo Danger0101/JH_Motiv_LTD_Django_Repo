@@ -1,0 +1,12 @@
+Taster Session Request Received
+---------------------------------
+
+Hi {{ user.first_name|default:'there' }},
+
+We have received your request for a taster session. We are excited to have you on board!
+
+Our team will review your request and get back to you shortly with the next steps.
+
+Thank you for your interest in our coaching services.
+
+The JH Motiv LTD Team

@@ -10,8 +10,11 @@ User = get_user_model()
 class Order(models.Model):
     # User is now nullable to allow for guest checkouts
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    email = models.EmailField(null=True, blank=True)
     # Secure token for guest order tracking - generated in save()
     guest_order_token = models.UUIDField(unique=True, null=True, blank=True, editable=False)
+    printful_order_id = models.CharField(max_length=255, null=True, blank=True)
+    printful_order_status = models.CharField(max_length=100, null=True, blank=True)
     total_paid = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

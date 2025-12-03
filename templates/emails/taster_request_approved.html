@@ -1,0 +1,10 @@
+{% extends 'emails/base_email.html' %}
+
+{% block content %}
+  <h1>Taster Session Request Approved!</h1>
+  <p>Hi {{ client.first_name|default:'there' }},</p>
+  <p>Good news! Your request for a taster session has been approved.</p>
+  <p>Your next step is to book a time that works for you. Please visit your dashboard to schedule your session.</p>
+  <p><a href="{{ dashboard_url }}" class="button">Book Your Session</a></p>
+  <p>We look forward to speaking with you!</p>
+{% endblock %}

@@ -1,0 +1,15 @@
+Taster Session Request Update
+-------------------------------
+
+Hi {{ client.first_name|default:'there' }},
+
+Thank you for your interest in a taster session. After reviewing your request, we are unfortunately unable to offer you a session at this time.
+
+{% if notes %}
+Notes from our team:
+{{ notes }}
+{% endif %}
+
+We appreciate your understanding and wish you the best in your endeavors.
+
+The JH Motiv LTD Team

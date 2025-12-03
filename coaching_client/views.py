@@ -1,11 +1,13 @@
 from django.shortcuts import redirect
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.views.generic import CreateView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib import messages
 from django.utils import timezone
 
 from .models import TasterSessionRequest
+from core.email_utils import send_transactional_email
+
 
 class RequestTasterView(LoginRequiredMixin, CreateView):
     """
@@ -27,8 +29,22 @@ class RequestTasterView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         """Set the client to the currently logged-in user."""
         form.instance.client = self.request.user
+        response = super().form_valid(form)
         messages.success(self.request, "Your request for a taster session has been submitted successfully!")
-        return super().form_valid(form)
+        
+        # Send acknowledgment email
+        user = self.request.user
+        email_context = {
+            'user': user,
+        }
+        send_transactional_email(
+            recipient_email=user.email,
+            subject="Taster Session Request Received",
+            template_name='emails/taster_request_acknowledgment.html',
+            context=email_context
+        )
+        
+        return response
 
 class ApproveTasterView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     """
@@ -45,14 +61,38 @@ class ApproveTasterView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 
     def form_valid(self, form):
         """Set the approver and decision timestamp automatically."""
-        instance = form.save(commit=False)
         instance.approver = self.request.user
         instance.decision_at = timezone.now()
         
+        # Determine email details based on status
         if instance.status == 'APPROVED':
             messages.success(self.request, f"Taster session for {instance.client.get_full_name()} has been approved.")
+            subject = "Your Taster Session Request has been Approved!"
+            template_name = 'emails/taster_request_approved.html'
+            dashboard_url = self.request.build_absolute_uri(reverse('accounts:account_profile'))
+            email_context = {
+                'client': instance.client,
+                'dashboard_url': dashboard_url,
+            }
         elif instance.status == 'DENIED':
             messages.warning(self.request, f"Taster session for {instance.client.get_full_name()} has been denied.")
-        
+            subject = "Update on Your Taster Session Request"
+            template_name = 'emails/taster_request_denied.html'
+            email_context = {
+                'client': instance.client,
+                'notes': instance.notes,
+            }
+        else:
+            subject = None
+
         instance.save()
+        
+        if subject:
+            send_transactional_email(
+                recipient_email=instance.client.email,
+                subject=subject,
+                template_name=template_name,
+                context=email_context
+            )
+        
         return super().form_valid(form)

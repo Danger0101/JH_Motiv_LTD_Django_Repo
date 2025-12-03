@@ -1,0 +1,12 @@
+{% extends 'emails/base_email.html' %}
+
+{% block content %}
+  <h1>Taster Session Request Update</h1>
+  <p>Hi {{ client.first_name|default:'there' }},</p>
+  <p>Thank you for your interest in a taster session. After reviewing your request, we are unfortunately unable to offer you a session at this time.</p>
+  {% if notes %}
+    <p><strong>Notes from our team:</strong></p>
+    <p>{{ notes }}</p>
+  {% endif %}
+  <p>We appreciate your understanding and wish you the best in your endeavors.</p>
+{% endblock %}

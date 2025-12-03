@@ -88,3 +88,86 @@ class ProductDetailView(DetailView):
         context['variant_lookup_json'] = json.dumps(variant_map)
 
         return context
+
+import hmac
+import hashlib
+from django.conf import settings
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from payments.models import Order
+from core.email_utils import send_transactional_email
+
+@csrf_exempt
+@require_POST
+def printful_webhook(request):
+    """
+    Handles webhooks from Printful, specifically for shipping confirmations.
+    """
+    payload = request.body
+    signature = request.headers.get('X-PF-Signature')
+
+    if not signature:
+        return HttpResponse("Signature header missing", status=401)
+
+    secret = getattr(settings, 'PRINTFUL_WEBHOOK_SECRET', '').encode('utf-8')
+    if not secret:
+        return HttpResponse("Printful webhook secret not configured.", status=500)
+
+    computed_signature = hmac.new(secret, payload, hashlib.sha256).hexdigest()
+
+    if not hmac.compare_digest(computed_signature, signature):
+        return HttpResponse("Invalid signature", status=401)
+
+    try:
+        event_data = json.loads(payload)
+        event_type = event_data.get('type')
+
+        if event_type == 'package_shipped':
+            order_data = event_data.get('data', {}).get('order', {})
+            printful_order_id = order_data.get('id')
+            
+            if not printful_order_id:
+                return HttpResponse("Missing Printful order ID in payload.", status=400)
+
+            try:
+                order = Order.objects.get(printful_order_id=printful_order_id)
+                
+                # Update order status
+                order.printful_order_status = 'shipped'
+                order.save()
+
+                # Send shipping confirmation email
+                shipment_data = event_data.get('data', {}).get('shipment', {})
+                tracking_url = shipment_data.get('tracking_url')
+                
+                customer_email = order.email
+                if not customer_email:
+                    print(f"Cannot send shipping confirmation for order {order.id}: no email found.")
+                    return JsonResponse({"status": "success", "message": "Webhook received, but no email for order."})
+
+                email_context = {
+                    'order': order,
+                    'tracking_url': tracking_url,
+                    'user': order.user,
+                }
+                
+                send_transactional_email(
+                    recipient_email=customer_email,
+                    subject=f"Your Order #{order.id} Has Shipped!",
+                    template_name='emails/shipping_confirmation.html',
+                    context=email_context
+                )
+
+                print(f"SUCCESS: Shipping confirmation email sent for Order {order.id}")
+
+            except Order.DoesNotExist:
+                return HttpResponse(f"Order with Printful ID {printful_order_id} not found.", status=404)
+
+        return JsonResponse({"status": "success", "message": "Webhook received"})
+
+    except json.JSONDecodeError:
+        return HttpResponse("Invalid JSON payload", status=400)
+    except Exception as e:
+        print(f"Error processing Printful webhook: {e}")
+        return HttpResponse("Internal server error", status=500)

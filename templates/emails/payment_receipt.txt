@@ -1,0 +1,19 @@
+Payment Receipt
+----------------
+
+Hi {{ user.first_name|default:'there' }},
+
+Thank you for your payment for order #{{ order.id }}. This is your official receipt.
+
+Order Summary
+-------------
+{% for item in order.items.all %}
+- {{ item.variant.product.name }} ({{ item.variant.name }}) x {{ item.quantity }}: £{{ item.price }}
+{% endfor %}
+
+Total Paid: £{{ order.total_paid }}
+----------------
+
+If you have any questions, please don't hesitate to contact us.
+
+The JH Motiv LTD Team

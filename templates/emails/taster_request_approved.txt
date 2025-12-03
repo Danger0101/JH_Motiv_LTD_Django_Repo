@@ -1,0 +1,13 @@
+Taster Session Request Approved!
+---------------------------------
+
+Hi {{ client.first_name|default:'there' }},
+
+Good news! Your request for a taster session has been approved.
+
+Your next step is to book a time that works for you. Please visit your dashboard to schedule your session:
+{{ dashboard_url }}
+
+We look forward to speaking with you!
+
+The JH Motiv LTD Team

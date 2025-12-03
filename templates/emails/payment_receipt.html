@@ -1,0 +1,35 @@
+{% extends 'emails/base_email.html' %}
+
+{% block content %}
+  <h1>Payment Receipt</h1>
+  <p>Hi {{ user.first_name|default:'there' }},</p>
+  <p>Thank you for your payment for order #{{ order.id }}. This email is your official receipt.</p>
+  
+  <h2>Order Summary</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Quantity</th>
+        <th>Price</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in order.items.all %}
+        <tr>
+          <td>{{ item.variant.product.name }} ({{ item.variant.name }})</td>
+          <td>{{ item.quantity }}</td>
+          <td>£{{ item.price }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2"><strong>Total Paid</strong></td>
+        <td><strong>£{{ order.total_paid }}</strong></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <p>If you have any questions, please don't hesitate to contact us.</p>
+{% endblock %}

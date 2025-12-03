@@ -1,0 +1,14 @@
+Hi {{ user.first_name|default:'there' }},
+
+Good news! Your order #{{ order.id }} has been shipped and is on its way to you.
+
+{% if tracking_url %}
+You can track your package using the following link:
+{{ tracking_url }}
+{% else %}
+Your order has been shipped. You will receive another notification once tracking information becomes available.
+{% endif %}
+
+Thank you for your order!
+
+The JH Motiv LTD Team

@@ -1,0 +1,16 @@
+{% extends 'emails/base_email.html' %}
+
+{% block content %}
+  <h1>Your Order Has Shipped!</h1>
+  <p>Hi {{ user.first_name|default:'there' }},</p>
+  <p>Good news! Your order #{{ order.id }} has been shipped and is on its way to you.</p>
+  
+  {% if tracking_url %}
+    <p>You can track your package using the following link:</p>
+    <p><a href="{{ tracking_url }}" class="button">Track Your Order</a></p>
+  {% else %}
+    <p>Your order has been shipped. You will receive another notification once tracking information becomes available.</p>
+  {% endif %}
+  
+  <p>Thank you for your order!</p>
+{% endblock %}

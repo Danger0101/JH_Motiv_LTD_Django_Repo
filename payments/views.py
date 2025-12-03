@@ -16,6 +16,7 @@ from coaching_core.models import Offering
 from accounts.models import CoachProfile
 from .models import Order, OrderItem
 from products.models import Product, Variant
+from products.printful_service import PrintfulService
 from django.utils import timezone
 
 # Custom imports for email sending
@@ -58,6 +59,9 @@ def create_checkout_session(request):
             # Stripe will automatically append ?session_id={CHECKOUT_SESSION_ID}
             return_url=request.build_absolute_uri(reverse('payments:payment_success')),
             # --- END FIX ---
+            shipping_address_collection={
+                'allowed_countries': ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'ES', 'IT', 'NL'],
+            },
             metadata={
                 'product_type': 'ecommerce_cart',
                 'cart_id': cart.id,
@@ -172,6 +176,10 @@ def stripe_webhook(request):
     # 2. Handle 'checkout.session.completed' Event
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
+        session = stripe.checkout.Session.retrieve(
+            session.id,
+            expand=['shipping_details']
+        )
         
         # Only proceed if payment was actually successful
         if session.get('payment_status') != 'paid':
@@ -282,6 +290,7 @@ def stripe_webhook(request):
                     # 1. Create the Order
                     order = Order.objects.create(
                         user_id=metadata.get('user_id'),
+                        email=session.get('customer_details', {}).get('email'),
                         total_paid=session.amount_total / 100,
                         # NOTE: Ensure you add address/guest info here if needed!
                     )
@@ -298,6 +307,46 @@ def stripe_webhook(request):
                     # 3. Mark the cart as submitted (consumed)
                     cart.status = 'submitted'
                     cart.save()
+
+                    # 4. Create Printful Order
+                    try:
+                        printful_service = PrintfulService()
+                        shipping_details = session.get('shipping_details')
+                        if not shipping_details or not shipping_details.get('address'):
+                            raise ValueError("Shipping details not found in Stripe session.")
+
+                        address = shipping_details['address']
+                        recipient = {
+                            "name": shipping_details.get('name'),
+                            "address1": address.get('line1'),
+                            "address2": address.get('line2'),
+                            "city": address.get('city'),
+                            "state_code": address.get('state'),
+                            "country_code": address.get('country'),
+                            "zip": address.get('postal_code'),
+                        }
+
+                        items = []
+                        for item in cart.items.all():
+                            items.append({
+                                "variant_id": item.variant.printful_variant_id,
+                                "quantity": item.quantity,
+                            })
+
+                        printful_order = printful_service.create_order(recipient, items)
+                        if 'result' in printful_order and printful_order['result'].get('id'):
+                            order.printful_order_id = printful_order['result']['id']
+                            order.printful_order_status = printful_order['result']['status']
+                            order.save()
+                            print(f"SUCCESS: Printful Order {order.printful_order_id} created for Order {order.id}")
+                        else:
+                            print(f"ERROR: Could not create Printful order. Response: {printful_order}")
+
+                    except Exception as e:
+                        print(f"FATAL ERROR creating Printful order: {e}")
+                        # Decide if this should be a 500 error
+                        # return HttpResponse("Printful Order creation failed.", status=500)
+
 
                     print(f"SUCCESS: E-commerce Order {order.id} created from cart {cart.id}")
 
@@ -330,8 +379,17 @@ def stripe_webhook(request):
                         )
                         print(f"SUCCESS: Order confirmation email sent to {customer_email} for order {order.id}")
 
+                        # Send Payment Receipt Email
+                        send_transactional_email(
+                            recipient_email=customer_email,
+                            subject=f"Your Payment Receipt for Order #{order.id}",
+                            template_name='emails/payment_receipt.html',
+                            context=email_context
+                        )
+                        print(f"SUCCESS: Payment receipt email sent to {customer_email} for order {order.id}")
+
                     except Exception as email_error:
-                        print(f"CRITICAL: Order {order.id} created but failed to send confirmation email. Error: {email_error}")
+                        print(f"CRITICAL: Order {order.id} created but failed to send email. Error: {email_error}")
 
 
                 except Cart.DoesNotExist:
