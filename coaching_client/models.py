@@ -87,11 +87,14 @@ class TasterSessionRequest(models.Model):
     # Tracking fields
     requested_at = models.DateTimeField(auto_now_add=True, verbose_name="Requested At")
     status = models.CharField(
-        max_length=10,
+        max_length=20,
         choices=REQUEST_STATUS_CHOICES,
         default='PENDING',
         verbose_name="Status"
     )
+    STATUS_PENDING = 'PENDING'
+    STATUS_APPROVED = 'APPROVED'
+
     approver = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -107,6 +110,17 @@ class TasterSessionRequest(models.Model):
         verbose_name="Internal Notes",
         help_text="Notes for why the request was approved or denied."
     )
+
+    @classmethod
+    def has_active_request(cls, user):
+        """Checks if a user has a PENDING or APPROVED request."""
+        if not user.is_authenticated:
+            return False
+        # Only block if the request is pending review or approved for booking
+        return cls.objects.filter(
+            client=user,
+            status__in=[cls.STATUS_PENDING, cls.STATUS_APPROVED]
+        ).exists()
 
     class Meta:
         verbose_name = "Taster Session Request"

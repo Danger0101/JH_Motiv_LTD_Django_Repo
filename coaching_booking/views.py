@@ -1,4 +1,4 @@
-from django.views.generic import ListView, DetailView
+from django.views.generic import ListView, DetailView, TemplateView # Added TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.conf import settings
 from django.shortcuts import get_object_or_404, redirect, render
@@ -20,7 +20,7 @@ from .models import ClientOfferingEnrollment, SessionBooking
 from accounts.models import CoachProfile
 from coaching_availability.utils import get_coach_available_slots
 from coaching_core.models import Offering, Workshop
-from coaching_client.models import ContentPage
+from coaching_client.models import ContentPage, TasterSessionRequest # Ensure this import is correct and not duplicated
 from cart.utils import get_or_create_cart, get_cart_summary_data
 from coaching_client.forms import TasterRequestForm # Make sure this import is correct
 
@@ -28,24 +28,50 @@ BOOKING_WINDOW_DAYS = 90
 
 # --- EXISTING VIEWS (Preserved) ---
 
-def coach_landing_view(request):
-    coaches = CoachProfile.objects.filter(user__is_active=True, is_available_for_new_clients=True).select_related('user')
-    offerings = Offering.objects.filter(active_status=True).prefetch_related('coaches')
-    workshops = Workshop.objects.filter(active_status=True)
-    knowledge_pages = ContentPage.objects.filter(is_published=True).order_by('title')[:3]
-    KNOWLEDGE_CATEGORIES = [('all', 'Business Coaches')]
-    cart = get_or_create_cart(request)
-    context = {
-        'coaches': coaches,
-        'offerings': offerings,
-        'workshops': workshops,
-        'knowledge_pages': knowledge_pages,
-        'knowledge_categories': KNOWLEDGE_CATEGORIES[1:],
-        'page_summary_text': "Welcome to our coaching services!",
-        'summary': get_cart_summary_data(cart),
-        'taster_request_form': TasterRequestForm() 
-    }
-    return render(request, 'coaching_booking/coach_landing.html', context)
+class CoachLandingView(TemplateView):
+    template_name = "coaching_booking/coach_landing.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+
+        # Common data for the landing page
+        coaches = CoachProfile.objects.filter(user__is_active=True, is_available_for_new_clients=True).select_related('user')
+        offerings = Offering.objects.filter(active_status=True).prefetch_related('coaches')
+        workshops = Workshop.objects.filter(active_status=True)
+        knowledge_pages = ContentPage.objects.filter(is_published=True).order_by('title')[:3]
+        KNOWLEDGE_CATEGORIES = [('all', 'Business Coaches')] # This seems like a placeholder, adjust as needed
+        cart = get_or_create_cart(self.request)
+
+        context.update({
+            'coaches': coaches,
+            'offerings': offerings,
+            'workshops': workshops,
+            'knowledge_pages': knowledge_pages,
+            'knowledge_categories': KNOWLEDGE_CATEGORIES[1:],
+            'page_summary_text': "Welcome to our coaching services!",
+            'summary': get_cart_summary_data(cart),
+        })
+
+        # 1. Authentication Status
+        context['is_logged_in'] = user.is_authenticated
+
+        # 2. Max One Application Check (One-Application Limit Logic)
+        if user.is_authenticated:
+            has_active_request = TasterSessionRequest.has_active_request(user)
+            context['has_pending_request'] = has_active_request
+
+            # 3. Form Initialization (Only pass initial data for logged-in users)
+            if not has_active_request:
+                context['taster_request_form'] = TasterRequestForm() # No initial data needed for simplified form
+            else:
+                 context['taster_request_form'] = None
+        else:
+            context['has_pending_request'] = False
+            context['taster_request_form'] = TasterRequestForm() # No initial data needed for simplified form
+            
+        return context
+
 
 class OfferListView(ListView):
     model = Offering

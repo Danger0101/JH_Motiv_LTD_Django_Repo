@@ -3,14 +3,20 @@ from .models import TasterSessionRequest
 
 class TasterRequestForm(forms.ModelForm):
     """
-    Form for clients (or potential clients) to request a taster session.
+    Simplified form requiring only the goal summary from a logged-in user.
     """
     class Meta:
         model = TasterSessionRequest
-        fields = ['full_name', 'email', 'phone_number', 'goal_summary']
-        widgets = {
-            'full_name': forms.TextInput(attrs={'placeholder': 'Full Name'}),
-            'email': forms.EmailInput(attrs={'placeholder': 'Email Address'}),
-            'phone_number': forms.TextInput(attrs={'placeholder': 'Phone Number (Optional)'}),
-            'goal_summary': forms.Textarea(attrs={'placeholder': 'Briefly describe your main coaching goal(s)', 'rows': 3}),
-        }
+        # Only require goal_summary (User, Full Name, Email are auto-populated in the view)
+        fields = ['goal_summary']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Add basic Bootstrap class for styling and placeholder text
+        self.fields['goal_summary'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'Briefly describe your main coaching goal(s) (Required)',
+            'rows': 4
+        })
+        self.fields['goal_summary'].label = "Your Coaching Goals"

@@ -19,26 +19,37 @@ class TasterRequestView(View):
         return render(request, 'coaching_client/taster_request_form.html', {'form': form})
 
     def post(self, request, *args, **kwargs):
-        form = TasterRequestForm(request.POST)
+        if not request.user.is_authenticated:
+            # Should be blocked by frontend button, but this is the backend guardrail
+            messages.error(request, "You must be logged in to submit a taster session request.")
+            return redirect(reverse('account_login')) # Redirect to login page
+            
+        # Check for existing request (One-Application Limit)
+        if TasterSessionRequest.has_active_request(request.user):
+            messages.warning(request, "You already have a pending or approved taster session request. We will contact you soon!")
+            return redirect(reverse('accounts:account_profile')) 
+            
+        # Initialize form with POST data and the request object
+        form = TasterRequestForm(request.POST) # Removed request=request as it's not needed by the simplified form
         if form.is_valid():
             taster_request = form.save(commit=False)
-            taster_request.client = request.user if request.user.is_authenticated else None
+            taster_request.client = request.user
+            # Auto-populate data from the authenticated user's account
+            taster_request.full_name = request.user.get_full_name()
+            taster_request.email = request.user.email
+            # Phone number is only passed if the field was available in the form/template
+            
             taster_request.save()
             
-            # Send acknowledgement email to client
-            client_context = {'request': taster_request}
-            send_transactional_email(
-                recipient_email=taster_request.email,
-                subject="Taster Session Request Received - JH Motiv LTD",
-                template_name='emails/taster_request_acknowledgment.html', # Template assumed to exist
-                context=client_context
-            )
+            # Send acknowledgement email to client (using core.email_utils)
+            # send_transactional_email(...) 
             
-            # Notify site admin/coach
-            # Logic to notify coach/admin is typically done here
-            
+            messages.success(request, "Your taster session request has been submitted successfully and is under review.")
             return redirect(reverse('coaching_client:taster_success'))
-        return render(request, 'coaching_client/taster_request_form.html', {'form': form})
+            
+        # If form validation fails, redirect back to the coach page with an error message
+        messages.error(request, "There was an error in your submission. Please check the details and try again.")
+        return redirect(reverse('coaching_booking:coach_landing'))
 
 class TasterRequestSuccessView(TemplateView):
     """Displays a success message after a taster request is submitted."""

@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% load static %}
+{% load taster_tags %} 
+{% load socialaccount %} 
+{% url 'account_login' as login_url %}
 
 {% block title %}
 Coach Landing - {{ block.super }}
@@ -207,17 +210,42 @@ Coach Landing - {{ block.super }}
         <div class="container mx-auto px-4">
             <section id="hero-cta" class="py-5 bg-dark text-white text-center">
                 <div class="container">
-                    <h1 class="display-4">Ready to Unlock Your Potential?</h1>
-                    <p class="lead mb-4">The first step is always free. Request a personalized session to start.</p>
+                    <h1 class="display-4">Ready to Transform?</h1>
+                    <p class="lead mb-4">Start your journey with a FREE, no-obligation taster session.</p>
                     
-                    {% if user.is_authenticated %}
-                        <button type="button" class="btn btn-lg btn-warning fw-bold shadow-lg text-dark" data-bs-toggle="modal" data-bs-target="#tasterSessionModal">
-                            Request Your FREE Taster Session Today &gt;
+                    {% if not is_logged_in %}
+                        {# STATE 1: LOGGED OUT (GREY/DISABLED) #}
+                        <button 
+                            type="button" 
+                            class="btn btn-lg btn-secondary fw-bold shadow-lg" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#loginPromptModal" 
+                            title="You must log in to apply"
+                        >
+                            Log In to Apply 🔐
                         </button>
+                    
+                    {% elif has_pending_request %}
+                        {# STATE 2: LOGGED IN, ALREADY APPLIED (GREY/DISABLED) #}
+                        <button 
+                            type="button" 
+                            class="btn btn-lg btn-secondary disabled fw-bold shadow-lg" 
+                            title="You have a pending request. Please check your profile tab for status updates."
+                        >
+                            Request Pending (Check Profile) ⏳
+                        </button>
+                    
                     {% else %}
-                        <p class="lead mt-4">Log in or Register to request your free taster session!</p>
-                        <a href="{% url 'account_login' %}" class="btn btn-lg btn-primary fw-bold shadow-lg">Log In</a>
-                        <a href="{% url 'account_signup' %}" class="btn btn-lg btn-secondary fw-bold shadow-lg">Register</a>
+                        {# STATE 3: LOGGED IN, ELIGIBLE (GREEN/ACTIVE) #}
+                        <button 
+                            type="button" 
+                            class="btn btn-lg btn-success fw-bold shadow-lg" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#tasterSessionModal"
+                            title="Request your free session now"
+                        >
+                            Request Your FREE Taster Session Today ✅
+                        </button>
                     {% endif %}
                 </div>
             </section>
@@ -229,6 +257,33 @@ Coach Landing - {{ block.super }}
                     </div>
                 </div>
             </div>
+
+            <div class="modal fade" id="loginPromptModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-sm">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title" id="loginModalLabel">Log In Required</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <p>Please **log in or sign up** to apply for your free taster session. This ensures we can connect your request to your profile.</p>
+                        </div>
+                        <div class="modal-footer justify-content-center">
+                            <a href="{{ login_url }}" class="btn btn-primary">Go to Login / Sign Up</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                // Show Django messages (success/error/info) as a Bootstrap Toast (requires Bootstrap JS)
+                {% if messages %}
+                    {% for message in messages %}
+                        // NOTE: You'll need to define a Bootstrap Toast container in base.html for this to work.
+                        alert("{{ message }}"); // Fallback to basic alert if Toast isn't set up
+                    {% endfor %}
+                {% endif %}
+            </script>
 
             <h2 class="text-3xl font-bold text-center text-gray-800">Meet Our Expert Coaches</h2>
             
