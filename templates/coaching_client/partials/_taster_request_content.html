@@ -33,13 +33,27 @@
             
             {% if form %}
                 <div class="space-y-4">
-                    {{ form.as_p }}
+                    <div>
+                        <label for="{{ form.full_name.id_for_label }}" class="block text-sm font-medium text-gray-700">Full Name</label>
+                        <input type="text" name="{{ form.full_name.name }}" id="{{ form.full_name.id_for_label }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        {{ form.full_name.errors }}
+                    </div>
+                    <div>
+                        <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700">Email Address</label>
+                        <input type="email" name="{{ form.email.name }}" id="{{ form.email.id_for_label }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        {{ form.email.errors }}
+                    </div>
+                    <div>
+                        <label for="{{ form.phone_number.id_for_label }}" class="block text-sm font-medium text-gray-700">Phone Number (Optional)</label>
+                        <input type="text" name="{{ form.phone_number.name }}" id="{{ form.phone_number.id_for_label }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        {{ form.phone_number.errors }}
+                    </div>
+                    <div>
+                        <label for="{{ form.goal_summary.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.goal_summary.label }}</label>
+                        <textarea name="{{ form.goal_summary.name }}" id="{{ form.goal_summary.id_for_label }}" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></textarea>
+                        {{ form.goal_summary.errors }}
+                    </div>
                 </div>
-                {% for field in form %}
-                    {% for error in field.errors %}
-                        <p class="mt-2 text-sm text-red-600">{{ error }}</p>
-                    {% endfor %}
-                {% endfor %}
                 {% if form.non_field_errors %}
                     {% for error in form.non_field_errors %}
                         <p class="mt-2 text-sm text-red-600">{{ error }}</p>
