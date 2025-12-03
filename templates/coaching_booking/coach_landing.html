@@ -17,24 +17,7 @@ Coach Landing - {{ block.super }}
         <a href="#coaching-offerings" class="mt-8 inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300">Explore Offerings</a>
     </div>
 
-<section id="hero-cta" class="py-5 bg-dark text-white text-center">
-    <div class="container">
-        <h1 class="display-4">Ready to Unlock Your Potential?</h1>
-        <p class="lead mb-4">The first step is always free. Request a personalized session to start.</p>
-        
-        <button type="button" class="btn btn-lg btn-warning fw-bold shadow-lg text-dark" data-bs-toggle="modal" data-bs-target="#tasterSessionModal">
-            Request Your FREE Taster Session Today &gt;
-        </button>
-    </div>
-</section>
 
-<div class="modal fade" id="tasterSessionModal" tabindex="-1" aria-labelledby="tasterModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            {% include "coaching_client/partials/_taster_request_content.html" with form=taster_request_form %}
-        </div>
-    </div>
-</div>
 
     <div class="py-16 bg-white">
         <div class="container mx-auto px-4">
@@ -222,6 +205,31 @@ Coach Landing - {{ block.super }}
 
     <div class="py-16 bg-white">
         <div class="container mx-auto px-4">
+            <section id="hero-cta" class="py-5 bg-dark text-white text-center">
+                <div class="container">
+                    <h1 class="display-4">Ready to Unlock Your Potential?</h1>
+                    <p class="lead mb-4">The first step is always free. Request a personalized session to start.</p>
+                    
+                    {% if user.is_authenticated %}
+                        <button type="button" class="btn btn-lg btn-warning fw-bold shadow-lg text-dark" data-bs-toggle="modal" data-bs-target="#tasterSessionModal">
+                            Request Your FREE Taster Session Today &gt;
+                        </button>
+                    {% else %}
+                        <p class="lead mt-4">Log in or Register to request your free taster session!</p>
+                        <a href="{% url 'account_login' %}" class="btn btn-lg btn-primary fw-bold shadow-lg">Log In</a>
+                        <a href="{% url 'account_signup' %}" class="btn btn-lg btn-secondary fw-bold shadow-lg">Register</a>
+                    {% endif %}
+                </div>
+            </section>
+
+            <div class="modal fade" id="tasterSessionModal" tabindex="-1" aria-labelledby="tasterModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        {% include "coaching_client/partials/_taster_request_content.html" with form=taster_request_form %}
+                    </div>
+                </div>
+            </div>
+
             <h2 class="text-3xl font-bold text-center text-gray-800">Meet Our Expert Coaches</h2>
             
             <div class="mt-12 grid md:grid-cols-3 gap-8">
