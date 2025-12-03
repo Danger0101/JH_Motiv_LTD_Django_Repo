@@ -1,4 +1,5 @@
 {% load accounts_tags %}
+{% load taster_tags %} 
 <div class="mt-12" id="profile-tabs-section">
     <div class="border-b border-gray-200">
         <ul class="-mb-px flex space-x-8" aria-label="Tabs" role="tablist">
@@ -33,17 +34,12 @@
                 </a>
             </li>
             {% if request.user.is_staff or request.user.is_coach %}
-            <li>
-                <a hx-get="{% url 'accounts:profile_taster_requests' %}" hx-target="#profile-content" hx-swap="innerHTML"
-                   class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm {% if active_tab == 'taster_requests' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}"
-                   aria-current="{% if active_tab == 'taster_requests' %}page{% else %}false{% endif %}"
-                   role="tab"
-                   aria-controls="profile-taster-requests-panel"
-                   id="profile-taster-requests-tab">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" id="taster-requests-tab" data-bs-toggle="tab" href="#taster-requests" role="tab" aria-controls="taster-requests" aria-selected="false">
                     Taster Requests
-                    {% with pending_count=request.user|pending_taster_count %}
+                    {% with pending_count=pending_taster_count %}
                         {% if pending_count > 0 %}
-                            <span class="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">{{ pending_count }}</span>
+                            <span class="badge text-bg-danger ms-1">{{ pending_count }}</span>
                         {% endif %}
                     {% endwith %}
                 </a>

@@ -1,11 +1,16 @@
 {% extends "emails/base_email.html" %}
+{% load static %}
 
 {% block content %}
-<h2>Your Taster Session Request has been Approved!</h2>
-<p>Hi {{ request.full_name }},</p>
-<p>Good news! Your request for a taster session has been approved.</p>
-<p>You can now proceed to book your free session from your account dashboard. Please use the link below to access your dashboard and schedule your session.</p>
-<p><a href="{{ profile_url }}">Go to my Dashboard</a></p>
-<p>We look forward to speaking with you!</p>
-<p>Sincerely,<br>The JH Motiv LTD Team</p>
+    <p>Dear {{ request.full_name }},</p>
+    <p>Great news! Your request for a free taster session with JH Motiv LTD has been approved.</p>
+    <p>Our coach has reviewed your goals and is excited to connect with you. To proceed, please follow the link below to book your session at a time that suits you:</p>
+    
+    <p style="text-align: center; margin: 20px 0;">
+        <a href="{{ request.booking_link }}" style="background-color: #28a745; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Book Your Session Now</a>
+    </p>
+
+    <p>We look forward to helping you achieve your goals!</p>
+    <p>Best regards,</p>
+    <p>The JH Motiv LTD Team</p>
 {% endblock %}

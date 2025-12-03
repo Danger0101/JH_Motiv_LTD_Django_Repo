@@ -1,12 +1,14 @@
 {% extends "emails/base_email.html" %}
+{% load static %}
 
 {% block content %}
-<h2>Update on Your Taster Session Request</h2>
-<p>Hi {{ request.full_name }},</p>
-<p>Thank you for your interest in a taster session. After reviewing your request, we are unfortunately unable to approve it at this time.</p>
-<p>This can happen for a variety of reasons, including high demand or a mismatch in coaching focus. We encourage you to explore our other coaching offerings to see if another option might be a good fit for you.</p>
-<p>You can view our offerings here:</p>
-<p><a href="{{ offer_list_url }}">View Coaching Offerings</a></p>
-<p>We appreciate your understanding.</p>
-<p>Sincerely,<br>The JH Motiv LTD Team</p>
+    <p>Dear {{ request.full_name }},</p>
+    <p>Thank you for your interest in a free taster session with JH Motiv LTD.</p>
+    <p>After careful consideration, we regret to inform you that we are unable to proceed with your taster session request at this time. This decision may be due to various factors, such as availability, alignment with our current coaching programs, or the information provided in your request.</p>
+    
+    <p>We understand this may be disappointing. We encourage you to explore our <a href="{% url 'core:faq' %}" style="color: #007bff; text-decoration: none;">FAQ section</a> or our full range of <a href="{% url 'coaching_booking:offer-list' %}" style="color: #007bff; text-decoration: none;">coaching offerings</a> which might be a better fit for your goals.</p>
+
+    <p>We wish you the best in your journey!</p>
+    <p>Best regards,</p>
+    <p>The JH Motiv LTD Team</p>
 {% endblock %}
