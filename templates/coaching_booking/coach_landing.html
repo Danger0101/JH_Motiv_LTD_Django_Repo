@@ -213,40 +213,23 @@ Coach Landing - {{ block.super }}
         <h1 class="display-4">Ready to Transform?</h1>
         <p class="lead mb-4">Start your journey with a FREE, no-obligation taster session.</p>
         
-        {% if not is_logged_in %}
-            {# STATE 1: LOGGED OUT (GREY/DISABLED) - Uses Modal to prompt login #}
-            <button 
-                type="button" 
-                class="btn btn-lg btn-secondary fw-bold shadow-lg" 
-                data-bs-toggle="modal" 
-                data-bs-target="#loginPromptModal" 
-                title="You must log in to apply"
-            >
-                Log In to Apply 🔐
-            </button>
-        
-        {% elif has_pending_request %}
-            {# STATE 2: LOGGED IN, ALREADY APPLIED (GREY/DISABLED) - Cannot apply twice #}
-            <button 
-                type="button" 
-                class="btn btn-lg btn-secondary disabled fw-bold shadow-lg" 
-                title="You already have a pending or approved request. Please check your profile tab for status updates."
-            >
+        {# This single button now handles all states, always pointing to the same modal. #}
+        {# The logic inside the included partial (_taster_request_content.html) will correctly
+           display the content for both logged-in and logged-out users. #}
+        <button 
+            type="button" 
+            class="btn btn-lg {% if has_pending_request %}btn-secondary disabled{% else %}btn-success{% endif %} fw-bold shadow-lg" 
+            data-bs-toggle="modal" 
+            data-bs-target="#tasterSessionModal"
+            title="{% if has_pending_request %}You already have a pending request{% else %}Request your free session now{% endif %}"
+            {% if has_pending_request %}disabled{% endif %}
+        >
+            {% if has_pending_request %}
                 Request Pending (Check Profile) ⏳
-            </button>
-        
-        {% else %}
-            {# STATE 3: LOGGED IN, ELIGIBLE (GREEN/ACTIVE) - Opens the application modal #}
-            <button 
-                type="button" 
-                class="btn btn-lg btn-success fw-bold shadow-lg" 
-                data-bs-toggle="modal" 
-                data-bs-target="#tasterSessionModal"
-                title="Request your free session now"
-            >
+            {% else %}
                 Request Your FREE Taster Session Today ✅
-            </button>
-        {% endif %}
+            {% endif %}
+        </button>
     </div>
 </section>
 
@@ -258,22 +241,7 @@ Coach Landing - {{ block.super }}
                 </div>
             </div>
 
-            <div class="modal fade" id="loginPromptModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-sm">
-                    <div class="modal-content">
-                        <div class="modal-header bg-primary text-white">
-                            <h5 class="modal-title" id="loginModalLabel">Log In Required</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body text-center">
-                            <p>Please **log in or sign up** to apply for your free taster session. This ensures we can connect your request to your profile.</p>
-                        </div>
-                        <div class="modal-footer justify-content-center">
-                            <a href="{{ login_url }}" class="btn btn-primary">Go to Login / Sign Up</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            
 
             <script>
                 // Show Django messages (success/error/info) as a Bootstrap Toast (requires Bootstrap JS)
