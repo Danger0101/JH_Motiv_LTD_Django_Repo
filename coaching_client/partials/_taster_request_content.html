@@ -1,0 +1,42 @@
+{% load static %}
+{% load taster_tags %}
+
+<div class="modal-header">
+    <h5 class="modal-title" id="tasterModalLabel">Request Your Free Taster Session 🚀</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<form method="post" action="{% url 'coaching_client:taster_request' %}" id="taster-request-form">
+    <div class="modal-body">
+        {% csrf_token %}
+        
+        {% if form %}
+            <div class="alert alert-info py-2 small">
+                We'll use your account details: <strong class="fw-bold">{{ request.user.get_full_name }}</strong> ({{ request.user.email }}).
+            </div>
+            
+            <div class="mb-3">
+                <label for="{{ form.goal_summary.id_for_label }}" class="form-label">{{ form.goal_summary.label }}</label>
+                {{ form.goal_summary|attr:"class:form-control" }} 
+                {% if form.goal_summary.errors %}
+                    <div class="invalid-feedback d-block">{{ form.goal_summary.errors }}</div>
+                {% endif %}
+            </div>
+            
+        {% else %}
+             <div class="alert alert-danger">Error: Form could not be initialized.</div>
+        {% endif %}
+
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="submit" class="btn btn-primary" id="submit-taster-btn">Submit Request</button>
+    </div>
+</form>
+
+<script>
+    // Simple JS to prevent double submission
+    document.getElementById('taster-request-form').addEventListener('submit', function() {
+        this.querySelector('#submit-taster-btn').disabled = true;
+        this.querySelector('#submit-taster-btn').textContent = 'Submitting...';
+    });
+</script>

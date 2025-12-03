@@ -209,46 +209,46 @@ Coach Landing - {{ block.super }}
     <div class="py-16 bg-white">
         <div class="container mx-auto px-4">
             <section id="hero-cta" class="py-5 bg-dark text-white text-center">
-                <div class="container">
-                    <h1 class="display-4">Ready to Transform?</h1>
-                    <p class="lead mb-4">Start your journey with a FREE, no-obligation taster session.</p>
-                    
-                    {% if not is_logged_in %}
-                        {# STATE 1: LOGGED OUT (GREY/DISABLED) #}
-                        <button 
-                            type="button" 
-                            class="btn btn-lg btn-secondary fw-bold shadow-lg" 
-                            data-bs-toggle="modal" 
-                            data-bs-target="#loginPromptModal" 
-                            title="You must log in to apply"
-                        >
-                            Log In to Apply 🔐
-                        </button>
-                    
-                    {% elif has_pending_request %}
-                        {# STATE 2: LOGGED IN, ALREADY APPLIED (GREY/DISABLED) #}
-                        <button 
-                            type="button" 
-                            class="btn btn-lg btn-secondary disabled fw-bold shadow-lg" 
-                            title="You have a pending request. Please check your profile tab for status updates."
-                        >
-                            Request Pending (Check Profile) ⏳
-                        </button>
-                    
-                    {% else %}
-                        {# STATE 3: LOGGED IN, ELIGIBLE (GREEN/ACTIVE) #}
-                        <button 
-                            type="button" 
-                            class="btn btn-lg btn-success fw-bold shadow-lg" 
-                            data-bs-toggle="modal" 
-                            data-bs-target="#tasterSessionModal"
-                            title="Request your free session now"
-                        >
-                            Request Your FREE Taster Session Today ✅
-                        </button>
-                    {% endif %}
-                </div>
-            </section>
+    <div class="container">
+        <h1 class="display-4">Ready to Transform?</h1>
+        <p class="lead mb-4">Start your journey with a FREE, no-obligation taster session.</p>
+        
+        {% if not is_logged_in %}
+            {# STATE 1: LOGGED OUT (GREY/DISABLED) - Uses Modal to prompt login #}
+            <button 
+                type="button" 
+                class="btn btn-lg btn-secondary fw-bold shadow-lg" 
+                data-bs-toggle="modal" 
+                data-bs-target="#loginPromptModal" 
+                title="You must log in to apply"
+            >
+                Log In to Apply 🔐
+            </button>
+        
+        {% elif has_pending_request %}
+            {# STATE 2: LOGGED IN, ALREADY APPLIED (GREY/DISABLED) - Cannot apply twice #}
+            <button 
+                type="button" 
+                class="btn btn-lg btn-secondary disabled fw-bold shadow-lg" 
+                title="You already have a pending or approved request. Please check your profile tab for status updates."
+            >
+                Request Pending (Check Profile) ⏳
+            </button>
+        
+        {% else %}
+            {# STATE 3: LOGGED IN, ELIGIBLE (GREEN/ACTIVE) - Opens the application modal #}
+            <button 
+                type="button" 
+                class="btn btn-lg btn-success fw-bold shadow-lg" 
+                data-bs-toggle="modal" 
+                data-bs-target="#tasterSessionModal"
+                title="Request your free session now"
+            >
+                Request Your FREE Taster Session Today ✅
+            </button>
+        {% endif %}
+    </div>
+</section>
 
             <div class="modal fade" id="tasterSessionModal" tabindex="-1" aria-labelledby="tasterModalLabel" aria-hidden="true">
                 <div class="modal-dialog">
