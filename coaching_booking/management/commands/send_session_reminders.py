@@ -21,8 +21,6 @@ class Command(BaseCommand):
         reminder_start_time = now + timedelta(hours=24)
         reminder_end_time = now + timedelta(hours=25)
 
-        # Find sessions that are scheduled to start between 24 and 25 hours from now
-        # and have not had a reminder sent yet.
         upcoming_sessions = SessionBooking.objects.filter(
             start_datetime__gte=reminder_start_time,
             start_datetime__lt=reminder_end_time,
