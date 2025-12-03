@@ -41,11 +41,6 @@ try:
     from payments.models import Order
 except ImportError:
     Order = None
-
-try:
-    from coaching_client.models import TasterSessionRequest
-except ImportError:
-    TasterSessionRequest = None
 # ------------------------
 
 from coaching_availability.utils import get_coach_available_slots 
@@ -106,20 +101,16 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         # --- STAFF DASHBOARD DATA ---
         context['is_staff'] = self.request.user.is_staff
         if self.request.user.is_staff:
-            # 1. Pending Taster Requests (Leads)
-            if TasterSessionRequest:
-                context['staff_pending_tasters'] = TasterSessionRequest.objects.filter(status='PENDING').count()
-            
-            # 2. Recent Orders (Sales Pulse)
+            # 1. Recent Orders (Sales Pulse)
             if Order:
                 # FIX: Changed '-created' to '-created_at' to match Order model
                 context['staff_recent_orders'] = Order.objects.select_related('user').order_by('-created_at')[:5]
             
-            # 3. Low Stock Alerts (Inventory Risk)
+            # 2. Low Stock Alerts (Inventory Risk)
             if StockItem:
                 context['staff_low_stock'] = StockItem.objects.filter(quantity__lt=5).select_related('variant__product', 'pool')[:5]
             
-            # 4. Community Stats
+            # 3. Community Stats
             if Dreamer:
                 context['staff_dreamer_count'] = Dreamer.objects.count()
 

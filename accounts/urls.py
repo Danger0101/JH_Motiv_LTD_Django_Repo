@@ -1,7 +1,6 @@
 from django.urls import path, include
 from . import views
 from allauth.account import views as allauth_views
-from coaching_client.views import TasterRequestManagerView
 
 
 app_name = 'accounts'
@@ -13,7 +12,6 @@ urlpatterns = [
 
     path('profile/offerings/', views.profile_offerings_partial, name='profile_offerings'),
     path('profile/bookings/', views.profile_bookings_partial, name='profile_bookings'),
-    path('profile/taster-requests/', TasterRequestManagerView.as_view(), name='profile_taster_requests'),
     path('profile/get-coaches-for-offering/', views.get_coaches_for_offering, name='get_coaches_for_offering'),
     path('profile/coach-clients-partial/', views.coach_clients_partial, name='coach_clients_partial'),
     

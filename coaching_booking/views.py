@@ -20,9 +20,7 @@ from .models import ClientOfferingEnrollment, SessionBooking
 from accounts.models import CoachProfile
 from coaching_availability.utils import get_coach_available_slots
 from coaching_core.models import Offering, Workshop
-from coaching_client.models import ContentPage, TasterSessionRequest # Ensure this import is correct and not duplicated
 from cart.utils import get_or_create_cart, get_cart_summary_data
-from coaching_client.forms import TasterRequestForm, GuestTasterRequestForm # Make sure this import is correct
 
 BOOKING_WINDOW_DAYS = 90
 
@@ -56,23 +54,6 @@ class CoachLandingView(TemplateView):
             'page_summary_text': "Welcome to our coaching services!",
             'summary': get_cart_summary_data(cart),
         })
-
-        # 1. Authentication Status
-        context['is_logged_in'] = user.is_authenticated
-
-        # 2. Max One Application Check (One-Application Limit Logic)
-        if user.is_authenticated:
-            has_active_request = TasterSessionRequest.has_active_request(user)
-            context['has_pending_request'] = has_active_request
-
-            # 3. Form Initialization (Only pass initial data for logged-in users)
-            if not has_active_request:
-                context['form'] = TasterRequestForm() # No initial data needed for simplified form
-            else:
-                 context['form'] = None
-        else:
-            context['has_pending_request'] = False
-            context['form'] = GuestTasterRequestForm() 
             
         return context
 
