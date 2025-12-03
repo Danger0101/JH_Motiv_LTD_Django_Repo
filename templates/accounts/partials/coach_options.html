@@ -1,10 +1,5 @@
-<div class="card-footer bg-light">
-    <h5 class="mb-2">Google Calendar Integration</h5>
-    {% if coach_is_connected %}
-        <p class="text-success small">Status: Connected. Events are being synced.</p>
-        <a href="{% url 'gcal:disconnect' %}" class="btn btn-sm btn-outline-danger">Disconnect Calendar</a>
-    {% else %}
-        <p class="text-danger small">Status: Disconnected. Sessions require manual scheduling.</p>
-        <a href="{% url 'gcal:oauth_start' %}" class="btn btn-sm btn-primary">Connect Google Calendar</a>
-    {% endif %}
-</div>
+{% for coach in coaches %}
+    <option value="{{ coach.id }}">{{ coach.user.get_full_name }}</option>
+{% empty %}
+    <option value="">No coaches available for this offering</option>
+{% endfor %}

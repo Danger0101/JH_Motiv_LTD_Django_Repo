@@ -1,5 +1,4 @@
 {% load accounts_tags %}
-{% load taster_tags %} 
 <div class="mt-12" id="profile-tabs-section">
     <div class="border-b border-gray-200">
         <ul class="-mb-px flex space-x-8" aria-label="Tabs" role="tablist">
@@ -41,7 +40,11 @@
                    aria-controls="profile-taster-requests-panel"
                    id="profile-taster-requests-tab">
                     Taster Requests
-                    <span class="badge text-bg-danger ms-1">{% pending_taster_count %}</span>
+                    {% with pending_count=request.user|pending_taster_count %}
+                        {% if pending_count > 0 %}
+                            <span class="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">{{ pending_count }}</span>
+                        {% endif %}
+                    {% endwith %}
                 </a>
             </li>
         </ul>
