@@ -1,14 +1,11 @@
 {% load i18n allauth socialaccount %}
 
-{# 1. Determine inheritance based on HTMX #}
-{% if not request.htmx %}
-    {% extends "base.html" %}
-{% endif %}
+{# 1. Determine inheritance based on HTMX. 'base_template' must be passed from the view. #}
+{% extends base_template %}
 
 {% block title %}{% trans "Account Connections" %}{% endblock %}
 
 {% block content %}
-{% if not request.htmx %}
 <div class="max-w-md mx-auto py-8 px-4 sm:px-6 lg:px-8">
     <div class="p-6 bg-white shadow-lg rounded-lg border">
         <h2 class="text-2xl font-bold mb-6 text-gray-900">{% translate "Account Connections" %}</h2>
@@ -44,8 +41,4 @@
             {% include "socialaccount/snippets/provider_list.html" with process="connect" %}
         </ul>
 
-{% if not request.htmx %}
-    </div>
-</div>
-{% endif %}
 {% endblock %}
