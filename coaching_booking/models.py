@@ -186,3 +186,43 @@ class SessionBooking(models.Model):
         self.status = 'RESCHEDULED'
         self.save()
         return 'SUCCESS'
+
+
+class OneSessionFreeOffer(models.Model):
+    """
+    Represents a single, non-paid, coach-approved coaching session offer
+    with a one-month redemption deadline.
+    """
+    client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='free_offers', verbose_name="Client")
+    coach = models.ForeignKey(CoachProfile, on_delete=models.CASCADE, related_name='approved_free_offers', verbose_name="Assigned Coach")
+    date_offered = models.DateTimeField(default=timezone.now, verbose_name="Date Offered/Created")
+    redemption_deadline = models.DateTimeField(null=True, blank=True, verbose_name="Redemption Deadline", help_text="The date by which the session must be booked AND scheduled.")
+    is_approved = models.BooleanField(default=False, verbose_name="Coach Approved", help_text="Must be approved by the coach before the client can book.")
+    is_redeemed = models.BooleanField(default=False, verbose_name="Is Redeemed", help_text="Set to True once the session is successfully booked.")
+    
+    # Link to the resulting SessionBooking, which confirms the redemption
+    session = models.OneToOneField('SessionBooking', on_delete=models.SET_NULL, null=True, blank=True, related_name='free_offer', verbose_name="Booked Session")
+
+    class Meta:
+        verbose_name = "One Session Free Offer"
+        verbose_name_plural = "One Session Free Offers"
+        ordering = ['-date_offered']
+        
+    def __str__(self):
+        status = "Approved" if self.is_approved else "Pending Approval"
+        return f"Free Session for {self.client.get_full_name()} with {self.coach.user.get_full_name()} - Status: {status}"
+
+    def save(self, *args, **kwargs):
+        # Calculate redemption_deadline on creation
+        if not self.pk and not self.redemption_deadline:
+            # Set the deadline for 1 calendar month from the offer date.
+            self.redemption_deadline = self.date_offered + relativedelta(months=1)
+            
+        super().save(*args, **kwargs)
+
+    @property
+    def is_expired(self):
+        """Checks if the offer has expired based on the deadline."""
+        if self.redemption_deadline:
+            return timezone.now() > self.redemption_deadline
+        return False

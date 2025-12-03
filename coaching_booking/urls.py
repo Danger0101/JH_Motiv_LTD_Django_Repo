@@ -14,6 +14,7 @@ urlpatterns = [
     path('reschedule-session-form/<int:booking_id>/', views.reschedule_session_form, name='reschedule_session_form'),
     path('profile/book-session/', views.profile_book_session_partial, name='profile_book_session'),
     path('get-booking-calendar/', views.get_booking_calendar, name='get_booking_calendar'),
-    path('get-daily-slots/', views.get_daily_slots, name='get_daily_slots'),
-    
-]
+        path('get-daily-slots/', views.get_daily_slots, name='get_daily_slots'),
+        path('apply-for-free-session/', views.apply_for_free_session, name='apply_for_free_session'),
+        path('coach-approve-free-session/', views.coach_approve_free_session, name='coach_approve_free_session'),
+    ]

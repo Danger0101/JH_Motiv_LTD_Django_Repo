@@ -16,10 +16,11 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.conf import settings
 
 from core.email_utils import send_transactional_email # Import the utility
-from .models import ClientOfferingEnrollment, SessionBooking
+from .models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer
 from accounts.models import CoachProfile
 from coaching_availability.utils import get_coach_available_slots
 from coaching_core.models import Offering, Workshop
+from coaching_client.models import ContentPage
 from cart.utils import get_or_create_cart, get_cart_summary_data
 
 BOOKING_WINDOW_DAYS = 90
@@ -86,6 +87,7 @@ class OfferEnrollmentStartView(LoginRequiredMixin, DetailView):
 @require_POST
 def book_session(request):
     enrollment_id = request.POST.get('enrollment_id')
+    free_offer_id = request.POST.get('free_offer_id') # New: for free sessions
     coach_id = request.POST.get('coach_id')
     start_time_str = request.POST.get('start_time')
 
@@ -95,27 +97,58 @@ def book_session(request):
         response['HX-Redirect'] = reverse('accounts:account_profile')
         return response
 
-    if not all([enrollment_id, coach_id, start_time_str]):
+    if not all([coach_id, start_time_str]):
         return htmx_error("Missing booking information. Please try again.")
 
-    try:
-        # Start transaction BEFORE fetching the enrollment to lock it
-        with transaction.atomic():
-            # LOCKING: select_for_update() prevents other requests from reading this 
-            # specific enrollment until this transaction finishes.
-            enrollment = get_object_or_404(
-                ClientOfferingEnrollment.objects.select_for_update(), 
-                id=enrollment_id, 
-                client=request.user
-            )
-            
-            # Now check sessions safely
-            if enrollment.remaining_sessions <= 0:
-                messages.error(request, "No sessions remaining for this enrollment.")
-                response = HttpResponse(status=400)
-                response['HX-Redirect'] = reverse('accounts:account_profile')
-                return response
+    if not (enrollment_id or free_offer_id):
+        return htmx_error("Booking requires either an enrollment or a free offer.")
 
+    if enrollment_id and free_offer_id:
+        return htmx_error("Cannot book with both an enrollment and a free offer simultaneously.")
+
+    try:
+        with transaction.atomic():
+            enrollment = None
+            free_offer = None
+            session_length = 0
+            
+            if enrollment_id:
+                # LOCKING: select_for_update() prevents other requests from reading this 
+                # specific enrollment until this transaction finishes.
+                enrollment = get_object_or_404(
+                    ClientOfferingEnrollment.objects.select_for_update(), 
+                    id=enrollment_id, 
+                    client=request.user
+                )
+                
+                # Now check sessions safely
+                if enrollment.remaining_sessions <= 0:
+                    messages.error(request, "No sessions remaining for this enrollment.")
+                    response = HttpResponse(status=400)
+                    response['HX-Redirect'] = reverse('accounts:account_profile')
+                    return response
+                session_length = enrollment.offering.session_length_minutes
+            elif free_offer_id:
+                free_offer = get_object_or_404(
+                    OneSessionFreeOffer.objects.select_for_update(),
+                    id=free_offer_id,
+                    client=request.user
+                )
+                if not free_offer.is_approved:
+                    return htmx_error("This free offer has not yet been approved by the coach.")
+                if free_offer.is_redeemed:
+                    return htmx_error("This free offer has already been redeemed.")
+                if free_offer.is_expired:
+                    return htmx_error("This free offer has expired.")
+                
+                # For free offers, session length is typically fixed, e.g., 60 minutes
+                # Or it could be defined on the CoachProfile or a default setting
+                # For now, let's assume a default of 60 minutes for free sessions
+                session_length = 60 # Default for free sessions
+                # Ensure the coach selected matches the coach on the free offer
+                if int(coach_id) != free_offer.coach.id:
+                    return htmx_error("The selected coach does not match the approved free offer.")
+            
             coach_profile = get_object_or_404(CoachProfile, id=coach_id)
             
             try:
@@ -134,7 +167,6 @@ def book_session(request):
                 return htmx_error(f"Cannot book more than {BOOKING_WINDOW_DAYS} days in advance.")
 
             # Availability check
-            session_length = enrollment.offering.session_length_minutes
             available_slots = get_coach_available_slots(
                 coach_profile,
                 start_datetime_obj.date(),
@@ -154,11 +186,16 @@ def book_session(request):
                 return htmx_error("That time slot is no longer available.")
 
             booking = SessionBooking.objects.create(
-                enrollment=enrollment,
+                enrollment=enrollment, # Will be None if free_offer is used
                 coach=coach_profile,
                 client=request.user,
                 start_datetime=start_datetime_obj,
             )
+
+            if free_offer:
+                free_offer.session = booking
+                free_offer.is_redeemed = True
+                free_offer.save()
 
             # --- Send Confirmation Emails ---
             try:
@@ -167,7 +204,8 @@ def book_session(request):
                 client_context = {
                     'user': request.user,
                     'session': booking,
-                    'dashboard_url': dashboard_url
+                    'dashboard_url': dashboard_url,
+                    'is_free_session': bool(free_offer),
                 }
                 send_transactional_email(
                     recipient_email=request.user.email,
@@ -181,11 +219,12 @@ def book_session(request):
                     'coach': coach_profile,
                     'client': request.user,
                     'session': booking,
+                    'is_free_session': bool(free_offer),
                 }
                 send_transactional_email(
                     recipient_email=coach_profile.user.email,
                     subject=f"New Session Booked with {request.user.get_full_name()}",
-                    template_name='emails/coach_notification.html', # We will create this template next
+                    template_name='emails/coach_notification.html',
                     context=coach_context
                 )
             except Exception as e:
@@ -341,6 +380,58 @@ def reschedule_session(request, booking_id):
 
 
 @login_required
+@require_POST
+def apply_for_free_session(request):
+    coach_id = request.POST.get('coach_id')
+    client = request.user
+
+    # Prevent multiple pending/approved free offers for the same client
+    if OneSessionFreeOffer.objects.filter(client=client, is_redeemed=False, is_expired=False).exclude(is_approved=False, redemption_deadline__lt=timezone.now()).exists():
+        messages.warning(request, "You already have a pending or active free session offer.")
+        response = HttpResponse(status=200) # HTMX expects 200 for message display
+        response['HX-Trigger'] = 'refreshProfile' # Custom event to refresh profile content
+        return response
+
+    try:
+        coach = get_object_or_404(CoachProfile, id=coach_id)
+        
+        # Create the free offer, initially not approved
+        free_offer = OneSessionFreeOffer.objects.create(
+            client=client,
+            coach=coach,
+            is_approved=False # Coach needs to approve
+        )
+
+        # Send notification to the coach
+        coach_context = {
+            'coach': coach,
+            'client': client,
+            'offer': free_offer,
+            'approval_url': request.build_absolute_uri(reverse('admin:coaching_booking_onesessionfreeoffer_change', args=[free_offer.pk]))
+        }
+        send_transactional_email(
+            recipient_email=coach.user.email,
+            subject=f"New Free Session Request from {client.get_full_name()}",
+            template_name='emails/coach_free_session_request.html', # Need to create this template
+            context=coach_context
+        )
+        
+        messages.success(request, "Your free session request has been sent to the coach for approval.")
+        response = HttpResponse(status=200)
+        response['HX-Trigger'] = 'refreshProfile'
+        return response
+
+    except CoachProfile.DoesNotExist:
+        messages.error(request, "Selected coach does not exist.")
+    except Exception as e:
+        messages.error(request, f"An error occurred: {e}")
+    
+    response = HttpResponse(status=400) # Indicate an error occurred
+    response['HX-Trigger'] = 'refreshProfile'
+    return response
+
+
+@login_required
 def profile_book_session_partial(request):
     user_offerings = ClientOfferingEnrollment.objects.filter(
         client=request.user,
@@ -348,6 +439,14 @@ def profile_book_session_partial(request):
         is_active=True,
         expiration_date__gte=timezone.now()
     ).select_related('offering')
+
+    # Fetch approved, non-redeemed, non-expired free offers for the client
+    free_offers = OneSessionFreeOffer.objects.filter(
+        client=request.user,
+        is_approved=True,
+        is_redeemed=False,
+        redemption_deadline__gte=timezone.now()
+    ).select_related('coach__user')
 
     coaches = CoachProfile.objects.filter(
         user__is_active=True,
@@ -358,14 +457,74 @@ def profile_book_session_partial(request):
 
     context = {
         'user_offerings': user_offerings,
+        'free_offers': free_offers, # Add free offers to context
         'coaches': coaches,
         'initial_year': today.year,
         'initial_month': today.month,
         'selected_enrollment_id': '', 
         'selected_coach_id': '',      
+        'selected_free_offer_id': '', # Add for initial selection
     }
     return render(request, 'coaching_booking/profile_book_session.html', context)
 
+
+@login_required
+@require_POST
+def coach_approve_free_session(request):
+    offer_id = request.POST.get('offer_id')
+    coach_user = request.user
+
+    try:
+        coach_profile = CoachProfile.objects.get(user=coach_user)
+    except CoachProfile.DoesNotExist:
+        messages.error(request, "You are not recognized as a coach.")
+        return HttpResponse(status=403)
+
+    try:
+        free_offer = get_object_or_404(OneSessionFreeOffer, id=offer_id)
+
+        if free_offer.coach != coach_profile:
+            messages.error(request, "You are not authorized to approve this offer.")
+            return HttpResponse(status=403)
+
+        if free_offer.is_approved:
+            messages.info(request, "This offer has already been approved.")
+            return HttpResponse(status=200)
+            
+        if free_offer.is_redeemed:
+            messages.info(request, "This offer has already been redeemed.")
+            return HttpResponse(status=200)
+
+        free_offer.is_approved = True
+        free_offer.save()
+
+        # Send notification to the client
+        client_context = {
+            'client': free_offer.client,
+            'coach': coach_profile,
+            'offer': free_offer,
+            'dashboard_url': request.build_absolute_uri(reverse('accounts:account_profile'))
+        }
+        send_transactional_email(
+            recipient_email=free_offer.client.email,
+            subject=f"Your Free Session with {coach_profile.user.get_full_name()} is Approved!",
+            template_name='emails/client_free_session_approved.html', # Need to create this template
+            context=client_context
+        )
+        
+        messages.success(request, f"Free session offer for {free_offer.client.get_full_name()} approved.")
+        response = HttpResponse(status=200)
+        response['HX-Trigger'] = 'refreshProfile'
+        return response
+
+    except OneSessionFreeOffer.DoesNotExist:
+        messages.error(request, "Free session offer not found.")
+    except Exception as e:
+        messages.error(request, f"An error occurred: {e}")
+    
+    response = HttpResponse(status=400)
+    response['HX-Trigger'] = 'refreshProfile'
+    return response
 
 @login_required
 def get_booking_calendar(request):

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ClientOfferingEnrollment, SessionBooking
+from .models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer
 from coaching_core.models import Offering
 from django.db.models import F
 from django.urls import reverse
@@ -65,3 +65,23 @@ class SessionBookingAdmin(admin.ModelAdmin):
     list_filter = ('status', 'coach', 'start_datetime')
     date_hierarchy = 'start_datetime'
     search_fields = ['client__email', 'coach__user__email', 'gcal_event_id']
+
+@admin.register(OneSessionFreeOffer)
+class OneSessionFreeOfferAdmin(admin.ModelAdmin):
+    list_display = ('client', 'coach', 'date_offered', 'redemption_deadline', 'is_approved', 'is_redeemed', 'session_link')
+    list_filter = ('is_approved', 'is_redeemed', 'coach')
+    search_fields = ('client__email', 'coach__user__email')
+    readonly_fields = ('date_offered', 'redemption_deadline', 'session')
+    actions = ['approve_offers']
+    
+    @admin.action(description='Approve selected free session offers')
+    def approve_offers(self, request, queryset):
+        count = queryset.filter(is_approved=False).update(is_approved=True)
+        self.message_user(request, f'{count} offer(s) successfully approved.')
+        
+    @admin.display(description='Booked Session')
+    def session_link(self, obj):
+        if obj.session:
+            url = reverse("admin:coaching_booking_sessionbooking_change", args=[obj.session.pk])
+            return format_html('<a href="{}">View Session</a>', url)
+        return "Not Booked"

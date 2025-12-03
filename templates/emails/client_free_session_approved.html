@@ -1,0 +1,16 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+    <p>Dear {{ client.get_full_name }},</p>
+    <p>Great news! Your request for a free coaching session with <strong>{{ coach.user.get_full_name }}</strong> has been approved!</p>
+    
+    <p>You can now book your free session. Please note that this offer is valid until <strong>{{ offer.redemption_deadline|date:"F d, Y P" }}</strong>.</p>
+    
+    <p>To book your session, please visit your profile dashboard:</p>
+    <p><a href="{{ dashboard_url }}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; border-radius: 5px;">Go to Dashboard</a></p>
+
+    <p>We look forward to your session!</p>
+
+    <p>Thank you,</p>
+    <p>The {{ SITE_NAME }} Team</p>
+{% endblock content %}

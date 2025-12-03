@@ -1,0 +1,14 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+    <p>Dear {{ coach.user.get_full_name }},</p>
+    <p>A client, <strong>{{ client.get_full_name }}</strong> ({{ client.email }}), has applied for a one-time free coaching session with you.</p>
+    
+    <p>Please review their request and approve or decline the offer in the admin panel:</p>
+    <p><a href="{{ approval_url }}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; border-radius: 5px;">Review Free Session Request</a></p>
+
+    <p>Once approved, the client will be notified and can proceed to book the session.</p>
+
+    <p>Thank you,</p>
+    <p>The {{ SITE_NAME }} Team</p>
+{% endblock content %}
