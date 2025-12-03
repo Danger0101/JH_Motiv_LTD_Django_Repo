@@ -1,0 +1,26 @@
+{% extends "emails/base_email.html" %}
+{% load humanize %}
+
+{% block content %}
+<p>Hi {{ user.first_name|default:user.username }},</p>
+
+<p>This is a friendly reminder about your upcoming coaching session tomorrow. Please find the details below:</p>
+
+<p><strong>Session Details:</strong></p>
+<ul>
+    <li><strong>Program:</strong> {{ session.enrollment.offering.name }}</li>
+    <li><strong>Coach:</strong> {{ session.coach.user.get_full_name }}</li>
+    <li><strong>Date:</strong> {{ session.start_time|date:"l, F j, Y" }} (Tomorrow)</li>
+    <li><strong>Time:</strong> {{ session.start_time|date:"g:i A T" }} - {{ session.end_time|date:"g:i A T" }}</li>
+</ul>
+
+<p><strong>Please be on time.</strong> If you need to reschedule, be aware that our policy may not permit changes within 24 hours of the session start time. You can manage your booking via your dashboard.</p>
+
+<p>
+    <a href="{{ dashboard_url }}" class="button">Go to Your Dashboard</a>
+</p>
+
+<p>We look forward to seeing you!</p>
+
+<p>Best regards,<br>The {{ site_name }} Team</p>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "emails/base_email.html" %}
+{% load humanize %}
+
+{% block content %}
+<p>Hi {{ user.first_name|default:user.username }},</p>
+
+<p>This email confirms your upcoming coaching session has been successfully booked. Please find the details below:</p>
+
+<p><strong>Session Details:</strong></p>
+<ul>
+    <li><strong>Program:</strong> {{ session.enrollment.offering.name }}</li>
+    <li><strong>Coach:</strong> {{ session.coach.user.get_full_name }}</li>
+    <li><strong>Date:</strong> {{ session.start_time|date:"l, F j, Y" }}</li>
+    <li><strong>Time:</strong> {{ session.start_time|date:"g:i A T" }} - {{ session.end_time|date:"g:i A T" }}</li>
+</ul>
+
+<p><strong>Next Steps:</strong></p>
+<p>Your coach has been notified. You will receive a separate calendar invitation from your coach shortly. Please make sure to accept it to add the event to your calendar.</p>
+
+<p>If you need to reschedule or cancel this session, please do so from your client dashboard at least 24 hours in advance.</p>
+
+<p>
+    <a href="{{ dashboard_url }}" class="button">Go to Your Dashboard</a>
+</p>
+
+<p>We look forward to seeing you!</p>
+
+<p>Best regards,<br>The {{ site_name }} Team</p>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "emails/base_email.html" %}
+{% load humanize %}
+
+{% block content %}
+<p>Hi {{ user.first_name|default:user.username }},</p>
+
+<p>This email confirms that your coaching session has been canceled. Please find the details of the canceled session below:</p>
+
+<p><strong>Canceled Session Details:</strong></p>
+<ul>
+    <li><strong>Program:</strong> {{ session.enrollment.offering.name }}</li>
+    <li><strong>Coach:</strong> {{ session.coach.user.get_full_name }}</li>
+    <li><strong>Original Date:</strong> {{ session.start_time|date:"l, F j, Y" }}</li>
+    <li><strong>Original Time:</strong> {{ session.start_time|date:"g:i A T" }}</li>
+</ul>
+
+<p><strong>{{ cancellation_message }}</strong></p>
+
+<p>You can book a new session at any time from your dashboard.</p>
+
+<p>
+    <a href="{{ dashboard_url }}" class="button">Go to Your Dashboard</a>
+</p>
+
+<p>Best regards,<br>The {{ site_name }} Team</p>
+{% endblock %}

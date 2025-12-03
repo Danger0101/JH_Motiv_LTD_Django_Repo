@@ -15,6 +15,7 @@ from django.views.generic import ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.conf import settings
 
+from core.email_utils import send_transactional_email # Import the utility
 from .models import ClientOfferingEnrollment, SessionBooking
 from accounts.models import CoachProfile
 from coaching_availability.utils import get_coach_available_slots
@@ -139,15 +140,47 @@ def book_session(request):
             if not is_available:
                 return htmx_error("That time slot is no longer available.")
 
-            SessionBooking.objects.create(
+            booking = SessionBooking.objects.create(
                 enrollment=enrollment,
                 coach=coach_profile,
                 client=request.user,
                 start_datetime=start_datetime_obj,
             )
+
+            # --- Send Confirmation Emails ---
+            try:
+                # 1. Send confirmation to the client
+                dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
+                client_context = {
+                    'user': request.user,
+                    'session': booking,
+                    'dashboard_url': dashboard_url
+                }
+                send_transactional_email(
+                    recipient_email=request.user.email,
+                    subject="Your Coaching Session is Confirmed!",
+                    template_name='emails/booking_confirmation.html',
+                    context=client_context
+                )
+
+                # 2. Send notification to the coach
+                coach_context = {
+                    'coach': coach_profile,
+                    'client': request.user,
+                    'session': booking,
+                }
+                send_transactional_email(
+                    recipient_email=coach_profile.user.email,
+                    subject=f"New Session Booked with {request.user.get_full_name()}",
+                    template_name='emails/coach_notification.html', # We will create this template next
+                    context=coach_context
+                )
+            except Exception as e:
+                # Log the email error but do not fail the booking
+                print(f"CRITICAL: Booking succeeded but failed to send confirmation emails. Error: {e}")
         
         # Success response...
-        messages.success(request, f"Session confirmed for {start_datetime_obj.strftime('%B %d, %Y at %I:%M %p')}.")
+        messages.success(request, f"Session confirmed for {start_datetime_obj.strftime('%B %d, %Y at %I:%M %p')}. A confirmation email has been sent.")
         response = HttpResponse(status=204)
         response['HX-Redirect'] = reverse('accounts:account_profile')
         return response
@@ -158,20 +191,55 @@ def book_session(request):
 
 @login_required
 @require_POST
-@transaction.atomic  # ADD THIS DECORATOR
+@transaction.atomic
 def cancel_session(request, booking_id):
-    # Locking isn't strictly necessary here for safety, but atomic is good practice
-    # to ensure the session count and status update happen together.
     booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
+    coach = booking.coach
+    client = booking.client
     
     is_refunded = booking.cancel()
     
+    # Prepare email messages
     if is_refunded:
+        client_msg = "Your session credit has been successfully restored to your account."
         messages.success(request, "Session canceled successfully. Your credit has been restored.")
     else:
-        messages.warning(request, "Session canceled. Because this was within 24 hours, the credit was forfeited per our Terms of Service.")
-    
-    # Fixed: Pass 'active_tab' context
+        client_msg = "Your session was canceled. Because this was within 24 hours of the start time, the session credit was forfeited per our Terms of Service."
+        messages.warning(request, "Session canceled. The credit was forfeited due to late cancellation.")
+
+    # Send emails
+    try:
+        dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
+        
+        # 1. Email to Client
+        send_transactional_email(
+            recipient_email=client.email,
+            subject="Your Coaching Session Has Been Canceled",
+            template_name='emails/cancellation_confirmation.html',
+            context={
+                'user': client,
+                'session': booking,
+                'cancellation_message': client_msg,
+                'dashboard_url': dashboard_url,
+            }
+        )
+
+        # 2. Email to Coach
+        send_transactional_email(
+            recipient_email=coach.user.email,
+            subject=f"Session Canceled by {client.get_full_name()}",
+            template_name='emails/coach_cancellation_notification.html',
+            context={
+                'coach': coach,
+                'client': client,
+                'session': booking,
+                'dashboard_url': dashboard_url,
+            }
+        )
+    except Exception as e:
+        print(f"CRITICAL: Cancellation for booking {booking.id} succeeded but failed to send emails. Error: {e}")
+
+    # The view returns a partial HTML to be rendered by HTMX
     return render(request, 'accounts/profile_bookings.html', {'active_tab': 'canceled'})
 
 
@@ -209,11 +277,46 @@ def reschedule_session(request, booking_id):
             if not is_available:
                 messages.error(request, "That time slot is no longer available. Please choose another.")
             else:
+                original_start_time = booking.start_time
                 result = booking.reschedule(new_start_time)
+
                 if result == 'LATE':
                     messages.error(request, "Sessions cannot be rescheduled within 24 hours of the start time.")
                 else:
                     messages.success(request, f"Session successfully rescheduled to {new_start_time.strftime('%B %d, %H:%M')}.")
+                    
+                    # --- Send Reschedule Emails ---
+                    try:
+                        dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
+                        
+                        # 1. Email to Client
+                        send_transactional_email(
+                            recipient_email=booking.client.email,
+                            subject="Your Coaching Session Has Been Rescheduled",
+                            template_name='emails/reschedule_confirmation.html',
+                            context={
+                                'user': booking.client,
+                                'session': booking,
+                                'original_start_time': original_start_time,
+                                'dashboard_url': dashboard_url,
+                            }
+                        )
+
+                        # 2. Email to Coach
+                        send_transactional_email(
+                            recipient_email=booking.coach.user.email,
+                            subject=f"Session Rescheduled by {booking.client.get_full_name()}",
+                            template_name='emails/coach_reschedule_notification.html',
+                            context={
+                                'coach': booking.coach,
+                                'client': booking.client,
+                                'session': booking,
+                                'original_start_time': original_start_time,
+                                'dashboard_url': dashboard_url,
+                            }
+                        )
+                    except Exception as e:
+                        print(f"CRITICAL: Reschedule for booking {booking.id} succeeded but failed to send emails. Error: {e}")
 
         except ValueError:
             messages.error(request, "Invalid date format.")

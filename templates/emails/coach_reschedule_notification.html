@@ -1,0 +1,27 @@
+{% extends "emails/base_email.html" %}
+{% load humanize %}
+
+{% block content %}
+<p>Hi {{ coach.user.first_name|default:coach.user.username }},</p>
+
+<p>This is a notification that a client has rescheduled their session with you. Please update your calendar accordingly.</p>
+
+<p><strong>Updated Session Details:</strong></p>
+<ul>
+    <li><strong>Client:</strong> {{ client.get_full_name }} ({{ client.email }})</li>
+    <li><strong>Program:</strong> {{ session.enrollment.offering.name }}</li>
+    <li><strong>New Date:</strong> {{ session.start_time|date:"l, F j, Y" }}</li>
+    <li><strong>New Time:</strong> {{ session.start_time|date:"g:i A T" }} - {{ session.end_time|date:"g:i A T" }}</li>
+</ul>
+
+<p><strong>Original Time:</strong> {{ original_start_time|date:"l, F j, Y, g:i A T" }}</p>
+
+<p><strong>Action Required:</strong></p>
+<p>Please ensure your calendar is updated and that the client receives an updated calendar invitation for the new time.</p>
+
+<p>
+    <a href="{{ dashboard_url }}" class="button">Go to Your Dashboard</a>
+</p>
+
+<p>Best regards,<br>The {{ site_name }} Team</p>
+{% endblock %}

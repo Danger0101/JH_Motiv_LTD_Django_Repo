@@ -87,6 +87,7 @@ class SessionBooking(models.Model):
     end_datetime = models.DateTimeField(verbose_name="End Time")
     status = models.CharField(max_length=20, choices=SESSION_STATUS_CHOICES, default='BOOKED', verbose_name="Status")
     gcal_event_id = models.CharField(max_length=255, blank=True, null=True, verbose_name="Google Calendar Event ID", help_text="The unique ID for the event in Google Calendar.")
+    reminder_sent = models.BooleanField(default=False, verbose_name="Reminder Sent", help_text="True if a reminder email has been sent for this session.")
 
     class Meta:
         verbose_name = "Session Booking"

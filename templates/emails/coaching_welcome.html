@@ -1,0 +1,20 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<p>Hi {{ user.first_name|default:user.username }},</p>
+
+<p>Welcome to <strong>{{ site_name }}</strong>! We are thrilled to have you join us.</p>
+
+<p>You have successfully enrolled in the <strong>"{{ offering_name }}"</strong> coaching program. This is your first step on a new and exciting journey of growth, and we are honored to be a part of it.</p>
+
+<p><strong>What's next?</strong></p>
+<p>You can now start booking your coaching sessions. Please head to your client dashboard to view your available sessions and schedule them at your convenience.</p>
+
+<p>
+    <a href="{{ dashboard_url }}" class="button">Go to Your Dashboard</a>
+</p>
+
+<p>If you have any questions or need assistance, please don't hesitate to reply to this email.</p>
+
+<p>Best regards,<br>The {{ site_name }} Team</p>
+{% endblock %}

@@ -18,6 +18,9 @@ from .models import Order, OrderItem
 from products.models import Product, Variant
 from django.utils import timezone
 
+# Custom imports for email sending
+from core.email_utils import send_transactional_email
+
 
 User = get_user_model() # Get the user model
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -233,13 +236,33 @@ def stripe_webhook(request):
                     return HttpResponse(status=200)
 
                 # 3. Create the Client Offering Enrollment
-                ClientOfferingEnrollment.objects.create(
+                enrollment = ClientOfferingEnrollment.objects.create(
                     client=user,
                     offering=offering,
                     coach=coach_profile,
                     purchase_date=timezone.now(), # Use current time for purchase
                     expiration_date=expiration_date # Assign calculated expiry date
                 )
+                
+                # 4. Send Welcome Email
+                try:
+                    dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
+                    email_context = {
+                        'user': user,
+                        'offering_name': offering.name,
+                        'dashboard_url': dashboard_url,
+                    }
+                    send_transactional_email(
+                        recipient_email=user.email,
+                        subject=f"Welcome to {offering.name}!",
+                        template_name='emails/coaching_welcome.html',
+                        context=email_context
+                    )
+                    print(f"SUCCESS: Welcome email sent to {user.email} for enrollment in {offering.name}.")
+                except Exception as email_error:
+                    # Log the email error but do not fail the transaction
+                    print(f"CRITICAL: Transaction succeeded but failed to send welcome email to {user.email}. Error: {email_error}")
+
                 
                 print(f"SUCCESS: Client Enrollment created for {user.email}. Expires: {expiration_date}")
             
@@ -278,6 +301,39 @@ def stripe_webhook(request):
 
                     print(f"SUCCESS: E-commerce Order {order.id} created from cart {cart.id}")
 
+                    # 4. Send Order Confirmation Email
+                    try:
+                        customer_email = session.get('customer_details', {}).get('email')
+                        if not customer_email:
+                             raise ValueError("Customer email not found in Stripe session.")
+
+                        user = order.user
+                        if user:
+                            dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
+                        else:
+                            # For guests, generate a link to their specific order
+                            dashboard_url = request.build_absolute_uri(
+                                reverse('payments:order_detail_guest', args=[order.guest_order_token])
+                            )
+
+                        email_context = {
+                            'order': order,
+                            'user': user, # This can be None for guests
+                            'dashboard_url': dashboard_url,
+                        }
+
+                        send_transactional_email(
+                            recipient_email=customer_email,
+                            subject=f"Your JH Motiv LTD Order #{order.id} is Confirmed",
+                            template_name='emails/order_confirmation.html',
+                            context=email_context
+                        )
+                        print(f"SUCCESS: Order confirmation email sent to {customer_email} for order {order.id}")
+
+                    except Exception as email_error:
+                        print(f"CRITICAL: Order {order.id} created but failed to send confirmation email. Error: {email_error}")
+
+
                 except Cart.DoesNotExist:
                     print(f"E-commerce cart ID {cart_id} not found or already submitted. Skipping.")
                 except Exception as e:
@@ -287,8 +343,49 @@ def stripe_webhook(request):
         else:
             print(f"Unknown product_type: {product_type}. Skipping.")
 
+    # 3. Handle 'charge.failed' Event
+    elif event['type'] == 'charge.failed':
+        charge = event['data']['object']
+        print(f"Processing failed charge: {charge.get('id')}")
 
-    # 3. Acknowledge Receipt
+        try:
+            billing_details = charge.get('billing_details', {})
+            customer_email = billing_details.get('email')
+            
+            if not customer_email:
+                print("Webhook Error: No email found in 'charge.failed' event.")
+                return HttpResponse(status=200) # Can't notify without an email
+
+            # Try to find if this customer is a registered user
+            user = User.objects.filter(email__iexact=customer_email).first()
+            
+            if user:
+                account_url = request.build_absolute_uri(reverse('accounts:account_profile'))
+            else:
+                account_url = request.build_absolute_uri(reverse('home')) # Link to homepage for guests
+
+            email_context = {
+                'customer_name': billing_details.get('name'),
+                'amount': charge.get('amount', 0) / 100,
+                'failure_reason': charge.get('failure_message', 'No reason provided.'),
+                'account_url': account_url,
+            }
+
+            send_transactional_email(
+                recipient_email=customer_email,
+                subject="Payment Failed for Your JH Motiv LTD Purchase",
+                template_name='emails/payment_failure.html',
+                context=email_context
+            )
+            print(f"SUCCESS: Payment failure notification sent to {customer_email}")
+
+        except Exception as e:
+            print(f"FATAL ERROR processing 'charge.failed' event: {e}")
+            # Don't return 500, as it's just a notification failure
+            return HttpResponse(status=200)
+
+
+    # 4. Acknowledge Receipt
     # Always return a 200 status code to Stripe unless a fatal, non-recoverable error occurred
     return HttpResponse(status=200)
 

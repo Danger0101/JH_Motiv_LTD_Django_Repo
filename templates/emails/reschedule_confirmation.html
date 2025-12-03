@@ -1,0 +1,27 @@
+{% extends "emails/base_email.html" %}
+{% load humanize %}
+
+{% block content %}
+<p>Hi {{ user.first_name|default:user.username }},</p>
+
+<p>This email confirms your coaching session has been successfully rescheduled. Please find the updated details below:</p>
+
+<p><strong>New Session Details:</strong></p>
+<ul>
+    <li><strong>Program:</strong> {{ session.enrollment.offering.name }}</li>
+    <li><strong>Coach:</strong> {{ session.coach.user.get_full_name }}</li>
+    <li><strong>New Date:</strong> {{ session.start_time|date:"l, F j, Y" }}</li>
+    <li><strong>New Time:</strong> {{ session.start_time|date:"g:i A T" }} - {{ session.end_time|date:"g:i A T" }}</li>
+</ul>
+
+<p><strong>Original Time:</strong> {{ original_start_time|date:"l, F j, Y, g:i A T" }}</p>
+
+<p><strong>Next Steps:</strong></p>
+<p>Your coach has been notified of the change. If you have already received a calendar invitation, please ensure it is updated. If not, you will receive one shortly.</p>
+
+<p>
+    <a href="{{ dashboard_url }}" class="button">Go to Your Dashboard</a>
+</p>
+
+<p>Best regards,<br>The {{ site_name }} Team</p>
+{% endblock %}

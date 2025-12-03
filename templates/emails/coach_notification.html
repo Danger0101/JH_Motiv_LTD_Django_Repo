@@ -1,0 +1,26 @@
+{% extends "emails/base_email.html" %}
+{% load humanize %}
+
+{% block content %}
+<p>Hi {{ coach.user.first_name|default:coach.user.username }},</p>
+
+<p>You have a new session booking from <strong>{{ client.get_full_name }}</strong>. Please see the details below and ensure you send a calendar invitation to the client.</p>
+
+<p><strong>Session Details:</strong></p>
+<ul>
+    <li><strong>Client:</strong> {{ client.get_full_name }} ({{ client.email }})</li>
+    <li><strong>Program:</strong> {{ session.enrollment.offering.name }}</li>
+    <li><strong>Date:</strong> {{ session.start_time|date:"l, F j, Y" }}</li>
+    <li><strong>Time:</strong> {{ session.start_time|date:"g:i A T" }} - {{ session.end_time|date:"g:i A T" }}</li>
+</ul>
+
+<p><strong>Action Required:</strong></p>
+<p>Please send a calendar invitation for this event to the client's email address: <strong>{{ client.email }}</strong>.</p>
+<p>You can manage your schedule and view all your upcoming sessions on your coach dashboard.</p>
+
+<p>
+    <a href="{{ dashboard_url }}" class="button">Go to Your Dashboard</a>
+</p>
+
+<p>Best regards,<br>The {{ site_name }} Team</p>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<p>Hi {{ customer_name|default:"Customer" }},</p>
+
+<p>We're writing to let you know that a recent payment for your purchase at <strong>{{ site_name }}</strong> has failed.</p>
+
+<p><strong>Details of the failed payment:</strong></p>
+<ul>
+    <li><strong>Amount:</strong> £{{ amount|floatformat:2 }}</li>
+    <li><strong>Date:</strong> {% now "F j, Y" %}</li>
+    <li><strong>Reason:</strong> {{ failure_reason }}</li>
+</ul>
+
+<p><strong>What to do next?</strong></p>
+<p>Please update your payment method in your account settings to ensure your service is not interrupted, or to complete your purchase. If you believe this is an error, please contact your bank.</p>
+
+<p>
+    <a href="{{ account_url }}" class="button">Update Payment Method</a>
+</p>
+
+<p>If you have any questions, please feel free to contact us.</p>
+
+<p>Best regards,<br>The {{ site_name }} Team</p>
+{% endblock %}
