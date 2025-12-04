@@ -37,7 +37,7 @@ urlpatterns = [
     path('oauth/', include('gcal.urls')),
 
     # Existing and Standard Apps
-    path('auth/', include('accounts.urls', namespace='accounts')),
+    path('auth/', include('accounts.urls', namespace='account')),
     path('checkout/', include('payments.urls', namespace='payments')),
     path('cart/', include('cart.urls', namespace='cart')),
     path('shop/', include('products.urls')),
