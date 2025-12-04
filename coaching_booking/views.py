@@ -386,8 +386,7 @@ def reschedule_session(request, booking_id):
 def apply_for_free_session(request):
     client = request.user
     
-    # Check if user already has a pending or active free session offer
-    # FIX: Replaced 'is_expired=False' with actual database check using Q objects
+    # FIX: Check database fields instead of properties
     active_requests = OneSessionFreeOffer.objects.filter(
         client=client, 
         is_redeemed=False
@@ -395,8 +394,11 @@ def apply_for_free_session(request):
         Q(redemption_deadline__isnull=True) | Q(redemption_deadline__gt=timezone.now())
     )
 
+    # Exclude rejected ones if that is your logic, typically you only care 
+    # if they have an 'active' one pending or approved.
+    # If you have an 'is_approved=False' that usually implies pending.
+    
     if active_requests.exists():
-        # Returns the "Pending" status fragment
         return render(request, 'coaching_booking/partials/free_session_status.html', {
             'status': 'pending',
             'message': 'You already have a pending or active request.'
@@ -405,14 +407,10 @@ def apply_for_free_session(request):
     # Create the new request
     OneSessionFreeOffer.objects.create(
         client=client,
-        is_approved=False, # Pending approval
+        is_approved=False, 
         is_redeemed=False
     )
     
-    # Notify Coaches (Optional: Send email to staff/coaches)
-    # send_new_request_notification(client)
-
-    # Return the "Pending" status fragment to replace the button
     return render(request, 'coaching_booking/partials/free_session_status.html', {
         'status': 'success', 
         'message': 'Request submitted! A coach will review it shortly.'
