@@ -91,6 +91,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'allauth.account.context_processors.account',
+                'allauth.socialaccount.context_processors.socialaccount',
             ],
         },
     },
@@ -258,7 +260,7 @@ LOGGING = {
     'formatters': {
         'verbose': {
             'format': ('%(asctime)s [%(levelname)s] [%(name)s:%(lineno)s] '
-                       '%(message)s'),
+                        '%(message)s'),
             'datefmt': '%Y-%m-%d %H:%M:%S'
         },
     },
@@ -272,8 +274,14 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': 'INFO',  # <--- Change this from 'DEBUG' to 'INFO'
             'propagate': True,
+        },
+        # --- ADD THIS SECTION TO SILENCE TEMPLATE NOISE ---
+        'django.template': {
+            'handlers': ['console'],
+            'level': 'INFO', 
+            'propagate': False,
         },
     },
     'root': {
