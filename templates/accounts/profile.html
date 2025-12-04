@@ -208,46 +208,67 @@
                 </div>
             </div>
 
-            <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                <h3 class="text-xl font-bold text-gray-800 mb-6 border-b pb-2">Weekly Recurring Availability</h3>
-                <div hx-get="{% url 'coaching_availability:profile_availability' %}" hx-trigger="load once" hx-swap="innerHTML">
-                    <p class="text-gray-500 animate-pulse">Loading schedule editor...</p>
-                </div>
-            </div>
-
-            <div x-data="{ oneOffTab: 'override' }" class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mt-8">
-                <h3 class="text-xl font-bold text-gray-800 mb-6 border-b pb-2">Date Overrides & Time Off</h3>
-                
-                <div class="flex space-x-4 mb-6 border-b border-gray-100">
-                    <button @click="oneOffTab = 'override'" 
-                            :class="{ 'border-b-2 border-blue-500 text-blue-600': oneOffTab === 'override', 'text-gray-500 hover:text-gray-700': oneOffTab !== 'override' }"
-                            class="py-2 px-1 text-sm font-medium transition-all duration-200 focus:outline-none"
-                            id="override-tab-btn">
-                        One-Off Changes (Overrides)
-                    </button>
-                    <button @click="oneOffTab = 'vacation'" 
-                            :class="{ 'border-b-2 border-blue-500 text-blue-600': oneOffTab === 'vacation', 'text-gray-500 hover:text-gray-700': oneOffTab !== 'vacation' }"
-                            class="py-2 px-1 text-sm font-medium transition-all duration-200 focus:outline-none"
-                            id="vacation-tab-btn">
-                        Vacations (Time Off)
-                    </button>
-                </div>
-
-                <div x-show="oneOffTab === 'override'" 
-                     hx-get="{% url 'coaching_availability:profile_override' %}" 
-                     hx-trigger="intersect, click from:#override-tab-btn" 
-                     hx-swap="innerHTML">
-                    <div class="flex justify-center py-8">
-                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div x-data="{ availabilityTab: 'weekly' }" class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 border-b border-gray-100 pb-2">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 sm:mb-0">Availability Management</h3>
+                    
+                    <div class="flex space-x-2 bg-gray-50 p-1 rounded-lg">
+                        <button @click="availabilityTab = 'weekly'" 
+                                :class="{ 'bg-white text-blue-600 shadow-sm': availabilityTab === 'weekly', 'text-gray-500 hover:text-gray-700': availabilityTab !== 'weekly' }"
+                                class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200">
+                            Weekly Schedule
+                        </button>
+                        <button @click="availabilityTab = 'override'" 
+                                :class="{ 'bg-white text-blue-600 shadow-sm': availabilityTab === 'override', 'text-gray-500 hover:text-gray-700': availabilityTab !== 'override' }"
+                                class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200"
+                                id="override-tab-btn">
+                            Date Overrides
+                        </button>
+                        <button @click="availabilityTab = 'vacation'" 
+                                :class="{ 'bg-white text-blue-600 shadow-sm': availabilityTab === 'vacation', 'text-gray-500 hover:text-gray-700': availabilityTab !== 'vacation' }"
+                                class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200"
+                                id="vacation-tab-btn">
+                            Time Off / Vacation
+                        </button>
                     </div>
                 </div>
 
-                <div x-show="oneOffTab === 'vacation'" 
-                     hx-get="{% url 'coaching_availability:profile_vacation' %}" 
-                     hx-trigger="click from:#vacation-tab-btn" 
-                     hx-swap="innerHTML">
-                    <div class="flex justify-center py-8">
-                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <div x-show="availabilityTab === 'weekly'"
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0 transform scale-95"
+                     x-transition:enter-end="opacity-100 transform scale-100">
+                    <div hx-get="{% url 'coaching_availability:profile_availability' %}" hx-trigger="load once" hx-swap="innerHTML">
+                        <div class="flex justify-center py-8">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div x-show="availabilityTab === 'override'" 
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0 transform scale-95"
+                     x-transition:enter-end="opacity-100 transform scale-100"
+                     style="display: none;">
+                    <div hx-get="{% url 'coaching_availability:profile_override' %}" 
+                         hx-trigger="intersect, click from:#override-tab-btn" 
+                         hx-swap="innerHTML">
+                        <div class="flex justify-center py-8">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div x-show="availabilityTab === 'vacation'" 
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0 transform scale-95"
+                     x-transition:enter-end="opacity-100 transform scale-100"
+                     style="display: none;">
+                    <div hx-get="{% url 'coaching_availability:profile_vacation' %}" 
+                         hx-trigger="click from:#vacation-tab-btn" 
+                         hx-swap="innerHTML">
+                        <div class="flex justify-center py-8">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'encrypted_model_fields',
     'django_htmx',
     'django_unicorn',
+    'widget_tweaks',
     
     # Allauth Apps
     'allauth',
