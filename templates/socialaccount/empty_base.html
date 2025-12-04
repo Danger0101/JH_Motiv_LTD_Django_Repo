@@ -1,15 +1,15 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>{% block title %}{% endblock %}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="utf-8">
 </head>
 <body>
-    <div class="container mx-auto p-4">
-        {% block content %}
-        {% endblock %}
-    </div>
+    {# This base template is used for HTMX requests to strip navigation/footer #}
+    {% block content %}
+    {% endblock %}
+    
+    {% block extra_scripts %}
+    {% endblock %}
 </body>
 </html>
