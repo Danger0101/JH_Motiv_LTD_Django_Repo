@@ -209,9 +209,46 @@
             </div>
 
             <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                <h3 class="text-xl font-bold text-gray-800 mb-6 border-b pb-2">Weekly Availability</h3>
+                <h3 class="text-xl font-bold text-gray-800 mb-6 border-b pb-2">Weekly Recurring Availability</h3>
                 <div hx-get="{% url 'coaching_availability:profile_availability' %}" hx-trigger="load once" hx-swap="innerHTML">
                     <p class="text-gray-500 animate-pulse">Loading schedule editor...</p>
+                </div>
+            </div>
+
+            <div x-data="{ oneOffTab: 'override' }" class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mt-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-6 border-b pb-2">Date Overrides & Time Off</h3>
+                
+                <div class="flex space-x-4 mb-6 border-b border-gray-100">
+                    <button @click="oneOffTab = 'override'" 
+                            :class="{ 'border-b-2 border-blue-500 text-blue-600': oneOffTab === 'override', 'text-gray-500 hover:text-gray-700': oneOffTab !== 'override' }"
+                            class="py-2 px-1 text-sm font-medium transition-all duration-200 focus:outline-none"
+                            id="override-tab-btn">
+                        One-Off Changes (Overrides)
+                    </button>
+                    <button @click="oneOffTab = 'vacation'" 
+                            :class="{ 'border-b-2 border-blue-500 text-blue-600': oneOffTab === 'vacation', 'text-gray-500 hover:text-gray-700': oneOffTab !== 'vacation' }"
+                            class="py-2 px-1 text-sm font-medium transition-all duration-200 focus:outline-none"
+                            id="vacation-tab-btn">
+                        Vacations (Time Off)
+                    </button>
+                </div>
+
+                <div x-show="oneOffTab === 'override'" 
+                     hx-get="{% url 'coaching_availability:profile_override' %}" 
+                     hx-trigger="intersect, click from:#override-tab-btn" 
+                     hx-swap="innerHTML">
+                    <div class="flex justify-center py-8">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    </div>
+                </div>
+
+                <div x-show="oneOffTab === 'vacation'" 
+                     hx-get="{% url 'coaching_availability:profile_vacation' %}" 
+                     hx-trigger="click from:#vacation-tab-btn" 
+                     hx-swap="innerHTML">
+                    <div class="flex justify-center py-8">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -310,7 +347,6 @@
             
             <div class="lg:col-span-1 space-y-6">
                 <div x-data="{ subTab: 'account_details' }">
-                    <!-- Sub-tab Navigation -->
                     <div class="flex border-b border-gray-200 bg-white rounded-t-xl overflow-x-auto">
                         <button @click="subTab = 'account_details'" 
                                 :class="{ 'border-b-2 border-blue-600 text-blue-600': subTab === 'account_details', 'text-gray-500 hover:text-gray-700': subTab !== 'account_details' }"
@@ -319,7 +355,6 @@
                         </button>
                     </div>
     
-                    <!-- Sub-tab Content -->
                     <div class="bg-white p-6 rounded-b-2xl border border-gray-200 shadow-sm">
                                                     <div x-show="subTab === 'account_details'" x-data="{ currentAction: 'overview', actionTitle: 'Account Details' }" class="space-y-6">
                                                         <div x-show="currentAction === 'overview'">
