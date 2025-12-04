@@ -177,6 +177,41 @@
     </style>
     <div class="py-16 bg-white">
         <div class="container mx-auto px-4">
+            
+            {% if user.is_authenticated %}
+            <div class="mt-8 text-center mb-12" id="free-session-container">
+                {% with latest_offer=user.free_offers.all|first %}
+                    {% if latest_offer and latest_offer.is_redeemed %}
+                        <p class="text-lg text-green-600 font-semibold">🎉 You've successfully redeemed your free session!</p>
+                        <p class="text-sm text-gray-500">Check your <a href="{% url 'accounts:profile' %}?tab=coaching" class="text-blue-500 hover:underline">Profile</a> for the session details.</p>
+                    {% elif latest_offer and latest_offer.is_approved %}
+                        <p class="text-lg text-blue-600 font-semibold">✅ Your free session is approved! Book it now.</p>
+                        <a href="{% url 'accounts:profile' %}?tab=coaching" class="mt-3 inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300">
+                            Book Your Free Session
+                        </a>
+                    {% elif latest_offer %}
+                        <p class="text-lg text-yellow-600 font-semibold">⏳ Your free session request is pending coach approval.</p>
+                        <p class="text-sm text-gray-500">You will be notified once approved. Check status in your <a href="{% url 'accounts:profile' %}" class="text-blue-500 hover:underline">Profile</a>.</p>
+                    {% else %}
+                        <button hx-post="{% url 'coaching_booking:apply_for_free_session' %}"
+                                hx-indicator="#free-session-indicator"
+                                hx-target="#free-session-container" 
+                                hx-swap="outerHTML"
+                                hx-confirm="Apply for a FREE 1:1 Taster Session? A coach will review your request."
+                                class="bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 transform hover:scale-105 shadow-xl">
+                            Apply for a FREE Taster Session
+                        </button>
+                        <span id="free-session-indicator" class="htmx-indicator text-pink-600 ml-3">Processing...</span>
+                    {% endif %}
+                {% endwith %}
+            </div>
+            {% else %}
+            <div class="mt-8 text-center mb-12">
+                <a href="{% url 'account_login' %}?next={% url 'coaching_booking:coach_landing' %}" class="bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 transform hover:scale-105 shadow-xl">
+                    Login to Claim Your FREE Taster Session
+                </a>
+            </div>
+            {% endif %}
             <h2 class="text-3xl font-bold text-center text-gray-800">Meet Our Expert Coaches</h2>
             <div class="mt-12 grid md:grid-cols-3 gap-8">
                 {% for coach in coaches %}
