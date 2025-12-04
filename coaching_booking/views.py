@@ -7,6 +7,7 @@ from django.utils import timezone
 from datetime import date, timedelta, datetime
 import calendar
 from django.db import transaction
+from django.db.models import Q # <--- ADDED THIS MISSING IMPORT
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
@@ -383,53 +384,39 @@ def reschedule_session(request, booking_id):
 @login_required
 @require_POST
 def apply_for_free_session(request):
-    coach_id = request.POST.get('coach_id')
     client = request.user
-
-    # Prevent multiple pending/approved free offers for the same client
-    if OneSessionFreeOffer.objects.filter(client=client, is_redeemed=False, is_expired=False).exclude(is_approved=False, redemption_deadline__lt=timezone.now()).exists():
-        messages.warning(request, "You already have a pending or active free session offer.")
-        response = HttpResponse(status=200) # HTMX expects 200 for message display
-        response['HX-Trigger'] = 'refreshProfile' # Custom event to refresh profile content
-        return response
-
-    try:
-        coach = get_object_or_404(CoachProfile, id=coach_id)
-        
-        # Create the free offer, initially not approved
-        free_offer = OneSessionFreeOffer.objects.create(
-            client=client,
-            coach=coach,
-            is_approved=False # Coach needs to approve
-        )
-
-        # Send notification to the coach
-        coach_context = {
-            'coach': coach,
-            'client': client,
-            'offer': free_offer,
-            'approval_url': request.build_absolute_uri(reverse('admin:coaching_booking_onesessionfreeoffer_change', args=[free_offer.pk]))
-        }
-        send_transactional_email(
-            recipient_email=coach.user.email,
-            subject=f"New Free Session Request from {client.get_full_name()}",
-            template_name='emails/coach_free_session_request.html', # Need to create this template
-            context=coach_context
-        )
-        
-        messages.success(request, "Your free session request has been sent to the coach for approval.")
-        response = HttpResponse(status=200)
-        response['HX-Trigger'] = 'refreshProfile'
-        return response
-
-    except CoachProfile.DoesNotExist:
-        messages.error(request, "Selected coach does not exist.")
-    except Exception as e:
-        messages.error(request, f"An error occurred: {e}")
     
-    response = HttpResponse(status=400) # Indicate an error occurred
-    response['HX-Trigger'] = 'refreshProfile'
-    return response
+    # Check if user already has a pending or active free session offer
+    # FIX: Replaced 'is_expired=False' with actual database check using Q objects
+    active_requests = OneSessionFreeOffer.objects.filter(
+        client=client, 
+        is_redeemed=False
+    ).filter(
+        Q(redemption_deadline__isnull=True) | Q(redemption_deadline__gt=timezone.now())
+    )
+
+    if active_requests.exists():
+        # Returns the "Pending" status fragment
+        return render(request, 'coaching_booking/partials/free_session_status.html', {
+            'status': 'pending',
+            'message': 'You already have a pending or active request.'
+        })
+
+    # Create the new request
+    OneSessionFreeOffer.objects.create(
+        client=client,
+        is_approved=False, # Pending approval
+        is_redeemed=False
+    )
+    
+    # Notify Coaches (Optional: Send email to staff/coaches)
+    # send_new_request_notification(client)
+
+    # Return the "Pending" status fragment to replace the button
+    return render(request, 'coaching_booking/partials/free_session_status.html', {
+        'status': 'success', 
+        'message': 'Request submitted! A coach will review it shortly.'
+    })
 
 
 @login_required
