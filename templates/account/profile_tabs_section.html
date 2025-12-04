@@ -41,7 +41,7 @@
          aria-labelledby="profile-{{ active_tab }}-tab">
                     {% if active_tab == 'offerings' %}
                     {% include 'account/profile_offerings.html' %}        {% elif active_tab == 'bookings' %}
-            {% include 'accounts/profile_bookings.html' %}
+            {% include 'account/profile_bookings.html' %}
         {% elif active_tab == 'book_session' %}
             {% include 'coaching_booking/profile_book_session.html' %}
         {% endif %}
