@@ -48,7 +48,7 @@ from coaching_availability.utils import get_coach_available_slots
 
 
 class CustomLoginView(LoginView):
-    template_name = 'accounts/login.html'
+    template_name = 'account/login.html'
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         cart = get_or_create_cart(self.request)
@@ -63,22 +63,22 @@ class CustomLoginView(LoginView):
         return response
 
 class CustomSignupView(SignupView):
-    template_name = 'accounts/signup.html'
+    template_name = 'account/signup.html'
 
 class CustomPasswordResetView(PasswordResetView):
-    template_name = 'accounts/password_reset.html'
+    template_name = 'account/password_reset.html'
 
 class CustomPasswordChangeView(PasswordChangeView):
-    template_name = 'accounts/password_change.html'
+    template_name = 'account/password_change.html'
 
 class CustomPasswordSetView(PasswordSetView):
-    template_name = 'accounts/password_set.html'
+    template_name = 'account/password_set.html'
 
 class CustomLogoutView(LogoutView):
-    template_name = 'accounts/logout.html'
+    template_name = 'account/logout.html'
 
 class CustomPasswordResetDoneView(PasswordResetDoneView):
-    template_name = 'accounts/password_reset_done.html'
+    template_name = 'account/password_reset_done.html'
 
 class CustomSocialAccountListView(ConnectionsView):
     def get_context_data(self, **kwargs):
@@ -90,7 +90,7 @@ class CustomSocialAccountListView(ConnectionsView):
         return context
 
 class ProfileView(LoginRequiredMixin, TemplateView):
-    template_name = 'accounts/profile.html'
+    template_name = 'account/profile.html'
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -179,7 +179,7 @@ def update_marketing_preference(request):
         preference, created = MarketingPreference.objects.get_or_create(user=request.user)
         preference.is_subscribed = is_subscribed
         preference.save()
-        return render(request, 'accounts/partials/marketing_status_fragment.html', 
+        return render(request, 'account/partials/marketing_status_fragment.html', 
                       {'marketing_preference': preference})
     return HttpResponse("Invalid request", status=400)
 
@@ -193,7 +193,7 @@ def profile_offerings_partial(request):
         is_active=True,
         expiration_date__gte=timezone.now().date()
     ).order_by('-enrolled_on')
-    return render(request, 'accounts/partials/profile_offerings_list.html', {
+    return render(request, 'account/partials/profile_offerings_list.html', {
         'user_offerings': user_offerings,
         'available_credits': available_credits,
         'active_tab': 'offerings'
@@ -232,7 +232,7 @@ def profile_bookings_partial(request):
         'user_bookings_page': user_bookings_page,
         'active_tab': active_tab,
     }
-    return render(request, 'accounts/partials/_booking_list.html', context)
+    return render(request, 'account/partials/_booking_list.html', context)
 
 @login_required
 def get_coaches_for_offering(request):
@@ -298,4 +298,4 @@ def coach_clients_partial(request):
     context = {
         'coach_clients_page': coach_clients_page,
     }
-    return render(request, 'accounts/partials/_coach_clients_list.html', context)
+    return render(request, 'account/partials/_coach_clients_list.html', context)
