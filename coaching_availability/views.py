@@ -81,3 +81,132 @@ def profile_availability(request):
     }
     return render(request, 'accounts/partials/_availability.html', context)
 
+@login_required
+def profile_override(request):
+    """
+    Renders the list of future Date Overrides and the form to add a new one.
+    Refreshed via HTMX when tabs are clicked or items are modified.
+    """
+    if not hasattr(request.user, 'coach_profile'):
+        return render(request, 'coaching_availability/partials/_one_off_availability.html', {'error': 'Unauthorized'})
+
+    overrides = DateOverride.objects.filter(
+        coach=request.user, 
+        date__gte=timezone.now().date()
+    ).order_by('date')
+    
+    context = {
+        'form': DateOverrideForm(),
+        'overrides': overrides
+    }
+    return render(request, 'coaching_availability/partials/_one_off_availability.html', context)
+
+
+@login_required
+def profile_vacation(request):
+    """
+    Renders the list of future Vacations and the form to add a new one.
+    Refreshed via HTMX when tabs are clicked or items are modified.
+    """
+    if not hasattr(request.user, 'coach_profile'):
+        return render(request, 'coaching_availability/partials/_vacation_management.html', {'error': 'Unauthorized'})
+
+    vacations = CoachVacation.objects.filter(
+        coach=request.user, 
+        end_date__gte=timezone.now().date()
+    ).order_by('start_date')
+    
+    context = {
+        'form': CoachVacationForm(),
+        'vacations': vacations
+    }
+    return render(request, 'coaching_availability/partials/_vacation_management.html', context)
+
+
+@login_required
+@require_POST
+def save_date_override(request):
+    """
+    Handles HTMX form submission to create a new DateOverride.
+    Returns the updated partial HTML.
+    """
+    form = DateOverrideForm(request.POST)
+    if form.is_valid():
+        # Check if override already exists for this date to prevent duplicates/errors
+        date_obj = form.cleaned_data['date']
+        DateOverride.objects.filter(coach=request.user, date=date_obj).delete()
+        
+        override = form.save(commit=False)
+        override.coach = request.user
+        override.save()
+        # Reset form for the UI
+        form = DateOverrideForm()
+    
+    # Fetch fresh list for re-rendering
+    overrides = DateOverride.objects.filter(
+        coach=request.user, 
+        date__gte=timezone.now().date()
+    ).order_by('date')
+    
+    context = {
+        'form': form,
+        'overrides': overrides
+    }
+    return render(request, 'coaching_availability/partials/_one_off_availability.html', context)
+
+
+@login_required
+@require_http_methods(["DELETE"])
+def delete_date_override(request, pk):
+    """
+    Handles HTMX delete request for a DateOverride.
+    """
+    try:
+        override = DateOverride.objects.get(pk=pk, coach=request.user)
+        override.delete()
+    except DateOverride.DoesNotExist:
+        pass
+        
+    return profile_override(request)
+
+
+@login_required
+@require_POST
+def save_coach_vacation(request):
+    """
+    Handles HTMX form submission to create a new CoachVacation.
+    Returns the updated partial HTML.
+    """
+    form = CoachVacationForm(request.POST)
+    if form.is_valid():
+        vacation = form.save(commit=False)
+        vacation.coach = request.user
+        vacation.save()
+        # Reset form
+        form = CoachVacationForm()
+        
+    vacations = CoachVacation.objects.filter(
+        coach=request.user, 
+        end_date__gte=timezone.now().date()
+    ).order_by('start_date')
+    
+    context = {
+        'form': form,
+        'vacations': vacations
+    }
+    return render(request, 'coaching_availability/partials/_vacation_management.html', context)
+
+
+@login_required
+@require_http_methods(["DELETE"])
+def delete_coach_vacation(request, pk):
+    """
+    Handles HTMX delete request for a CoachVacation.
+    """
+    try:
+        vacation = CoachVacation.objects.get(pk=pk, coach=request.user)
+        vacation.delete()
+    except CoachVacation.DoesNotExist:
+        pass
+        
+    return profile_vacation(request)
