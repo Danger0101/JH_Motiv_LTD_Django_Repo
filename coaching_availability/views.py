@@ -15,7 +15,7 @@ def profile_availability(request):
     if not hasattr(request.user, 'coach_profile'):
         # Redirect non-coaches or show an error
         # For HTMX, you might want to render an error partial or simply do nothing
-        return render(request, 'accounts/partials/_availability.html', {
+        return render(request, 'account/partials/_availability.html', {
             'error': 'You must be a coach to manage availability.'
         })
 
@@ -81,7 +81,7 @@ def profile_availability(request):
         'active_tab': 'availability',
         'days_of_week': CoachAvailability.DAYS_OF_WEEK,
     }
-    return render(request, 'accounts/partials/_availability.html', context)
+    return render(request, 'account/partials/_availability.html', context)
 
 @login_required
 def profile_override(request):
