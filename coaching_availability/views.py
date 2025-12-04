@@ -1,9 +1,11 @@
 from datetime import time # Import time for default slot times
-from django.shortcuts import render, redirect # Ensure redirect is imported
-from django.http import HttpResponseRedirect # Ensure HttpResponseRedirect is imported
+from django.shortcuts import render, redirect, get_object_or_404 # Added get_object_or_404
+from django.http import HttpResponseRedirect 
 from django.db import transaction
 from django.forms import modelformset_factory
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST, require_http_methods # Added these decorators
+from django.utils import timezone # Added timezone
 from .forms import DateOverrideForm, CoachVacationForm, WeeklyScheduleForm
 from .models import CoachAvailability, DateOverride, CoachVacation, settings
 
