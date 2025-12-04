@@ -9,8 +9,7 @@
 <div class="max-w-md mx-auto py-8 px-4 sm:px-6 lg:px-8">
     <div class="p-6 bg-white shadow-lg rounded-lg border">
         <h2 class="text-2xl font-bold mb-6 text-gray-900">{% translate "Account Connections" %}</h2>
-{% endif %}
-
+        
         {% if form.accounts %}
         <p class="text-gray-700 mb-4">
             {% blocktrans %}You are currently connected to the following social networks:{% endblocktrans %}
@@ -40,5 +39,6 @@
         <ul class="socialaccount_providers space-y-3">
             {% include "socialaccount/snippets/provider_list.html" with process="connect" %}
         </ul>
-
+    </div>
+</div>
 {% endblock %}
