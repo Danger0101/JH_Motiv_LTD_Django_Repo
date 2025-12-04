@@ -405,8 +405,13 @@ def apply_for_free_session(request):
         })
 
     # Create the new request
+    coach_id = request.POST.get('coach_id')
+    coach_instance = get_object_or_404(CoachProfile, id=coach_id)
+
+    # Create the new request
     OneSessionFreeOffer.objects.create(
         client=client,
+        coach=coach_instance, # <--- Add this line
         is_approved=False, 
         is_redeemed=False
     )
