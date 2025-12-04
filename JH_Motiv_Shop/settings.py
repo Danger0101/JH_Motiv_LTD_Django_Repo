@@ -289,6 +289,8 @@ LOGGING = {
 }
 
 
+ACCOUNT_TEMPLATE_EXTENSION = "base.html"
+
 
 # --- HEROKU PRODUCTION SETTINGS ---
 if not DEBUG:
