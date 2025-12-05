@@ -71,6 +71,11 @@ class CustomPasswordResetView(PasswordResetView):
 class CustomPasswordChangeView(PasswordChangeView):
     template_name = 'account/password_change.html'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['base_template'] = 'socialaccount/empty_base.html' if self.request.htmx else 'base.html'
+        return context
+
 class CustomPasswordSetView(PasswordSetView):
     template_name = 'account/password_set.html'
 
