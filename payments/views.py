@@ -177,10 +177,12 @@ def stripe_webhook(request):
     # 2. Handle 'checkout.session.completed' Event
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
-        session = stripe.checkout.Session.retrieve(
-            session.id,
-            expand=['shipping_details']
-        )
+        
+        try:
+            session = stripe.checkout.Session.retrieve(session.id)
+        except Exception as e:
+             print(f"Error retrieving session: {e}")
+             return HttpResponse("Error retrieving session", status=500)
         
         # Only proceed if payment was actually successful
         if session.get('payment_status') != 'paid':
@@ -317,44 +319,53 @@ def stripe_webhook(request):
                     cart.status = 'submitted'
                     cart.save()
 
-                    # 4. Create Printful Order
+                    # 4. Create Printful Order (CONDITIONAL)
                     try:
-                        printful_service = PrintfulService()
-                        shipping_details = session.get('shipping_details')
-                        if not shipping_details or not shipping_details.get('address'):
-                            raise ValueError("Shipping details not found in Stripe session.")
-
-                        address = shipping_details['address']
-                        recipient = {
-                            "name": shipping_details.get('name'),
-                            "address1": address.get('line1'),
-                            "address2": address.get('line2'),
-                            "city": address.get('city'),
-                            "state_code": address.get('state'),
-                            "country_code": address.get('country'),
-                            "zip": address.get('postal_code'),
-                        }
-
-                        items = []
+                        printful_items = []
+                        
+                        # Filter: Only select items that HAVE a Printful ID
                         for item in cart.items.all():
-                            items.append({
-                                "variant_id": item.variant.printful_variant_id,
-                                "quantity": item.quantity,
-                            })
+                            if item.variant.printful_variant_id:
+                                printful_items.append({
+                                    "variant_id": item.variant.printful_variant_id,
+                                    "quantity": item.quantity,
+                                })
+                        
+                        # Only contact Printful if there are actual Printful items to fulfill
+                        if printful_items:
+                            printful_service = PrintfulService()
+                            shipping_details = session.get('shipping_details')
+                            
+                            if not shipping_details or not shipping_details.get('address'):
+                                raise Exception("Shipping details are required for Printful orders but were not provided.")
 
-                        printful_order = printful_service.create_order(recipient, items)
-                        if 'result' in printful_order and printful_order['result'].get('id'):
-                            order.printful_order_id = printful_order['result']['id']
-                            order.printful_order_status = printful_order['result']['status']
-                            order.save()
-                            print(f"SUCCESS: Printful Order {order.printful_order_id} created for Order {order.id}")
-                        else:
-                            print(f"ERROR: Could not create Printful order. Response: {printful_order}")
+                            address = shipping_details['address']
+                            recipient = {
+                                "name": shipping_details.get('name'),
+                                "address1": address.get('line1'),
+                                "address2": address.get('line2'),
+                                "city": address.get('city'),
+                                "state_code": address.get('state'),
+                                "country_code": address.get('country'),
+                                "zip": address.get('postal_code'),
+                            }
+
+                            # Use the FILTERED list, not the full list
+                            printful_order = printful_service.create_order(recipient, printful_items)
+                            
+                            if 'result' in printful_order and printful_order['result'].get('id'):
+                                order.printful_order_id = printful_order['result']['id']
+                                order.printful_order_status = printful_order['result']['status']
+                                order.save()
+                                print(f"SUCCESS: Printful Order {order.printful_order_id} created.")
+                            else:
+                                # Now this is a REAL error because we know we tried to send valid items
+                                raise Exception(f"Printful API Error: {printful_order}")
 
                     except Exception as e:
                         print(f"FATAL ERROR creating Printful order: {e}")
-                        # Decide if this should be a 500 error
-                        # return HttpResponse("Printful Order creation failed.", status=500)
+                        # Return 500 to force Stripe retry (as discussed in the previous step)
+                        return HttpResponse("Printful Order creation failed.", status=500)
 
 
                     print(f"SUCCESS: E-commerce Order {order.id} created from cart {cart.id}")

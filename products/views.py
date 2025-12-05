@@ -53,12 +53,8 @@ class ProductDetailView(DetailView):
         
         # 1. Build the Lookup Map and collect unique options
         for variant in product.variants.all():
-            color = variant.color
-            size = variant.size
-            
-            # Skip variants missing required options, or variants with no StockPool assigned
-            if not color or not size:
-                continue
+            color = variant.color or "Default"
+            size = variant.size or "One Size"
 
             # Check stock status using the modular method from the Variant model
             is_in_stock = variant.is_available() 

@@ -112,7 +112,13 @@ class Variant(models.Model):
         return self.stock_pool.available_stock if self.stock_pool else 0
 
     def is_available(self, quantity=1):
-        """Checks if the item is available based on the StockPool."""
+        """
+        Checks if the variant is available.
+        - Digital products are always available.
+        - Physical products depend on the linked StockPool.
+        """
+        if self.product.product_type == 'digital':
+            return True
         return self.stock_pool.is_in_stock(quantity) if self.stock_pool else False
 
     def __str__(self):

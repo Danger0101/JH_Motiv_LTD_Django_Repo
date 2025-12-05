@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.shortcuts import render, get_object_or_404
 from django.template.loader import render_to_string
 from django.http import HttpResponse, HttpResponseRedirect
@@ -21,7 +22,8 @@ def add_to_cart(request, variant_id):
     # Check variant availability (optional but recommended before saving)
     if not variant.is_available(quantity):
         # Optionally, handle out-of-stock error here, e.g., using Django messages
-        pass 
+        messages.error(request, "Sorry, this item is out of stock.")
+        return HttpResponseRedirect(reverse('products:product_detail', args=[variant.product.id]))
 
     cart_item, created = CartItem.objects.get_or_create(
         cart=cart,
