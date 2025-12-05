@@ -1,4 +1,4 @@
-from django.views.generic import ListView, DetailView, TemplateView # Added TemplateView
+from django.views.generic import ListView, DetailView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.conf import settings
 from django.shortcuts import get_object_or_404, redirect, render
@@ -7,29 +7,22 @@ from django.utils import timezone
 from datetime import date, timedelta, datetime
 import calendar
 from django.db import transaction
-from django.db.models import Q # <--- ADDED THIS MISSING IMPORT
+from django.db.models import Q
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import HttpResponse
-from django.views.generic import ListView, DetailView
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.conf import settings
 
-from core.email_utils import send_transactional_email # Import the utility
+from core.email_utils import send_transactional_email
 from .models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer
 from accounts.models import CoachProfile
 from coaching_availability.utils import get_coach_available_slots
 from coaching_core.models import Offering, Workshop
 from coaching_client.models import ContentPage
 from cart.utils import get_or_create_cart, get_cart_summary_data
-from coaching_client.models import ContentPage
+from facts.models import Fact
 
 BOOKING_WINDOW_DAYS = 90
-
-# --- EXISTING VIEWS (Preserved) ---
-
-from facts.models import Fact
 
 class CoachLandingView(TemplateView):
     template_name = "coaching_booking/coach_landing.html"
@@ -38,13 +31,12 @@ class CoachLandingView(TemplateView):
         context = super().get_context_data(**kwargs)
         user = self.request.user
 
-        # Common data for the landing page
         coaches = CoachProfile.objects.filter(user__is_active=True, is_available_for_new_clients=True).select_related('user')
         offerings = Offering.objects.filter(active_status=True).prefetch_related('coaches')
         workshops = Workshop.objects.filter(active_status=True)
         knowledge_pages = ContentPage.objects.filter(is_published=True).order_by('title')[:3]
         facts = Fact.objects.all()
-        KNOWLEDGE_CATEGORIES = [('all', 'Business Coaches')] # This seems like a placeholder, adjust as needed
+        KNOWLEDGE_CATEGORIES = [('all', 'Business Coaches')]
         cart = get_or_create_cart(self.request)
 
         context.update({
@@ -59,7 +51,6 @@ class CoachLandingView(TemplateView):
         })
             
         return context
-
 
 class OfferListView(ListView):
     model = Offering
@@ -83,13 +74,11 @@ class OfferEnrollmentStartView(LoginRequiredMixin, DetailView):
         context['summary'] = get_cart_summary_data(cart)
         return context
 
-# --- UPDATED BOOKING & MANAGEMENT VIEWS ---
-
 @login_required
 @require_POST
 def book_session(request):
     enrollment_id = request.POST.get('enrollment_id')
-    free_offer_id = request.POST.get('free_offer_id') # New: for free sessions
+    free_offer_id = request.POST.get('free_offer_id')
     coach_id = request.POST.get('coach_id')
     start_time_str = request.POST.get('start_time')
 
@@ -106,7 +95,8 @@ def book_session(request):
         return htmx_error("Booking requires either an enrollment or a free offer.")
 
     if enrollment_id and free_offer_id:
-        return htmx_error("Cannot book with both an enrollment and a free offer simultaneously.")
+        # If both are somehow present, prefer the one that matches the logic used (handled below)
+        pass 
 
     try:
         with transaction.atomic():
@@ -115,21 +105,18 @@ def book_session(request):
             session_length = 0
             
             if enrollment_id:
-                # LOCKING: select_for_update() prevents other requests from reading this 
-                # specific enrollment until this transaction finishes.
                 enrollment = get_object_or_404(
                     ClientOfferingEnrollment.objects.select_for_update(), 
                     id=enrollment_id, 
                     client=request.user
                 )
-                
-                # Now check sessions safely
                 if enrollment.remaining_sessions <= 0:
                     messages.error(request, "No sessions remaining for this enrollment.")
                     response = HttpResponse(status=400)
                     response['HX-Redirect'] = reverse('accounts:account_profile')
                     return response
                 session_length = enrollment.offering.session_length_minutes
+                
             elif free_offer_id:
                 free_offer = get_object_or_404(
                     OneSessionFreeOffer.objects.select_for_update(),
@@ -143,11 +130,7 @@ def book_session(request):
                 if free_offer.is_expired:
                     return htmx_error("This free offer has expired.")
                 
-                # For free offers, session length is typically fixed, e.g., 60 minutes
-                # Or it could be defined on the CoachProfile or a default setting
-                # For now, let's assume a default of 60 minutes for free sessions
-                session_length = 60 # Default for free sessions
-                # Ensure the coach selected matches the coach on the free offer
+                session_length = 60 
                 if int(coach_id) != free_offer.coach.id:
                     return htmx_error("The selected coach does not match the approved free offer.")
             
@@ -168,7 +151,6 @@ def book_session(request):
             if start_datetime_obj > now + timedelta(days=BOOKING_WINDOW_DAYS):
                 return htmx_error(f"Cannot book more than {BOOKING_WINDOW_DAYS} days in advance.")
 
-            # Availability check
             available_slots = get_coach_available_slots(
                 coach_profile,
                 start_datetime_obj.date(),
@@ -188,7 +170,7 @@ def book_session(request):
                 return htmx_error("That time slot is no longer available.")
 
             booking = SessionBooking.objects.create(
-                enrollment=enrollment, # Will be None if free_offer is used
+                enrollment=enrollment, 
                 coach=coach_profile,
                 client=request.user,
                 start_datetime=start_datetime_obj,
@@ -199,9 +181,7 @@ def book_session(request):
                 free_offer.is_redeemed = True
                 free_offer.save()
 
-            # --- Send Confirmation Emails ---
             try:
-                # 1. Send confirmation to the client
                 dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
                 client_context = {
                     'user': request.user,
@@ -216,7 +196,6 @@ def book_session(request):
                     context=client_context
                 )
 
-                # 2. Send notification to the coach
                 coach_context = {
                     'coach': coach_profile,
                     'client': request.user,
@@ -230,10 +209,8 @@ def book_session(request):
                     context=coach_context
                 )
             except Exception as e:
-                # Log the email error but do not fail the booking
                 print(f"CRITICAL: Booking succeeded but failed to send confirmation emails. Error: {e}")
         
-        # Success response...
         messages.success(request, f"Session confirmed for {start_datetime_obj.strftime('%B %d, %Y at %I:%M %p')}. A confirmation email has been sent.")
         response = HttpResponse(status=204)
         response['HX-Redirect'] = reverse('accounts:account_profile')
@@ -241,7 +218,6 @@ def book_session(request):
 
     except Exception as e:
         return htmx_error(f"An error occurred: {str(e)}")
-
 
 @login_required
 @require_POST
@@ -253,7 +229,6 @@ def cancel_session(request, booking_id):
     
     is_refunded = booking.cancel()
     
-    # Prepare email messages
     if is_refunded:
         client_msg = "Your session credit has been successfully restored to your account."
         messages.success(request, "Session canceled successfully. Your credit has been restored.")
@@ -261,11 +236,9 @@ def cancel_session(request, booking_id):
         client_msg = "Your session was canceled. Because this was within 24 hours of the start time, the session credit was forfeited per our Terms of Service."
         messages.warning(request, "Session canceled. The credit was forfeited due to late cancellation.")
 
-    # Send emails
     try:
         dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
         
-        # 1. Email to Client
         send_transactional_email(
             recipient_email=client.email,
             subject="Your Coaching Session Has Been Canceled",
@@ -278,7 +251,6 @@ def cancel_session(request, booking_id):
             }
         )
 
-        # 2. Email to Coach
         send_transactional_email(
             recipient_email=coach.user.email,
             subject=f"Session Canceled by {client.get_full_name()}",
@@ -293,15 +265,12 @@ def cancel_session(request, booking_id):
     except Exception as e:
         print(f"CRITICAL: Cancellation for booking {booking.id} succeeded but failed to send emails. Error: {e}")
 
-    # The view returns a partial HTML to be rendered by HTMX
     return render(request, 'accounts/profile_bookings.html', {'active_tab': 'canceled'})
-
 
 @login_required
 def reschedule_session_form(request, booking_id):
     booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
     return render(request, 'accounts/partials/reschedule_form.html', {'booking': booking})
-
 
 @login_required
 @require_POST
@@ -339,11 +308,9 @@ def reschedule_session(request, booking_id):
                 else:
                     messages.success(request, f"Session successfully rescheduled to {new_start_time.strftime('%B %d, %H:%M')}.")
                     
-                    # --- Send Reschedule Emails ---
                     try:
                         dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
                         
-                        # 1. Email to Client
                         send_transactional_email(
                             recipient_email=booking.client.email,
                             subject="Your Coaching Session Has Been Rescheduled",
@@ -356,7 +323,6 @@ def reschedule_session(request, booking_id):
                             }
                         )
 
-                        # 2. Email to Coach
                         send_transactional_email(
                             recipient_email=booking.coach.user.email,
                             subject=f"Session Rescheduled by {booking.client.get_full_name()}",
@@ -377,16 +343,13 @@ def reschedule_session(request, booking_id):
         except Exception as e:
             messages.error(request, f"An error occurred: {e}")
 
-    # Fixed: Pass 'active_tab' context
     return render(request, 'accounts/profile_bookings.html', {'active_tab': 'upcoming'})
-
 
 @login_required
 @require_POST
 def apply_for_free_session(request):
     client = request.user
     
-    # FIX: Check database fields instead of properties
     active_requests = OneSessionFreeOffer.objects.filter(
         client=client, 
         is_redeemed=False
@@ -394,24 +357,18 @@ def apply_for_free_session(request):
         Q(redemption_deadline__isnull=True) | Q(redemption_deadline__gt=timezone.now())
     )
 
-    # Exclude rejected ones if that is your logic, typically you only care 
-    # if they have an 'active' one pending or approved.
-    # If you have an 'is_approved=False' that usually implies pending.
-    
     if active_requests.exists():
         return render(request, 'coaching_booking/partials/free_session_status.html', {
             'status': 'pending',
             'message': 'You already have a pending or active request.'
         })
 
-    # Create the new request
     coach_id = request.POST.get('coach_id')
     coach_instance = get_object_or_404(CoachProfile, id=coach_id)
 
-    # Create the new request
     OneSessionFreeOffer.objects.create(
         client=client,
-        coach=coach_instance, # <--- Add this line
+        coach=coach_instance,
         is_approved=False, 
         is_redeemed=False
     )
@@ -420,7 +377,6 @@ def apply_for_free_session(request):
         'status': 'success', 
         'message': 'Request submitted! A coach will review it shortly.'
     })
-
 
 @login_required
 def profile_book_session_partial(request):
@@ -431,7 +387,6 @@ def profile_book_session_partial(request):
         expiration_date__gte=timezone.now()
     ).select_related('offering')
 
-    # Fetch approved, non-redeemed, non-expired free offers for the client
     free_offers = OneSessionFreeOffer.objects.filter(
         client=request.user,
         is_approved=True,
@@ -448,16 +403,15 @@ def profile_book_session_partial(request):
 
     context = {
         'user_offerings': user_offerings,
-        'free_offers': free_offers, # Add free offers to context
+        'free_offers': free_offers,
         'coaches': coaches,
         'initial_year': today.year,
         'initial_month': today.month,
         'selected_enrollment_id': '', 
         'selected_coach_id': '',      
-        'selected_free_offer_id': '', # Add for initial selection
+        'selected_free_offer_id': '',
     }
     return render(request, 'coaching_booking/profile_book_session.html', context)
-
 
 @login_required
 @require_POST
@@ -489,7 +443,6 @@ def coach_approve_free_session(request):
         free_offer.is_approved = True
         free_offer.save()
 
-        # Send notification to the client
         client_context = {
             'client': free_offer.client,
             'coach': coach_profile,
@@ -499,7 +452,7 @@ def coach_approve_free_session(request):
         send_transactional_email(
             recipient_email=free_offer.client.email,
             subject=f"Your Free Session with {coach_profile.user.get_full_name()} is Approved!",
-            template_name='emails/client_free_session_approved.html', # Need to create this template
+            template_name='emails/client_free_session_approved.html',
             context=client_context
         )
         
@@ -534,13 +487,10 @@ def coach_deny_free_session(request):
         messages.error(request, "You cannot manage this request.")
         return HttpResponse(status=403)
 
-    # We delete the request on denial so the user can apply again (potentially with a different coach)
-    # Alternatively, you could add a 'status' field to the model if you want to keep a record of denials.
     free_offer.delete()
 
     messages.info(request, "Taster session request denied.")
     
-    # Return 200 with HX-Trigger to refresh the list
     response = HttpResponse(status=200)
     response['HX-Trigger'] = 'refreshProfile' 
     return response
@@ -550,11 +500,12 @@ def get_booking_calendar(request):
     coach_id = request.GET.get('coach_id')
     enrollment_id = request.GET.get('enrollment_id')
 
+    # Allow if either valid enrollment_id exists or it's a "free_X" string
     if not coach_id or not enrollment_id:
         return HttpResponse(
-            '&lt;div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center h-full flex flex-col justify-center items-center"&gt;'
-            '&lt;p class="text-gray-500 font-medium"&gt;Select an Offering and a Coach to view availability.&lt;/p&gt;'
-            '&lt;/div&gt;'
+            '<div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center h-full flex flex-col justify-center items-center">'
+            '<p class="text-gray-500 font-medium">Select an Offering and a Coach to view availability.</p>'
+            '</div>'
         )
 
     try:
@@ -593,26 +544,26 @@ def get_booking_calendar(request):
         'today': today,
         'max_date': max_date,
         'coach_id': coach_id,
-        'enrollment_id': enrollment_id,
+        'enrollment_id': enrollment_id, # Can be "free_X" or normal ID
     }
     return render(request, 'coaching_booking/partials/_calendar_widget.html', context)
-
 
 @login_required
 def get_daily_slots(request):
     date_str = request.GET.get('date')
     coach_id = request.GET.get('coach_id')
-    enrollment_id = request.GET.get('enrollment_id')
+    enrollment_id_param = request.GET.get('enrollment_id')
 
     context = {
         'coach_id': coach_id,
-        'enrollment_id': enrollment_id,
+        'enrollment_id': '', # Default empty
+        'free_offer_id': '', # Default empty
         'selected_date': None,
         'available_slots': [],
         'error_message': None
     }
 
-    if not all([date_str, coach_id, enrollment_id]):
+    if not all([date_str, coach_id, enrollment_id_param]):
         context['error_message'] = 'Please select an offering and a coach first.'
         return render(request, 'coaching_booking/partials/available_slots.html', context)
 
@@ -631,8 +582,25 @@ def get_daily_slots(request):
             return render(request, 'coaching_booking/partials/available_slots.html', context)
 
         coach_profile = CoachProfile.objects.get(id=coach_id)
-        enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id, client=request.user)
-        session_length = enrollment.offering.session_length_minutes
+        
+        # Handle "free_X" vs normal enrollment ID
+        if str(enrollment_id_param).startswith('free_'):
+            free_id = str(enrollment_id_param).split('_')[1]
+            free_offer = OneSessionFreeOffer.objects.get(id=free_id, client=request.user)
+            
+            # Check for Coach Mismatch
+            if int(coach_id) != free_offer.coach.id:
+                 context['error_message'] = "The selected coach does not match the approved free offer."
+                 return render(request, 'coaching_booking/partials/available_slots.html', context)
+
+            session_length = 60 # Default for Taster Sessions
+            context['free_offer_id'] = free_id
+            context['enrollment_id'] = ''
+        else:
+            enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id_param, client=request.user)
+            session_length = enrollment.offering.session_length_minutes
+            context['enrollment_id'] = enrollment_id_param
+            context['free_offer_id'] = ''
         
         available_slots = get_coach_available_slots(
             coach_profile,
@@ -653,8 +621,8 @@ def get_daily_slots(request):
 
         context['available_slots'] = formatted_slots
 
-    except (ValueError, CoachProfile.DoesNotExist, ClientOfferingEnrollment.DoesNotExist):
-        context['error_message'] = 'Invalid request data.'
+    except (ValueError, CoachProfile.DoesNotExist, ClientOfferingEnrollment.DoesNotExist, OneSessionFreeOffer.DoesNotExist):
+        context['error_message'] = 'Invalid request data or enrollment not found.'
     except Exception as e:
         context['error_message'] = f'Error fetching slots: {str(e)}'
 

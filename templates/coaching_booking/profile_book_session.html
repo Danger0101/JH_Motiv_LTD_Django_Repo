@@ -8,13 +8,27 @@
             <select id="enrollment_id" name="enrollment_id"
                     class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
                 <option value="">-- Select an Offering --</option>
-                {% for enrollment in user_offerings %}
-                    {% if enrollment.remaining_sessions > 0 and enrollment.is_active and not enrollment.is_expired %}
-                        <option value="{{ enrollment.id }}" {% if selected_enrollment_id == enrollment.id|stringformat:"s" %}selected{% endif %}>
-                            {{ enrollment.offering.name }} ({{ enrollment.remaining_sessions }} sessions remaining)
+                {% if user_offerings %}
+                    <optgroup label="Paid Enrollments">
+                    {% for enrollment in user_offerings %}
+                        {% if enrollment.remaining_sessions > 0 and enrollment.is_active and not enrollment.is_expired %}
+                            <option value="{{ enrollment.id }}" {% if selected_enrollment_id == enrollment.id|stringformat:"s" %}selected{% endif %}>
+                                {{ enrollment.offering.name }} ({{ enrollment.remaining_sessions }} sessions remaining)
+                            </option>
+                        {% endif %}
+                    {% endfor %}
+                    </optgroup>
+                {% endif %}
+
+                {% if free_offers %}
+                    <optgroup label="Free Taster Sessions">
+                    {% for offer in free_offers %}
+                        <option value="free_{{ offer.id }}" {% if selected_free_offer_id == offer.id|stringformat:"s" %}selected{% endif %}>
+                            Free Taster Session with {{ offer.coach.user.get_full_name }}
                         </option>
-                    {% endif %}
-                {% endfor %}
+                    {% endfor %}
+                    </optgroup>
+                {% endif %}
             </select>
         </div>
 
@@ -33,8 +47,6 @@
             </select>
         </div>
 
-        {# Changed ID to 'calendar-wrapper' to avoid conflict with the inner widget's ID #}
-        {# Added hx-include to send the dropdown values #}
         <div class="flex flex-col md:flex-row gap-6 mt-6">
             <div id="calendar-wrapper" class="md:w-2/3"
                  hx-trigger="change from:#enrollment_id, change from:#coach_id"

@@ -16,7 +16,8 @@
                 <div class="p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors">
                     <form hx-post="{% url 'coaching_booking:book_session' %}" hx-target="body">
                         {% csrf_token %}
-                        <input type="hidden" name="enrollment_id" value="{{ enrollment_id }}">
+                        <input type="hidden" name="enrollment_id" value="{{ enrollment_id|default:'' }}">
+                        <input type="hidden" name="free_offer_id" value="{{ free_offer_id|default:'' }}">
                         <input type="hidden" name="coach_id" value="{{ coach_id }}">
                         <input type="hidden" name="start_time" value="{{ slot.start_time|date:'Y-m-d H:i' }}">
                         
@@ -26,7 +27,7 @@
                             </div>
                             <button type="submit"
                                     class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all"
-                                    hx-confirm="Confirm booking for {{ slot.start_time|date:'F j, Y \\a\\t h:i A' }}?">
+                                    hx-confirm="Confirm booking for {{ slot.start_time|date:'F j, Y \a\t h:i A' }}?">
                                 Book Now
                             </button>
                         </div>
@@ -36,7 +37,7 @@
         </div>
     {% else %}
         <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative" role="alert">
-            <strong class="font-bold"&gt;Heads up!</strong>
+            <strong class="font-bold">Heads up!</strong>
             <span class="block sm:inline">No available slots found for this date.</span>
         </div>
     {% endif %}
