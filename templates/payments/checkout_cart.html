@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+
+{% block title %}Cart Checkout{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-10">
+    <h1 class="text-3xl font-bold text-gray-800 mb-8 text-center">Secure Checkout</h1>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-semibold mb-4">Shipping Address</h2>
+            <form id="shipping-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Full Name</label>
+                    <input type="text" name="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Address Line 1</label>
+                    <input type="text" name="address1" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">City</label>
+                        <input type="text" name="city" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">State/Region</label>
+                        <input type="text" name="state_code" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Postal Code</label>
+                        <input type="text" name="zip" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Country Code (e.g. GB, US)</label>
+                        <input type="text" name="country_code" required maxlength="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                </div>
+                <button type="button" id="calc-shipping-btn" class="mt-4 w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded">
+                    Calculate Shipping
+                </button>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-lg p-6 h-fit">
+            <h2 class="text-xl font-semibold mb-4">Order Summary</h2>
+            <div class="space-y-2 border-b pb-4 mb-4">
+                {% for item in cart.items.all %}
+                <div class="flex justify-between">
+                    <span>{{ item.quantity }}x {{ item.variant.product.name }}</span>
+                    <span>£{{ item.get_total_price }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="flex justify-between text-gray-600">
+                <span>Subtotal:</span>
+                <span>£{{ summary.subtotal }}</span>
+            </div>
+            <div class="flex justify-between text-gray-600">
+                <span>Shipping:</span>
+                <span id="shipping-cost-display">--</span>
+            </div>
+            <div class="flex justify-between text-xl font-bold mt-4 pt-4 border-t">
+                <span>Total:</span>
+                <span id="total-display">£{{ summary.subtotal }}</span>
+            </div>
+
+            <button id="checkout-button" disabled class="mt-6 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-full transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                Proceed to Payment
+            </button>
+            <p id="error-message" class="text-red-500 text-sm mt-2 hidden"></p>
+        </div>
+    </div>
+</div>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+    const stripe = Stripe('{{ STRIPE_PUBLISHABLE_KEY }}'); // Ensure this is in context
+    const calcBtn = document.getElementById('calc-shipping-btn');
+    const checkoutBtn = document.getElementById('checkout-button');
+    let currentShippingCost = 0;
+
+    calcBtn.addEventListener('click', async () => {
+        const formData = new FormData(document.getElementById('shipping-form'));
+        const address = Object.fromEntries(formData);
+        
+        // Basic validation
+        if(!address.address1 || !address.city || !address.country_code || !address.zip) {
+            alert("Please fill in all address fields.");
+            return;
+        }
+
+        checkoutBtn.disabled = true;
+        calcBtn.innerText = "Calculating...";
+
+        try {
+            const response = await fetch("{% url 'payments:calculate_shipping' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({ address: address })
+            });
+
+            const data = await response.json();
+            
+            if (response.ok) {
+                currentShippingCost = parseFloat(data.shipping_cost);
+                document.getElementById('shipping-cost-display').innerText = `£${currentShippingCost.toFixed(2)}`;
+                
+                // Update Total
+                const subtotal = {{ summary.subtotal }}; // Assuming passed as float/decimal
+                const total = subtotal + currentShippingCost;
+                document.getElementById('total-display').innerText = `£${total.toFixed(2)}`;
+                
+                checkoutBtn.disabled = false;
+                calcBtn.innerText = "Update Shipping";
+            } else {
+                alert("Error calculating shipping: " + data.error);
+                calcBtn.innerText = "Calculate Shipping";
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Network error.");
+            calcBtn.innerText = "Calculate Shipping";
+        }
+    });
+
+    checkoutBtn.addEventListener('click', async () => {
+        const formData = new FormData(document.getElementById('shipping-form'));
+        const address = Object.fromEntries(formData);
+
+        // Call the view to create Session, PASSING address
+        const response = await fetch("{% url 'payments:create_checkout_session' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify({ address: address }) 
+        });
+
+        const session = await response.json();
+        
+        if (session.clientSecret) {
+            const checkout = await stripe.initEmbeddedCheckout({
+                clientSecret: session.clientSecret,
+            });
+            checkout.mount('#checkout-button'); // Or mount to a modal div
+            // Alternatively, for redirection mode:
+            // window.location.href = session.url; 
+        } else {
+            alert(session.error);
+        }
+    });
+</script>
+{% endblock %}
