@@ -15,7 +15,7 @@ from cart.models import Cart
 from coaching_booking.models import ClientOfferingEnrollment 
 from coaching_core.models import Offering
 from accounts.models import CoachProfile
-from .models import Order, OrderItem
+from .models import Order, OrderItem, CoachingOrder
 from products.models import Product, Variant
 from products.printful_service import PrintfulService
 from django.utils import timezone
@@ -252,6 +252,14 @@ def stripe_webhook(request):
                     purchase_date=timezone.now(), # Use current time for purchase
                     expiration_date=expiration_date # Assign calculated expiry date
                 )
+
+                # --- FIX START: Create the CoachingOrder ---
+                CoachingOrder.objects.create(
+                    enrollment=enrollment,
+                    total_paid=session.amount_total / 100, # Convert cents to main currency unit
+                )
+                print(f"SUCCESS: Coaching Order created for enrollment {enrollment.id}")
+                # --- FIX END ---
                 
                 # 4. Send Welcome Email
                 try:
