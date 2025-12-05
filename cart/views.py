@@ -4,6 +4,8 @@ from django.template.loader import render_to_string
 from django.http import HttpResponse, HttpResponseRedirect
 from django.views.decorators.http import require_POST
 from django.urls import reverse
+from django.conf import settings  # Imported settings
+
 from .utils import get_or_create_cart, get_cart_summary_data
 from .models import CartItem
 from products.models import Variant
@@ -67,9 +69,18 @@ def update_cart_item(request, item_id):
     return response
 
 def cart_detail(request):
+    """
+    Unified One-Step Cart & Checkout View.
+    """
     cart = get_or_create_cart(request)
     summary_data = get_cart_summary_data(cart)
-    return render(request, 'cart/detail.html', {'cart': cart, 'summary': summary_data})
+    
+    context = {
+        'cart': cart,
+        'summary': summary_data,
+        'STRIPE_PUBLISHABLE_KEY': settings.STRIPE_PUBLISHABLE_KEY  # Pass key for embedded checkout
+    }
+    return render(request, 'cart/detail.html', context)
 
 # NEW VIEW: Renders the summary panel content for HTMX reloading
 def cart_summary_panel(request):
