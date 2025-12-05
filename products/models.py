@@ -97,11 +97,19 @@ class Variant(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    # --- Variant Option Fields (as requested) ---
+    # Variant Option Fields (as requested) ---
     size = models.CharField(max_length=20, blank=True)
     color = models.CharField(max_length=50, blank=True)
+
+    # --- NEW: Weight for Self-Fulfilled Shipping ---
+    weight = models.DecimalField(
+        max_digits=8, 
+        decimal_places=2, 
+        default=0.00, 
+        help_text="Weight in grams (g). Required for self-fulfilled shipping calculation."
+    )
     
-    def get_image_url(self):
+    def get_image_url():
         """Returns the URL of the product's featured image for cart display."""
         if self.product.featured_image:
             return self.product.featured_image.url

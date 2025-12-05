@@ -19,6 +19,8 @@ from .models import Order, OrderItem, CoachingOrder
 from products.models import Product, Variant
 from products.printful_service import PrintfulService
 from django.utils import timezone
+from .shipping_utils import calculate_cart_shipping
+import json
 
 # Custom imports for email sending
 from core.email_utils import send_transactional_email
@@ -29,12 +31,27 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 def create_checkout_session(request):
     """
-    Creates a Stripe Checkout session for an embedded UI based on the user's current cart.
-    FIX: The 'return_url' no longer contains the literal session ID placeholder.
+    Creates a Stripe Checkout session. 
+    NOW SUPPORTS: Pre-calculated shipping.
     """
     cart = get_or_create_cart(request)
     if not cart.items.exists():
         return redirect('cart:cart_detail')
+
+    # Parse request body for address data if provided (from JS)
+    shipping_amount = 0
+    address_data = {}
+    
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+            address_data = body.get('address', {})
+            
+            # Calculate dynamic shipping if address is present
+            if address_data:
+                shipping_amount = calculate_cart_shipping(cart, address_data)
+        except json.JSONDecodeError:
+            pass
 
     line_items = []
     for item in cart.items.all():
@@ -44,35 +61,78 @@ def create_checkout_session(request):
                 'product_data': {
                     'name': item.variant.product.name,
                     'description': item.variant.name,
+                    'images': [request.build_absolute_uri(item.variant.get_image_url())],
                 },
                 'unit_amount': int(item.variant.price * 100),
             },
             'quantity': item.quantity,
         })
 
-    try:
-        checkout_session = stripe.checkout.Session.create(
-            ui_mode='embedded',
-            payment_method_types=['card'],
-            line_items=line_items,
-            mode='payment',
-            # --- FIX APPLIED ---
-            # Stripe will automatically append ?session_id={CHECKOUT_SESSION_ID}
-            return_url=request.build_absolute_uri(reverse('payments:payment_success')),
-            # --- END FIX ---
-            shipping_address_collection={
-                'allowed_countries': ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'ES', 'IT', 'NL'],
+    # Add Shipping Line Item if applicable
+    if shipping_amount > 0:
+        line_items.append({
+            'price_data': {
+                'currency': 'gbp',
+                'product_data': {
+                    'name': 'Shipping & Handling',
+                    'description': 'Standard Shipping',
+                },
+                'unit_amount': int(shipping_amount * 100),
             },
-            metadata={
+            'quantity': 1,
+        })
+
+    try:
+        # Determine if we need Stripe to collect address or if we already have it
+        # If we have calculated shipping, we usually don't want the user to change the country in Stripe 
+        # as that would invalidate our calculation.
+        
+        session_params = {
+            'ui_mode': 'embedded',
+            'payment_method_types': ['card'],
+            'line_items': line_items,
+            'mode': 'payment',
+            'return_url': request.build_absolute_uri(reverse('payments:payment_success')) + '?session_id={CHECKOUT_SESSION_ID}',
+            'metadata': {
                 'product_type': 'ecommerce_cart',
                 'cart_id': cart.id,
                 'user_id': request.user.id if request.user.is_authenticated else None,
+                # Store the address used for calculation in metadata for the webhook to use
+                'shipping_address_json': json.dumps(address_data) if address_data else ''
             }
-        )
-        return JsonResponse({'clientSecret': checkout_session.client_secret})
+        }
+
+        # If we didn't calculate shipping (e.g. digital only), we might still want address for billing
+        # But if we did calculate it, we assume the address is "locked" or passed as pre-fill
+        # Stripe Embedded doesn't support 'pre-fill' address strictly in the same way as Hosted, 
+        # but we can pass 'customer_details' if we have them.
+        
+        if not address_data:
+             session_params['shipping_address_collection'] = {
+                'allowed_countries': ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'ES', 'IT', 'NL'],
+            }
+
+        checkout_session = stripe.checkout.Session.create(**session_params)
+        return JsonResponse({'clientSecret': checkout_session.client_client_secret})
     except Exception as e:
         print(f"Error creating Stripe checkout session: {e}")
         return JsonResponse({'error': str(e)}, status=500)
+
+
+# NEW VIEW for calculating shipping via AJAX/HTMX
+@csrf_exempt
+def calculate_shipping_api(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            address = data.get('address')
+            cart = get_or_create_cart(request)
+            
+            cost = calculate_cart_shipping(cart, address)
+            return JsonResponse({'shipping_cost': float(cost)})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    return JsonResponse({'error': 'POST required'}, status=405)
 
 def payment_success(request):
     """

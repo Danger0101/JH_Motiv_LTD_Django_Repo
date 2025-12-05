@@ -77,6 +77,35 @@ class PrintfulService:
             logger.exception(f"Exception fetching variants for {product_id}: {e}")
             return []
     
+    def calculate_shipping_rates(self, recipient, items):
+        """
+        Calculates shipping rates for a list of items to a specific recipient.
+        
+        Args:
+            recipient (dict): { 'address1': ..., 'city': ..., 'country_code': ..., 'zip': ... }
+            items (list): [{ 'variant_id': 123, 'quantity': 1 }, ...]
+        """
+        url = f"{self.BASE_URL}/shipping/rates"
+        payload = {
+            "recipient": recipient,
+            "items": items
+        }
+        
+        try:
+            response = requests.post(url, json=payload, headers=self.headers)
+            if response.status_code == 200:
+                result = response.json().get('result', [])
+                # Return the cheapest or 'STANDARD' rate
+                # Printful returns a list of available rates (Standard, Express, etc.)
+                # We default to the first one (usually cheapest) or look for 'STANDARD'
+                return result
+            else:
+                logger.error(f"Printful Shipping Calc Error: {response.status_code} - {response.text}")
+                return []
+        except Exception as e:
+            logger.exception(f"Exception calculating shipping: {e}")
+            return []
+    
     def create_order(self, recipient, items):
         """
         Creates an order in Printful.

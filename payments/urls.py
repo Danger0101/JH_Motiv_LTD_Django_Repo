@@ -12,6 +12,7 @@ urlpatterns = [
     path('guest-order/<uuid:guest_order_token>/', views.order_detail_guest, name='order_detail_guest'),
     
     path('order/<int:order_id>/', views.order_detail, name='order_detail'),
+    path('api/calculate-shipping/', views.calculate_shipping_api, name='calc_shipping'),
     
     # Corrected URL for creating a coaching checkout session
     path('create-coaching-checkout-session/<int:offering_id>/', views.create_coaching_checkout_session_view, name='create_coaching_checkout_session'),
