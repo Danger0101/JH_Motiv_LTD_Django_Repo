@@ -1,22 +1,19 @@
 import requests
 import os
+import json
 
 # --- CONFIGURATION ---
-# 1. Ensure your API Key is set here or in your environment
-API_KEY = os.getenv('PRINTFUL_API_KEY', 'YOUR_PRINTFUL_API_KEY_HERE_IF_NOT_IN_ENV')
+# We use the env variable for the API key so you don't have to paste it
+API_KEY = os.environ.get('PRINTFUL_API_KEY')
 
-# 2. Your Production URL (Heroku or custom domain)
-# MUST BE HTTPS
-WEBHOOK_URL = os.getenv('PRINTFUL_PUBLIC_WEBHOOK_URL', "https://jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com/products/webhook/printful/")
-
-# Ensure WEBHOOK_URL is set
-if not WEBHOOK_URL or WEBHOOK_URL == 'YOUR_PRINTFUL_PUBLIC_WEBHOOK_URL_HERE':
-    print("CRITICAL: WEBHOOK_URL is not set. Please set the PRINTFUL_PUBLIC_WEBHOOK_URL environment variable.")
-    exit(1)
-
-# ---------------------
+# IMPORTANT: Ensure this matches your ACTUAL Heroku URL
+WEBHOOK_URL = "https://jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com/products/webhook/printful/"
 
 def setup_printful_webhook():
+    if not API_KEY:
+        print("❌ Error: PRINTFUL_API_KEY environment variable is not set.")
+        return
+
     print(f"Setting up webhook at: {WEBHOOK_URL}")
     
     headers = {
@@ -24,11 +21,7 @@ def setup_printful_webhook():
         "Content-Type": "application/json"
     }
 
-    # 1. Check existing webhooks (optional cleanup)
-    # response = requests.get("https://api.printful.com/webhooks", headers=headers)
-    # print("Current Webhooks:", response.json())
-
-    # 2. Set the Webhook
+    # Set the Webhook
     payload = {
         "url": WEBHOOK_URL,
         "types": [
@@ -38,18 +31,26 @@ def setup_printful_webhook():
         ]
     }
 
-    response = requests.post("https://api.printful.com/webhooks", json=payload, headers=headers)
+    try:
+        response = requests.post("https://api.printful.com/webhooks", json=payload, headers=headers)
 
-    if response.status_code == 200:
-        data = response.json()
-        print("\n✅ SUCCESS! Webhook configured.")
-        print("---------------------------------------------------")
-        print(f"Secret Key: {data['result']['secret_key']}")
-        print("---------------------------------------------------")
-        print("ACTION REQUIRED: Copy the 'Secret Key' above and add it to your Heroku Config Vars as 'PRINTFUL_WEBHOOK_SECRET'.")
-    else:
-        print(f"\n❌ FAILED. Status: {response.status_code}")
-        print(response.text)
+        if response.status_code == 200:
+            data = response.json()
+            print(f"Full Printful API Response: {json.dumps(data, indent=2)}")
+            print("\n✅ SUCCESS! Webhook configured.")
+            print("---------------------------------------------------")
+            secret_key = data.get('result', {}).get('secret_key')
+            if secret_key:
+                print(f"Secret Key: {secret_key}")
+            else:
+                print("Secret Key not found in Printful response. Please inspect the 'Full Printful API Response' above.")
+            print("---------------------------------------------------")
+            print("ACTION REQUIRED: Copy the 'Secret Key' above and add it to your Heroku Config Vars as 'PRINTFUL_WEBHOOK_SECRET'.")
+        else:
+            print(f"\n❌ FAILED. Status: {response.status_code}")
+            print(response.text)
+    except Exception as e:
+        print(f"Error: {e}")
 
 if __name__ == "__main__":
     setup_printful_webhook()

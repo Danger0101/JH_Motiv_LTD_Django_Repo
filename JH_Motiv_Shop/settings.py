@@ -252,9 +252,11 @@ FIELD_ENCRYPTION_KEY = os.getenv('FIELD_ENCRYPTION_KEY')
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET') # For verifying webhook signatures
+# Printful API & Webhooks
 PRINTFUL_API_KEY = os.environ.get('PRINTFUL_API_KEY')
 PRINTFUL_STORE_ID = os.environ.get('PRINTFUL_STORE_ID')
 PRINTFUL_AUTO_FULFILLMENT = False  # Set to True for auto-processing
+# Add this line for webhook security verification
 PRINTFUL_WEBHOOK_SECRET = os.environ.get('PRINTFUL_WEBHOOK_SECRET')
 
 
