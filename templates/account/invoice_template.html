@@ -109,10 +109,10 @@
             </div>
             <div class="col right">
                 {% if order %}
-                    <h2>Invoice #{{ order.order_number }}</h2>
+                    <h2>Invoice #{{ order.id }}</h2>
                     <p>Date: {{ order.created_at|date:"d M Y" }}</p>
                 {% elif coaching_order %}
-                    <h2>Invoice #{{ coaching_order.order_number }}</h2>
+                    <h2>Invoice #{{ coaching_order.id }}</h2>
                     <p>Date: {{ coaching_order.created_at|date:"d M Y" }}</p>
                 {% endif %}
             </div>
@@ -123,26 +123,26 @@
                 <tr>
                     <th>Description</th>
                     <th>Quantity</th>
-                    <th>Unit Price (excl. VAT)</th>
-                    <th>Total (excl. VAT)</th>
+                    <th>Unit Price</th>
+                    <th>Total</th>
                 </tr>
             </thead>
             <tbody>
                 {% if order %}
-                    {% for item in order.lineitems.all %}
+                    {% for item in order.items.all %}
                     <tr>
                         <td>{{ item.variant.product.name }} ({{ item.variant.name }})</td>
                         <td>{{ item.quantity }}</td>
                         <td>£{{ item.price|floatformat:2 }}</td>
-                        <td>£{{ item.lineitem_total|floatformat:2 }}</td>
+                        <td>£{{ item.line_total|floatformat:2 }}</td>
                     </tr>
                     {% endfor %}
                 {% elif coaching_order %}
                     <tr>
                         <td>{{ coaching_order.enrollment.offering.name }}</td>
                         <td>1</td>
-                        <td>£{{ coaching_order.amount|floatformat:2 }}</td>
-                        <td>£{{ coaching_order.amount|floatformat:2 }}</td>
+                        <td>£{{ coaching_order.total_paid|floatformat:2 }}</td>
+                        <td>£{{ coaching_order.total_paid|floatformat:2 }}</td>
                     </tr>
                 {% endif %}
             </tbody>
@@ -161,11 +161,11 @@
                     </tr>
                     <tr>
                         <td>Total before VAT</td>
-                        <td>£{{ order.subtotal_plus_delivery|floatformat:2 }}</td>
+                        <td>£{{ order.total_before_vat|floatformat:2 }}</td>
                     </tr>
                      <tr>
                         <td>VAT (0%)</td>
-                        <td>£0.00</td>
+                        <td>£{{ order.vat_amount|floatformat:2 }}</td>
                     </tr>
                     <tr class="grand-total">
                         <td>Grand Total</td>
@@ -174,15 +174,15 @@
                 {% elif coaching_order %}
                     <tr>
                         <td>Total before VAT</td>
-                        <td>£{{ coaching_order.amount|floatformat:2 }}</td>
+                        <td>£{{ coaching_order.total_before_vat|floatformat:2 }}</td>
                     </tr>
                      <tr>
                         <td>VAT (0%)</td>
-                        <td>£0.00</td>
+                        <td>£{{ coaching_order.vat_amount|floatformat:2 }}</td>
                     </tr>
                     <tr class="grand-total">
                         <td>Grand Total</td>
-                        <td>£{{ coaching_order.amount|floatformat:2 }}</td>
+                        <td>£{{ coaching_order.grand_total|floatformat:2 }}</td>
                     </tr>
                 {% endif %}
             </table>

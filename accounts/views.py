@@ -27,6 +27,7 @@ from collections import defaultdict
 from django.views import View
 from django.contrib.auth import get_user_model
 from datetime import timedelta, date, datetime
+from decimal import Decimal
 
 try:
     from weasyprint import HTML
@@ -45,10 +46,11 @@ except ImportError:
     StockItem = None
 
 try:
-    from payments.models import Order, CoachingOrder
+    from payments.models import Order, CoachingOrder, OrderItem
 except ImportError:
     Order = None
     CoachingOrder = None
+    OrderItem = None
 # ------------------------
 
 from coaching_availability.utils import get_coach_available_slots 
@@ -357,35 +359,54 @@ def generate_invoice_pdf(request, order_id):
     coaching_order = None
     order_type = ''
 
-    # The logic to find the order needs to be robust, as the ID could belong to
-    # either an e-commerce Order or a CoachingOrder. We also need to ensure
-    # the models were imported successfully.
-
     if Order:
         try:
-            # Check for E-commerce order first
-            possible_order = Order.objects.select_related('user').get(id=order_id)
+            possible_order = Order.objects.select_related('user').prefetch_related('items__variant__product').get(id=order_id)
             if possible_order.user == request.user or request.user.is_staff:
                 order = possible_order
                 order_type = 'E-commerce'
         except Order.DoesNotExist:
-            pass  # Not an e-commerce order, or ID doesn't exist.
+            pass
 
     if not order and CoachingOrder:
         try:
-            # If not found, check for Coaching order
-            possible_coaching_order = CoachingOrder.objects.select_related('enrollment__client').get(id=order_id)
+            possible_coaching_order = CoachingOrder.objects.select_related('enrollment__client', 'enrollment__offering').get(id=order_id)
             if possible_coaching_order.enrollment.client == request.user or request.user.is_staff:
                 coaching_order = possible_coaching_order
                 order_type = 'Coaching'
         except CoachingOrder.DoesNotExist:
-            pass # Not a coaching order either.
+            pass
 
-    # If neither order was found and assigned, the user is not authorized or the order doesn't exist.
     if not order and not coaching_order:
         messages.error(request, "Invoice not found or you do not have permission to view it.")
-        # Redirecting to profile is a safe bet.
         return HttpResponse("Order not found or unauthorized", status=404)
+
+    # --- Calculate totals for the invoice ---
+    if order:
+        try:
+            order_items = order.items.all()
+            for item in order_items:
+                item.line_total = item.price * item.quantity
+
+            subtotal = sum(item.line_total for item in order_items)
+            grand_total = order.total_paid
+            delivery_cost = grand_total - subtotal
+
+            order.subtotal = subtotal
+            order.delivery_cost = delivery_cost
+            order.grand_total = grand_total
+            order.total_before_vat = subtotal + delivery_cost
+            order.vat_amount = Decimal('0.00')
+
+        except Exception as e:
+            messages.error(request, f"Could not calculate all order totals: {e}")
+            return HttpResponse("Error generating invoice data.", status=500)
+
+    elif coaching_order:
+        coaching_order.total_before_vat = coaching_order.total_paid
+        coaching_order.vat_amount = Decimal('0.00')
+        coaching_order.grand_total = coaching_order.total_paid
+
 
     # Prepare context for the template
     context = {
@@ -403,7 +424,6 @@ def generate_invoice_pdf(request, order_id):
         return HttpResponse("PDF generation service is unavailable.", status=500)
 
     # Generate PDF
-    # The base_url is crucial for resolving relative paths to static files (like CSS) in the template.
     html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
     pdf = html.write_pdf()
 
