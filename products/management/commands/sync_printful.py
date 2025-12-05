@@ -14,7 +14,7 @@ class Command(BaseCommand):
         # 1. Fetch Products
         printful_products = service.get_store_products()
         if not printful_products:
-            self.stdout.write(self.style.WARNING("No products found or API error."))
+            self.stdout.write(self.style.WARNING("No products found or API error. (See console above for details)"))
             return
 
         for p_data in printful_products:
@@ -45,29 +45,31 @@ class Command(BaseCommand):
                 variants = service.get_product_variants(p_data['id'])
                 
                 for v_data in variants:
-                    # Parse logic to extract Size and Color from name
-                    # Printful names vary, e.g., "Product - Color / Size" or "Product / Size"
                     variant_name = v_data.get('name', '')
                     product_name = p_data.get('name', '')
                     
                     color = "Default"
                     size = "One Size"
-
-                    # Strategy 1: "Product - Color / Size" (Hyphen Separator)
+                    
+                    # --- PARSING STRATEGY 1: Standard Printful ("Product - Color / Size") ---
                     if ' - ' in variant_name:
                         parts = variant_name.split(' - ')
-                        details = parts[-1] # e.g. "Black / L" or "11oz"
+                        details = parts[-1] 
                         if '/' in details:
                             detail_parts = details.split('/')
                             color = detail_parts[0].strip()
                             size = detail_parts[1].strip()
                         else:
                             size = details.strip()
-                    
-                    # Strategy 2: "Product / Size" (No Hyphen, just appended options)
+
+                    # --- PARSING STRATEGY 2: WooCommerce/Direct ("Product / Size" or "Product Size") ---
+                    # Checks if variant starts with product name to strip it out
                     elif variant_name.startswith(product_name):
-                        # Remove product name and leading delimiters (slash or space)
-                        suffix = variant_name[len(product_name):].strip(' -/')
+                        # Remove product name from the start
+                        suffix = variant_name[len(product_name):].strip()
+                        # Remove leading separators like " / " or " - "
+                        suffix = suffix.lstrip(' -/')
+                        
                         if suffix:
                             if '/' in suffix:
                                 detail_parts = suffix.split('/')
@@ -77,8 +79,6 @@ class Command(BaseCommand):
                                 size = suffix.strip()
 
                     # Create or Update Variant
-                    # We use defaults for color/size to avoid overwriting manual corrections in admin
-                    # if the parsing matches existing logic, but we must ensure uniqueness.
                     obj, v_created = Variant.objects.update_or_create(
                         printful_variant_id=str(v_data['id']),
                         defaults={
@@ -87,8 +87,8 @@ class Command(BaseCommand):
                             'price': v_data.get('retail_price', 0.00),
                             'sku': v_data.get('sku', ''),
                             'stock_pool': None,
-                            'color': color[:50], # Truncate to fit max_length
-                            'size': size[:20],   # Truncate to fit max_length
+                            'color': color[:50], 
+                            'size': size[:20],   
                         }
                     )
                     action = "Created" if v_created else "Updated"
@@ -96,7 +96,6 @@ class Command(BaseCommand):
 
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f"Failed to process product {p_data.get('name')}: {e}"))
-                # Continue to next product instead of stopping completely
                 continue
 
         self.stdout.write(self.style.SUCCESS("Printful sync completed."))

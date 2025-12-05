@@ -1,70 +1,74 @@
 import requests
 import json
+import logging
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 class PrintfulService:
     BASE_URL = "https://api.printful.com"
 
     def __init__(self):
         self.api_key = getattr(settings, 'PRINTFUL_API_KEY', None)
-        self.store_id = getattr(settings, 'PRINTFUL_STORE_ID', None)
-        print(f"PrintfulService initialized.")
-        print(f"API Key found: {'Yes' if self.api_key else 'No'}")
-        print(f"Store ID found: {self.store_id if self.store_id else 'No'}")
-
         if not self.api_key:
-            print("CRITICAL: PRINTFUL_API_KEY not found in settings. Service will not work.")
-
+            logger.warning("PRINTFUL_API_KEY not found in settings.")
+        
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
 
-        if self.store_id:
-            self.headers["X-Printful-Store-Id"] = str(self.store_id)
-        
-        print(f"Request Headers: {self.headers}")
-
     def get_store_products(self):
         """Fetches all sync products from the Printful store."""
         url = f"{self.BASE_URL}/store/products"
-        print(f"--- Fetching Products from Printful ---")
-        print(f"URL: {url}")
+        logger.info(f"Fetching Products from: {url}")
         
         try:
-            print("Making request to Printful API...")
             response = requests.get(url, headers=self.headers)
-            print(f"Response Status Code: {response.status_code}")
+            
             if response.status_code == 200:
                 data = response.json().get('result', [])
-                print(f"Successfully fetched {len(data)} products.")
+                logger.info(f"Successfully fetched {len(data)} products.")
                 return data
-            else:
-                print(f"Error fetching products: {response.text}")
+            
+            elif response.status_code == 400:
+                # Specific check for the "Store Type" error
+                error_json = response.json()
+                error_msg = error_json.get('error', {}).get('message', '')
+                if "Manual Order / API platform" in error_msg:
+                    logger.critical("\n" + "="*60)
+                    logger.critical("CRITICAL ERROR: INCORRECT STORE TYPE")
+                    logger.critical("="*60)
+                    logger.critical(f"The Store ID you are using is connected to an integration (e.g., WooCommerce).")
+                    logger.critical(f"Printful forbids fetching products via API for integration stores.")
+                    logger.critical(f"SOLUTION: Create a new 'Manual order platform / API' store in Printful")
+                    logger.critical(f"and use that Store ID/API Key for this Django app.")
+                    logger.critical("="*60 + "\n")
+                else:
+                    logger.error(f"Error fetching products: {response.status_code} - {response.text}")
                 return []
+            
+            else:
+                logger.error(f"Error fetching products: {response.status_code} - {response.text}")
+                return []
+                
         except Exception as e:
-            print(f"An exception occurred: {e}")
+            logger.exception(f"Exception fetching products: {e}")
             return []
 
     def get_product_variants(self, product_id):
         """Fetches variants for a specific sync product."""
         url = f"{self.BASE_URL}/store/products/{product_id}"
-        print(f"--- Fetching Variants for Product ID {product_id} ---")
-        print(f"URL: {url}")
-
+        
         try:
-            print("Making request to Printful API...")
             response = requests.get(url, headers=self.headers)
-            print(f"Response Status Code: {response.status_code}")
             if response.status_code == 200:
-                variants = response.json().get('result', {}).get('sync_variants', [])
-                print(f"Successfully fetched {len(variants)} variants.")
-                return variants
+                return response.json().get('result', {}).get('sync_variants', [])
             else:
-                print(f"Error fetching variants: {response.text}")
+                logger.error(f"Error fetching variants for {product_id}: {response.status_code} - {response.text}")
                 return []
         except Exception as e:
-            print(f"An exception occurred: {e}")
+            logger.exception(f"Exception fetching variants for {product_id}: {e}")
             return []
     
     def create_order(self, recipient, items):
@@ -73,25 +77,17 @@ class PrintfulService:
         recipient: dict with name, address1, city, etc.
         items: list of dicts with variant_id, quantity
         """
-        url = f"{self.BASE_URL}/orders"
         payload = {
             "recipient": recipient,
             "items": items
         }
-        print(f"--- Creating Printful Order ---")
-        print(f"URL: {url}")
-        print(f"Payload: {json.dumps(payload, indent=2)}")
+        logger.info(f"Creating Printful Order with payload: {json.dumps(payload, indent=2)}")
         
         try:
-            print("Making request to Printful API...")
-            response = requests.post(url, json=payload, headers=self.headers)
-            print(f"Response Status Code: {response.status_code}")
-            response_data = response.json()
+            response = requests.post(f"{self.BASE_URL}/orders", json=payload, headers=self.headers)
             if response.status_code != 200:
-                print(f"Error creating order: {response.text}")
-            else:
-                print("Order created successfully.")
-            return response_data
+                logger.error(f"Error creating order: {response.status_code} - {response.text}")
+            return response.json()
         except Exception as e:
-            print(f"An exception occurred: {e}")
+            logger.exception(f"Exception creating order: {e}")
             return {'error': str(e)}
