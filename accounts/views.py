@@ -14,7 +14,7 @@ from .models import MarketingPreference
 from allauth.account.views import LoginView, SignupView, PasswordResetView, PasswordChangeView, PasswordSetView, LogoutView, PasswordResetDoneView, PasswordResetDoneView
 from allauth.socialaccount.views import ConnectionsView
 from cart.utils import get_or_create_cart, get_cart_summary_data
-from coaching_booking.models import ClientOfferingEnrollment, SessionBooking
+from coaching_booking.models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer
 from coaching_core.models import Offering
 from accounts.models import CoachProfile 
 from gcal.models import GoogleCredentials
@@ -97,13 +97,30 @@ class ProfileView(LoginRequiredMixin, TemplateView):
 
         # --- COACHING DASHBOARD DATA ---
         context['coach_upcoming_sessions'] = []
+        context['pending_taster_requests'] = [] # Initialize
+
         if hasattr(self.request.user, 'coach_profile'):
             coach_profile = self.request.user.coach_profile
+            # ... existing session query ...
             context['coach_upcoming_sessions'] = SessionBooking.objects.filter(
                 coach=coach_profile,
                 start_datetime__gte=timezone.now(),
                 status__in=['BOOKED', 'RESCHEDULED']
             ).select_related('client').order_by('start_datetime')
+
+            # Fetch Pending Taster Requests
+            context['pending_taster_requests'] = OneSessionFreeOffer.objects.filter(
+                coach=coach_profile,
+                is_approved=False,
+                is_redeemed=False,
+                redemption_deadline__gte=timezone.now()
+            ).select_related('client')
+
+        # For Client: My Taster Status (Already accessible via user.free_offers.all in template, 
+        # but explicitly adding it can be cleaner)
+        context['my_taster_status'] = OneSessionFreeOffer.objects.filter(
+            client=self.request.user
+        ).order_by('-date_offered').first()
 
         # Initialized as empty; loaded via HTMX
         context['coach_clients'] = []

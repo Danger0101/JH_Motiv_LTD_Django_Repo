@@ -518,6 +518,34 @@ def coach_approve_free_session(request):
     return response
 
 @login_required
+@require_POST
+def coach_deny_free_session(request):
+    offer_id = request.POST.get('offer_id')
+    
+    try:
+        coach_profile = request.user.coach_profile
+    except CoachProfile.DoesNotExist:
+        messages.error(request, "You are not a coach.")
+        return HttpResponse(status=403)
+
+    free_offer = get_object_or_404(OneSessionFreeOffer, id=offer_id)
+
+    if free_offer.coach != coach_profile:
+        messages.error(request, "You cannot manage this request.")
+        return HttpResponse(status=403)
+
+    # We delete the request on denial so the user can apply again (potentially with a different coach)
+    # Alternatively, you could add a 'status' field to the model if you want to keep a record of denials.
+    free_offer.delete()
+
+    messages.info(request, "Taster session request denied.")
+    
+    # Return 200 with HX-Trigger to refresh the list
+    response = HttpResponse(status=200)
+    response['HX-Trigger'] = 'refreshProfile' 
+    return response
+
+@login_required
 def get_booking_calendar(request):
     coach_id = request.GET.get('coach_id')
     enrollment_id = request.GET.get('enrollment_id')

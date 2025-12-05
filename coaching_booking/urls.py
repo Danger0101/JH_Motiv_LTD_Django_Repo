@@ -17,4 +17,5 @@ urlpatterns = [
         path('get-daily-slots/', views.get_daily_slots, name='get_daily_slots'),
         path('apply-for-free-session/', views.apply_for_free_session, name='apply_for_free_session'),
         path('coach-approve-free-session/', views.coach_approve_free_session, name='coach_approve_free_session'),
+        path('coach-deny-free-session/', views.coach_deny_free_session, name='coach_deny_free_session'),
     ]
