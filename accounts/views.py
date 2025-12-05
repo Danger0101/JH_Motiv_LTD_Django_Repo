@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.core.paginator import Paginator
 from django.db.models import Q
 from .models import MarketingPreference
-from allauth.account.views import LoginView, SignupView, PasswordResetView, PasswordChangeView, PasswordSetView, LogoutView, PasswordResetDoneView, PasswordResetDoneView
+from allauth.account.views import LoginView, SignupView, PasswordResetView, PasswordChangeView, PasswordSetView, LogoutView, PasswordResetDoneView, PasswordResetDoneView, EmailView
 from allauth.socialaccount.views import ConnectionsView
 from cart.utils import get_or_create_cart, get_cart_summary_data
 from coaching_booking.models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer
@@ -81,6 +81,14 @@ class CustomPasswordSetView(PasswordSetView):
 
 class CustomLogoutView(LogoutView):
     template_name = 'account/logout.html'
+
+class CustomEmailView(EmailView):
+    template_name = 'account/email.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['base_template'] = 'socialaccount/empty_base.html' if self.request.htmx else 'base.html'
+        return context
 
 class CustomPasswordResetDoneView(PasswordResetDoneView):
     template_name = 'account/password_reset_done.html'

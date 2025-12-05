@@ -195,17 +195,17 @@
                 <div class="space-y-6 max-w-2xl">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="p-4 border rounded-xl hover:border-blue-300 cursor-pointer transition"
-                             hx-get="{% url 'account_change_password' %}" hx-target="#settings-content" hx-swap="innerHTML">
+                             hx-get="{% url 'accounts:password_change' %}" hx-target="#settings-content" hx-swap="innerHTML">
                             <h4 class="font-bold text-gray-800">Password</h4>
                             <p class="text-sm text-gray-500">Update your password</p>
                         </div>
                         <div class="p-4 border rounded-xl hover:border-blue-300 cursor-pointer transition"
-                             hx-get="{% url 'account_email' %}" hx-target="#settings-content" hx-swap="innerHTML">
+                             hx-get="{% url 'accounts:account_email' %}" hx-target="#settings-content" hx-swap="innerHTML">
                             <h4 class="font-bold text-gray-800">Email Address</h4>
                             <p class="text-sm text-gray-500">{{ user.email }}</p>
                         </div>
                         <div class="p-4 border rounded-xl hover:border-blue-300 cursor-pointer transition"
-                             hx-get="{% url 'socialaccount_connections' %}" hx-target="#settings-content" hx-swap="innerHTML">
+                             hx-get="{% url 'accounts:socialaccount_connections' %}" hx-target="#settings-content" hx-swap="innerHTML">
                             <h4 class="font-bold text-gray-800">Connected Accounts</h4>
                             <p class="text-sm text-gray-500">Google, Facebook, etc.</p>
                         </div>

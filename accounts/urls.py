@@ -26,6 +26,8 @@ urlpatterns = [
     path('password/reset/', views.CustomPasswordResetView.as_view(), name='password_reset'),
     path('password/reset/done/', views.CustomPasswordResetDoneView.as_view(), name='password_reset_done'),
     
+    path('email/', views.CustomEmailView.as_view(), name='account_email'),
+
     # Custom Allauth Social Account Connections View for HTMX
     path('3rdparty/', views.CustomSocialAccountListView.as_view(), name='socialaccount_connections'),
 ]
