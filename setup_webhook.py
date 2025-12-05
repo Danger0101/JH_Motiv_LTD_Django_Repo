@@ -1,6 +1,5 @@
 import requests
 import os
-import json
 
 # --- CONFIGURATION ---
 # We use the env variable for the API key so you don't have to paste it
@@ -36,16 +35,10 @@ def setup_printful_webhook():
 
         if response.status_code == 200:
             data = response.json()
-            print(f"Full Printful API Response: {json.dumps(data, indent=2)}")
             print("\n✅ SUCCESS! Webhook configured.")
             print("---------------------------------------------------")
-            secret_key = data.get('result', {}).get('secret_key')
-            if secret_key:
-                print(f"Secret Key: {secret_key}")
-            else:
-                print("Secret Key not found in Printful response. Please inspect the 'Full Printful API Response' above.")
+            print("Please find your Printful Webhook Secret in your Printful dashboard (API/Store settings) and add it to your Heroku Config Vars as 'PRINTFUL_WEBHOOK_SECRET'.")
             print("---------------------------------------------------")
-            print("ACTION REQUIRED: Copy the 'Secret Key' above and add it to your Heroku Config Vars as 'PRINTFUL_WEBHOOK_SECRET'.")
         else:
             print(f"\n❌ FAILED. Status: {response.status_code}")
             print(response.text)
