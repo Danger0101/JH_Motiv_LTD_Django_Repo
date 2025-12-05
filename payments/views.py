@@ -155,222 +155,101 @@ def payment_cancel(request):
     return render(request, 'payments/cancel.html')
 
 @csrf_exempt
-@transaction.atomic # Ensure all database operations succeed or fail together
+@transaction.atomic
 def stripe_webhook(request):
     payload = request.body
     sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
     event = None
 
-    # 1. Verify Webhook Signature
     try:
-        # NOTE: settings.STRIPE_WEBHOOK_SECRET must be configured
         event = stripe.Webhook.construct_event(
             payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
         )
-    except ValueError as e:
-        # Invalid payload
+    except ValueError:
         return HttpResponse("Invalid payload", status=400)
-    except stripe.SignatureVerificationError as e:
-        # Invalid signature
+    except stripe.SignatureVerificationError:
         return HttpResponse("Invalid signature", status=400)
 
-    # 2. Handle 'checkout.session.completed' Event
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
-        
-        try:
-            session = stripe.checkout.Session.retrieve(session.id)
-        except Exception as e:
-             print(f"Error retrieving session: {e}")
-             return HttpResponse("Error retrieving session", status=500)
-        
-        # Only proceed if payment was actually successful
-        if session.get('payment_status') != 'paid':
-            print(f"Skipping session {session.id}: Not paid.")
-            return HttpResponse(status=200)
-
-        # Retrieve the CRITICAL routing metadata
         metadata = session.get('metadata', {})
-        # --- FIX: Be explicit about 'product_type' ---
-        # Do not provide a default. If it's missing, it's a critical error.
         product_type = metadata.get('product_type')
         
-        if not product_type:
-            print(f"FATAL ERROR: Webhook for session {session.id} is missing 'product_type' in metadata.")
-            # Return a 500 to force Stripe to retry. This gives you time to investigate.
-            return HttpResponse("Webhook Error: Missing product_type in metadata.", status=500)
-        print(f"Processing session {session.id} for product_type: '{product_type}'")
-        print(f"Webhook Metadata: {metadata}") # ADDED LOGGING
-        
-        # --- A. COACHING ENROLLMENT LOGIC (Updated with Expiry Rules) ---
-        if product_type == 'coaching_offering':
-            try:
-                user_id = metadata.get('user_id')
-                offering_id = metadata.get('offering_id')
-                coach_id = metadata.get('coach_id')
-
-                if not all([user_id, offering_id, coach_id]):
-                    raise ValueError("Missing required metadata for coaching enrollment.")
-                
-                user = User.objects.get(pk=user_id)
-                offering = Offering.objects.get(pk=offering_id)
-                coach_profile = CoachProfile.objects.get(pk=coach_id)
-
-                # 1. Calculate Enrollment Expiration Date
-                # Based on rule: 3 months (monthly) + 2 months buffer = 5 months total duration.
-                # NOTE: Assuming offering.duration_months or similar attribute exists.
-                
-                expiration_date = None
-                
-                if 'monthly' in offering.name.lower(): # Rule: 3 months + 2 months buffer = 5 months
-                    # Assuming a 3-month term plus 2 months grace
-                    expiration_date = timezone.now() + timedelta(days=150) # 5 months * 30 days
-                    print("Rule applied: Monthly, expiry in 5 months.")
-                    
-                elif 'weekly' in offering.name.lower(): # Rule: 4 weeks for a weekly offer
-                    expiration_date = timezone.now() + timedelta(weeks=4)
-                    print("Rule applied: Weekly, expiry in 4 weeks.")
-                    
-                elif 'whole day' in offering.name.lower() or 'immersion' in offering.name.lower(): # Rule: Whole Day/Immersion, 12 months from purchase
-                    expiration_date = timezone.now() + timedelta(days=365)
-                    print("Rule applied: Whole Day/Immersion, expiry in 12 months.")
-
-                # If the system doesn't find a matching rule, ensure it has a default (e.g., 6 months)
-                if expiration_date is None:
-                     expiration_date = timezone.now() + timedelta(days=180) # Default 6 months
-                     print("Rule applied: Default 6 months expiry.")
-
-
-                # 2. Check for existing enrollment (prevent duplicates from webhook retries)
-                if ClientOfferingEnrollment.objects.filter(client=user, offering=offering, is_active=True).exists():
-                    print(f"Duplicate enrollment skipped for user {user.id} in offering {offering.id}.")
-                    return HttpResponse(status=200)
-
-                # 3. Create the Client Offering Enrollment
-                enrollment = ClientOfferingEnrollment.objects.create(
-                    client=user,
-                    offering=offering,
-                    coach=coach_profile,
-                    purchase_date=timezone.now(), # Use current time for purchase
-                    expiration_date=expiration_date # Assign calculated expiry date
-                )
-
-                # --- FIX START: Create the CoachingOrder ---
-                CoachingOrder.objects.create(
-                    enrollment=enrollment,
-                    total_paid=session.amount_total / 100, # Convert cents to main currency unit
-                )
-                print(f"SUCCESS: Coaching Order created for enrollment {enrollment.id}")
-                # --- FIX END ---
-                
-                # 4. Send Welcome Email
-                try:
-                    dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
-                    email_context = {
-                        'user': user,
-                        'offering_name': offering.name,
-                        'dashboard_url': dashboard_url,
-                    }
-                    send_transactional_email(
-                        recipient_email=user.email,
-                        subject=f"Welcome to {offering.name}!",
-                        template_name='emails/coaching_welcome.html',
-                        context=email_context
-                    )
-                    print(f"SUCCESS: Welcome email sent to {user.email} for enrollment in {offering.name}.")
-                except Exception as email_error:
-                    # Log the email error but do not fail the transaction
-                    print(f"CRITICAL: Transaction succeeded but failed to send welcome email to {user.email}. Error: {email_error}")
-
-                
-                print(f"SUCCESS: Client Enrollment created for {user.email}. Expires: {expiration_date}")
-            
-            except Exception as e:
-                print(f"FATAL ERROR in Coaching Enrollment: {e}")
-                # Return 500 so Stripe retries, giving you time to fix missing IDs/models
-                return HttpResponse("Coaching Enrollment failed.", status=500)
-
-        # --- B. E-COMMERCE ORDER LOGIC (Fallback/General Cart) ---
-        elif product_type == 'ecommerce_cart':
+        if product_type == 'ecommerce_cart':
             cart_id = metadata.get('cart_id')
-            
             if cart_id:
                 try:
                     cart = Cart.objects.get(id=cart_id, status='open')
                     
-                    # 1. Create the Order
+                    # 1. Create Local Order
                     order = Order.objects.create(
                         user_id=metadata.get('user_id'),
                         email=session.get('customer_details', {}).get('email'),
                         total_paid=session.amount_total / 100,
-                        # NOTE: Ensure you add address/guest info here if needed!
                     )
 
-                    # 2. Create Order items from cart items
+                    printful_items = []
                     for item in cart.items.all():
                         OrderItem.objects.create(
                             order=order,
                             variant=item.variant,
-                            price=item.variant.price, # Use the price at time of payment
+                            price=item.variant.price,
                             quantity=item.quantity,
                         )
+                        # Collect Printful items
+                        if item.variant.printful_variant_id:
+                            printful_items.append({
+                                "variant_id": item.variant.printful_variant_id,
+                                "quantity": item.quantity,
+                            })
                     
-                    # 3. Mark the cart as submitted (consumed)
+                    # Consolidate Cart
                     cart.status = 'submitted'
                     cart.save()
 
-                    # 4. Create Printful Order (CONDITIONAL)
-                    try:
-                        printful_items = []
+                    # 2. Handle Printful Fulfillment (Auto vs Manual)
+                    if printful_items:
+                        auto_fulfill = getattr(settings, 'PRINTFUL_AUTO_FULFILLMENT', False)
                         
-                        # Filter: Only select items that HAVE a Printful ID
-                        for item in cart.items.all():
-                            if item.variant.printful_variant_id:
-                                printful_items.append({
-                                    "variant_id": item.variant.printful_variant_id,
-                                    "quantity": item.quantity,
-                                })
+                        shipping_details = session.get('shipping_details')
+                        address = shipping_details['address'] if shipping_details else {}
                         
-                        # Only contact Printful if there are actual Printful items to fulfill
-                        if printful_items:
+                        # Verify Address Data for Printful
+                        recipient = {
+                            "name": shipping_details.get('name'),
+                            "address1": address.get('line1'),
+                            "address2": address.get('line2', ''),
+                            "city": address.get('city'),
+                            "state_code": address.get('state'),  # Stripe 'state' usually maps to region code
+                            "country_code": address.get('country'),
+                            "zip": address.get('postal_code'),
+                            "email": order.email
+                        }
+
+                        if auto_fulfill:
+                            # AUTOMATIC: Send to Printful immediately
                             printful_service = PrintfulService()
-                            shipping_details = session.get('shipping_details')
+                            print(f"Auto-processing Printful Order for Order #{order.id}")
                             
-                            if not shipping_details or not shipping_details.get('address'):
-                                raise Exception("Shipping details are required for Printful orders but were not provided.")
-
-                            address = shipping_details['address']
-                            recipient = {
-                                "name": shipping_details.get('name'),
-                                "address1": address.get('line1'),
-                                "address2": address.get('line2'),
-                                "city": address.get('city'),
-                                "state_code": address.get('state'),
-                                "country_code": address.get('country'),
-                                "zip": address.get('postal_code'),
-                            }
-
-                            # Use the FILTERED list, not the full list
-                            printful_order = printful_service.create_order(recipient, printful_items)
+                            response = printful_service.create_order(recipient, printful_items)
                             
-                            if 'result' in printful_order and printful_order['result'].get('id'):
-                                order.printful_order_id = printful_order['result']['id']
-                                order.printful_order_status = printful_order['result']['status']
+                            if 'result' in response and response['result'].get('id'):
+                                order.printful_order_id = response['result']['id']
+                                order.printful_order_status = response['result']['status']
                                 order.save()
-                                print(f"SUCCESS: Printful Order {order.printful_order_id} created.")
                             else:
-                                # Now this is a REAL error because we know we tried to send valid items
-                                raise Exception(f"Printful API Error: {printful_order}")
+                                error_msg = response.get('error', 'Unknown Error')
+                                print(f"Printful Auto-Fulfillment Failed: {error_msg}")
+                                # Mark as failed so staff can retry manually
+                                order.printful_order_status = 'failed_auto_sync'
+                                order.save()
+                        else:
+                            # MANUAL: Mark as pending approval
+                            print(f"Manual Mode: Order #{order.id} queued for approval.")
+                            order.printful_order_status = 'pending_approval'
+                            order.save()
 
-                    except Exception as e:
-                        print(f"FATAL ERROR creating Printful order: {e}")
-                        # Return 500 to force Stripe retry (as discussed in the previous step)
-                        return HttpResponse("Printful Order creation failed.", status=500)
-
-
-                    print(f"SUCCESS: E-commerce Order {order.id} created from cart {cart.id}")
-
-                    # 4. Send Order Confirmation Email
+                    # Send Emails (keep existing email logic)
                     try:
                         customer_email = session.get('customer_details', {}).get('email')
                         if not customer_email:
@@ -411,60 +290,10 @@ def stripe_webhook(request):
                     except Exception as email_error:
                         print(f"CRITICAL: Order {order.id} created but failed to send email. Error: {email_error}")
 
-
-                except Cart.DoesNotExist:
-                    print(f"E-commerce cart ID {cart_id} not found or already submitted. Skipping.")
                 except Exception as e:
-                    print(f"FATAL ERROR in E-commerce Order: {e}")
-                    return HttpResponse("E-commerce Order failed.", status=500)
-        
-        else:
-            print(f"Unknown product_type: {product_type}. Skipping.")
-
-    # 3. Handle 'charge.failed' Event
-    elif event['type'] == 'charge.failed':
-        charge = event['data']['object']
-        print(f"Processing failed charge: {charge.get('id')}")
-
-        try:
-            billing_details = charge.get('billing_details', {})
-            customer_email = billing_details.get('email')
-            
-            if not customer_email:
-                print("Webhook Error: No email found in 'charge.failed' event.")
-                return HttpResponse(status=200) # Can't notify without an email
-
-            # Try to find if this customer is a registered user
-            user = User.objects.filter(email__iexact=customer_email).first()
-            
-            if user:
-                account_url = request.build_absolute_uri(reverse('accounts:account_profile'))
-            else:
-                account_url = request.build_absolute_uri(reverse('home')) # Link to homepage for guests
-
-            email_context = {
-                'customer_name': billing_details.get('name'),
-                'amount': charge.get('amount', 0) / 100,
-                'failure_reason': charge.get('failure_message', 'No reason provided.'),
-                'account_url': account_url,
-            }
-
-            send_transactional_email(
-                recipient_email=customer_email,
-                subject="Payment Failed for Your JH Motiv LTD Purchase",
-                template_name='emails/payment_failure.html',
-                context=email_context
-            )
-            print(f"SUCCESS: Payment failure notification sent to {customer_email}")
-
-        except Exception as e:
-            print(f"FATAL ERROR processing 'charge.failed' event: {e}")
-            # Don't return 500, as it's just a notification failure
-            return HttpResponse(status=200)
-
-
-    # 4. Acknowledge Receipt
-    # Always return a 200 status code to Stripe unless a fatal, non-recoverable error occurred
+                    print(f"Error processing e-commerce order: {e}")
+                    return HttpResponse("Error processing order", status=500)
+    
     return HttpResponse(status=200)
 
 

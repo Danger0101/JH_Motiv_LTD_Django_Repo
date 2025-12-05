@@ -1,20 +1,36 @@
 from django.core.management.base import BaseCommand
 from django.core.files.base import ContentFile
+from django.conf import settings
 import requests
 from products.models import Product, Variant, StockPool
 from products.printful_service import PrintfulService
 
 class Command(BaseCommand):
-    help = 'Syncs products from Printful'
+    help = 'Syncs products from Printful and ensures StockPools are assigned'
 
     def handle(self, *args, **kwargs):
         self.stdout.write("Starting Printful Sync...")
         service = PrintfulService()
         
+        # --- STOCK STRATEGY ---
+        # Create a shared StockPool for on-demand items.
+        # We assume high availability (9999) because Printful handles the inventory.
+        on_demand_pool, _ = StockPool.objects.get_or_create(
+            name="Printful On-Demand Pool",
+            defaults={
+                'available_stock': 9999,
+                'low_stock_threshold': 50
+            }
+        )
+        # Ensure it's topped up if it was already created but low
+        if on_demand_pool.available_stock < 1000:
+            on_demand_pool.available_stock = 9999
+            on_demand_pool.save()
+
         # 1. Fetch Products
         printful_products = service.get_store_products()
         if not printful_products:
-            self.stdout.write(self.style.WARNING("No products found or API error. (See console above for details)"))
+            self.stdout.write(self.style.WARNING("No products found or API error."))
             return
 
         for p_data in printful_products:
@@ -30,10 +46,10 @@ class Command(BaseCommand):
                     }
                 )
                 
-                # Optional: Fetch Product Thumbnail if available
+                # Fetch Thumbnail
                 if created and p_data.get('thumbnail_url'):
                     try:
-                        img_resp = requests.get(p_data['thumbnail_url'])
+                        img_resp = requests.get(p_data['thumbnail_url'], timeout=10)
                         if img_resp.status_code == 200:
                             file_name = f"printful_{p_data['id']}.jpg"
                             product.featured_image.save(file_name, ContentFile(img_resp.content), save=True)
@@ -51,7 +67,7 @@ class Command(BaseCommand):
                     color = "Default"
                     size = "One Size"
                     
-                    # --- PARSING STRATEGY 1: Standard Printful ("Product - Color / Size") ---
+                    # --- PARSING LOGIC ---
                     if ' - ' in variant_name:
                         parts = variant_name.split(' - ')
                         details = parts[-1] 
@@ -61,15 +77,8 @@ class Command(BaseCommand):
                             size = detail_parts[1].strip()
                         else:
                             size = details.strip()
-
-                    # --- PARSING STRATEGY 2: WooCommerce/Direct ("Product / Size" or "Product Size") ---
-                    # Checks if variant starts with product name to strip it out
                     elif variant_name.startswith(product_name):
-                        # Remove product name from the start
-                        suffix = variant_name[len(product_name):].strip()
-                        # Remove leading separators like " / " or " - "
-                        suffix = suffix.lstrip(' -/')
-                        
+                        suffix = variant_name[len(product_name):].strip().lstrip(' -/')
                         if suffix:
                             if '/' in suffix:
                                 detail_parts = suffix.split('/')
@@ -78,7 +87,7 @@ class Command(BaseCommand):
                             else:
                                 size = suffix.strip()
 
-                    # Create or Update Variant
+                    # Create or Update Variant & LINK STOCK POOL
                     obj, v_created = Variant.objects.update_or_create(
                         printful_variant_id=str(v_data['id']),
                         defaults={
@@ -86,16 +95,14 @@ class Command(BaseCommand):
                             'name': variant_name,
                             'price': v_data.get('retail_price', 0.00),
                             'sku': v_data.get('sku', ''),
-                            'stock_pool': None,
+                            'stock_pool': on_demand_pool,  # <--- CRITICAL FIX: Assign Infinite Stock
                             'color': color[:50], 
                             'size': size[:20],   
                         }
                     )
-                    action = "Created" if v_created else "Updated"
-                    self.stdout.write(f"  - {action} Variant: {variant_name} (Size: {size}, Color: {color})")
-
+                    
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f"Failed to process product {p_data.get('name')}: {e}"))
                 continue
 
-        self.stdout.write(self.style.SUCCESS("Printful sync completed."))
+        self.stdout.write(self.style.SUCCESS("Printful sync completed. Stock pools assigned."))

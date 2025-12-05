@@ -1,5 +1,5 @@
 import uuid
-from django.db import models
+from django.db import models, JSONField
 from django.contrib.auth import get_user_model
 from products.models import Variant
 from coaching_booking.models import ClientOfferingEnrollment
@@ -15,6 +15,7 @@ class Order(models.Model):
     guest_order_token = models.UUIDField(unique=True, null=True, blank=True, editable=False)
     printful_order_id = models.CharField(max_length=255, null=True, blank=True)
     printful_order_status = models.CharField(max_length=100, null=True, blank=True)
+    shipping_data = JSONField(null=True, blank=True) # Added for Printful
     total_paid = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
