@@ -254,7 +254,8 @@ STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET') # For verifying webhook signatures
 PRINTFUL_API_KEY = os.environ.get('PRINTFUL_API_KEY')
 PRINTFUL_STORE_ID = os.environ.get('PRINTFUL_STORE_ID')
-PRINTFUL_AUTO_FULFILLMENT = False
+PRINTFUL_AUTO_FULFILLMENT = False  # Set to True for auto-processing
+PRINTFUL_WEBHOOK_SECRET = os.environ.get('PRINTFUL_WEBHOOK_SECRET')
 
 
 LOGGING = {
