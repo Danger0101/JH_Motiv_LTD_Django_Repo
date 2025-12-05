@@ -20,6 +20,10 @@ class Cart(models.Model):
             return f"Cart for {self.user}"
         return f"Anonymous cart {self.session_key}"
 
+    def get_total_price(self):
+        """Calculates the total price of all items in the cart."""
+        return sum(item.get_total_price() for item in self.items.all())
+
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, related_name='items', on_delete=models.CASCADE)
     variant = models.ForeignKey(Variant, on_delete=models.CASCADE)
