@@ -201,7 +201,7 @@
             
                 <div class="space-y-8">
                     <div>
-                        <h3 class="text-lg font-semibold text-gray-700 mb-4">Shop Orders</h3>
+                        <h3 class="text-lg font-semibold text-gray-700 mb-4">Retail Orders</h3>
                         {% if ecomm_orders %}
                             <div class="flow-root">
                                 <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
@@ -219,17 +219,19 @@
                                             <tbody class="divide-y divide-gray-200">
                                                 {% for order in ecomm_orders %}
                                                     <tr>
-                                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">{{ order.order_number }}</td>
+                                                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">#{{ order.id }}</td>
                                                         <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ order.created_at|date:"d M Y" }}</td>
-                                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">£{{ order.grand_total|floatformat:2 }}</td>
+                                                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">£{{ order.total_paid|floatformat:2 }}</td>
                                                         <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                                                             <span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-                                                                {{ order.status|default:"Completed" }}
+                                                                {{ order.printful_order_status|default:"Processing"|title }}
                                                             </span>
                                                         </td>
                                                         <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                                                            <a href="{% url 'payments:order_detail' order.id %}" class="text-blue-600 hover:text-blue-900 mr-3">View Details</a>
-                                                            <a href="{% url 'accounts:generate_invoice_pdf' order.id %}" class="text-gray-500 hover:text-gray-700">Invoice</a>
+                                                            <a href="{% url 'accounts:generate_invoice_pdf' order.id %}" target="_blank" class="text-blue-600 hover:text-blue-900 flex items-center justify-end">
+                                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                                                Invoice
+                                                            </a>
                                                         </td>
                                                     </tr>
                                                 {% endfor %}
@@ -239,7 +241,7 @@
                                 </div>
                             </div>
                         {% else %}
-                            <p class="text-gray-500">You have not made any shop purchases yet.</p>
+                            <p class="text-gray-500 italic">You have not made any shop purchases yet.</p>
                         {% endif %}
                     </div>
             
@@ -254,7 +256,7 @@
                                                 <tr>
                                                     <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Order #</th>
                                                     <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date</th>
-                                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Item</th>
+                                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Plan</th>
                                                     <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Total</th>
                                                     <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-0"><span class="sr-only">Invoice</span></th>
                                                 </tr>
@@ -262,13 +264,15 @@
                                             <tbody class="divide-y divide-gray-200">
                                                 {% for order in coaching_orders %}
                                                 <tr>
-                                                    <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">{{ order.order_number }}</td>
+                                                    <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">#{{ order.id }}</td>
                                                     <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ order.created_at|date:"d M Y" }}</td>
                                                     <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ order.enrollment.offering.name }}</td>
-                                                    <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">£{{ order.amount|floatformat:2 }}</td>
+                                                    <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">£{{ order.total_paid|floatformat:2 }}</td>
                                                     <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                                                        <a href="{% url 'payments:order_detail' order.id %}" class="text-blue-600 hover:text-blue-900 mr-3">View Details</a>
-                                                        <a href="{% url 'accounts:generate_invoice_pdf' order.id %}" class="text-gray-500 hover:text-gray-700">Invoice</a>
+                                                        <a href="{% url 'accounts:generate_invoice_pdf' order.id %}" target="_blank" class="text-blue-600 hover:text-blue-900 flex items-center justify-end">
+                                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                                            Invoice
+                                                        </a>
                                                     </td>
                                                 </tr>
                                                 {% endfor %}
@@ -278,7 +282,7 @@
                                 </div>
                             </div>
                         {% else %}
-                            <p class="text-gray-500">You have not purchased any coaching plans yet.</p>
+                            <p class="text-gray-500 italic">You have not purchased any coaching plans yet.</p>
                         {% endif %}
                     </div>
                 </div>
@@ -287,42 +291,126 @@
             <div x-show="activeTab === 'settings'" x-cloak class="p-6">
                 <h2 class="text-2xl font-bold text-gray-800 border-b pb-4 mb-6">Profile Settings</h2>
                 
-                <div class="space-y-6 max-w-2xl">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="p-4 border rounded-xl hover:border-blue-300 cursor-pointer transition"
-                             hx-get="{% url 'accounts:password_change' %}" hx-target="#settings-content" hx-swap="innerHTML">
-                            <h4 class="font-bold text-gray-800">Password</h4>
-                            <p class="text-sm text-gray-500">Update your password</p>
-                        </div>
-                        <div class="p-4 border rounded-xl hover:border-blue-300 cursor-pointer transition"
-                             hx-get="{% url 'accounts:account_email' %}" hx-target="#settings-content" hx-swap="innerHTML">
-                            <h4 class="font-bold text-gray-800">Email Address</h4>
-                            <p class="text-sm text-gray-500">{{ user.email }}</p>
-                        </div>
-                        <div class="p-4 border rounded-xl hover:border-blue-300 cursor-pointer transition"
-                             hx-get="{% url 'accounts:socialaccount_connections' %}" hx-target="#settings-content" hx-swap="innerHTML">
-                            <h4 class="font-bold text-gray-800">Connected Accounts</h4>
-                            <p class="text-sm text-gray-500">Google, Facebook, etc.</p>
+                <div class="space-y-4 max-w-3xl" x-data="{ openSetting: null }">
+                    
+                    <div class="border rounded-xl shadow-sm overflow-hidden">
+                        <button @click="openSetting = (openSetting === 'password' ? null : 'password')" 
+                                class="w-full flex justify-between items-center p-4 bg-white hover:bg-gray-50 transition focus:outline-none">
+                            <span class="font-semibold text-gray-800">Change Password</span>
+                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" 
+                                 :class="{'rotate-180': openSetting === 'password'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div x-show="openSetting === 'password'" x-collapse>
+                            <div class="p-6 border-t bg-gray-50" 
+                                 hx-get="{% url 'accounts:password_change' %}" 
+                                 hx-trigger="intersect once">
+                                <div class="flex justify-center"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div></div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="p-5 bg-gray-50 rounded-xl border">
-                        <h4 class="font-bold text-gray-800 mb-2">Email Preferences</h4>
-                        {% with marketing_preference=user.marketing_preference %}
-                        <form hx-post="{% url 'accounts:update_marketing_preference' %}" hx-target="#marketing-status">
-                            {% csrf_token %}
-                            <label class="flex items-center space-x-3 cursor-pointer">
-                                <input type="checkbox" name="is_subscribed" {% if marketing_preference.is_subscribed %}checked{% endif %}
-                                       class="form-checkbox h-5 w-5 text-blue-600"
-                                       hx-post="{% url 'accounts:update_marketing_preference' %}" hx-trigger="change">
-                                <span class="text-sm text-gray-700">Receive marketing emails and updates</span>
-                            </label>
-                            <div id="marketing-status" class="mt-2 text-xs text-gray-500 ml-8"></div>
-                        </form>
-                        {% endwith %}
+                    <div class="border rounded-xl shadow-sm overflow-hidden">
+                        <button @click="openSetting = (openSetting === 'email' ? null : 'email')" 
+                                class="w-full flex justify-between items-center p-4 bg-white hover:bg-gray-50 transition focus:outline-none">
+                            <div class="flex flex-col items-start">
+                                <span class="font-semibold text-gray-800">Email Addresses</span>
+                                <span class="text-xs text-gray-500">{{ user.email }}</span>
+                            </div>
+                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" 
+                                 :class="{'rotate-180': openSetting === 'email'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div x-show="openSetting === 'email'" x-collapse>
+                            <div class="p-6 border-t bg-gray-50" 
+                                 hx-get="{% url 'accounts:account_email' %}" 
+                                 hx-trigger="intersect once">
+                                 <div class="flex justify-center"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div></div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div id="settings-content" class="mt-8"></div>
+                    <div class="border rounded-xl shadow-sm overflow-hidden">
+                        <button @click="openSetting = (openSetting === 'social' ? null : 'social')" 
+                                class="w-full flex justify-between items-center p-4 bg-white hover:bg-gray-50 transition focus:outline-none">
+                            <span class="font-semibold text-gray-800">Connected Accounts</span>
+                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" 
+                                 :class="{'rotate-180': openSetting === 'social'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div x-show="openSetting === 'social'" x-collapse>
+                            <div class="p-6 border-t bg-gray-50" 
+                                 hx-get="{% url 'accounts:socialaccount_connections' %}" 
+                                 hx-trigger="intersect once">
+                                 <div class="flex justify-center"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border rounded-xl shadow-sm overflow-hidden">
+                        <button @click="openSetting = (openSetting === 'address' ? null : 'address')" 
+                                class="w-full flex justify-between items-center p-4 bg-white hover:bg-gray-50 transition focus:outline-none">
+                            <span class="font-semibold text-gray-800">Saved Addresses</span>
+                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" 
+                                 :class="{'rotate-180': openSetting === 'address'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div x-show="openSetting === 'address'" x-collapse>
+                            <div class="p-6 border-t bg-gray-50">
+                                {% if user.addresses.exists %}
+                                    <ul class="divide-y divide-gray-200">
+                                    {% for address in user.addresses.all %}
+                                        <li class="py-3 flex justify-between items-start">
+                                            <div>
+                                                <p class="font-bold text-gray-800">{{ address.full_name }}</p>
+                                                <p class="text-sm text-gray-600">{{ address.street_address }}</p>
+                                                <p class="text-sm text-gray-600">{{ address.city }}, {{ address.postcode }}</p>
+                                                <p class="text-sm text-gray-600">{{ address.country }}</p>
+                                            </div>
+                                            {% if address.is_default %}
+                                                <span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">Default</span>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <p class="text-gray-500 text-sm italic">No saved addresses found.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border rounded-xl shadow-sm overflow-hidden">
+                        <button @click="openSetting = (openSetting === 'prefs' ? null : 'prefs')" 
+                                class="w-full flex justify-between items-center p-4 bg-white hover:bg-gray-50 transition focus:outline-none">
+                            <span class="font-semibold text-gray-800">Email Preferences</span>
+                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" 
+                                 :class="{'rotate-180': openSetting === 'prefs'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div x-show="openSetting === 'prefs'" x-collapse>
+                            <div class="p-6 border-t bg-gray-50">
+                                {% with marketing_preference=user.marketing_preference %}
+                                <form hx-post="{% url 'accounts:update_marketing_preference' %}" hx-target="#marketing-status">
+                                    {% csrf_token %}
+                                    <label class="flex items-center space-x-3 cursor-pointer">
+                                        <input type="checkbox" name="is_subscribed" {% if marketing_preference.is_subscribed %}checked{% endif %}
+                                               class="form-checkbox h-5 w-5 text-blue-600"
+                                               hx-post="{% url 'accounts:update_marketing_preference' %}" hx-trigger="change">
+                                        <span class="text-sm text-gray-700">Receive marketing emails and updates</span>
+                                    </label>
+                                    <div id="marketing-status" class="mt-2 text-xs text-gray-500 ml-8"></div>
+                                </form>
+                                {% endwith %}
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
