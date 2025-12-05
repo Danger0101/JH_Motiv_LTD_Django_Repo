@@ -6,7 +6,7 @@ from django.views.generic import ListView, DetailView
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from .models import Product, Variant # Ensure Variant is imported
+from .models import Product, Variant
 from payments.models import Order
 from core.email_utils import send_transactional_email
 
@@ -18,7 +18,7 @@ class ProductListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search_query'] = self.request.GET.get('q', '')
-        context['per_page'] = self.request.GET.get('per_page', '12') # Default to 12 or whatever your default is
+        context['per_page'] = self.request.GET.get('per_page', '12')
         return context
 
 # ----------------------------------------------------------------------
@@ -69,6 +69,7 @@ class ProductDetailView(DetailView):
             'Lime': '#CDDC39',
             'Indigo Blue': '#3F51B5',
             'Sapphire': '#0288D1',
+            'Ash': '#D3D3D3',
         }
         
         clean_name = color_name.strip()
@@ -87,49 +88,43 @@ class ProductDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         product = context['product']
         
-        # Initialize default values for the template
         context['unique_colors'] = []
         context['unique_sizes'] = []
-        context['variant_lookup_json'] = json.dumps({}) # Set to an empty JSON object
+        context['variant_lookup_json'] = json.dumps({})
         
-        # If there are no variants, there's nothing to process, so return early.
         if not product.variants.exists():
             return context
 
         unique_colors = set()
         unique_sizes = set()
-        variant_map = {} # This will become the JSON lookup table
+        variant_map = {}
         
-        # 1. Build the Lookup Map and collect unique options
         for variant in product.variants.all():
             color = variant.color or "Default"
             size = variant.size or "One Size"
+            # Use the method from the model if available, else default to True
+            is_in_stock = variant.is_available() if hasattr(variant, 'is_available') else True
 
-            # Check stock status using the modular method from the Variant model
-            is_in_stock = variant.is_available() 
-
-            # Create the unique key used by Alpine.js: Color_Size
             lookup_key = f"{color}_{size}" 
             
             variant_map[lookup_key] = {
                 'id': variant.id,
-                'price': float(variant.price), # Use float for easier JS pricing
+                'price': float(variant.price),
                 'in_stock': is_in_stock 
             }
             
-            # Collect unique options
-            if color:
+            # Only add distinct colors if they aren't "Default"
+            if color and color != "Default":
                 color_hex = self.get_color_hex(color)
+                # Use a tuple so the set handles uniqueness correctly
                 unique_colors.add((color, color_hex)) 
-            if size:
+            
+            if size and size != "One Size":
                 unique_sizes.add(size)
         
-        # 2. Add context variables required by the template
-        # Convert sets/dicts to JSON-serializable structures
-        context['unique_colors'] = sorted(list(unique_colors))
+        # Sort and convert back to list
+        context['unique_colors'] = sorted(list(unique_colors), key=lambda x: x[0])
         context['unique_sizes'] = sorted(list(unique_sizes))
-        
-        # Serialize the lookup map for Alpine.js consumption
         context['variant_lookup_json'] = json.dumps(variant_map)
 
         return context
@@ -142,7 +137,7 @@ class ProductDetailView(DetailView):
 @require_POST
 def printful_webhook(request):
     """
-    Handles webhooks from Printful.
+    Handles webhooks from Printful, specifically for shipping confirmations.
     Verifies signature and processes 'package_shipped' events.
     """
     payload = request.body
