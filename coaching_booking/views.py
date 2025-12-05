@@ -300,7 +300,7 @@ def reschedule_session(request, booking_id):
             if not is_available:
                 messages.error(request, "That time slot is no longer available. Please choose another.")
             else:
-                original_start_time = booking.start_time
+                original_start_time = booking.start_datetime
                 result = booking.reschedule(new_start_time)
 
                 if result == 'LATE':
