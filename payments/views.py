@@ -29,6 +29,27 @@ from core.email_utils import send_transactional_email
 User = get_user_model() # Get the user model
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
+def checkout_cart_view(request):
+    """
+    Renders the dedicated Cart Checkout page (Physical products).
+    This is where the user enters their address for shipping calculation.
+    """
+    cart = get_or_create_cart(request)
+    if not cart or not cart.items.exists():
+        return redirect('cart:cart_detail')
+        
+    # Calculate initial totals (without shipping)
+    summary = {
+        'subtotal': cart.get_total_price(),
+        'total': cart.get_total_price() # Shipping added via JS later
+    }
+    
+    return render(request, 'payments/checkout_cart.html', {
+        'cart': cart,
+        'summary': summary,
+        'STRIPE_PUBLISHABLE_KEY': settings.STRIPE_PUBLISHABLE_KEY
+    })
+
 def create_checkout_session(request):
     """
     Creates a Stripe Checkout session. 
