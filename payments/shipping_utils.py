@@ -45,9 +45,19 @@ def calculate_cart_shipping(cart, address_data):
         
         rates = service.calculate_shipping_rates(recipient, printful_items)
         if rates:
-            # Use the first available rate (usually standard/cheapest)
-            rate = rates[0]
-            total_shipping += Decimal(str(rate['rate']))
+            # --- LOGIC FIX: Prioritize 'STANDARD' shipping ---
+            # Try to find the rate with ID 'STANDARD'
+            standard_rate = next((r for r in rates if r['id'] == 'STANDARD'), None)
+            
+            if standard_rate:
+                rate_cost = standard_rate['rate']
+            else:
+                # Fallback: Sort by price and take the cheapest
+                # Printful rates usually look like: {'id': 'DPD...', 'rate': '5.50', ...}
+                sorted_rates = sorted(rates, key=lambda x: float(x['rate']))
+                rate_cost = sorted_rates[0]['rate']
+
+            total_shipping += Decimal(str(rate_cost))
 
     # 3. Calculate Self-Fulfilled Shipping (Royal Mail Logic)
     if self_fulfilled_weight > 0:
