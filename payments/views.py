@@ -134,7 +134,7 @@ def create_checkout_session(request):
             }
 
         checkout_session = stripe.checkout.Session.create(**session_params)
-        return JsonResponse({'clientSecret': checkout_session.client_client_secret})
+        return JsonResponse({'clientSecret': checkout_session.client_secret})
     except Exception as e:
         print(f"Error creating Stripe checkout session: {e}")
         return JsonResponse({'error': str(e)}, status=500)
