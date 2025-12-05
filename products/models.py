@@ -109,7 +109,7 @@ class Variant(models.Model):
         help_text="Weight in grams (g). Required for self-fulfilled shipping calculation."
     )
     
-    def get_image_url():
+    def get_image_url(self):
         """Returns the URL of the product's featured image for cart display."""
         if self.product.featured_image:
             return self.product.featured_image.url
