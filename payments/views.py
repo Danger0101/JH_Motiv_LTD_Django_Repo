@@ -3,6 +3,7 @@ from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse, HttpResponse
+from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.db import transaction, models # ADDED: models for coach query
 from django.contrib.auth import get_user_model # ADDED: Better way to get User model
@@ -508,3 +509,12 @@ def create_coaching_checkout_session_view(request, offering_id):
 
     # This view should only handle POST requests for creating the session
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+@login_required
+def order_detail(request, order_id):
+    """
+    Displays order details for a logged-in user.
+    Ensures the user can only see their own orders.
+    """
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    return render(request, 'payments/order_detail.html', {'order': order})
