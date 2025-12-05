@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            color: #333;
+        }
+        .container {
+            width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            color: #000;
+        }
+        .header p {
+            margin: 5px 0;
+            color: #555;
+        }
+        .invoice-details {
+            margin-bottom: 40px;
+            overflow: hidden; /* Clearfix */
+        }
+        .invoice-details .col {
+            float: left;
+            width: 48%;
+        }
+        .invoice-details .col.right {
+            float: right;
+            text-align: right;
+        }
+        .invoice-details h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.5em;
+            color: #000;
+        }
+        .invoice-details p {
+            margin: 0 0 5px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 40px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f8f8;
+            font-weight: bold;
+        }
+        .totals {
+            float: right;
+            width: 40%;
+            text-align: right;
+        }
+        .totals table {
+            width: 100%;
+        }
+        .totals td {
+            border: none;
+            padding: 5px 0;
+        }
+        .totals .grand-total {
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            color: #888;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>INVOICE</h1>
+            <p>JH Motiv LTD</p>
+            <p>Company Address, City, ZIP</p>
+            <p>Email: contact@jhmotiv.com</p>
+            <p>VAT Number: [Your VAT Number]</p>
+        </div>
+
+        <div class="invoice-details">
+            <div class="col">
+                <h2>Bill To:</h2>
+                <p>{{ user.get_full_name|default:user.username }}</p>
+                <p>{{ user.email }}</p>
+                {% if order.shipping_address %}
+                    <p>{{ order.shipping_address.street_address1 }}, {{ order.shipping_address.street_address2 }}</p>
+                    <p>{{ order.shipping_address.city }}, {{ order.shipping_address.postcode }}</p>
+                    <p>{{ order.shipping_address.country }}</p>
+                {% elif coaching_order %}
+                    <p>(Coaching Service)</p>
+                {% endif %}
+            </div>
+            <div class="col right">
+                {% if order %}
+                    <h2>Invoice #{{ order.order_number }}</h2>
+                    <p>Date: {{ order.created_at|date:"d M Y" }}</p>
+                {% elif coaching_order %}
+                    <h2>Invoice #{{ coaching_order.order_number }}</h2>
+                    <p>Date: {{ coaching_order.created_at|date:"d M Y" }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Quantity</th>
+                    <th>Unit Price (excl. VAT)</th>
+                    <th>Total (excl. VAT)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if order %}
+                    {% for item in order.lineitems.all %}
+                    <tr>
+                        <td>{{ item.variant.product.name }} ({{ item.variant.name }})</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>£{{ item.price|floatformat:2 }}</td>
+                        <td>£{{ item.lineitem_total|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                {% elif coaching_order %}
+                    <tr>
+                        <td>{{ coaching_order.enrollment.offering.name }}</td>
+                        <td>1</td>
+                        <td>£{{ coaching_order.amount|floatformat:2 }}</td>
+                        <td>£{{ coaching_order.amount|floatformat:2 }}</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+
+        <div class="totals">
+            <table>
+                {% if order %}
+                    <tr>
+                        <td>Subtotal</td>
+                        <td>£{{ order.subtotal|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td>Delivery</td>
+                        <td>£{{ order.delivery_cost|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td>Total before VAT</td>
+                        <td>£{{ order.subtotal_plus_delivery|floatformat:2 }}</td>
+                    </tr>
+                     <tr>
+                        <td>VAT (0%)</td>
+                        <td>£0.00</td>
+                    </tr>
+                    <tr class="grand-total">
+                        <td>Grand Total</td>
+                        <td>£{{ order.grand_total|floatformat:2 }}</td>
+                    </tr>
+                {% elif coaching_order %}
+                    <tr>
+                        <td>Total before VAT</td>
+                        <td>£{{ coaching_order.amount|floatformat:2 }}</td>
+                    </tr>
+                     <tr>
+                        <td>VAT (0%)</td>
+                        <td>£0.00</td>
+                    </tr>
+                    <tr class="grand-total">
+                        <td>Grand Total</td>
+                        <td>£{{ coaching_order.amount|floatformat:2 }}</td>
+                    </tr>
+                {% endif %}
+            </table>
+        </div>
+
+        <div class="footer">
+            <p>Thank you for your business!</p>
+            <p>If you have any questions, please contact us at contact@jhmotiv.com.</p>
+        </div>
+    </div>
+</body>
+</html>

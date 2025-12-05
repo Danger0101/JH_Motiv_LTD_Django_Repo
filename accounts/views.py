@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.template.loader import render_to_string
 from .models import MarketingPreference
 from allauth.account.views import LoginView, SignupView, PasswordResetView, PasswordChangeView, PasswordSetView, LogoutView, PasswordResetDoneView, PasswordResetDoneView, EmailView
 from allauth.socialaccount.views import ConnectionsView
@@ -27,6 +28,11 @@ from django.views import View
 from django.contrib.auth import get_user_model
 from datetime import timedelta, date, datetime
 
+try:
+    from weasyprint import HTML
+except ImportError:
+    HTML = None
+
 # --- FIX IMPORTS HERE ---
 try:
     from dreamers.models import Dreamer
@@ -39,9 +45,10 @@ except ImportError:
     StockItem = None
 
 try:
-    from payments.models import Order
+    from payments.models import Order, CoachingOrder
 except ImportError:
     Order = None
+    CoachingOrder = None
 # ------------------------
 
 from coaching_availability.utils import get_coach_available_slots 
@@ -153,6 +160,16 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             # 3. Community Stats
             if Dreamer:
                 context['staff_dreamer_count'] = Dreamer.objects.count()
+
+        # --- CLIENT ORDER HISTORY ---
+        if Order:
+            context['ecomm_orders'] = Order.objects.filter(user=self.request.user).order_by('-created_at')
+        
+        if CoachingOrder:
+            # Coaching orders are linked via ClientOfferingEnrollment
+            context['coaching_orders'] = CoachingOrder.objects.filter(
+                enrollment__client=self.request.user
+            ).select_related('enrollment', 'enrollment__offering').order_by('-created_at')
 
         # --- EXISTING CONTEXT ---
         cart = get_or_create_cart(self.request)
@@ -329,3 +346,69 @@ def coach_clients_partial(request):
         'coach_clients_page': coach_clients_page,
     }
     return render(request, 'account/partials/_coach_clients_list.html', context)
+
+@login_required
+def generate_invoice_pdf(request, order_id):
+    """
+    Generates a PDF invoice for a given e-commerce or coaching order.
+    Users can only access their own invoices, unless they are staff.
+    """
+    order = None
+    coaching_order = None
+    order_type = ''
+
+    # The logic to find the order needs to be robust, as the ID could belong to
+    # either an e-commerce Order or a CoachingOrder. We also need to ensure
+    # the models were imported successfully.
+
+    if Order:
+        try:
+            # Check for E-commerce order first
+            possible_order = Order.objects.select_related('user').get(id=order_id)
+            if possible_order.user == request.user or request.user.is_staff:
+                order = possible_order
+                order_type = 'E-commerce'
+        except Order.DoesNotExist:
+            pass  # Not an e-commerce order, or ID doesn't exist.
+
+    if not order and CoachingOrder:
+        try:
+            # If not found, check for Coaching order
+            possible_coaching_order = CoachingOrder.objects.select_related('enrollment__client').get(id=order_id)
+            if possible_coaching_order.enrollment.client == request.user or request.user.is_staff:
+                coaching_order = possible_coaching_order
+                order_type = 'Coaching'
+        except CoachingOrder.DoesNotExist:
+            pass # Not a coaching order either.
+
+    # If neither order was found and assigned, the user is not authorized or the order doesn't exist.
+    if not order and not coaching_order:
+        messages.error(request, "Invoice not found or you do not have permission to view it.")
+        # Redirecting to profile is a safe bet.
+        return HttpResponse("Order not found or unauthorized", status=404)
+
+    # Prepare context for the template
+    context = {
+        'order': order,
+        'coaching_order': coaching_order,
+        'order_type': order_type,
+        'user': request.user,
+    }
+
+    # Render HTML template to a string
+    html_string = render_to_string('account/invoice_template.html', context)
+
+    if not HTML:
+        messages.error(request, "Could not generate PDF invoice. The PDF generation service is currently unavailable. Please contact support.")
+        return HttpResponse("PDF generation service is unavailable.", status=500)
+
+    # Generate PDF
+    # The base_url is crucial for resolving relative paths to static files (like CSS) in the template.
+    html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
+    pdf = html.write_pdf()
+
+    # Create HTTP response to trigger download
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="invoice_{order_id}.pdf"'
+    
+    return response

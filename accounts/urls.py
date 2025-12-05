@@ -14,6 +14,7 @@ urlpatterns = [
     path('profile/bookings/', views.profile_bookings_partial, name='profile_bookings'),
     path('profile/get-coaches-for-offering/', views.get_coaches_for_offering, name='get_coaches_for_offering'),
     path('profile/coach-clients-partial/', views.coach_clients_partial, name='coach_clients_partial'),
+    path('profile/invoice/<int:order_id>/', views.generate_invoice_pdf, name='generate_invoice_pdf'),
     
 
 
