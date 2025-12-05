@@ -1,11 +1,11 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% load i18n allauth socialaccount %}
 
 {% block title %}{% trans "Account Connections" %}{% endblock %}
 
 {% block content %}
-<div class="max-w-md mx-auto py-8 px-4 sm:px-6 lg:px-8">
-    <div class="p-6 bg-white shadow-lg rounded-lg border">
+<div class="{% if not request.htmx %}max-w-md mx-auto py-8 px-4 sm:px-6 lg:px-8{% endif %}">
+    <div class="{% if not request.htmx %}p-6 bg-white shadow-lg rounded-lg border{% endif %}">
         <h2 class="text-2xl font-bold mb-6 text-gray-900">{% translate "Account Connections" %}</h2>
 
         {% if form.accounts %}
