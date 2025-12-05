@@ -214,6 +214,8 @@ def order_detail_guest(request, guest_order_token):
 def payment_cancel(request):
     return render(request, 'payments/cancel.html')
 
+from products.models import StockPool # Ensure this is imported
+
 @csrf_exempt
 @transaction.atomic
 def stripe_webhook(request):
@@ -235,20 +237,43 @@ def stripe_webhook(request):
         metadata = session.get('metadata', {})
         product_type = metadata.get('product_type')
         
+        # --- E-COMMERCE CART HANDLING ---
         if product_type == 'ecommerce_cart':
             cart_id = metadata.get('cart_id')
             if cart_id:
                 try:
                     cart = Cart.objects.get(id=cart_id, status='open')
                     
-                    # 1. Create Local Order
+                    # 1. Retrieve & Save Shipping Data
+                    # We look for the JSON we stored in metadata during checkout creation
+                    shipping_json = metadata.get('shipping_address_json')
+                    shipping_data = json.loads(shipping_json) if shipping_json else {}
+                    
+                    # Fallback to Stripe's data if our metadata is empty
+                    if not shipping_data:
+                        shipping_details = session.get('shipping_details') or {}
+                        address = shipping_details.get('address') or {}
+                        shipping_data = {
+                            'name': shipping_details.get('name'),
+                            'address1': address.get('line1'),
+                            'address2': address.get('line2'),
+                            'city': address.get('city'),
+                            'state_code': address.get('state'),
+                            'country_code': address.get('country'),
+                            'zip': address.get('postal_code'),
+                        }
+
+                    # 2. Create the Order
                     order = Order.objects.create(
                         user_id=metadata.get('user_id'),
                         email=session.get('customer_details', {}).get('email'),
                         total_paid=session.amount_total / 100,
+                        shipping_data=shipping_data  # <--- SAVING THE ADDRESS
                     )
 
                     printful_items = []
+
+                    # 3. Process Items & Deduct Stock
                     for item in cart.items.all():
                         OrderItem.objects.create(
                             order=order,
@@ -256,40 +281,61 @@ def stripe_webhook(request):
                             price=item.variant.price,
                             quantity=item.quantity,
                         )
-                        # Collect Printful items
+
+                        # A. Handle Printful Items
                         if item.variant.printful_variant_id:
                             printful_items.append({
                                 "variant_id": item.variant.printful_variant_id,
                                 "quantity": item.quantity,
                             })
-                    
-                    # Consolidate Cart
+                        
+                        # B. Handle Self-Fulfilled Stock Deduction
+                        # We only deduct if it's PHYSICAL and NOT a Printful item (or mixed)
+                        # Actually, Printful items use "Infinite" pools, so we can treat all physical same
+                        # as long as the pool is set up correctly.
+                        if item.variant.product.product_type == 'physical' and item.variant.stock_pool:
+                            try:
+                                # Lock the pool row to prevent race conditions
+                                pool = StockPool.objects.select_for_update().get(id=item.variant.stock_pool.id)
+                                
+                                # Check if this is our "Printful Infinite Pool" (usually 9999)
+                                # If it's a real inventory pool, deduct.
+                                if pool.available_stock < 9000: 
+                                    if pool.available_stock >= item.quantity:
+                                        pool.available_stock -= item.quantity
+                                        pool.save()
+                                        print(f"Stock deducted: {item.quantity} from {pool.name}")
+                                    else:
+                                        # Critical: Sold more than we have!
+                                        print(f"CRITICAL: Oversold {pool.name}. Had {pool.available_stock}, sold {item.quantity}.")
+                                        pool.available_stock = 0 # Zero it out
+                                        pool.save()
+                                        # TODO: Send alert email to Admin
+                            except StockPool.DoesNotExist:
+                                print(f"Error: StockPool not found for variant {item.variant.id}")
+
+                    # 4. Consolidate Cart
                     cart.status = 'submitted'
                     cart.save()
 
-                    # 2. Handle Printful Fulfillment (Auto vs Manual)
+                    # 5. Handle Printful Fulfillment
                     if printful_items:
                         auto_fulfill = getattr(settings, 'PRINTFUL_AUTO_FULFILLMENT', False)
                         
-                        shipping_details = session.get('shipping_details')
-                        address = shipping_details['address'] if shipping_details else {}
-                        
-                        # Verify Address Data for Printful
-                        recipient = {
-                            "name": shipping_details.get('name'),
-                            "address1": address.get('line1'),
-                            "address2": address.get('line2', ''),
-                            "city": address.get('city'),
-                            "state_code": address.get('state'),  # Stripe 'state' usually maps to region code
-                            "country_code": address.get('country'),
-                            "zip": address.get('postal_code'),
-                            "email": order.email
-                        }
-
                         if auto_fulfill:
-                            # AUTOMATIC: Send to Printful immediately
+                            # AUTOMATIC MODE
                             printful_service = PrintfulService()
-                            print(f"Auto-processing Printful Order for Order #{order.id}")
+                            # Construct recipient for Printful from saved data
+                            recipient = {
+                                "name": shipping_data.get('name'),
+                                "address1": shipping_data.get('address1'),
+                                "address2": shipping_data.get('address2', ''),
+                                "city": shipping_data.get('city'),
+                                "state_code": shipping_data.get('state_code'),
+                                "country_code": shipping_data.get('country_code'),
+                                "zip": shipping_data.get('zip'),
+                                "email": order.email
+                            }
                             
                             response = printful_service.create_order(recipient, printful_items)
                             
@@ -298,18 +344,17 @@ def stripe_webhook(request):
                                 order.printful_order_status = response['result']['status']
                                 order.save()
                             else:
-                                error_msg = response.get('error', 'Unknown Error')
-                                print(f"Printful Auto-Fulfillment Failed: {error_msg}")
-                                # Mark as failed so staff can retry manually
+                                print(f"Printful Auto-Sync Failed: {response}")
                                 order.printful_order_status = 'failed_auto_sync'
                                 order.save()
                         else:
-                            # MANUAL: Mark as pending approval
-                            print(f"Manual Mode: Order #{order.id} queued for approval.")
+                            # MANUAL MODE (Safety Buffer)
                             order.printful_order_status = 'pending_approval'
                             order.save()
+                            print(f"Order #{order.id} queued for manual Printful approval.")
 
-                    # Send Emails (keep existing email logic)
+                    # 6. Send Confirmation Emails
+                    # (Keep your existing email sending logic here)
                     try:
                         customer_email = session.get('customer_details', {}).get('email')
                         if not customer_email:
@@ -351,9 +396,13 @@ def stripe_webhook(request):
                         print(f"CRITICAL: Order {order.id} created but failed to send email. Error: {email_error}")
 
                 except Exception as e:
-                    print(f"Error processing e-commerce order: {e}")
-                    return HttpResponse("Error processing order", status=500)
-    
+                    print(f"FATAL ERROR in E-commerce Webhook: {e}")
+                    return HttpResponse("Webhook processing error", status=500)
+
+        # --- COACHING HANDLING (Keep existing) ---
+        elif product_type == 'coaching_offering':
+             pass # (Paste your existing coaching logic here)
+
     return HttpResponse(status=200)
 
 
