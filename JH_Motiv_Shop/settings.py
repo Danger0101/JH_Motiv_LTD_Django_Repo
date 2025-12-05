@@ -253,6 +253,7 @@ STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET') # For verifying webhook signatures
 PRINTFUL_API_KEY = os.environ.get('PRINTFUL_API_KEY')
+PRINTFUL_STORE_ID = os.environ.get('PRINTFUL_STORE_ID')
 
 
 LOGGING = {

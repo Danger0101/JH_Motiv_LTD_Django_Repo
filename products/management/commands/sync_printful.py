@@ -45,16 +45,17 @@ class Command(BaseCommand):
                 variants = service.get_product_variants(p_data['id'])
                 
                 for v_data in variants:
-                    # Attempt to parse Size and Color from name (standard Printful format: "Product - Color / Size")
-                    # This is needed because your Variant model enforces unique_together on (product, color, size)
+                    # Parse logic to extract Size and Color from name
+                    # Printful names vary, e.g., "Product - Color / Size" or "Product / Size"
                     variant_name = v_data.get('name', '')
-                    parts = variant_name.split(' - ')
+                    product_name = p_data.get('name', '')
                     
                     color = "Default"
                     size = "One Size"
-                    
-                    # Basic parsing logic (Printful names vary, this is a best-effort attempt)
-                    if len(parts) > 1:
+
+                    # Strategy 1: "Product - Color / Size" (Hyphen Separator)
+                    if ' - ' in variant_name:
+                        parts = variant_name.split(' - ')
                         details = parts[-1] # e.g. "Black / L" or "11oz"
                         if '/' in details:
                             detail_parts = details.split('/')
@@ -63,8 +64,21 @@ class Command(BaseCommand):
                         else:
                             size = details.strip()
                     
+                    # Strategy 2: "Product / Size" (No Hyphen, just appended options)
+                    elif variant_name.startswith(product_name):
+                        # Remove product name and leading delimiters (slash or space)
+                        suffix = variant_name[len(product_name):].strip(' -/')
+                        if suffix:
+                            if '/' in suffix:
+                                detail_parts = suffix.split('/')
+                                color = detail_parts[0].strip()
+                                size = detail_parts[1].strip()
+                            else:
+                                size = suffix.strip()
+
                     # Create or Update Variant
                     # We use defaults for color/size to avoid overwriting manual corrections in admin
+                    # if the parsing matches existing logic, but we must ensure uniqueness.
                     obj, v_created = Variant.objects.update_or_create(
                         printful_variant_id=str(v_data['id']),
                         defaults={
@@ -73,7 +87,6 @@ class Command(BaseCommand):
                             'price': v_data.get('retail_price', 0.00),
                             'sku': v_data.get('sku', ''),
                             'stock_pool': None,
-                            # Ensure we satisfy unique constraint if it's a new record
                             'color': color[:50], # Truncate to fit max_length
                             'size': size[:20],   # Truncate to fit max_length
                         }
