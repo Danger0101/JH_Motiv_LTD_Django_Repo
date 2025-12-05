@@ -1,14 +1,15 @@
 import json
-import hmac
-import hashlib
-from django.conf import settings
-from django.views.generic import ListView, DetailView
+import logging
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.views.generic import ListView, DetailView
 from .models import Product, Variant
 from payments.models import Order
 from core.email_utils import send_transactional_email
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 class ProductListView(ListView):
     model = Product
@@ -45,7 +46,7 @@ class ProductDetailView(DetailView):
             'Grey': '#9E9E9E',
             'Gray': '#9E9E9E',
             
-            # Printful Specifics (Common)
+            # Printful Specifics
             'Dark Heather': '#424242',
             'Sport Grey': '#BDBDBD',
             'Heather Grey': '#9E9E9E',
@@ -74,7 +75,6 @@ class ProductDetailView(DetailView):
         
         clean_name = color_name.strip()
         
-        # Fallback smart matching
         if clean_name not in color_map:
             if "Heather" in clean_name: return '#757575'
             if "Navy" in clean_name: return '#0D47A1'
@@ -82,7 +82,7 @@ class ProductDetailView(DetailView):
             if "Red" in clean_name: return '#D32F2F'
             if "Blue" in clean_name: return '#1976D2'
         
-        return color_map.get(clean_name, '#E0E0E0') # Default Light Grey
+        return color_map.get(clean_name, '#E0E0E0')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -102,7 +102,6 @@ class ProductDetailView(DetailView):
         for variant in product.variants.all():
             color = variant.color or "Default"
             size = variant.size or "One Size"
-            # Use the method from the model if available, else default to True
             is_in_stock = variant.is_available() if hasattr(variant, 'is_available') else True
 
             lookup_key = f"{color}_{size}" 
@@ -113,16 +112,13 @@ class ProductDetailView(DetailView):
                 'in_stock': is_in_stock 
             }
             
-            # Only add distinct colors if they aren't "Default"
             if color and color != "Default":
                 color_hex = self.get_color_hex(color)
-                # Use a tuple so the set handles uniqueness correctly
                 unique_colors.add((color, color_hex)) 
             
             if size and size != "One Size":
                 unique_sizes.add(size)
         
-        # Sort and convert back to list
         context['unique_colors'] = sorted(list(unique_colors), key=lambda x: x[0])
         context['unique_sizes'] = sorted(list(unique_sizes))
         context['variant_lookup_json'] = json.dumps(variant_map)
@@ -130,46 +126,25 @@ class ProductDetailView(DetailView):
         return context
 
 # ----------------------------------------------------------------------
-# WEBHOOK VIEW
+# WEBHOOK VIEW (V1 COMPATIBLE - NO SIGNATURE CHECK)
 # ----------------------------------------------------------------------
 
 @csrf_exempt
 @require_POST
 def printful_webhook(request):
     """
-    Handles webhooks from Printful, specifically for shipping confirmations.
-    Verifies signature and processes 'package_shipped' events.
+    Handles webhooks from Printful (API V1).
+    Note: V1 does NOT support signature verification, so we trust the payload.
     """
-    payload = request.body
-    # Printful sends signature in X-PF-Signature header
-    signature = request.headers.get('X-PF-Signature') or request.META.get('HTTP_X_PF_SIGNATURE')
-
-    if not signature:
-        return HttpResponse("Signature header missing", status=401)
-
-    secret = getattr(settings, 'PRINTFUL_WEBHOOK_SECRET', '')
-    if not secret:
-        print("CRITICAL: PRINTFUL_WEBHOOK_SECRET is missing in settings.")
-        return HttpResponse("Server configuration error", status=500)
-
-    # Verify Signature
     try:
-        # Ensure secret is bytes
-        secret_bytes = secret.encode('utf-8')
-        computed_signature = hmac.new(secret_bytes, payload, hashlib.sha256).hexdigest()
-    except Exception as e:
-        print(f"Signature computation error: {e}")
-        return HttpResponse("Signature computation failed", status=500)
-
-    if not hmac.compare_digest(computed_signature, signature):
-        print(f"Invalid Signature. Received: {signature}, Computed: {computed_signature}")
-        return HttpResponse("Invalid signature", status=401)
-
-    try:
+        payload = request.body
         event_data = json.loads(payload)
         event_type = event_data.get('type')
         
-        print(f"Received Printful Webhook: {event_type}")
+        # Printful V1 sends 'type', V2 sends 'type' or 'event_type' depending on context
+        # V1: "package_shipped"
+        
+        logger.info(f"Received Printful Webhook: {event_type}")
 
         if event_type == 'package_shipped':
             order_data = event_data.get('data', {}).get('order', {})
@@ -181,12 +156,12 @@ def printful_webhook(request):
             try:
                 order = Order.objects.get(printful_order_id=printful_order_id)
                 
-                # Avoid duplicate emails if already marked shipped
                 if order.printful_order_status != 'shipped':
                     order.printful_order_status = 'shipped'
                     order.save()
 
-                    # Get tracking details
+                    # V1 Payload Structure for Shipment
+                    # data: { shipment: { ... }, order: { ... } }
                     shipment = event_data.get('data', {}).get('shipment', {})
                     tracking_number = shipment.get('tracking_number')
                     tracking_url = shipment.get('tracking_url')
@@ -199,7 +174,8 @@ def printful_webhook(request):
                             'tracking_url': tracking_url,
                             'carrier': carrier,
                             'user': order.user,
-                            'dashboard_url': request.build_absolute_uri('/accounts/profile/orders/')
+                            # Adjust domain if needed or use request.build_absolute_uri
+                            'dashboard_url': "https://jhmotiv.shop/accounts/profile/bookings/" 
                         }
                         
                         send_transactional_email(
@@ -208,15 +184,15 @@ def printful_webhook(request):
                             template_name='emails/shipping_confirmation.html',
                             context=email_context
                         )
-                        print(f"Sent shipping confirmation for Order #{order.id}")
+                        logger.info(f"Sent shipping confirmation for Order #{order.id}")
                     else:
-                        print(f"Order #{order.id} has no email address. Skipping notification.")
+                        logger.warning(f"Order #{order.id} has no email address. Skipping notification.")
                 else:
-                    print(f"Order #{order.id} was already marked as shipped.")
+                    logger.info(f"Order #{order.id} was already marked as shipped.")
 
             except Order.DoesNotExist:
-                print(f"Order not found for Printful ID {printful_order_id}. Ignoring.")
-                # Return 200 so Printful stops retrying
+                logger.warning(f"Order not found for Printful ID {printful_order_id}. Ignoring.")
+                # Return 200 so Printful stops retrying, as we can't fix a missing local order
                 return JsonResponse({"status": "ignored", "reason": "Order not found"})
 
         return JsonResponse({"status": "success"})
@@ -224,5 +200,5 @@ def printful_webhook(request):
     except json.JSONDecodeError:
         return HttpResponse("Invalid JSON", status=400)
     except Exception as e:
-        print(f"Webhook Error: {e}")
+        logger.error(f"Webhook Error: {e}")
         return HttpResponse("Internal server error", status=500)
