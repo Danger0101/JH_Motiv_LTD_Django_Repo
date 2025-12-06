@@ -1,0 +1,25 @@
+{% if results %}
+    <ul class="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1 max-h-60 overflow-auto">
+        {% for user in results %}
+            <li>
+                <button 
+                    hx-get="{% url 'accounts:staff_customer_lookup' %}?user_id={{ user.id }}"
+                    hx-target="#customer-detail-panel"
+                    hx-swap="innerHTML"
+                    @click="document.getElementById('customer-search-input').value = ''; document.getElementById('search-results').innerHTML = ''"
+                    class="w-full text-left px-4 py-3 hover:bg-blue-50 transition flex justify-between items-center group">
+                    
+                    <div>
+                        <p class="font-medium text-gray-800">{{ user.get_full_name|default:user.username }}</p>
+                        <p class="text-xs text-gray-500">{{ user.email }}</p>
+                    </div>
+                    <svg class="w-5 h-5 text-gray-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <div class="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1 p-3 text-sm text-gray-500 text-center">
+        No users found.
+    </div>
+{% endif %}

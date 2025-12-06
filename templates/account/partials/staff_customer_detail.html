@@ -1,0 +1,72 @@
+<div class="bg-gray-50 rounded-xl p-6 border border-gray-200 animate-fade-in-up">
+    
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+        <div class="flex items-center mb-4 md:mb-0">
+            <div class="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold mr-4">
+                {{ customer.first_name|first|upper }}{{ customer.last_name|first|upper }}
+            </div>
+            <div>
+                <h3 class="text-xl font-bold text-gray-900">{{ customer.get_full_name|default:customer.username }}</h3>
+                <div class="flex items-center text-sm text-gray-500 space-x-3">
+                    <span>{{ customer.email }}</span>
+                    <span>•</span>
+                    <span>Joined: {{ customer.date_joined|date:"M Y" }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="flex space-x-2">
+            <a href="{% url 'admin:auth_user_change' customer.id %}" target="_blank" class="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded">
+                Edit in Admin
+            </a>
+            </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <div class="bg-white p-4 rounded-lg border shadow-sm">
+            <h4 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">Active Coaching Plans</h4>
+            {% if active_enrollments %}
+                <ul class="space-y-3">
+                    {% for enrollment in active_enrollments %}
+                        <li class="flex justify-between items-center pb-2 border-b last:border-0">
+                            <div>
+                                <p class="font-semibold text-gray-800">{{ enrollment.offering.name }}</p>
+                                <p class="text-xs text-green-600">Active</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="block text-lg font-bold text-blue-600">{{ enrollment.sessions_remaining }}</span>
+                                <span class="text-xs text-gray-400">Credits</span>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-sm text-gray-400 italic">No active plans.</p>
+            {% endif %}
+        </div>
+
+        <div class="bg-white p-4 rounded-lg border shadow-sm">
+            <h4 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">Recent Orders</h4>
+            {% if recent_orders %}
+                <ul class="space-y-2">
+                    {% for order in recent_orders %}
+                        <li class="flex justify-between text-sm">
+                            <span class="text-blue-600 font-medium">#{{ order.id }}</span>
+                            <span class="text-gray-500">{{ order.created_at|date:"d/m/y" }}</span>
+                            <span class="text-gray-700">£{{ order.total_paid }}</span>
+                            <span class="px-2 py-0.5 rounded text-xs 
+                                {% if order.status == 'paid' %}bg-green-100 text-green-800
+                                {% elif order.status == 'shipped' %}bg-blue-100 text-blue-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ order.status|title }}
+                            </span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-sm text-gray-400 italic">No orders found.</p>
+            {% endif %}
+        </div>
+
+    </div>
+</div>

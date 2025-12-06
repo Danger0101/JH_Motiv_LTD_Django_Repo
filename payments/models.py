@@ -23,17 +23,41 @@ class Order(models.Model):
 
     STATUS_PENDING = 'pending'
     STATUS_PAID = 'paid'
+    STATUS_PREPARING = 'preparing'  # New
+    STATUS_SHIPPED = 'shipped'      # New
+    STATUS_DELIVERED = 'delivered'  # New
     STATUS_CANCELLED = 'cancelled'
+    STATUS_REFUNDED = 'refunded'    # New
+
     STATUS_CHOICES = [
         (STATUS_PENDING, 'Pending'),
         (STATUS_PAID, 'Paid'),
+        (STATUS_PREPARING, 'Preparing'),
+        (STATUS_SHIPPED, 'Shipped'),
+        (STATUS_DELIVERED, 'Delivered'),
         (STATUS_CANCELLED, 'Cancelled'),
+        (STATUS_REFUNDED, 'Refunded'),
     ]
+    
     status = models.CharField(
-        max_length=10,
+        max_length=20, # Increased length just in case
         choices=STATUS_CHOICES,
         default=STATUS_PENDING,
     )
+
+    # 2. NEW CARRIER & TRACKING FIELDS
+    CARRIER_CHOICES = [
+        ('royal_mail', 'Royal Mail'),
+        ('dpd', 'DPD'),
+        ('evri', 'Evri'),
+        ('dhl', 'DHL'),
+        ('ups', 'UPS'),
+        ('fedex', 'FedEx'),
+        ('other', 'Other'),
+    ]
+    carrier = models.CharField(max_length=50, choices=CARRIER_CHOICES, null=True, blank=True)
+    tracking_number = models.CharField(max_length=100, null=True, blank=True)
+    tracking_url = models.URLField(max_length=500, null=True, blank=True, help_text="Optional direct link to tracking")
 
     def save(self, *args, **kwargs):
         if not self.pk and self.user is None and self.guest_order_token is None:

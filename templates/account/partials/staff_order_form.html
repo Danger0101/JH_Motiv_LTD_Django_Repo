@@ -1,0 +1,57 @@
+<tr id="order-row-{{ order.id }}" class="bg-blue-50">
+    <td colspan="6" class="p-4">
+        <form hx-post="{% url 'accounts:staff_update_order' order.id %}" 
+              hx-target="#order-row-{{ order.id }}" 
+              hx-swap="outerHTML"
+              class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            
+            <div class="md:col-span-4 mb-2 font-bold text-gray-700">
+                Editing Order #{{ order.id }} - {{ order.user.username|default:"Guest" }}
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-700">Status</label>
+                <select name="status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                    {% for val, label in order.STATUS_CHOICES %}
+                        <option value="{{ val }}" {% if order.status == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-700">Carrier</label>
+                <select name="carrier" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                    <option value="">---------</option>
+                    {% for val, label in order.CARRIER_CHOICES %}
+                        <option value="{{ val }}" {% if order.carrier == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-700">Tracking #</label>
+                <input type="text" name="tracking_number" value="{{ order.tracking_number|default:'' }}" 
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+            </div>
+
+            <div class="flex space-x-2">
+                <button type="submit" class="bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700">
+                    Save
+                </button>
+                <button type="button" 
+                        hx-get="{% url 'accounts:staff_update_order' order.id %}" 
+                        hx-target="#order-row-{{ order.id }}" 
+                        hx-swap="outerHTML" 
+                        class="bg-white text-gray-700 border border-gray-300 px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-50">
+                    Cancel
+                </button>
+            </div>
+            
+            <div class="md:col-span-4 mt-2">
+                <label class="block text-xs font-medium text-gray-700">Tracking Link (Optional)</label>
+                <input type="url" name="tracking_url" value="{{ order.tracking_url|default:'' }}" placeholder="https://..."
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+            </div>
+        </form>
+    </td>
+</tr>

@@ -432,3 +432,67 @@ def generate_invoice_pdf(request, order_id):
     response['Content-Disposition'] = f'attachment; filename="invoice_{order_id}.pdf"'
     
     return response
+
+from django.contrib.admin.views.decorators import staff_member_required
+
+@staff_member_required
+def staff_update_order(request, order_id):
+    """
+    HTMX view to handle updating order status and shipping info from the staff profile.
+    """
+    order = get_object_or_404(Order, id=order_id)
+
+    if request.method == "POST":
+        # Update fields from the form
+        order.status = request.POST.get('status', order.status)
+        order.carrier = request.POST.get('carrier', order.carrier)
+        order.tracking_number = request.POST.get('tracking_number', order.tracking_number)
+        order.tracking_url = request.POST.get('tracking_url', order.tracking_url)
+        order.save()
+        
+        # Return the read-only row with updated info
+        return render(request, 'account/partials/staff_order_row.html', {'order': order})
+
+    # GET request returns the edit form
+    return render(request, 'account/partials/staff_order_form.html', {'order': order})
+
+
+@staff_member_required
+def staff_customer_lookup(request):
+    """
+    HTMX view for searching users and displaying their mini-CRM profile.
+    """
+    User = get_user_model()
+    query = request.GET.get('q', '')
+    user_id = request.GET.get('user_id')
+
+    # 1. HANDLE DETAIL VIEW (When a user is clicked)
+    if user_id:
+        customer = get_object_or_404(User, id=user_id)
+        
+        # Fetch key data
+        recent_orders = Order.objects.filter(user=customer).order_by('-created_at')[:5]
+        active_enrollments = ClientOfferingEnrollment.objects.filter(
+            client=customer, 
+            is_active=True
+        ).select_related('offering')
+        
+        context = {
+            'customer': customer,
+            'recent_orders': recent_orders,
+            'active_enrollments': active_enrollments,
+        }
+        return render(request, 'account/partials/staff_customer_detail.html', context)
+
+    # 2. HANDLE SEARCH (As you type)
+    if query:
+        results = User.objects.filter(
+            Q(email__icontains=query) | 
+            Q(first_name__icontains=query) | 
+            Q(last_name__icontains=query) |
+            Q(username__icontains=query)
+        ).exclude(is_staff=True)[:10] # Exclude staff to keep it clean, limit to 10
+        
+        return render(request, 'account/partials/staff_customer_search_results.html', {'results': results})
+
+    return HttpResponse("") # Return nothing if no query
