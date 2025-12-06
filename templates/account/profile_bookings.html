@@ -1,36 +1,61 @@
-<div class="bg-white p-6 rounded-lg shadow-lg">
-    <h2 class="text-xl font-semibold text-gray-800 mb-4">My Booked Sessions</h2>
+{% load static %}
 
-    <div class="border-b border-gray-200 mb-4">
-        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-            <a href="#" 
-               hx-get="{% url 'accounts:profile_bookings' %}?tab=upcoming" 
-               hx-target="#session-list-container"
-               hx-swap="innerHTML"
-               class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm {% if active_tab == 'upcoming' or not active_tab %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
-                Upcoming
-            </a>
-            <a href="#" 
-               hx-get="{% url 'accounts:profile_bookings' %}?tab=past" 
-               hx-target="#session-list-container"
-               hx-swap="innerHTML"
-               class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm {% if active_tab == 'past' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
-                Past
-            </a>
-            <a href="#" 
-               hx-get="{% url 'accounts:profile_bookings' %}?tab=canceled" 
-               hx-target="#session-list-container"
-               hx-swap="innerHTML"
-               class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm {% if active_tab == 'canceled' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
-                Canceled
-            </a>
-        </nav>
-    </div>
-
-    <div id="session-list-container" 
-         hx-get="{% url 'accounts:profile_bookings' %}?tab={{ active_tab|default:'upcoming' }}" 
-         hx-trigger="load"
-         hx-swap="innerHTML">
-        <p class="text-gray-500 italic py-4">Loading sessions...</p>
-    </div>
+{% if bookings %}
+<div class="history-table-wrapper">
+    <table class="history-table">
+        <thead>
+            <tr>
+                <th>Service</th>
+                <th>Coach</th>
+                <th>Date & Time</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for booking in bookings %}
+            <tr>
+                <td>
+                    <span style="font-weight: 600; color: var(--gray-900);">{{ booking.enrollment.offering.name }}</span>
+                </td>
+                <td>{{ booking.coach.user.get_full_name }}</td>
+                <td>
+                    <div style="font-weight: 500;">{{ booking.start_datetime|date:"M d, Y" }}</div>
+                    <div style="font-size: 0.75rem; color: var(--gray-500);">{{ booking.start_datetime|time:"H:i" }} - {{ booking.end_datetime|time:"H:i" }}</div>
+                </td>
+                <td>
+                    <span class="status-pill" style="{% if booking.status == 'confirmed' %}background-color: #d1fae5; color: #065f46;{% elif booking.status == 'cancelled' %}background-color: #f3f4f6; color: #374151;{% else %}background-color: #fef3c7; color: #92400e;{% endif %}">
+                        {{ booking.get_status_display }}
+                    </span>
+                </td>
+                <td>
+                    {% if booking.status == 'confirmed' %}
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <a href="{{ booking.meeting_link }}" target="_blank" class="btn-primary" style="padding: 0.25rem 0.75rem; width: auto; font-size: 0.75rem; text-decoration: none;">
+                                Join
+                            </a>
+                            <button 
+                                hx-get="{% url 'coaching_booking:reschedule_form' booking.id %}"
+                                hx-target="#booking-modal-container"
+                                class="btn-secondary"
+                                style="padding: 0.25rem 0.75rem; width: auto; font-size: 0.75rem;"
+                            >
+                                Reschedule
+                            </button>
+                        </div>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
+
+<div id="booking-modal-container"></div>
+
+{% else %}
+<div class="dashboard-card" style="text-align: center; border: 1px dashed var(--gray-300); background-color: var(--gray-50);">
+    <p style="color: var(--gray-500); margin-bottom: 1rem;">You have no upcoming sessions scheduled.</p>
+    <a href="{% url 'coaching_booking:profile_book_session' %}" class="btn-primary" style="display: inline-block; width: auto;">Book a Session</a>
+</div>
+{% endif %}

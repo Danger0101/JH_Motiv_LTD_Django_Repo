@@ -1,34 +1,29 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Shipping Policy{% endblock %}
 
+{% block extra_head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/core.css' %}">
+{% endblock %}
+
 {% block content %}
-<div class="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-    <div class="text-center mb-10">
-        <h1 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-            {{ shipping_data.policy.title }}
-        </h1>
-        <p class="mt-4 text-lg text-gray-500">Effective Date: {{ shipping_data.policy.effective_date }}</p>
+<div class="core-wrapper">
+    <div class="core-header">
+        <h1 class="core-title">Shipping Policy</h1>
+        <p class="core-subtitle">Information about delivery and fulfillment.</p>
     </div>
 
-    <div class="bg-white shadow-lg rounded-lg p-6 lg:p-10">
-        
-        {% for section in shipping_data.policy.sections %}
-            <section class="mb-8">
-                {% if section.heading|slice:":2" == "1." or section.heading|slice:":2" == "2." or section.heading|slice:":2" == "3." or section.heading|slice:":2" == "4." %}
-                    <h2 class="text-2xl font-semibold mb-3 pt-4 border-t border-gray-200">{{ section.heading }}</h2>
-                {% else %}
-                    <h3 class="text-xl font-semibold mb-3">{{ section.heading }}</h3>
-                {% endif %}
-                
-                <div class="text-gray-700 leading-relaxed space-y-4">
-                    {{ section.content|safe }}
-                </div>
-            </section>
+    <div class="policy-card content-panel prose-text">
+        {% for section in shipping_data.sections %}
+        <section style="margin-bottom: 2rem;">
+            <h3>{{ section.heading }}</h3>
+            <div>
+                {{ section.content|safe }}
+            </div>
+        </section>
         {% endfor %}
-        
-        <p class="text-sm pt-4 border-t border-gray-200">For further inquiries, please contact us at: {{ shipping_data.policy.contact }}</p>
-
     </div>
 </div>
 {% endblock %}

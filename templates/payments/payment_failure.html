@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Payment Cancelled{% endblock %}
+{% block title %}Payment Failed{% endblock %}
 
 {% block extra_head %}
 {{ block.super }}
@@ -12,18 +12,20 @@
 <div class="cart-page-wrapper">
     <div class="success-container">
         <div class="success-card">
-            <h1 class="success-header" style="color: #dc2626;"> Payment Cancelled
+            <h1 class="success-header" style="color: #dc2626;">
+                Payment Failed
             </h1>
             <p style="font-size: 1.125rem; color: var(--gray-700); margin-bottom: 1.5rem;">
-                Your payment was not processed. No charges were made.
+                We were unable to process your payment.
+            </p>
+
+            <p style="background-color: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; padding: 1rem; border-radius: 0.5rem; margin-bottom: 2rem;">
+                {{ error_message|default:"An unknown error occurred with the payment provider." }}
             </p>
 
             <div class="success-actions">
-                <p style="color: var(--gray-600); margin-bottom: 1rem;">
-                    You can try again or continue shopping.
-                </p>
                 <a href="{% url 'cart:cart_detail' %}" class="btn-start-shopping">
-                    Return to Cart
+                    Try Again
                 </a>
             </div>
         </div>
