@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 from datetime import date, timedelta, datetime
 import calendar
+import logging
 from django.db import transaction
 from django.db.models import Q
 from django.contrib import messages
@@ -22,6 +23,7 @@ from coaching_client.models import ContentPage
 from cart.utils import get_or_create_cart, get_cart_summary_data
 from facts.models import Fact
 
+logger = logging.getLogger(__name__)
 BOOKING_WINDOW_DAYS = 90
 
 class CoachLandingView(TemplateView):
@@ -95,8 +97,7 @@ def book_session(request):
         return htmx_error("Booking requires either an enrollment or a free offer.")
 
     if enrollment_id and free_offer_id:
-        # If both are somehow present, prefer the one that matches the logic used (handled below)
-        pass 
+        return htmx_error("Cannot provide both an enrollment and a free offer. Please select one.")
 
     try:
         with transaction.atomic():
@@ -209,7 +210,7 @@ def book_session(request):
                     context=coach_context
                 )
             except Exception as e:
-                print(f"CRITICAL: Booking succeeded but failed to send confirmation emails. Error: {e}")
+                logger.error(f"CRITICAL: Booking succeeded but failed to send confirmation emails. Error: {e}")
         
         messages.success(request, f"Session confirmed for {start_datetime_obj.strftime('%B %d, %Y at %I:%M %p')}. A confirmation email has been sent.")
         response = HttpResponse(status=204)
@@ -263,7 +264,7 @@ def cancel_session(request, booking_id):
             }
         )
     except Exception as e:
-        print(f"CRITICAL: Cancellation for booking {booking.id} succeeded but failed to send emails. Error: {e}")
+        logger.error(f"CRITICAL: Cancellation for booking {booking.id} succeeded but failed to send emails. Error: {e}")
 
     return render(request, 'accounts/profile_bookings.html', {'active_tab': 'canceled'})
 
@@ -336,7 +337,7 @@ def reschedule_session(request, booking_id):
                             }
                         )
                     except Exception as e:
-                        print(f"CRITICAL: Reschedule for booking {booking.id} succeeded but failed to send emails. Error: {e}")
+                        logger.error(f"CRITICAL: Reschedule for booking {booking.id} succeeded but failed to send emails. Error: {e}")
 
         except ValueError:
             messages.error(request, "Invalid date format.")
@@ -349,23 +350,29 @@ def reschedule_session(request, booking_id):
 @require_POST
 def apply_for_free_session(request):
     client = request.user
-    
-    active_requests = OneSessionFreeOffer.objects.filter(
-        client=client, 
-        is_redeemed=False
-    ).filter(
-        Q(redemption_deadline__isnull=True) | Q(redemption_deadline__gt=timezone.now())
-    )
-
-    if active_requests.exists():
-        return render(request, 'coaching_booking/partials/free_session_status.html', {
-            'status': 'pending',
-            'message': 'You already have a pending or active request.'
-        })
-
     coach_id = request.POST.get('coach_id')
     coach_instance = get_object_or_404(CoachProfile, id=coach_id)
 
+    # Check for an existing, non-redeemed, non-expired offer with this specific coach
+    existing_offer = OneSessionFreeOffer.objects.filter(
+        client=client,
+        coach=coach_instance,
+        is_redeemed=False
+    ).filter(
+        Q(redemption_deadline__isnull=True) | Q(redemption_deadline__gt=timezone.now())
+    ).first()
+
+    if existing_offer:
+        if existing_offer.is_approved:
+            message = 'You already have an approved free session with this coach. Please book it from your profile.'
+        else:
+            message = 'You already have a pending request with this coach. They will review it shortly.'
+        return render(request, 'coaching_booking/partials/free_session_status.html', {
+            'status': 'pending',
+            'message': message
+        })
+
+    # Create a new offer since no active one exists for this coach
     OneSessionFreeOffer.objects.create(
         client=client,
         coach=coach_instance,
@@ -375,7 +382,7 @@ def apply_for_free_session(request):
     
     return render(request, 'coaching_booking/partials/free_session_status.html', {
         'status': 'success', 
-        'message': 'Request submitted! A coach will review it shortly.'
+        'message': 'Request submitted! The coach will review it shortly.'
     })
 
 @login_required

@@ -19,7 +19,7 @@ DEBUG = False
 
 HEROKU_APP_NAME = os.environ.get('HEROKU_APP_NAME')
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com']
-CSRF_TRUSTED_ORIGINS = ['https://jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com', 'https://*.127.0.0.1', 'https://*.localhost', 'https://jhmotiv.shop', 'http://jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com']
+CSRF_TRUSTED_ORIGINS = ['https://jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com', 'https://*.127.0.0.1', 'https://*.localhost', 'https://jhmotiv.shop']
 
 # Application definition
 INSTALLED_APPS = [

@@ -1,5 +1,8 @@
 import json
 import logging
+import hmac
+import hashlib
+from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -126,25 +129,42 @@ class ProductDetailView(DetailView):
         return context
 
 # ----------------------------------------------------------------------
-# WEBHOOK VIEW (V1 COMPATIBLE - NO SIGNATURE CHECK)
+# WEBHOOK VIEW (V2 COMPATIBLE - WITH SIGNATURE CHECK)
 # ----------------------------------------------------------------------
 
 @csrf_exempt
 @require_POST
 def printful_webhook(request):
     """
-    Handles webhooks from Printful (API V1).
-    Note: V1 does NOT support signature verification, so we trust the payload.
+    Handles webhooks from Printful (API V2) with signature verification.
     """
+    signature_header = request.headers.get('X-Printful-Signature')
+    if not signature_header:
+        logger.warning("Printful webhook missing signature header.")
+        return HttpResponse("Signature header missing.", status=400)
+
     try:
+        secret = settings.PRINTFUL_WEBHOOK_SECRET
+        if not secret:
+            logger.error("PRINTFUL_WEBHOOK_SECRET is not configured.")
+            return HttpResponse("Webhook secret not configured.", status=500)
+
+        # V2 requires HMAC-SHA256 signature verification
         payload = request.body
+        expected_signature = hmac.new(
+            key=secret.encode('utf-8'),
+            msg=payload,
+            digestmod=hashlib.sha256
+        ).hexdigest()
+
+        if not hmac.compare_digest(expected_signature, signature_header):
+            logger.warning("Invalid Printful webhook signature.")
+            return HttpResponse("Invalid signature.", status=403)
+            
         event_data = json.loads(payload)
         event_type = event_data.get('type')
         
-        # Printful V1 sends 'type', V2 sends 'type' or 'event_type' depending on context
-        # V1: "package_shipped"
-        
-        logger.info(f"Received Printful Webhook: {event_type}")
+        logger.info(f"Received verified Printful Webhook: {event_type}")
 
         if event_type == 'package_shipped':
             order_data = event_data.get('data', {}).get('order', {})
@@ -160,12 +180,12 @@ def printful_webhook(request):
                     order.printful_order_status = 'shipped'
                     order.save()
 
-                    # V1 Payload Structure for Shipment
-                    # data: { shipment: { ... }, order: { ... } }
-                    shipment = event_data.get('data', {}).get('shipment', {})
-                    tracking_number = shipment.get('tracking_number')
-                    tracking_url = shipment.get('tracking_url')
-                    carrier = shipment.get('carrier')
+                    # V2 payload for 'package_shipped' is slightly different.
+                    # The 'shipment' data is directly inside 'data'.
+                    shipment_data = event_data.get('data', {}).get('shipment', {})
+                    tracking_number = shipment_data.get('tracking_number')
+                    tracking_url = shipment_data.get('tracking_url')
+                    carrier = shipment_data.get('carrier')
                     
                     if order.email:
                         email_context = {
@@ -174,7 +194,6 @@ def printful_webhook(request):
                             'tracking_url': tracking_url,
                             'carrier': carrier,
                             'user': order.user,
-                            # Adjust domain if needed or use request.build_absolute_uri
                             'dashboard_url': "https://jhmotiv.shop/accounts/profile/bookings/" 
                         }
                         
@@ -192,13 +211,13 @@ def printful_webhook(request):
 
             except Order.DoesNotExist:
                 logger.warning(f"Order not found for Printful ID {printful_order_id}. Ignoring.")
-                # Return 200 so Printful stops retrying, as we can't fix a missing local order
                 return JsonResponse({"status": "ignored", "reason": "Order not found"})
 
         return JsonResponse({"status": "success"})
 
     except json.JSONDecodeError:
+        logger.error("Webhook payload is not valid JSON.")
         return HttpResponse("Invalid JSON", status=400)
     except Exception as e:
-        logger.error(f"Webhook Error: {e}")
+        logger.error(f"Webhook Error: {e}", exc_info=True)
         return HttpResponse("Internal server error", status=500)
