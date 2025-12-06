@@ -1,25 +1,26 @@
-<div class="slots-container animate-in fade-in zoom-in-95 duration-200">
-    <h3 style="font-size: 1rem; font-weight: 600; color: var(--gray-800); margin-bottom: 1rem;">
-        Available Times for {{ date_display }}
+<div class="slots-container">
+    <h3 style="font-size: 1rem; font-weight: 700; color: var(--gray-800); margin-bottom: 1rem; text-align: center;">
+        Availability for {{ date_display }}
     </h3>
 
     {% if slots %}
         <div class="slots-grid">
             {% for slot in slots %}
             <form action="{% url 'coaching_booking:booking_checkout' %}" method="get">
-                <input type="hidden" name="enrollment_id" value="{{ enrollment_id }}">
-                <input type="hidden" name="date" value="{{ date_str }}">
-                <input type="hidden" name="time" value="{{ slot }}">
+                <input type="hidden" name="enrollment_id" value="{{ enrollment_id }}" />
+                <input type="hidden" name="date" value="{{ date_str }}" />
+                <input type="hidden" name="time" value="{{ slot }}" />
                 
-                <button type="submit" class="slot-btn" style="width: 100%;">
+                <button type="submit" class="slot-btn">
                     {{ slot }}
                 </button>
             </form>
             {% endfor %}
         </div>
     {% else %}
-        <p style="color: var(--gray-500); font-style: italic; text-align: center;">
-            No slots available on this date. Please try another day.
-        </p>
+        <div style="text-align: center; color: var(--gray-600);">
+            <svg style="width: 2rem; height: 2rem; margin: 0 auto 0.5rem; color: var(--gray-400);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <p>No slots available on this date.</p>
+        </div>
     {% endif %}
 </div>

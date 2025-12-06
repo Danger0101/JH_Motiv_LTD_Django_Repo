@@ -10,7 +10,7 @@
 
 {% block content %}
 <div class="cart-page-wrapper">
-    <div class="cart-container" style="max-width: 40rem;">
+    <div class="cart-container" style="max-width: 36rem;">
         
         <header class="cart-header">
             <h1>Confirm Session</h1>
@@ -19,7 +19,7 @@
         <div class="content-card">
             <h2 class="card-title">Session Details</h2>
             
-            <div style="margin-bottom: 1.5rem;">
+            <div style="margin-bottom: 2rem;">
                 <div class="summary-row">
                     <span style="font-weight: 600;">Coach</span>
                     <span>{{ coach.user.get_full_name }}</span>
@@ -36,25 +36,29 @@
                     <span style="font-weight: 600;">Plan</span>
                     <span>{{ enrollment.offering.name }}</span>
                 </div>
-                <div class="summary-row" style="margin-top: 1rem; color: #16a34a;">
-                    <span style="font-weight: 600;">Cost</span>
-                    <span>1 Credit ({{ enrollment.remaining_sessions }} remaining)</span>
+                
+                <div style="border-top: 1px solid var(--gray-200); margin-top: 1rem; padding-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; color: var(--gray-900);">Total Cost</span>
+                    <span style="font-weight: 700; color: #16a34a;">1 Credit</span>
                 </div>
+                <p style="text-align: right; font-size: 0.75rem; color: var(--gray-500); margin-top: 0.25rem;">
+                    You will have {{ enrollment.remaining_sessions|add:"-1" }} credits remaining.
+                </p>
             </div>
 
             <form action="{% url 'coaching_booking:confirm_booking' %}" method="post">
                 {% csrf_token %}
-                <input type="hidden" name="enrollment_id" value="{{ enrollment.id }}">
-                <input type="hidden" name="date" value="{{ date_raw }}">
-                <input type="hidden" name="time" value="{{ time_raw }}">
+                <input type="hidden" name="enrollment_id" value="{{ enrollment.id }}" />
+                <input type="hidden" name="date" value="{{ date_raw }}" />
+                <input type="hidden" name="time" value="{{ time_raw }}" />
                 
                 <button type="submit" class="btn-pay">
-                    Confirm Booking
+                    Confirm & Book
                 </button>
             </form>
 
-            <div style="text-align: center; margin-top: 1rem;">
-                <a href="{% url 'account:account_profile' %}" style="color: var(--gray-500); font-size: 0.875rem; text-decoration: underline;">Cancel</a>
+            <div style="text-align: center; margin-top: 1.5rem;">
+                <a href="{% url 'account:account_profile' %}" style="color: var(--gray-500); font-weight: 500; font-size: 0.875rem;">Cancel</a>
             </div>
         </div>
 

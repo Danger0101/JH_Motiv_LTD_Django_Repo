@@ -2,28 +2,42 @@
 
 <link rel="stylesheet" href="{% static 'css/booking.css' %}">
 
+<link rel="stylesheet" href="{% static 'css/management.css' %}"> <div id="booking-wizard-container" class="booking-wizard">
 <div id="booking-wizard-container" class="booking-wizard">
     <div class="wizard-header">
         <h2 class="wizard-title">Book Your Session</h2>
-        <p class="wizard-step-indicator">Select a date and time that works for you.</p>
+        <p class="wizard-step-indicator">
+            {% if not selected_enrollment %}Step 1: Select Plan{% else %}Step 2: Select Date & Time{% endif %}
+        </p>
     </div>
 
     {% if not selected_enrollment %}
-    <div class="form-group">
-        <label class="form-label">Select Plan:</label>
-        <select 
-            class="form-select" 
-            hx-get="{% url 'coaching_booking:profile_book_session' %}" 
-            hx-target="#booking-wizard-container" 
-            name="enrollment_id"
-            hx-trigger="change"
-        >
-            <option value="">-- Choose a Plan --</option>
-            {% for enrollment in enrollments %}
-                <option value="{{ enrollment.id }}">{{ enrollment.offering.name }} ({{ enrollment.remaining_sessions }} left)</option>
-            {% endfor %}
-        </select>
+    <div class="manage-form-card" style="box-shadow: none; border: none; padding: 0;">
+        <div class="form-group">
+            <label for="enrollment-select">Choose an Active Plan:</label>
+            <select 
+                id="enrollment-select"
+                name="enrollment_id"
+                hx-get="{% url 'coaching_booking:profile_book_session' %}" 
+                hx-target="#booking-wizard-container" 
+                hx-trigger="change"
+            >
+                <option value="">-- Select --</option>
+                {% for enrollment in enrollments %}
+                    <option value="{{ enrollment.id }}">
+                        {{ enrollment.offering.name }} ({{ enrollment.remaining_sessions }} sessions left)
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% if not enrollments %}
+            <p style="text-align: center; color: var(--gray-500); margin-top: 1rem;">
+                You don't have any active coaching plans. 
+                <a href="{% url 'coaching_booking:offer-list' %}" style="color: #2563eb; text-decoration: underline;">Purchase one here</a>.
+            </p>
+        {% endif %}
     </div>
+
     {% else %}
         
         <div class="calendar-layout">
@@ -32,20 +46,23 @@
                 hx-get="{% url 'coaching_booking:calendar_widget' %}?enrollment_id={{ selected_enrollment.id }}&month={{ current_month }}&year={{ current_year }}"
                 hx-trigger="load"
             >
-                <div style="text-align: center; padding: 2rem;">Loading Calendar...</div>
+                <div style="text-align: center; padding: 2rem; color: var(--gray-500);">Loading Calendar...</div>
             </div>
 
             <div id="time-slots-container">
+                <div style="text-align: center; padding: 2rem; color: var(--gray-500); border: 1px dashed var(--gray-300); border-radius: 0.75rem;">
+                    Select a date to view available times.
+                </div>
             </div>
         </div>
 
-        <div style="margin-top: 2rem; display: flex; justify-content: space-between; border-top: 1px solid var(--gray-200); padding-top: 1rem;">
+        <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--gray-200);">
              <button 
-                class="btn-secondary" 
+                class="btn-secondary-action" 
                 hx-get="{% url 'coaching_booking:profile_book_session' %}" 
                 hx-target="#booking-wizard-container"
              >
-                &larr; Back to Plans
+                &larr; Change Plan
              </button>
         </div>
 

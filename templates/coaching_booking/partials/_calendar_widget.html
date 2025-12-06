@@ -5,6 +5,7 @@
             class="calendar-nav-btn" 
             hx-get="{% url 'coaching_booking:calendar_widget' %}?enrollment_id={{ enrollment_id }}&month={{ prev_month }}&year={{ prev_year }}"
             hx-target="#calendar-widget"
+            title="Previous Month"
         >
             &larr;
         </button>
@@ -15,6 +16,7 @@
             class="calendar-nav-btn" 
             hx-get="{% url 'coaching_booking:calendar_widget' %}?enrollment_id={{ enrollment_id }}&month={{ next_month }}&year={{ next_year }}"
             hx-target="#calendar-widget"
+            title="Next Month"
         >
             &rarr;
         </button>
@@ -33,12 +35,12 @@
     <div class="days-grid">
         {% for day in calendar_days %}
             {% if day.is_empty %}
-                <div class="day-cell empty"></div>
+                <div class="day-cell"></div>
             {% else %}
                 <button 
                     type="button"
                     class="day-cell 
-                           {% if day.is_available %}available{% else %}disabled{% endif %} 
+                           {% if day.is_available %}available{% endif %} 
                            {% if day.is_today %}today{% endif %}"
                     {% if day.is_available %}
                         hx-get="{% url 'coaching_booking:available_slots' %}?enrollment_id={{ enrollment_id }}&date={{ day.date_str }}"
@@ -46,6 +48,7 @@
                         _="on click remove .selected from .day-cell then add .selected to me"
                     {% else %}
                         disabled
+                        style="cursor: not-allowed; opacity: 0.5;"
                     {% endif %}
                 >
                     {{ day.day }}

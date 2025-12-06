@@ -16,10 +16,7 @@
             <p class="page-subtitle">Schedule and manage group sessions.</p>
         </div>
         <div class="header-actions">
-            <a href="{% url 'coaching_core:workshop_create' %}" class="btn-action btn-primary-action">
-                <svg style="width: 1.25rem; height: 1.25rem; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                Create Workshop
-            </a>
+            <a href="{% url 'coaching_core:workshop_create' %}" class="btn-action btn-primary-action">Create Workshop</a>
         </div>
     </div>
 
@@ -47,14 +44,9 @@
                     <td>{{ workshop.date|date:"M d, Y" }}</td>
                     <td>{{ workshop.start_time|time:"H:i" }}</td>
                     <td>{{ workshop.attendees.count }} / {{ workshop.max_attendees }}</td>
+                    <td><span class="status-pill status-active">Active</span></td>
                     <td>
-                        <span class="status-pill {% if workshop.is_active %}status-active{% else %}status-draft{% endif %}">
-                            {% if workshop.is_active %}Active{% else %}Draft{% endif %}
-                        </span>
-                    </td>
-                    <td>
-                        <a href="{% url 'coaching_core:workshop_update' pk=workshop.pk %}" style="color: #2563eb; font-weight: 500; margin-right: 1rem;">Edit</a>
-                        <a href="{% url 'coaching_core:workshop_delete' pk=workshop.pk %}" class="btn-danger-action">Delete</a>
+                        <a href="{% url 'coaching_core:workshop_update' pk=workshop.pk %}" style="color: #2563eb; font-weight: 500;">Edit</a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -63,8 +55,7 @@
     </div>
     {% else %}
     <div class="empty-state">
-        <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-        <p style="font-size: 1.125rem; font-weight: 500; color: var(--gray-900);">No workshops found</p>
+        <p style="font-weight: 500; color: var(--gray-900);">No workshops found</p>
         <a href="{% url 'coaching_core:workshop_create' %}" class="btn-action btn-primary-action" style="margin-top: 1rem;">Create Workshop</a>
     </div>
     {% endif %}
