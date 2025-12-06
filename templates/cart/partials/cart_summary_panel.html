@@ -1,24 +1,24 @@
-<div id="cart-summary-panel">
-    <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-4">Order Summary</h2>
+<div class="summary-card">
+    <h2 class="card-title">Order Summary</h2>
 
-    <div class="space-y-4">
-        <div class="flex justify-between items-center text-gray-700">
-            <span class="text-base">Subtotal ({{ summary.item_count }} items)</span>
-            <span class="font-semibold">£{{ summary.subtotal|floatformat:2 }}</span>
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div class="summary-row">
+            <span>Subtotal ({{ summary.item_count }} items)</span>
+            <span style="font-weight: 600;">£{{ summary.subtotal|floatformat:2 }}</span>
         </div>
 
-        <div class="flex justify-between items-center text-gray-700 pt-2">
-            <span class="text-base">Estimated Tax</span>
-            <span class="font-semibold">£{{ summary.tax|floatformat:2 }}</span>
+        <div class="summary-row">
+            <span>Estimated Tax</span>
+            <span style="font-weight: 600;">£{{ summary.tax|floatformat:2 }}</span>
         </div>
     </div>
 
-    <div class="flex justify-between items-center border-t border-gray-200 pt-6 mt-6">
-        <h3 class="text-xl font-bold text-gray-900">Order Total</h3>
-        <span class="text-2xl font-extrabold text-blue-600">£{{ summary.total|floatformat:2 }}</span>
+    <div class="summary-total">
+        <h3>Order Total</h3>
+        <span style="color: #2563eb;">£{{ summary.total|floatformat:2 }}</span>
     </div>
 
-    <a href="{% url 'payments:checkout_cart' %}" class="block text-center w-full bg-blue-600 text-white font-bold py-3 mt-6 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md">
+    <a href="{% url 'payments:checkout_cart' %}" class="btn-start-shopping" style="display: block; width: 100%; text-align: center; margin-top: 1.5rem;">
         Proceed to Checkout
     </a>
 </div>
