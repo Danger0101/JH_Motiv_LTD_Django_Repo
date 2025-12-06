@@ -1,67 +1,70 @@
-<div class="bg-white p-6 rounded-lg shadow-lg">
-    <h2 class="text-2xl font-bold text-gray-800 mb-6">Book a New Session</h2>
+{% load static %}
 
-    <div>
-        {% csrf_token %}
-        <div class="mb-4">
-            <label for="enrollment_id" class="block text-sm font-medium text-gray-700">Select Offering:</label>
-            <select id="enrollment_id" name="enrollment_id"
-                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                <option value="">-- Select an Offering --</option>
-                {% if user_offerings %}
-                    <optgroup label="Paid Enrollments">
-                    {% for enrollment in user_offerings %}
-                        {% if enrollment.remaining_sessions > 0 and enrollment.is_active and not enrollment.is_expired %}
-                            <option value="{{ enrollment.id }}" {% if selected_enrollment_id == enrollment.id|stringformat:"s" %}selected{% endif %}>
-                                {{ enrollment.offering.name }} ({{ enrollment.remaining_sessions }} sessions remaining)
-                            </option>
-                        {% endif %}
-                    {% endfor %}
-                    </optgroup>
-                {% endif %}
+<link rel="stylesheet" href="{% static 'css/booking.css' %}">
 
-                {% if free_offers %}
-                    <optgroup label="Free Taster Sessions">
-                    {% for offer in free_offers %}
-                        <option value="free_{{ offer.id }}" {% if selected_free_offer_id == offer.id|stringformat:"s" %}selected{% endif %}>
-                            Free Taster Session with {{ offer.coach.user.get_full_name }}
-                        </option>
-                    {% endfor %}
-                    </optgroup>
-                {% endif %}
+<link rel="stylesheet" href="{% static 'css/management.css' %}"> <div id="booking-wizard-container" class="booking-wizard">
+<div id="booking-wizard-container" class="booking-wizard">
+    <div class="wizard-header">
+        <h2 class="wizard-title">Book Your Session</h2>
+        <p class="wizard-step-indicator">
+            {% if not selected_enrollment %}Step 1: Select Plan{% else %}Step 2: Select Date & Time{% endif %}
+        </p>
+    </div>
+
+    {% if not selected_enrollment %}
+    <div class="manage-form-card" style="box-shadow: none; border: none; padding: 0;">
+        <div class="form-group">
+            <label for="enrollment-select">Choose an Active Plan:</label>
+            <select 
+                id="enrollment-select"
+                name="enrollment_id"
+                hx-get="{% url 'coaching_booking:profile_book_session' %}" 
+                hx-target="#booking-wizard-container" 
+                hx-trigger="change"
+            >
+                <option value="">-- Select --</option>
+                {% for enrollment in enrollments %}
+                    <option value="{{ enrollment.id }}">
+                        {{ enrollment.offering.name }} ({{ enrollment.remaining_sessions }} sessions left)
+                    </option>
+                {% endfor %}
             </select>
         </div>
+        {% if not enrollments %}
+            <p style="text-align: center; color: var(--gray-500); margin-top: 1rem;">
+                You don't have any active coaching plans. 
+                <a href="{% url 'coaching_booking:offer-list' %}" style="color: #2563eb; text-decoration: underline;">Purchase one here</a>.
+            </p>
+        {% endif %}
+    </div>
 
-        <div class="mb-4">
-            <label for="coach_id" class="block text-sm font-medium text-gray-700">Select Coach:</label>
-            <select id="coach_id" name="coach_id"
-                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                <option value="">-- Select a Coach --</option>
-                {% if coaches %}
-                    {% for coach in coaches %}
-                        <option value="{{ coach.id }}" {% if selected_coach_id == coach.id|stringformat:"s" %}selected{% endif %}>
-                            {{ coach.user.get_full_name }}
-                        </option>
-                    {% endfor %}
-                {% endif %}
-            </select>
-        </div>
+    {% else %}
+        
+        <div class="calendar-layout">
+            <div 
+                id="calendar-widget"
+                hx-get="{% url 'coaching_booking:calendar_widget' %}?enrollment_id={{ selected_enrollment.id }}&month={{ current_month }}&year={{ current_year }}"
+                hx-trigger="load"
+            >
+                <div style="text-align: center; padding: 2rem; color: var(--gray-500);">Loading Calendar...</div>
+            </div>
 
-        <div class="flex flex-col md:flex-row gap-6 mt-6">
-            <div id="calendar-wrapper" class="md:w-2/3"
-                 hx-trigger="change from:#enrollment_id, change from:#coach_id"
-                 hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}"
-                 hx-include="#enrollment_id, #coach_id"
-                 hx-swap="innerHTML">
-                
-                <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    <p class="text-gray-500 font-medium">Select an Offering and a Coach to view the booking calendar.</p>
+            <div id="time-slots-container">
+                <div style="text-align: center; padding: 2rem; color: var(--gray-500); border: 1px dashed var(--gray-300); border-radius: 0.75rem;">
+                    Select a date to view available times.
                 </div>
             </div>
-
-            <div id="time-slots-column" class="md:w-1/3 border-l pl-6">
-                <p class="text-sm text-gray-500 text-center italic py-4">Select a date above to see available times.</p>
-            </div>
         </div>
-    </div>
+
+        <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--gray-200);">
+             <button 
+                class="btn-secondary-action" 
+                hx-get="{% url 'coaching_booking:profile_book_session' %}" 
+                hx-target="#booking-wizard-container"
+             >
+                &larr; Change Plan
+             </button>
+        </div>
+
+    {% endif %}
 </div>

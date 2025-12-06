@@ -1,0 +1,76 @@
+/* static/css/core.css */
+
+/* --- Generic Core Page Layout --- */
+.core-wrapper {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+}
+
+.core-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.core-title {
+    font-size: 2.25rem;
+    font-weight: 800;
+    color: var(--gray-900);
+}
+
+.core-subtitle {
+    font-size: 1.125rem;
+    color: var(--gray-600);
+    margin-top: 0.5rem;
+}
+
+.content-panel {
+    background-color: white;
+    border: 1px solid var(--gray-100);
+    border-radius: 0.75rem;
+    padding: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.prose-text {
+    line-height: 1.7;
+    color: var(--gray-700);
+}
+
+.prose-text h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+/* --- Error Page (404, 500) Styles --- */
+.error-page-container {
+    text-align: center;
+    padding: 4rem 1rem;
+}
+
+.error-code {
+    font-size: 6rem; /* 96px */
+    font-weight: 900;
+    color: var(--blue-500);
+    line-height: 1;
+}
+
+.error-title {
+    font-size: 1.875rem; /* 30px */
+    font-weight: 700;
+    color: var(--gray-800);
+    margin-top: 1rem;
+}
+
+.error-message {
+    font-size: 1.125rem; /* 18px */
+    color: var(--gray-600);
+    margin-top: 0.5rem;
+    margin-bottom: 2.5rem;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+}

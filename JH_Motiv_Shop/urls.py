@@ -30,17 +30,17 @@ urlpatterns = [
 
     # Coaching System Apps
     path('', include('core.urls', namespace='core')),
-    path('coach/', include('coaching_booking.urls')),
-    path('info/', include('coaching_client.urls')),
-    path('admin/offers/', include('coaching_core.urls', namespace='coaching')),
+    path('coach/', include('coaching_booking.urls', namespace='coaching_booking')),
+    path('client/', include('coaching_client.urls', namespace='coaching_client')),
+    path('coaching/', include('coaching_core.urls', namespace='coaching_core')),
     path('coach/time/', include('coaching_availability.urls', namespace='coaching_availability')),
-    path('oauth/', include('gcal.urls')),
+    path('oauth/', include('gcal.urls', namespace='gcal')),
 
     # Existing and Standard Apps
     path('auth/', include('accounts.urls', namespace='account')),
     path('checkout/', include('payments.urls', namespace='payments')),
     path('cart/', include('cart.urls', namespace='cart')),
-    path('shop/', include('products.urls')),
+    path('shop/', include('products.urls', namespace='products')),
 ]
 
 if settings.DEBUG:

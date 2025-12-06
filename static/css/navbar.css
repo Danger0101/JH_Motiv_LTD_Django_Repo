@@ -1,136 +1,146 @@
 /* static/css/navbar.css */
 
+/* Main header container */
 .main-header {
-    background-color: var(--white);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    background-color: white;
+    border-bottom: 1px solid var(--gray-100);
+    padding: 1rem 1.5rem;
     position: sticky;
     top: 0;
     z-index: 40;
 }
 
-.nav-container {
+.navbar-container {
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    padding-top: 1rem;
-    padding-bottom: 1rem;
+    align-items: center;
+    max-width: 1280px;
+    margin: 0 auto;
 }
 
-.brand-logo a {
+/* Logo */
+.navbar-logo a {
     font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--gray-800);
+    font-weight: 800;
+    color: var(--gray-900);
+    text-decoration: none;
 }
 
-/* Desktop Menu Links */
+/* Desktop Navigation Links */
 .nav-links-desktop {
     display: none; /* Hidden on mobile */
     gap: 1.5rem;
 }
 
 .nav-link {
+    font-weight: 600;
     color: var(--gray-600);
+    text-decoration: none;
+    transition: color 0.2s;
 }
 
 .nav-link:hover {
-    color: var(--blue-500);
+    color: var(--blue-600);
 }
 
-/* Right Side Actions */
-.nav-actions {
+/* Right-side actions (Cart, Account) */
+.navbar-actions {
     display: flex;
     align-items: center;
     gap: 1rem;
 }
 
-/* Account Dropdown */
-.account-dropdown-wrapper {
+.action-link {
+    color: var(--gray-500);
+    text-decoration: none;
+    transition: color 0.2s;
     position: relative;
-    display: none; /* Hidden on mobile */
 }
 
-.dropdown-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--gray-600);
-}
-
-.dropdown-btn:hover {
-    color: var(--blue-500);
-}
-
-.dropdown-menu {
-    position: absolute;
-    right: 0;
-    top: 100%;
-    margin-top: 0.5rem;
-    width: 12rem;
-    background-color: var(--white);
-    border-radius: 0.375rem;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-    padding: 0.5rem 0;
-    z-index: 50;
-}
-
-.dropdown-item {
-    display: block;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    color: var(--gray-700);
-}
-
-.dropdown-item:hover {
-    background-color: var(--blue-500);
-    color: var(--white);
-}
-
-/* Mobile Toggle */
-.mobile-toggle-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--gray-600);
-    display: block; /* Visible on mobile */
-}
-
-.mobile-toggle-btn:hover {
+.action-link:hover {
     color: var(--gray-800);
 }
 
-/* Mobile Menu Overlay */
-.mobile-menu {
-    margin-top: 1rem;
-    display: block; /* Controlled by Alpine x-show */
+.action-link .icon {
+    width: 1.5rem;
+    height: 1.5rem;
 }
 
-.mobile-menu .nav-link {
-    display: block;
-    padding: 0.5rem 1rem;
-    border-radius: 0.25rem;
-}
-
-.mobile-menu .nav-link:hover {
+.cart-indicator {
+    position: absolute;
+    top: -0.25rem;
+    right: -0.25rem;
     background-color: var(--blue-500);
-    color: var(--white);
+    color: white;
+    font-size: 0.625rem;
+    font-weight: 700;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* Responsive Media Query (Desktop) */
-@media (min-width: 768px) {
+/* Mobile Menu Toggle */
+.mobile-menu-toggle {
+    display: block; /* Visible on mobile */
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--gray-600);
+}
+
+.mobile-menu-toggle .icon {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+/* Mobile Menu Panel */
+.mobile-menu-panel {
+    display: none; /* Hidden by default */
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: white;
+    border-top: 1px solid var(--gray-100);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+}
+
+.nav-links-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.nav-link-mobile {
+    display: block;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    text-decoration: none;
+    border-radius: 0.375rem;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.nav-link-mobile:hover {
+    background-color: var(--gray-50);
+    color: var(--gray-900);
+}
+
+/* Responsive Breakpoints */
+@media (min-width: 768px) { /* Corresponds to md: breakpoint */
     .nav-links-desktop {
         display: flex;
-        align-items: center;
     }
 
-    .account-dropdown-wrapper {
-        display: block;
-    }
-
-    .mobile-toggle-btn {
+    .mobile-menu-toggle {
         display: none;
     }
 
-    .mobile-menu {
-        display: none !important; /* Force hide mobile menu on desktop */
+    .mobile-menu-panel {
+        display: none !important; /* Ensure it's hidden on desktop */
     }
 }

@@ -1,72 +1,36 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Terms of Service{% endblock %}
 
+{% block extra_head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/core.css' %}">
+{% endblock %}
+
 {% block content %}
-<div class="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-    <div class="text-center mb-10">
-        <h1 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-            Terms of Service
-        </h1>
-        <p class="mt-4 text-lg text-gray-500">Governing your use of JHMotiv.Shop</p>
+<div class="core-wrapper">
+    <div class="core-header">
+        <h1 class="core-title">Terms of Service</h1>
+        <p class="core-subtitle">Last Updated: {{ tos_data.last_updated }}</p>
     </div>
 
-    <div x-data="{ activePolicy: 'retail' }" class="mt-12">
-        <div class="flex justify-center border-b border-gray-200 mb-8" role="tablist" aria-label="Terms of Service Versions">
-            <button 
-                @click="activePolicy = 'retail'"
-                :class="{ 'border-blue-500 text-blue-600': activePolicy === 'retail', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activePolicy !== 'retail' }"
-                class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-base focus:outline-none"
-                id="retail-tos-tab"
-                role="tab"
-                aria-controls="retail-tos-panel"
-                :aria-selected="activePolicy === 'retail'"
-            >
-                Retail & General Use
-            </button>
-            <button 
-                @click="activePolicy = 'coaching'"
-                :class="{ 'border-blue-500 text-blue-600': activePolicy === 'coaching', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activePolicy !== 'coaching' }"
-                class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-base focus:outline-none"
-                id="coaching-tos-tab"
-                role="tab"
-                aria-controls="coaching-tos-panel"
-                :aria-selected="activePolicy === 'coaching'"
-            >
-                Coaching Offering Terms
-            </button>
-        </div>
+    <div class="policy-card content-panel prose-text">
+        <p>Welcome to JH Motiv LTD. Please read these terms carefully.</p>
 
-        <div class="bg-white shadow-lg rounded-lg p-6 lg:p-10">
-
-            <div x-show="activePolicy === 'retail'" role="tabpanel" id="retail-tos-panel" aria-labelledby="retail-tos-tab">
-                <h2 class="text-2xl font-bold mb-4">{{ tos_data.retail.title }}</h2>
-                <p class="text-sm text-gray-600 mb-8">Effective Date: {{ tos_data.retail.effective_date }}</p>
-                
-                {% for section in tos_data.retail.sections %}
-                    <section class="mb-8">
-                        <h3 class="text-xl font-semibold mb-3">{{ section.heading }}</h3>
-                        <div class="text-gray-700 leading-relaxed space-y-4">
-                            {{ section.content|safe }}
-                        </div>
-                    </section>
-                {% endfor %}
+        {% for section in tos_data.sections %}
+        <section style="margin-bottom: 2rem;">
+            <h3>{{ section.heading }}</h3>
+            <div>
+                {{ section.content|safe }}
             </div>
-
-            <div x-show="activePolicy === 'coaching'" role="tabpanel" id="coaching-tos-panel" aria-labelledby="coaching-tos-tab" x-cloak>
-                <h2 class="text-2xl font-bold mb-4">{{ tos_data.coaching.title }}</h2>
-                <p class="text-sm text-gray-600 mb-8">Effective Date: {{ tos_data.coaching.effective_date }}</p>
-
-                {% for section in tos_data.coaching.sections %}
-                    <section class="mb-8">
-                        <h3 class="text-xl font-semibold mb-3">{{ section.heading }}</h3>
-                        <div class="text-gray-700 leading-relaxed space-y-4">
-                            {{ section.content|safe }}
-                        </div>
-                    </section>
-                {% endfor %}
-            </div>
-
+        </section>
+        {% endfor %}
+        
+        <div style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--gray-200);">
+            <p style="font-size: 0.875rem; color: var(--gray-600);">
+                If you have any questions about these Terms, please contact us at <a href="mailto:Support@JHMotiv.Shop" style="color: #2563eb;">Support@JHMotiv.Shop</a>.
+            </p>
         </div>
     </div>
 </div>

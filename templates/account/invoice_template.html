@@ -1,262 +1,120 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Invoice</title>
-    <style>
-        body {
-            font-family: 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
-            color: #555;
-            margin: 0;
-            padding: 0;
-            font-size: 14px;
-            line-height: 20px;
-        }
-
-        .invoice-box {
-            max-width: 800px;
-            margin: auto;
-            padding: 30px;
-            border: 1px solid #eee;
-            box-shadow: 0 0 10px rgba(0, 0, 0, .15);
-            background-color: #ffffff;
-        }
-
-        /* The main layout is a table to ensure PDF compatibility */
-        .invoice-box table {
-            width: 100%;
-            line-height: inherit;
-            text-align: left;
-            border-collapse: collapse;
-        }
-
-        .invoice-box table td {
-            padding: 5px;
-            vertical-align: top;
-        }
-
-        /* Header Layout */
-        .invoice-box table tr.top table td {
-            padding-bottom: 20px;
-        }
-
-        .invoice-box table tr.top table td.title {
-            font-size: 30px;
-            line-height: 30px;
-            color: #333;
-            font-weight: bold;
-            width: 60%;
-        }
-
-        .invoice-box table tr.top table td.invoice-meta {
-            text-align: right;
-            width: 40%;
-        }
-
-        /* Information Row (Addresses) */
-        .invoice-box table tr.information table td {
-            padding-bottom: 40px;
-        }
-
-        .invoice-box table tr.information table td.company-info {
-            width: 50%;
-        }
-
-        .invoice-box table tr.information table td.client-info {
-            text-align: right;
-            width: 50%;
-        }
-
-        /* Headings */
-        h3 {
-            margin: 0 0 5px 0;
-            color: #333;
-            font-size: 16px;
-            border-bottom: 2px solid #eee;
-            display: inline-block;
-            padding-bottom: 2px;
-        }
-
-        /* Line Items Table */
-        .invoice-box table tr.heading td {
-            background: #eee;
-            border-bottom: 1px solid #ddd;
-            font-weight: bold;
-            padding: 10px;
-        }
-
-        .invoice-box table tr.item td {
-            border-bottom: 1px solid #eee;
-            padding: 10px;
-        }
-
-        .invoice-box table tr.item.last td {
-            border-bottom: none;
-        }
-
-        /* Totals */
-        .invoice-box table tr.total td {
-            border-top: 2px solid #eee;
-            padding: 10px;
-            font-weight: bold;
-            text-align: right;
-        }
-        
-        .text-right {
-            text-align: right;
-        }
-
-        .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-            text-align: center;
-            font-size: 12px;
-            color: #777;
-        }
-    </style>
+    <title>Invoice #{{ order.id|default:coaching_order.id }}</title>
+    <link rel="stylesheet" href="{% static 'css/invoice.css' %}">
 </head>
-
 <body>
-    <div class="invoice-box">
-        <table cellpadding="0" cellspacing="0">
-            
-            <tr class="top">
-                <td colspan="4">
-                    <table>
-                        <tr>
-                            <td class="title">
-                                JH Motiv LTD
-                            </td>
-                            
-                            <td class="invoice-meta">
-                                <h3>INVOICE</h3>
-                                {% if order %}
-                                    <strong>Invoice #:</strong> {{ order.id }}<br>
-                                    <strong>Date:</strong> {{ order.created_at|date:"d M Y" }}
-                                {% elif coaching_order %}
-                                    <strong>Invoice #:</strong> {{ coaching_order.id }}<br>
-                                    <strong>Date:</strong> {{ coaching_order.created_at|date:"d M Y" }}
-                                {% endif %}
-                            </td>
-                        </tr>
-                    </table>
-                </td>
+    <div class="invoice-header">
+        <div>
+            <h1 class="invoice-title">Invoice</h1>
+            <p><strong>#{{ order.id|default:coaching_order.id }}</strong></p>
+            <p>Date: {{ order.created_at|default:coaching_order.created_at|date:"F j, Y" }}</p>
+        </div>
+        <div class="company-details">
+            <h2 class="company-name">JH Motiv LTD</h2>
+            <p>
+                71-75 Shelton Street<br>
+                Covent Garden<br>
+                London, WC2H 9JQ<br>
+                United Kingdom
+            </p>
+            <p>support@jhmotiv.shop</p>
+        </div>
+    </div>
+
+    <div class="invoice-meta">
+        <div class="meta-group" style="width: 45%;">
+            <h3>Bill To</h3>
+            <p>
+                <strong>{{ user.get_full_name|default:user.username }}</strong><br>
+                {{ user.email }}
+            </p>
+        </div>
+        {% if order.shipping_address %}
+        <div class="meta-group" style="width: 45%;">
+            <h3>Ship To</h3>
+            <p>
+                <strong>{{ order.shipping_address.full_name }}</strong><br>
+                {{ order.shipping_address.street_address1 }}<br>
+                {% if order.shipping_address.street_address2 %}{{ order.shipping_address.street_address2 }}<br>{% endif %}
+                {{ order.shipping_address.city }}, {{ order.shipping_address.postcode }}<br>
+                {{ order.shipping_address.country.name }}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+
+    <table class="invoice-table">
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th class="text-right">Quantity</th>
+                <th class="text-right">Unit Price</th>
+                <th class="text-right">Total</th>
             </tr>
-            
-            <tr class="information">
-                <td colspan="4">
-                    <table>
-                        <tr>
-                            <td class="company-info">
-                                <h3>From:</h3>
-                                <strong>JH Motiv LTD</strong><br>
-                                71-75 Shelton Street<br>
-                                Covent Garden<br>
-                                London, WC2H 9JQ<br>
-                                UNITED KINGDOM<br>
-                                <br>
-                                <em>Email: Support@JHMotiv.Shop</em><br>
-                                <em>VAT Number: N/A</em>
-                            </td>
-                            
-                            <td class="client-info">
-                                <h3>Bill To:</h3>
-                                <strong>{{ user.get_full_name|default:user.username }}</strong><br>
-                                {{ user.email }}<br>
-                                
-                                {% if order.shipping_address %}
-                                    {{ order.shipping_address.street_address1 }}<br>
-                                    {% if order.shipping_address.street_address2 %}
-                                        {{ order.shipping_address.street_address2 }}<br>
-                                    {% endif %}
-                                    {{ order.shipping_address.city }}, {{ order.shipping_address.postcode }}<br>
-                                    {{ order.shipping_address.country }}
-                                {% elif coaching_order %}
-                                    (Coaching Service)
-                                {% endif %}
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            
-            <tr class="heading">
-                <td style="width: 50%;">Description</td>
-                <td class="text-right" style="width: 15%;">Unit Price</td>
-                <td class="text-right" style="width: 10%;">Qty</td>
-                <td class="text-right" style="width: 25%;">Total</td>
-            </tr>
-            
+        </thead>
+        <tbody>
             {% if order %}
                 {% for item in order.items.all %}
-                <tr class="item">
-                    <td>{{ item.variant.product.name }} <br><small>({{ item.variant.name }})</small></td>
-                    <td class="text-right">£{{ item.price|floatformat:2 }}</td>
+                <tr>
+                    <td>
+                        <strong>{{ item.variant.product.name }}</strong>
+                        <br><span style="color: #666; font-size: 12px;">{{ item.variant.name }}</span>
+                    </td>
                     <td class="text-right">{{ item.quantity }}</td>
+                    <td class="text-right">£{{ item.price|floatformat:2 }}</td>
                     <td class="text-right">£{{ item.line_total|floatformat:2 }}</td>
                 </tr>
                 {% endfor %}
             {% elif coaching_order %}
-                <tr class="item">
-                    <td>{{ coaching_order.enrollment.offering.name }}</td>
-                    <td class="text-right">£{{ coaching_order.total_paid|floatformat:2 }}</td>
+                <tr>
+                    <td>
+                        <strong>{{ coaching_order.enrollment.offering.name }}</strong>
+                    </td>
                     <td class="text-right">1</td>
+                    <td class="text-right">£{{ coaching_order.grand_total|floatformat:2 }}</td>
                     <td class="text-right">£{{ coaching_order.total_paid|floatformat:2 }}</td>
                 </tr>
             {% endif %}
-            
-            <tr class="details">
-                <td colspan="4" style="padding: 20px;"></td>
-            </tr>
+        </tbody>
+    </table>
 
-            <tr>
-                <td colspan="4">
-                    <table style="width: 300px; float: right;">
-                        {% if order %}
-                            <tr>
-                                <td class="text-right" style="padding: 5px;">Subtotal:</td>
-                                <td class="text-right" style="padding: 5px;">£{{ order.subtotal|floatformat:2 }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-right" style="padding: 5px;">Delivery:</td>
-                                <td class="text-right" style="padding: 5px;">£{{ order.delivery_cost|floatformat:2 }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-right" style="padding: 5px;">Total before VAT:</td>
-                                <td class="text-right" style="padding: 5px;">£{{ order.total_before_vat|floatformat:2 }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-right" style="padding: 5px;">VAT (0%):</td>
-                                <td class="text-right" style="padding: 5px;">£{{ order.vat_amount|floatformat:2 }}</td>
-                            </tr>
-                            <tr style="font-size: 16px; font-weight: bold; border-top: 2px solid #333;">
-                                <td class="text-right" style="padding: 10px 5px;">Grand Total:</td>
-                                <td class="text-right" style="padding: 10px 5px;">£{{ order.grand_total|floatformat:2 }}</td>
-                            </tr>
-                        {% elif coaching_order %}
-                            <tr>
-                                <td class="text-right" style="padding: 5px;">Total before VAT:</td>
-                                <td class="text-right" style="padding: 5px;">£{{ coaching_order.total_before_vat|floatformat:2 }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-right" style="padding: 5px;">VAT (0%):</td>
-                                <td class="text-right" style="padding: 5px;">£{{ coaching_order.vat_amount|floatformat:2 }}</td>
-                            </tr>
-                            <tr style="font-size: 16px; font-weight: bold; border-top: 2px solid #333;">
-                                <td class="text-right" style="padding: 10px 5px;">Grand Total:</td>
-                                <td class="text-right" style="padding: 10px 5px;">£{{ coaching_order.grand_total|floatformat:2 }}</td>
-                            </tr>
-                        {% endif %}
-                    </table>
-                </td>
-            </tr>
-        </table>
+    <div class="invoice-totals">
+        {% if order %}
+            <div class="total-row">
+                <span>Subtotal</span>
+                <span>£{{ order.subtotal|floatformat:2 }}</span>
+            </div>
+            <div class="total-row">
+                <span>Shipping</span>
+                <span>£{{ order.delivery_cost|floatformat:2 }}</span>
+            </div>
+            <div class="total-row">
+                <span>VAT (0%)</span>
+                <span>£{{ order.vat_amount|floatformat:2 }}</span>
+            </div>
+            <div class="total-row final">
+                <span>Grand Total</span>
+                <span>£{{ order.grand_total|floatformat:2 }}</span>
+            </div>
+        {% elif coaching_order %}
+            <div class="total-row">
+                <span>VAT (0%)</span>
+                <span>£{{ coaching_order.vat_amount|floatformat:2 }}</span>
+            </div>
+            <div class="total-row final">
+                <span>Grand Total</span>
+                <span>£{{ coaching_order.grand_total|floatformat:2 }}</span>
+            </div>
+        {% endif %}
+    </div>
 
-        <div class="footer">
-            <p>Thank you for your business!</p>
-            <p>If you have any questions about this invoice, please contact us at Support@JHMotiv.Shop</p>
-        </div>
+    <div class="footer">
+        <p>Thank you for your business!</p>
+        <p>JH Motiv LTD - Registered in England & Wales</p>
     </div>
 </body>
 </html>

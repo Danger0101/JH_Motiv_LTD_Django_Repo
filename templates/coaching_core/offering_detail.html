@@ -1,4 +1,53 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ offering.name }}{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/management.css' %}">
+{% endblock %}
+
 {% block content %}
-    <h1>Offering Detail</h1>
-{% endblock content %}
+<div class="management-container">
+    <div class="management-header">
+        <div>
+            <h1 class="page-title">{{ offering.name }}</h1>
+            <span class="status-pill {% if offering.is_active %}status-active{% else %}status-draft{% endif %}">
+                {% if offering.is_active %}Active{% else %}Draft{% endif %}
+            </span>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'coaching_core:offering_update' pk=offering.pk %}" class="btn-action btn-secondary-action">Edit</a>
+            <a href="{% url 'coaching_core:offering_list' %}" class="btn-action btn-secondary-action">Back</a>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr; gap: 2rem;">
+        
+        <div class="manage-form-card" style="width: 100%; max-width: none;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                <div>
+                    <h3 style="font-size: 0.75rem; font-weight: 700; color: var(--gray-500); text-transform: uppercase;">Price</h3>
+                    <p style="font-size: 1.5rem; font-weight: 700; color: var(--gray-900);">£{{ offering.price }}</p>
+                </div>
+                <div>
+                    <h3 style="font-size: 0.75rem; font-weight: 700; color: var(--gray-500); text-transform: uppercase;">Format</h3>
+                    <p style="font-size: 1.125rem;">{{ offering.get_format_display }}</p>
+                </div>
+                <div>
+                    <h3 style="font-size: 0.75rem; font-weight: 700; color: var(--gray-500); text-transform: uppercase;">Sessions</h3>
+                    <p style="font-size: 1.125rem;">{{ offering.total_number_of_sessions }}</p>
+                </div>
+            </div>
+            
+            <div>
+                <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem;">Description</h3>
+                <div style="color: var(--gray-700); line-height: 1.6;">
+                    {{ offering.description|linebreaks }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
