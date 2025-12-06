@@ -16,7 +16,7 @@
             <p class="page-subtitle">Schedule and manage group sessions.</p>
         </div>
         <div class="header-actions">
-            <a href="{% url 'coaching_core:workshop_create' %}" class="btn-action btn-primary-action">Create Workshop</a>
+            <a href="{% url 'coaching_core:workshop-create' %}" class="btn-action btn-primary-action">Create Workshop</a>
         </div>
     </div>
 
@@ -37,16 +37,16 @@
                 {% for workshop in workshops %}
                 <tr>
                     <td>
-                        <a href="{% url 'coaching_core:workshop_detail' pk=workshop.pk %}" style="font-weight: 600; color: var(--gray-900);">
+                        <a href="{% url 'coaching_core:workshop-detail' slug=workshop.slug %}" style="font-weight: 600; color: var(--gray-900);">
                             {{ workshop.name }}
                         </a>
                     </td>
                     <td>{{ workshop.date|date:"M d, Y" }}</td>
                     <td>{{ workshop.start_time|time:"H:i" }}</td>
                     <td>{{ workshop.attendees.count }} / {{ workshop.max_attendees }}</td>
-                    <td><span class="status-pill status-active">Active</span></td>
+                    <td><span class="status-pill {% if workshop.is_active %}status-active{% else %}status-inactive{% endif %}">{% if workshop.is_active %}Active{% else %}Inactive{% endif %}</span></td>
                     <td>
-                        <a href="{% url 'coaching_core:workshop_update' pk=workshop.pk %}" style="color: #2563eb; font-weight: 500;">Edit</a>
+                        <a href="{% url 'coaching_core:workshop-update' slug=workshop.slug %}" style="color: #2563eb; font-weight: 500;">Edit</a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -56,7 +56,7 @@
     {% else %}
     <div class="empty-state">
         <p style="font-weight: 500; color: var(--gray-900);">No workshops found</p>
-        <a href="{% url 'coaching_core:workshop_create' %}" class="btn-action btn-primary-action" style="margin-top: 1rem;">Create Workshop</a>
+        <a href="{% url 'coaching_core:workshop-create' %}" class="btn-action btn-primary-action" style="margin-top: 1rem;">Create Workshop</a>
     </div>
     {% endif %}
 </div>
