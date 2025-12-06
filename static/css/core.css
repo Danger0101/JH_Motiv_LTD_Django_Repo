@@ -1,0 +1,277 @@
+/* static/css/core.css */
+
+/* --- Page Layouts --- */
+.core-wrapper {
+    max-width: 80rem; /* max-w-6xl equivalent approximately */
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.core-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.core-title {
+    font-size: 2.25rem; /* 4xl */
+    font-weight: 800;
+    color: var(--gray-900);
+    margin-bottom: 1rem;
+}
+
+.core-subtitle {
+    font-size: 1.125rem; /* lg */
+    color: var(--gray-500);
+    margin-top: 1rem;
+}
+
+/* --- Tab Navigation System --- */
+.tab-navigation {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    border-bottom: 1px solid var(--gray-200);
+    margin-top: 3rem;
+    margin-bottom: 2rem;
+}
+
+.tab-btn {
+    padding: 0.75rem 1rem;
+    text-align: center;
+    border-bottom: 2px solid transparent;
+    font-weight: 500;
+    font-size: 1rem;
+    color: var(--gray-500);
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+}
+
+.tab-btn:hover {
+    color: var(--gray-700);
+    border-bottom-color: var(--gray-300);
+}
+
+.tab-btn:focus {
+    outline: none;
+}
+
+/* Active State (toggled by Alpine) */
+.tab-btn.active {
+    border-bottom-color: #3b82f6; /* blue-500 */
+    color: #2563eb; /* blue-600 */
+}
+
+/* --- Content Panels --- */
+.content-panel {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Typography for text content */
+.prose-content {
+    max-width: 65ch;
+    margin: 0 auto;
+    color: var(--gray-700);
+    line-height: 1.75;
+}
+
+.prose-content h2 {
+    font-size: 1.875rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    margin-top: 2rem;
+    color: var(--gray-900);
+}
+
+.prose-content h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    margin-top: 1.5rem;
+    color: var(--gray-800);
+}
+
+.prose-content p {
+    margin-bottom: 1.25rem;
+}
+
+.prose-content ul {
+    list-style: disc;
+    padding-left: 1.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.prose-content li {
+    margin-bottom: 0.5rem;
+}
+
+/* --- Meet the Team (About Page) --- */
+.team-grid {
+    display: grid;
+    gap: 2rem;
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+    .team-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (min-width: 1024px) {
+    .team-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+.team-card {
+    text-align: center;
+    padding: 1.5rem;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    background-color: var(--white);
+}
+
+.team-avatar {
+    width: 8rem;
+    height: 8rem;
+    object-fit: cover;
+    border-radius: 50%;
+    margin: 0 auto 1rem;
+    border: 4px solid #3b82f6; /* blue-500 */
+}
+
+.team-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.team-role {
+    color: #2563eb; /* blue-600 */
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+}
+
+.team-bio {
+    color: var(--gray-700);
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+/* --- Wall of Dreamers (About Page) --- */
+.dreamer-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.dreamer-item {
+    padding: 1rem;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--white);
+}
+
+.dreamer-info {
+    flex: 1;
+}
+
+.dreamer-name {
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--gray-900);
+    display: block;
+}
+
+.dreamer-excerpt {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    margin-top: 0.25rem;
+}
+
+.social-icons {
+    display: flex;
+    gap: 0.75rem;
+    margin-left: 1rem;
+}
+
+.social-link {
+    color: var(--gray-500);
+    transition: color 0.15s;
+}
+
+.social-link:hover {
+    color: #2563eb; /* blue-600 */
+}
+
+/* --- FAQ Accordion --- */
+.faq-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.faq-card {
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    background-color: var(--white);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.faq-trigger {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    text-align: left;
+    font-weight: 500;
+    color: var(--gray-900);
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.faq-trigger:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: -2px;
+}
+
+.faq-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    transition: transform 0.3s;
+    color: var(--gray-500);
+}
+
+.faq-trigger.expanded .faq-icon {
+    transform: rotate(180deg);
+}
+
+.faq-answer {
+    padding: 0 1rem 1rem 1rem;
+    color: var(--gray-600);
+    line-height: 1.5;
+}
+
+/* --- Policy Pages --- */
+.policy-card {
+    background-color: var(--white);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+    .policy-card { padding: 2.5rem; }
+}

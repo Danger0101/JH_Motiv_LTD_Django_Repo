@@ -1,47 +1,401 @@
 {% extends 'base.html' %}
+{% load static %}
 
 
 {% block title %}My Account Dashboard{% endblock %}
 
+{% block extra_head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/account.css' %}">
+{% endblock %}
+
 {% block content %}
-<div class="container mx-auto px-4 sm:px-6 py-6" x-data="{ activeTab: 'dashboard', mobileMenuOpen: false }">
+<div class="profile-container" x-data="{ activeTab: 'dashboard', mobileMenuOpen: false }">
     
-    <div class="flex justify-between items-center mb-6 lg:mb-8">
-        <div class="flex items-center">
-            <button @click="mobileMenuOpen = !mobileMenuOpen" class="lg:hidden mr-4 text-gray-500 hover:text-gray-700 focus:outline-none">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+    <div class="profile-header">
+        <div style="display: flex; align-items: center;">
+            <button @click="mobileMenuOpen = !mobileMenuOpen" style="margin-right: 1rem; color: var(--gray-500);" class="lg:hidden">
+                <svg style="width: 1.5rem; height: 1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
             <div>
-                <h1 class="text-2xl lg:text-3xl font-bold text-gray-800">
+                <h1 class="profile-title">
                     Welcome, {{ user.first_name|default:user.username }}
                 </h1>
-                <p class="hidden sm:block text-gray-500 text-sm">Manage your account and sessions</p>
+                <p style="display: none; font-size: 0.875rem; color: var(--gray-500); @media (min-width: 640px) { display: block; }">Manage your account and sessions</p>
             </div>
         </div>
-        <div class="flex space-x-2">
+        <div style="display: flex; gap: 0.5rem;">
             {% if is_coach %}
-                <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-semibold uppercase">Coach</span>
+                <span style="padding: 0.25rem 0.5rem; background-color: #f3e8ff; color: #7e22ce; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">Coach</span>
             {% endif %}
-            <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-semibold uppercase">Client</span>
+            <span style="padding: 0.25rem 0.5rem; background-color: #dbeafe; color: #1d4ed8; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">Client</span>
         </div>
     </div>
 
-    <div class="flex flex-col lg:flex-row gap-8 relative">
+    <div class="profile-layout">
         
         <aside :class="{'block absolute inset-0 z-40 bg-white p-4 shadow-xl lg:static lg:block lg:shadow-none lg:p-0 lg:bg-transparent': mobileMenuOpen, 'hidden lg:block': !mobileMenuOpen}" 
-               class="w-full lg:w-1/4 lg:flex-shrink-0 transition-all duration-300">
+               class="profile-sidebar">
             
-            <div class="sticky top-6 space-y-2">
+            <div style="position: sticky; top: 1.5rem;">
                 <div class="lg:hidden flex justify-end mb-4">
-                     <button @click="mobileMenuOpen = false" class="text-gray-500"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                     <button @click="mobileMenuOpen = false" style="color: var(--gray-500);">✕</button>
                 </div>
 
-                <p class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Menu</p>
+                <div class="nav-menu">
+                    <p class="nav-section-title">Menu</p>
 
-                <button @click="activeTab = 'dashboard'; mobileMenuOpen = false" 
-                        :class="activeTab === 'dashboard' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-transparent'"
-                        class="w-full flex items-center px-4 py-3 text-sm font-medium border rounded-lg transition-colors">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                    <button @click="activeTab = 'dashboard'; mobileMenuOpen = false" 
+                            :class="{'active': activeTab === 'dashboard'}"
+                            class="nav-btn">
+                        Dashboard
+                    </button>
+
+                    <button @click="activeTab = 'bookings'; mobileMenuOpen = false" 
+                            :class="{'active': activeTab === 'bookings'}"
+                            class="nav-btn">
+                        My Bookings
+                    </button>
+
+                    <button @click="activeTab = 'credits'; mobileMenuOpen = false" 
+                            :class="{'active': activeTab === 'credits'}"
+                            class="nav-btn">
+                        My Credits & Plans
+                    </button>
+
+                    <button @click="activeTab = 'order_history'; mobileMenuOpen = false"
+                            :class="{'active': activeTab === 'order_history'}"
+                            class="nav-btn">
+                        Order History
+                    </button>
+
+                    <button @click="activeTab = 'settings'; mobileMenuOpen = false" 
+                            :class="{'active': activeTab === 'settings'}"
+                            class="nav-btn">
+                        Profile Settings
+                    </button>
+
+                    {% if is_coach %}
+                    <p class="nav-section-title" style="margin-top: 1.5rem;">Coach Area</p>
+                    <button @click="activeTab = 'coach_portal'; mobileMenuOpen = false" 
+                            :class="{'active': activeTab === 'coach_portal'}"
+                            class="nav-btn">
+                        Coach Portal
+                    </button>
+                    {% endif %}
+
+                    {% if is_staff %}
+                    <p class="nav-section-title" style="margin-top: 1.5rem;">Admin</p>
+                    <button @click="activeTab = 'staff'; mobileMenuOpen = false" 
+                            :class="{'active': activeTab === 'staff'}"
+                            class="nav-btn">
+                        Staff Dashboard
+                    </button>
+                    {% endif %}
+                    
+                    <div style="border-top: 1px solid var(--gray-100); margin-top: 1rem; padding-top: 1rem;">
+                        <a href="{% url 'account_logout' %}" class="nav-btn" style="color: #dc2626;">
+                            Sign Out
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="profile-main">
+            
+            <div x-show="activeTab === 'dashboard'" x-cloak>
+                <h2 class="section-header">Dashboard</h2>
+
+                {% with my_taster=user.free_offers.all|first %}
+                    {% if my_taster and not my_taster.is_redeemed and not my_taster.is_expired %}
+                        <div class="dashboard-card taster-card">
+                            <h3 style="font-size: 1.125rem; font-weight: 700; color: var(--gray-800); margin-bottom: 0.5rem;">Free Taster Session</h3>
+                            {% if my_taster.is_approved %}
+                                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                                    <div>
+                                        <p style="color: #15803d; font-weight: 500;">✅ Approved! Ready to book.</p>
+                                        <p style="font-size: 0.875rem; color: var(--gray-500);">Expires: {{ my_taster.redemption_deadline|date:"M d, Y" }}</p>
+                                    </div>
+                                    <button onclick="document.querySelector('[x-data]').__x.$data.openBooking = true" 
+                                            class="btn-primary" style="width: auto;">
+                                        Book Now
+                                    </button>
+                                </div>
+                            {% else %}
+                                <p style="color: #a16207;">⏳ Request pending approval.</p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                <div class="dashboard-card booking-cta-card">
+                    <div>
+                        <h3 style="font-size: 1.125rem; font-weight: 700; color: #1e3a8a;">Book a Session</h3>
+                        <p style="font-size: 0.875rem; color: #1d4ed8;">You have valid credits available.</p>
+                    </div>
+                    <div x-data="{ openBooking: false }">
+                        <button @click="openBooking = !openBooking" class="btn-primary" style="width: auto;">
+                            Book New Session
+                        </button>
+                        <div x-show="openBooking" style="display: none; position: fixed; inset: 0; z-index: 50; background-color: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; padding: 1rem;" x-cloak>
+                            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl p-6 relative" @click.away="openBooking = false">
+                                <button @click="openBooking = false" style="position: absolute; top: 1rem; right: 1rem; font-size: 1.5rem;">✕</button>
+                                <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">Book a Session</h2>
+                                <div hx-get="{% url 'coaching_booking:profile_book_session' %}" hx-trigger="intersect" hx-swap="innerHTML">
+                                    <div style="text-align: center; padding: 2rem;">Loading...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="font-size: 1.125rem; font-weight: 700; color: var(--gray-800);">Upcoming Sessions</h3>
+                        <button @click="activeTab = 'bookings'" style="color: #2563eb; font-size: 0.875rem; text-decoration: underline; background: none; border: none; cursor: pointer;">View All</button>
+                    </div>
+                    <div id="profile-bookings-dashboard">
+                         {% include 'account/profile_bookings.html' %}
+                    </div>
+                </div>
+            </div>
+
+            <div x-show="activeTab === 'bookings'" x-cloak>
+                <h2 class="section-header">My Bookings</h2>
+                <div id="profile-bookings-full">
+                    {% include 'account/profile_bookings.html' %}
+                </div>
+            </div>
+
+            <div x-show="activeTab === 'credits'" x-cloak>
+                <h2 class="section-header">Credits & Plans</h2>
+                
+                {% if available_credits %}
+                    <div style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+                        {% for credit in available_credits %}
+                            <div style="padding: 1rem; border: 1px solid var(--gray-200); border-radius: 0.75rem; background-color: var(--gray-50); display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <p style="font-weight: 700; color: var(--gray-900);">{{ credit.offering.name }}</p>
+                                    <p style="font-size: 0.75rem; color: var(--gray-500);">Exp: {{ credit.expiration_date|date:"M d, Y" }}</p>
+                                </div>
+                                <span class="status-pill">
+                                    {{ credit.remaining_sessions }} left
+                                </span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div style="text-align: center; padding: 3rem; background-color: var(--gray-50); border-radius: 0.75rem; border: 1px dashed var(--gray-300);">
+                        <p style="color: var(--gray-500); margin-bottom: 0.5rem;">You don't have any active credits.</p>
+                        <a href="{% url 'coaching_booking:offer-list' %}" class="btn-primary" style="display: inline-block; width: auto;">Purchase a Plan</a>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div x-show="activeTab === 'order_history'" x-cloak>
+                <h2 class="section-header">Order History</h2>
+            
+                <div style="display: flex; flex-direction: column; gap: 2rem;">
+                    <div>
+                        <h3 style="font-size: 1.125rem; font-weight: 600; color: var(--gray-700); margin-bottom: 1rem;">Retail Orders</h3>
+                        {% if ecomm_orders %}
+                            <div class="history-table-wrapper">
+                                <table class="history-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Order #</th>
+                                            <th>Date</th>
+                                            <th>Total</th>
+                                            <th>Status</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for order in ecomm_orders %}
+                                            <tr>
+                                                <td style="font-weight: 500; color: var(--gray-900);">#{{ order.id }}</td>
+                                                <td>{{ order.created_at|date:"d M Y" }}</td>
+                                                <td>£{{ order.total_paid|floatformat:2 }}</td>
+                                                <td>
+                                                    <span class="status-pill">{{ order.printful_order_status|default:"Processing"|title }}</span>
+                                                </td>
+                                                <td style="text-align: right;">
+                                                    <a href="{% url 'accounts:generate_invoice_pdf' order.id %}" target="_blank" style="color: #2563eb; font-weight: 500; text-decoration: none;">
+                                                        Invoice
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p style="color: var(--gray-500); font-style: italic;">You have not made any shop purchases yet.</p>
+                        {% endif %}
+                    </div>
+            
+                    <div>
+                        <h3 style="font-size: 1.125rem; font-weight: 600; color: var(--gray-700); margin-bottom: 1rem;">Coaching Orders</h3>
+                        {% if coaching_orders %}
+                             <div class="history-table-wrapper">
+                                <table class="history-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Order #</th>
+                                            <th>Date</th>
+                                            <th>Plan</th>
+                                            <th>Total</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for order in coaching_orders %}
+                                        <tr>
+                                            <td style="font-weight: 500; color: var(--gray-900);">#{{ order.id }}</td>
+                                            <td>{{ order.created_at|date:"d M Y" }}</td>
+                                            <td>{{ order.enrollment.offering.name }}</td>
+                                            <td>£{{ order.total_paid|floatformat:2 }}</td>
+                                            <td style="text-align: right;">
+                                                <a href="{% url 'accounts:generate_invoice_pdf' order.id %}" target="_blank" style="color: #2563eb; font-weight: 500; text-decoration: none;">
+                                                    Invoice
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p style="color: var(--gray-500); font-style: italic;">You have not purchased any coaching plans yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div x-show="activeTab === 'settings'" x-cloak>
+                <h2 class="section-header">Profile Settings</h2>
+                
+                <div x-data="{ openSetting: null }">
+                    
+                    <div class="settings-item">
+                        <button @click="openSetting = (openSetting === 'password' ? null : 'password')" class="settings-trigger">
+                            <span style="font-weight: 600; color: var(--gray-800);">Change Password</span>
+                            <span :class="{'rotate-180': openSetting === 'password'}" style="transition: transform 0.2s;">▼</span>
+                        </button>
+                        <div x-show="openSetting === 'password'" x-collapse>
+                            <div class="settings-content" 
+                                 hx-get="{% url 'accounts:password_change' %}" 
+                                 hx-trigger="intersect once">
+                                <div style="text-align: center;">Loading...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-item">
+                        <button @click="openSetting = (openSetting === 'email' ? null : 'email')" class="settings-trigger">
+                            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                                <span style="font-weight: 600; color: var(--gray-800);">Email Addresses</span>
+                                <span style="font-size: 0.75rem; color: var(--gray-500);">{{ user.email }}</span>
+                            </div>
+                            <span :class="{'rotate-180': openSetting === 'email'}" style="transition: transform 0.2s;">▼</span>
+                        </button>
+                        <div x-show="openSetting === 'email'" x-collapse>
+                            <div class="settings-content" 
+                                 hx-get="{% url 'accounts:account_email' %}" 
+                                 hx-trigger="intersect once">
+                                 <div style="text-align: center;">Loading...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-item">
+                        <button @click="openSetting = (openSetting === 'prefs' ? null : 'prefs')" class="settings-trigger">
+                            <span style="font-weight: 600; color: var(--gray-800);">Email Preferences</span>
+                            <span :class="{'rotate-180': openSetting === 'prefs'}" style="transition: transform 0.2s;">▼</span>
+                        </button>
+                        <div x-show="openSetting === 'prefs'" x-collapse>
+                            <div class="settings-content">
+                                {% with marketing_preference=user.marketing_preference %}
+                                <form hx-post="{% url 'accounts:update_marketing_preference' %}" hx-target="#marketing-status">
+                                    {% csrf_token %}
+                                    <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+                                        <input type="checkbox" name="is_subscribed" {% if marketing_preference.is_subscribed %}checked{% endif %}
+                                               style="width: 1.25rem; height: 1.25rem;"
+                                               hx-post="{% url 'accounts:update_marketing_preference' %}" hx-trigger="change">
+                                        <span style="font-size: 0.875rem; color: var(--gray-700);">Receive marketing emails and updates</span>
+                                    </label>
+                                    <div id="marketing-status" style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--gray-500); margin-left: 2rem;"></div>
+                                </form>
+                                {% endwith %}
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            {% if is_coach %}
+            <div x-show="activeTab === 'coach_portal'" x-cloak>
+                <h2 class="section-header">Coach Portal</h2>
+                
+                <div style="padding: 1rem; background-color: #eff6ff; border: 1px solid #dbeafe; border-radius: 0.75rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <div style="display: flex; align-items: center;">
+                        <img src="https://www.gstatic.com/images/branding/product/1x/calendar_48dp.png" alt="GCal" style="width: 1.5rem; height: 1.5rem; margin-right: 0.75rem;">
+                        <div>
+                            <h4 style="font-weight: 700; color: var(--gray-800);">Google Calendar</h4>
+                            <p style="font-size: 0.75rem; color: var(--gray-600);">
+                                {% if user.coach_profile.google_credentials %}Synced{% else %}Not Connected{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                     {% if user.coach_profile.google_credentials %}
+                        <a href="{% url 'gcal:google_calendar_disconnect' %}" style="font-size: 0.875rem; color: #dc2626; text-decoration: underline;">Disconnect</a>
+                    {% else %}
+                        <a href="{% url 'gcal:google_calendar_init' %}" style="padding: 0.5rem 1rem; background-color: white; color: #2563eb; font-size: 0.875rem; font-weight: 700; border-radius: 0.375rem; text-decoration: none; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);">Connect</a>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <h3 style="font-weight: 700; color: var(--gray-800); margin-bottom: 1rem;">My Clients</h3>
+                    <div hx-get="{% url 'accounts:coach_clients_partial' %}" hx-trigger="load" hx-swap="innerHTML">
+                        <div style="padding: 1rem; text-align: center; color: var(--gray-500);">Loading clients...</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if is_staff %}
+            <div x-show="activeTab === 'staff'" x-cloak>
+                <h2 class="section-header">Staff Dashboard</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2.5rem;">
+                    <div class="dashboard-card" style="background-color: var(--gray-50); border: 1px solid var(--gray-200);">
+                        <p style="font-size: 0.875rem; color: var(--gray-500);">Dreamers Count</p>
+                        <p style="font-size: 1.5rem; font-weight: 700;">{{ staff_dreamer_count }}</p>
+                    </div>
+                    <div class="dashboard-card" style="background-color: var(--gray-50); border: 1px solid var(--gray-200); display: flex; align-items: center; justify-content: center;">
+                        <a href="{% url 'admin:index' %}" target="_blank" style="color: #2563eb; font-weight: 700;">Access Django Admin &rarr;</a>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 2.5rem;">
+                    <h3 style="font-size: 1.125rem; font-weight: 700; color: var(--gray-800); margin-bottom: 1rem;">Customer Lookup</h3>
+                    <input type="text" 
+                           class="form-input"
+                           placeholder="Search by name, email, or username..."
+                           hx-get="{% url 'accounts:staff_customer_lookup' %}"
+                           hx-trigger="keyup changed delay:500ms"
+                           hx-target="#search-results">
+                    <div id="search-results"></div>
+                    <div id="customer-detail-panel"></div>
+                </div>
+            </div>
+            {% endif %}
+
+        </main>
+    </div>
+</div>
+{% endblock %}
                     Dashboard
                 </button>
 
