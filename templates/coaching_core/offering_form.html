@@ -1,4 +1,55 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit Offering{% else %}New Offering{% endif %}{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/management.css' %}">
+{% endblock %}
+
 {% block content %}
-    <h1>Offering Form</h1>
+<div class="management-container">
+    <div class="form-card">
+        <h1 class="page-title" style="margin-bottom: 2rem; border-bottom: 1px solid var(--gray-200); padding-bottom: 1rem;">
+            {% if form.instance.pk %}Edit Offering: {{ form.instance.name }}{% else %}Create New Offering{% endif %}
+        </h1>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div style="background-color: #fee2e2; border: 1px solid #fecaca; color: #b91c1c; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            {% for field in form %}
+                <div class="form-group">
+                    <label for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                        {% if field.field.required %}<span style="color: #dc2626;">*</span>{% endif %}
+                    </label>
+                    
+                    {{ field }}
+                    
+                    {% if field.help_text %}
+                        <p class="help-text">{{ field.help_text|safe }}</p>
+                    {% endif %}
+                    
+                    {% if field.errors %}
+                        <div style="color: #dc2626; font-size: 0.875rem; margin-top: 0.25rem;">
+                            {{ field.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+
+            <div class="form-actions">
+                <button type="submit" class="btn-submit">Save Offering</button>
+                <a href="{% url 'coaching_core:offering_list' %}" class="btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock content %}

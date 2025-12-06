@@ -1,0 +1,246 @@
+/* static/css/management.css */
+
+/* --- Layout --- */
+.management-container {
+    max-width: 80rem;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+
+.management-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--gray-200);
+    padding-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .management-header {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+}
+
+.page-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.header-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+/* --- Buttons --- */
+.btn-create {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.625rem 1.25rem;
+    background-color: #2563eb; /* blue-600 */
+    color: white;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    text-decoration: none;
+}
+
+.btn-create:hover {
+    background-color: #1d4ed8;
+}
+
+.btn-create svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-right: 0.5rem;
+}
+
+.btn-secondary {
+    background-color: white;
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+    background-color: var(--gray-50);
+}
+
+/* --- Data Tables --- */
+.table-responsive {
+    overflow-x: auto;
+    background-color: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--gray-200);
+}
+
+.management-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+}
+
+.management-table th {
+    background-color: var(--gray-50);
+    padding: 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--gray-500);
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.management-table td {
+    padding: 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--gray-200);
+    color: var(--gray-700);
+}
+
+.management-table tr:last-child td {
+    border-bottom: none;
+}
+
+.table-row-link {
+    font-weight: 600;
+    color: var(--gray-900);
+    text-decoration: none;
+}
+
+.table-row-link:hover {
+    color: #2563eb;
+}
+
+/* --- Status Badges --- */
+.status-badge {
+    display: inline-flex;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-badge.active {
+    background-color: #dcfce7; /* green-100 */
+    color: #166534; /* green-800 */
+}
+
+.status-badge.inactive {
+    background-color: #f3f4f6; /* gray-100 */
+    color: #374151; /* gray-700 */
+}
+
+/* --- Forms --- */
+.form-card {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--gray-200);
+    max-width: 48rem;
+    margin: 0 auto;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--gray-700);
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="email"],
+.form-group input[type="url"],
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.help-text {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    margin-top: 0.25rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--gray-100);
+}
+
+.btn-submit {
+    background-color: #2563eb;
+    color: white;
+    padding: 0.75rem 2rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-submit:hover {
+    background-color: #1d4ed8;
+}
+
+/* Availability Specifics */
+.availability-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.availability-card {
+    background-color: white;
+    padding: 1.5rem;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    border-left: 4px solid #2563eb;
+}
+
+.day-header {
+    font-weight: 700;
+    font-size: 1.125rem;
+    margin-bottom: 0.5rem;
+    color: var(--gray-800);
+}
+
+.time-slot {
+    font-family: monospace;
+    background-color: var(--gray-100);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    margin-right: 0.5rem;
+}
