@@ -1,35 +1,36 @@
 {% extends 'emails/base_email.html' %}
 
-{% block content %}
-  <h1>Payment Receipt</h1>
-  <p>Hi {{ user.first_name|default:'there' }},</p>
-  <p>Thank you for your payment for order #{{ order.id }}. This email is your official receipt.</p>
-  
-  <h2>Order Summary</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Item</th>
-        <th>Quantity</th>
-        <th>Price</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in order.items.all %}
-        <tr>
-          <td>{{ item.variant.product.name }} ({{ item.variant.name }})</td>
-          <td>{{ item.quantity }}</td>
-          <td>£{{ item.price }}</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-    <tfoot>
-      <tr>
-        <td colspan="2"><strong>Total Paid</strong></td>
-        <td><strong>£{{ order.total_paid }}</strong></td>
-      </tr>
-    </tfoot>
-  </table>
+{% block title %}Payment Receipt{% endblock %}
 
-  <p>If you have any questions, please don't hesitate to contact us.</p>
+{% block content %}
+    <h1>Payment Receipt</h1>
+    
+    <p>Hello,</p>
+    <p>This email confirms that we have received your payment.</p>
+
+    <h2>Transaction Details</h2>
+    <table class="data-table">
+        <tbody>
+            <tr>
+                <td><strong>Transaction ID</strong></td>
+                <td style="text-align: right; font-family: monospace;">{{ transaction_id }}</td>
+            </tr>
+            <tr>
+                <td><strong>Date</strong></td>
+                <td style="text-align: right;">{% now "F j, Y H:i" %}</td>
+            </tr>
+            <tr>
+                <td><strong>Payment Method</strong></td>
+                <td style="text-align: right;">Card (Stripe)</td>
+            </tr>
+            <tr class="total-row">
+                <td>Amount Paid</td>
+                <td style="text-align: right;">£{{ amount }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>A copy of this receipt is also available in your <a href="{{ account_url }}" style="color: #2563eb;">account history</a>.</p>
+
+    <p>Thank you for your business!</p>
 {% endblock %}
