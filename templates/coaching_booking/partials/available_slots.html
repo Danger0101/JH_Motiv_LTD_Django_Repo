@@ -1,44 +1,25 @@
-<div id="time-slots-column" class="bg-white p-4 rounded-lg shadow-inner flex-grow">
-    {% if selected_date %}
-    <h3 class="text-lg font-semibold text-gray-800 mb-4">
-        Available Slots for <span class="text-indigo-600">{{ selected_date|date:"F j, Y" }}</span>
+<div class="slots-container animate-in fade-in zoom-in-95 duration-200">
+    <h3 style="font-size: 1rem; font-weight: 600; color: var(--gray-800); margin-bottom: 1rem;">
+        Available Times for {{ date_display }}
     </h3>
-    {% endif %}
 
-    {% if error_message %}
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-            <strong class="font-bold">Error:</strong>
-            <span class="block sm:inline">{{ error_message }}</span>
-        </div>
-    {% elif available_slots %}
-        <div class="space-y-2 max-h-96 overflow-y-auto pr-2">
-            {% for slot in available_slots %}
-                <div class="p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors">
-                    <form hx-post="{% url 'coaching_booking:book_session' %}" hx-target="body">
-                        {% csrf_token %}
-                        <input type="hidden" name="enrollment_id" value="{{ enrollment_id|default:'' }}">
-                        <input type="hidden" name="free_offer_id" value="{{ free_offer_id|default:'' }}">
-                        <input type="hidden" name="coach_id" value="{{ coach_id }}">
-                        <input type="hidden" name="start_time" value="{{ slot.start_time|date:'Y-m-d H:i' }}">
-                        
-                        <div class="flex justify-between items-center">
-                            <div class="font-medium text-gray-800">
-                                {{ slot.start_time|date:"h:i A" }} - {{ slot.end_time|date:"h:i A" }}
-                            </div>
-                            <button type="submit"
-                                    class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all"
-                                    hx-confirm="Confirm booking for {{ slot.start_time|date:'F j, Y \a\t h:i A' }}?">
-                                Book Now
-                            </button>
-                        </div>
-                    </form>
-                </div>
+    {% if slots %}
+        <div class="slots-grid">
+            {% for slot in slots %}
+            <form action="{% url 'coaching_booking:booking_checkout' %}" method="get">
+                <input type="hidden" name="enrollment_id" value="{{ enrollment_id }}">
+                <input type="hidden" name="date" value="{{ date_str }}">
+                <input type="hidden" name="time" value="{{ slot }}">
+                
+                <button type="submit" class="slot-btn" style="width: 100%;">
+                    {{ slot }}
+                </button>
+            </form>
             {% endfor %}
         </div>
     {% else %}
-        <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative" role="alert">
-            <strong class="font-bold">Heads up!</strong>
-            <span class="block sm:inline">No available slots found for this date.</span>
-        </div>
+        <p style="color: var(--gray-500); font-style: italic; text-align: center;">
+            No slots available on this date. Please try another day.
+        </p>
     {% endif %}
 </div>

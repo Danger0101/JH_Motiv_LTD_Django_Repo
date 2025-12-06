@@ -1,4 +1,92 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ offering.name }}{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/management.css' %}">
+{% endblock %}
+
 {% block content %}
-    <h1>Offering Detail</h1>
-{% endblock content %}
+<div class="management-container">
+    <div class="management-header">
+        <div>
+            <h1 class="page-title">{{ offering.name }}</h1>
+            <span class="status-pill {% if offering.is_active %}status-active{% else %}status-draft{% endif %}">
+                {% if offering.is_active %}Active{% else %}Draft{% endif %}
+            </span>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'coaching_core:offering_update' pk=offering.pk %}" class="btn-action btn-secondary-action">Edit Offering</a>
+            <a href="{% url 'coaching_core:offering_list' %}" class="btn-action btn-secondary-action">Back to List</a>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr; gap: 2rem;">
+        
+        <div class="manage-form-card" style="width: 100%; max-width: none;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                <div>
+                    <h3 style="font-size: 0.875rem; text-transform: uppercase; color: var(--gray-500); font-weight: 700;">Price</h3>
+                    <p style="font-size: 1.5rem; font-weight: 700; color: var(--gray-900);">£{{ offering.price }}</p>
+                </div>
+                <div>
+                    <h3 style="font-size: 0.875rem; text-transform: uppercase; color: var(--gray-500); font-weight: 700;">Format</h3>
+                    <p style="font-size: 1.125rem; color: var(--gray-900);">{{ offering.get_format_display }}</p>
+                </div>
+                <div>
+                    <h3 style="font-size: 0.875rem; text-transform: uppercase; color: var(--gray-500); font-weight: 700;">Sessions</h3>
+                    <p style="font-size: 1.125rem; color: var(--gray-900);">{{ offering.total_number_of_sessions }}</p>
+                </div>
+                <div>
+                    <h3 style="font-size: 0.875rem; text-transform: uppercase; color: var(--gray-500); font-weight: 700;">Duration</h3>
+                    <p style="font-size: 1.125rem; color: var(--gray-900);">{{ offering.duration_minutes }} mins</p>
+                </div>
+            </div>
+
+            <div>
+                <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem;">Description</h3>
+                <div style="color: var(--gray-700); line-height: 1.6;">
+                    {{ offering.description|linebreaks }}
+                </div>
+            </div>
+        </div>
+
+        <div class="manage-form-card" style="width: 100%; max-width: none;">
+            <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.5rem;">Enrolled Clients</h2>
+            {% if offering.enrollments.exists %}
+                <div class="table-container">
+                    <table class="manage-table">
+                        <thead>
+                            <tr>
+                                <th>Client Name</th>
+                                <th>Enrollment Date</th>
+                                <th>Sessions Left</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for enrollment in offering.enrollments.all %}
+                            <tr>
+                                <td>{{ enrollment.user.get_full_name }}</td>
+                                <td>{{ enrollment.created_at|date:"M d, Y" }}</td>
+                                <td>{{ enrollment.remaining_sessions }}</td>
+                                <td>
+                                    <span class="status-pill {% if enrollment.is_active %}status-active{% else %}status-draft{% endif %}">
+                                        {% if enrollment.is_active %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p style="color: var(--gray-500);">No clients currently enrolled in this offering.</p>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

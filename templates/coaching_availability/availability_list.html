@@ -16,37 +16,50 @@
             <p class="page-subtitle">Manage your weekly recurring schedule and exceptions.</p>
         </div>
         <div class="header-actions">
-            <a href="{% url 'coaching_availability:availability_create' %}" class="btn-create">
-                Add Availability
-            </a>
-            <a href="{% url 'coaching_availability:vacation_create' %}" class="btn-secondary">
-                Add Vacation
+            <button 
+                hx-get="{% url 'coaching_availability:set_recurring_availability' %}"
+                hx-target="#dialog-container"
+                class="btn-action btn-primary-action"
+            >
+                Edit Weekly Schedule
+            </button>
+            <a href="{% url 'coaching_availability:vacation_create' %}" class="btn-action btn-secondary-action">
+                Manage Vacation
             </a>
         </div>
     </div>
 
-    {% if availability_list %}
-        <div class="availability-grid">
-            {% for slot in availability_list %}
-            <div class="availability-card">
-                <div class="day-header">{{ slot.get_day_of_week_display }}</div>
-                <div class="time-display">
-                    <span class="time-slot">{{ slot.start_time|time:"H:i" }}</span>
-                    <span class="separator">-</span>
-                    <span class="time-slot">{{ slot.end_time|time:"H:i" }}</span>
-                </div>
-                <div class="card-actions table-actions">
-                    <a href="{% url 'coaching_availability:availability_update' pk=slot.pk %}">Edit</a>
-                    <a href="{% url 'coaching_availability:availability_delete' pk=slot.pk %}" class="delete">Delete</a>
-                </div>
+    <div class="schedule-grid">
+        {% for day_name, slots in week_schedule.items %}
+        <div class="day-card">
+            <div class="day-title">
+                {{ day_name }}
             </div>
-            {% endfor %}
+            
+            {% if slots %}
+                <div class="slot-list">
+                    {% for slot in slots %}
+                    <div class="slot-item">
+                        <span class="slot-time">{{ slot.start_time|time:"H:i" }} - {{ slot.end_time|time:"H:i" }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p style="color: var(--gray-400); font-style: italic; font-size: 0.875rem;">Unavailable</p>
+            {% endif %}
         </div>
-    {% else %}
-        <div class="empty-state">
-            <p>You haven't set any availability yet. Clients won't be able to book you.</p>
-            <a href="{% url 'coaching_availability:availability_create' %}" class="btn-create">Set Availability</a>
-        </div>
-    {% endif %}
+        {% endfor %}
+    </div>
+    
+    <div id="dialog-container"></div>
 </div>
+
+<script>
+    // Simple logic to handle modal closing if clicked outside
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if(evt.detail.target.id === "dialog-container") {
+            // Logic to initialize modal if needed, or simply render the HTML response
+        }
+    });
+</script>
 {% endblock %}

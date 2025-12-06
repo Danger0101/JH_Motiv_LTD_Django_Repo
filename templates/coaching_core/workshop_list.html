@@ -1,25 +1,72 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Workshops{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/management.css' %}">
+{% endblock %}
+
 {% block content %}
-<div class="container">
-    <h1>Upcoming Workshops</h1>
-    <div class="row">
-        {% for workshop in workshops %}
-        <div class="col-md-4">
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h5 class="card-title">{{ workshop.name }}</h5>
-                    <p class="card-text">{{ workshop.description }}</p>
-                    <p class="card-text"><strong>Date:</strong> {{ workshop.date }}</p>
-                    <p class="card-text"><strong>Time:</strong> {{ workshop.start_time }} - {{ workshop.end_time }}</p>
-                    <p class="card-text"><strong>Price:</strong> ${{ workshop.price }}</p>
-                    <p class="card-text"><strong>Spaces Left:</strong> {{ workshop.remaining_spaces }}</p>
-                    <a href="{% url 'coaching_core:workshop-detail' workshop.slug %}" class="btn btn-primary">View Details</a>
-                </div>
-            </div>
+<div class="management-container">
+    <div class="management-header">
+        <div>
+            <h1 class="page-title">My Workshops</h1>
+            <p class="page-subtitle">Schedule and manage group sessions.</p>
         </div>
-        {% empty %}
-        <p>No upcoming workshops at the moment.</p>
-        {% endfor %}
+        <div class="header-actions">
+            <a href="{% url 'coaching_core:workshop_create' %}" class="btn-action btn-primary-action">
+                <svg style="width: 1.25rem; height: 1.25rem; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Create Workshop
+            </a>
+        </div>
     </div>
+
+    {% if workshops %}
+    <div class="table-container">
+        <table class="manage-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Attendees</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for workshop in workshops %}
+                <tr>
+                    <td>
+                        <a href="{% url 'coaching_core:workshop_detail' pk=workshop.pk %}" style="font-weight: 600; color: var(--gray-900);">
+                            {{ workshop.name }}
+                        </a>
+                    </td>
+                    <td>{{ workshop.date|date:"M d, Y" }}</td>
+                    <td>{{ workshop.start_time|time:"H:i" }}</td>
+                    <td>{{ workshop.attendees.count }} / {{ workshop.max_attendees }}</td>
+                    <td>
+                        <span class="status-pill {% if workshop.is_active %}status-active{% else %}status-draft{% endif %}">
+                            {% if workshop.is_active %}Active{% else %}Draft{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{% url 'coaching_core:workshop_update' pk=workshop.pk %}" style="color: #2563eb; font-weight: 500; margin-right: 1rem;">Edit</a>
+                        <a href="{% url 'coaching_core:workshop_delete' pk=workshop.pk %}" class="btn-danger-action">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+        <p style="font-size: 1.125rem; font-weight: 500; color: var(--gray-900);">No workshops found</p>
+        <a href="{% url 'coaching_core:workshop_create' %}" class="btn-action btn-primary-action" style="margin-top: 1rem;">Create Workshop</a>
+    </div>
+    {% endif %}
 </div>
-{% endblock content %}
+{% endblock %}
