@@ -57,8 +57,7 @@ coverage.xml
 db.sqlite3
 /media/
 
-# Django Generated Static Files (CRITICAL ADDITION)
-staticfiles/
+
 
 # Scrapy stuff:
 .scrapy
@@ -122,4 +121,3 @@ venv/
 # Operating System Files (ADDED)
 .DS_Store
 Thumbs.db
-!theme/static/css/dist/styles.css
