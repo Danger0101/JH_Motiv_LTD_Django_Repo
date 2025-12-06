@@ -122,3 +122,4 @@ venv/
 # Operating System Files (ADDED)
 .DS_Store
 Thumbs.db
+!theme/static/css/dist/styles.css
