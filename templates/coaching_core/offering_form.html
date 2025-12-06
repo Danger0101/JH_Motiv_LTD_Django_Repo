@@ -11,7 +11,7 @@
 {% block content %}
 <div class="management-container">
     <div class="form-card">
-        <h1 class="page-title" style="margin-bottom: 2rem; border-bottom: 1px solid var(--gray-200); padding-bottom: 1rem;">
+        <h1 class="page-title">
             {% if form.instance.pk %}Edit Offering: {{ form.instance.name }}{% else %}Create New Offering{% endif %}
         </h1>
 
@@ -19,7 +19,7 @@
             {% csrf_token %}
             
             {% if form.non_field_errors %}
-                <div style="background-color: #fee2e2; border: 1px solid #fecaca; color: #b91c1c; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+                <div class="alert-error">
                     {{ form.non_field_errors }}
                 </div>
             {% endif %}
@@ -28,7 +28,7 @@
                 <div class="form-group">
                     <label for="{{ field.id_for_label }}">
                         {{ field.label }}
-                        {% if field.field.required %}<span style="color: #dc2626;">*</span>{% endif %}
+                        {% if field.field.required %}<span class="required-asterisk">*</span>{% endif %}
                     </label>
                     
                     {{ field }}
@@ -38,7 +38,7 @@
                     {% endif %}
                     
                     {% if field.errors %}
-                        <div style="color: #dc2626; font-size: 0.875rem; margin-top: 0.25rem;">
+                        <div class="field-error">
                             {{ field.errors }}
                         </div>
                     {% endif %}
@@ -52,4 +52,4 @@
         </form>
     </div>
 </div>
-{% endblock content %}
+{% endblock %}
