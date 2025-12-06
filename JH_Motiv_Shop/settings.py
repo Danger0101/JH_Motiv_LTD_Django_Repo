@@ -181,8 +181,8 @@ STORAGES = {
         "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage" if os.getenv('CLOUDINARY_CLOUD_NAME') else "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        # Temporarily use standard storage to bypass compression errors.
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        # Restore Whitenoise for production performance
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
 
