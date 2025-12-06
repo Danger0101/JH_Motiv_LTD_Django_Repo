@@ -1,6 +1,6 @@
 import random
 from django.core.management.base import BaseCommand
-from faker import Faker
+#from faker import Faker
 from products.models import Product, Variant, StockPool 
 
 class Command(BaseCommand):
@@ -11,7 +11,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         count = kwargs.get('count')
-        fake = Faker()
+        #fake = Faker()
         self.stdout.write(self.style.SUCCESS(f'Creating {count} complex dummy products...'))
 
         # --- Base Data Lists ---
@@ -38,13 +38,16 @@ class Command(BaseCommand):
         
         # --- 2. Create Products and Variants ---
         for i in range(count):
-            product_name = fake.bs().title()
+            #product_name = fake.bs().title()
+            product_name = f"Dummy Product {random.randint(1, 1000)}"
             while Product.objects.filter(name=product_name).exists():
-                product_name = f"{fake.bs().title()} {random.randint(1, 1000)}"
+                #product_name = f"{fake.bs().title()} {random.randint(1, 1000)}"
+                product_name = f"Dummy Product {random.randint(1, 1000)}"
 
             product = Product.objects.create(
                 name=product_name,
-                description=fake.paragraph(nb_sentences=10),
+                #description=fake.paragraph(nb_sentences=10),
+                description="This is a dummy product description.",
                 product_type='physical' if random.choice([True, False]) else 'digital' 
             )
 
