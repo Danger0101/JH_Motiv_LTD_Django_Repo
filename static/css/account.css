@@ -56,6 +56,11 @@
     color: #1d4ed8; /* blue-800 */
 }
 
+/* Auth pages */
+.auth-card-centered {
+    text-align: center;
+}
+
 /* Main layout for sidebar and content */
 .profile-layout {
     display: grid;
@@ -139,6 +144,11 @@
     margin-bottom: 1.5rem;
 }
 
+.text-pending {
+    color: #a16207; /* amber-600 */
+    font-weight: 500;
+}
+
 /* Dashboard cards */
 .dashboard-card {
     padding: 1.5rem;
@@ -220,6 +230,30 @@
     background-color: var(--gray-50);
 }
 
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+}
+
+.checkbox-input {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.checkbox-text {
+    font-size: 0.875rem;
+    color: var(--gray-700);
+}
+
+.marketing-status-text {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    margin-left: 2rem; /* Aligns with checkbox */
+}
+
 /* Responsive styles */
 @media (min-width: 640px) {
     .profile-subtitle {
@@ -230,5 +264,166 @@
 @media (min-width: 1024px) {
     .profile-layout {
         grid-template-columns: 1fr 3fr;
+    }
+}
+
+/* --- Profile Bookings Partial --- */
+.bookings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.booking-card {
+    padding: 1rem;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.booking-title {
+    font-weight: 600;
+    color: var(--gray-800);
+}
+
+.booking-time {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+}
+
+.booking-status-actions {
+    text-align: right;
+}
+
+.booking-actions {
+    margin-top: 0.5rem;
+    display: flex;
+    gap: 1rem;
+    font-size: 0.875rem;
+}
+
+/* --- Order Detail Page --- */
+.order-detail-container {
+    max-width: 1024px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+}
+
+.order-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+    margin-bottom: 2rem;
+}
+
+.order-detail-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.order-detail-meta {
+    color: var(--gray-500);
+    margin-top: 0.25rem;
+}
+
+.order-detail-grid {
+    display: grid;
+    gap: 2rem;
+}
+
+.order-detail-section {
+    background-color: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+}
+
+.order-section-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-bottom: 1rem;
+}
+
+.order-items-table {
+    width: 100%;
+}
+
+.order-item-row {
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.order-item-row:last-child {
+    border-bottom: none;
+}
+
+.order-item-row td {
+    padding: 1rem 0;
+}
+
+.order-item-image {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    border: 1px solid var(--gray-200);
+    margin-right: 1rem;
+}
+
+.order-item-details {
+    padding: 0 1rem;
+}
+
+.order-item-name {
+    font-weight: 600;
+    color: var(--gray-800);
+}
+
+.order-item-meta {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+}
+
+.order-item-price {
+    text-align: right;
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+.order-address {
+    font-style: normal;
+    line-height: 1.6;
+    color: var(--gray-600);
+}
+
+.order-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    color: var(--gray-700);
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+}
+
+.summary-total {
+    font-weight: 700;
+    color: var(--gray-900);
+    border-top: 1px solid var(--gray-200);
+    padding-top: 0.75rem;
+}
+
+@media (min-width: 768px) {
+    .order-detail-grid {
+        grid-template-columns: 2fr 1fr;
     }
 }

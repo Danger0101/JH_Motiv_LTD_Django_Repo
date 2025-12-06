@@ -113,7 +113,7 @@
                                     </button>
                                 </div>
                             {% else %}
-                                <p style="color: #a16207;">⏳ Request pending approval.</p>
+                                <p class="text-pending">⏳ Request pending approval.</p>
                             {% endif %}
                         </div>
                     {% endif %}
@@ -319,12 +319,11 @@ Let me know if you'd like to tackle another component!
                                 <form hx-post="{% url 'accounts:update_marketing_preference' %}" hx-target="#marketing-status">
                                     {% csrf_token %}
                                     <label class="checkbox-label">
-                                        <input type="checkbox" name="is_subscribed" {% if marketing_preference.is_subscribed %}checked{% endif %}
-                                               style="width: 1.25rem; height: 1.25rem;"
+                                        <input type="checkbox" name="is_subscribed" {% if marketing_preference.is_subscribed %}checked{% endif %} class="checkbox-input"
                                                hx-post="{% url 'accounts:update_marketing_preference' %}" hx-trigger="change">
-                                        <span style="font-size: 0.875rem; color: var(--gray-700);">Receive marketing emails and updates</span>
+                                        <span class="checkbox-text">Receive marketing emails and updates</span>
                                     </label>
-                                    <div id="marketing-status" style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--gray-500); margin-left: 2rem;"></div>
+                                    <div id="marketing-status" class="marketing-status-text"></div>
                                 </form>
                                 {% endwith %}
                             </div>

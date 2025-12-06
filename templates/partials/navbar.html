@@ -1,102 +1,54 @@
-<header class="main-header">
-  <nav
-    x-data="{ isOpen: false }"
-    class="container nav-container"
-    aria-label="Main Site Navigation"
-  >
-    <div class="brand-logo">
-      <a href="{% url 'core:home' %}">JH MOTIV</a>
-    </div>
+{% load static %}
 
-    <div class="nav-links-desktop">
-        <a href="{% url 'products:product_list' %}" class="nav-link">Shop</a>
-        <a href="{% url 'coaching_booking:coach_landing' %}" class="nav-link">Coaching</a>
-        <a href="{% url 'core:faqs' %}" class="nav-link">FAQs</a>
-        <a href="{% url 'core:about' %}" class="nav-link">About Us</a>
-    
-      <div class="nav-actions">
-        <div
-          id="nav-cart-summary"
-          hx-get="{% url 'cart:cart_summary_fragment' %}"
-          hx-trigger="load, cartUpdated from:body"
-          hx-swap="innerHTML"
-        >
-          {% include 'cart/partials/cart_summary.html' %}
+<header class="main-header" x-data="{ mobileMenuOpen: false }">
+    <div class="navbar-container">
+        
+        <!-- Logo -->
+        <div class="navbar-logo">
+            <a href="{% url 'core:home' %}">JH Motiv</a>
         </div>
 
-        <div x-data="{ dropdownOpen: false }" class="account-dropdown-wrapper">
-          <button
-            @click="dropdownOpen = !dropdownOpen"
-            class="dropdown-btn"
-          >
-            <svg
-              class="h-6 w-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              ></path>
-            </svg>
-          </button>
-          <div
-            x-show="dropdownOpen"
-            @click.away="dropdownOpen = false"
-            x-cloak
-            class="dropdown-menu"
-          >
+        <!-- Desktop Navigation -->
+        <nav class="nav-links-desktop">
+            <a href="{% url 'coaching_booking:offer-list' %}" class="nav-link">Coaching</a>
+            <a href="{% url 'products:product_list' %}" class="nav-link">Shop</a>
+            <a href="{% url 'coaching_core:workshop_list_public' %}" class="nav-link">Workshops</a>
+            <a href="{% url 'core:about' %}" class="nav-link">About</a>
+        </nav>
+
+        <!-- Actions: Cart, Account, Mobile Toggle -->
+        <div class="navbar-actions">
+            <a href="{% url 'cart:cart_detail' %}" class="action-link">
+                <i class="fa-solid fa-cart-shopping icon"></i>
+                {% if cart|length > 0 %}
+                    <span class="cart-indicator">{{ cart|length }}</span>
+                {% endif %}
+            </a>
+
             {% if user.is_authenticated %}
-            <a href="{% url 'account:account_profile' %}" class="dropdown-item">My Account</a>
-            <a href="{% url 'account:logout' %}" class="dropdown-item">Logout</a>
+                <a href="{% url 'account:account_profile' %}" class="action-link">
+                    <i class="fa-solid fa-user icon"></i>
+                </a>
             {% else %}
-            <a href="{% url 'account:login' %}" class="dropdown-item">Login</a>
-            <a href="{% url 'account:signup' %}" class="dropdown-item">Sign Up</a>
+                <a href="{% url 'account_login' %}" class="action-link">
+                    <i class="fa-solid fa-right-to-bracket icon"></i>
+                </a>
             {% endif %}
-          </div>
+
+            <!-- Mobile Menu Toggle -->
+            <button @click="mobileMenuOpen = !mobileMenuOpen" class="mobile-menu-toggle">
+                <i class="fa-solid fa-bars icon"></i>
+            </button>
         </div>
-      </div>
     </div>
 
-    <div class="mobile-toggle-wrapper md:hidden">
-      <button
-        @click="isOpen = !isOpen"
-        type="button"
-        class="mobile-toggle-btn"
-        aria-label="toggle menu"
-      >
-        <svg viewBox="0 0 24 24" class="h-6 w-6 fill-current">
-          <path
-            x-show="!isOpen"
-            fill-rule="evenodd"
-            d="M4 5h16a1 1 0 0 1 0 2H4a1 1 0 1 1 0-2zm0 6h16a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2zm0 6h16a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2z"
-          ></path>
-          <path
-            x-show="isOpen"
-            fill-rule="evenodd"
-            d="M18.278 16.864a1 1 0 0 1-1.414 1.414l-4.829-4.828-4.828 4.828a1 1 0 0 1-1.414-1.414l4.828-4.829-4.828-4.828a1 1 0 0 1 1.414-1.414l4.829 4.828 4.828-4.828a1 1 0 1 1 1.414 1.414l-4.828 4.829 4.828 4.828z"
-            x-cloak
-          ></path>
-        </svg>
-      </button>
+    <!-- Mobile Menu Panel -->
+    <div x-show="mobileMenuOpen" @click.away="mobileMenuOpen = false" class="mobile-menu-panel" x-cloak style="display: none;">
+        <nav class="nav-links-mobile">
+            <a href="{% url 'coaching_booking:offer-list' %}" class="nav-link-mobile">Coaching</a>
+            <a href="{% url 'products:product_list' %}" class="nav-link-mobile">Shop</a>
+            <a href="{% url 'coaching_core:workshop_list_public' %}" class="nav-link-mobile">Workshops</a>
+            <a href="{% url 'core:about' %}" class="nav-link-mobile">About</a>
+        </nav>
     </div>
-
-    <div x-show="isOpen" x-cloak class="mobile-menu">
-      <a href="{% url 'products:product_list' %}" class="nav-link">Shop</a>
-      <a href="{% url 'coaching_booking:coach_landing' %}" class="nav-link">Coaching</a>
-      <a href="{% url 'core:faqs' %}" class="nav-link">FAQs</a>
-      <a href="{% url 'core:about' %}" class="nav-link">About Us</a>
-      <hr style="margin: 0.5rem 0; border: 0; border-top: 1px solid var(--gray-400);" />
-      {% if user.is_authenticated %}
-      <a href="{% url 'account:account_profile' %}" class="nav-link">My Account</a>
-      <a href="{% url 'account:logout' %}" class="nav-link">Logout</a>
-      {% else %}
-      <a href="{% url 'account:login' %}" class="nav-link">Login</a>
-      <a href="{% url 'account:signup' %}" class="nav-link">Sign Up</a>
-      {% endif %}
-    </div>
-  </nav>
 </header>
