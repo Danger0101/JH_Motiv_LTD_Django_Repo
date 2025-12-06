@@ -21,6 +21,20 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    STATUS_PENDING = 'pending'
+    STATUS_PAID = 'paid'
+    STATUS_CANCELLED = 'cancelled'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_PAID, 'Paid'),
+        (STATUS_CANCELLED, 'Cancelled'),
+    ]
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+    )
+
     def save(self, *args, **kwargs):
         if not self.pk and self.user is None and self.guest_order_token is None:
             self.guest_order_token = uuid.uuid4()

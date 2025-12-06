@@ -21,6 +21,7 @@ from products.printful_service import PrintfulService
 from django.utils import timezone
 from .shipping_utils import calculate_cart_shipping
 import json
+import uuid
 
 # Custom imports for email sending
 from core.email_utils import send_transactional_email
@@ -74,67 +75,93 @@ def create_checkout_session(request):
         except json.JSONDecodeError:
             pass
 
-    line_items = []
-    for item in cart.items.all():
-        line_items.append({
-            'price_data': {
-                'currency': 'gbp',
-                'product_data': {
-                    'name': item.variant.product.name,
-                    'description': item.variant.name,
-                    'images': [request.build_absolute_uri(item.variant.get_image_url())],
-                },
-                'unit_amount': int(item.variant.price * 100),
-            },
-            'quantity': item.quantity,
-        })
+    try: # This try now wraps the entire order creation and Stripe session
+        with transaction.atomic():
+            # 1. Create a pending Order
+            user = request.user if request.user.is_authenticated else None
+            guest_order_token = None
+            if not user:
+                guest_order_token = str(uuid.uuid4())
 
-    # Add Shipping Line Item if applicable
-    if shipping_amount > 0:
-        line_items.append({
-            'price_data': {
-                'currency': 'gbp',
-                'product_data': {
-                    'name': 'Shipping & Handling',
-                    'description': 'Standard Shipping',
-                },
-                'unit_amount': int(shipping_amount * 100),
-            },
-            'quantity': 1,
-        })
+            order = Order.objects.create(
+                user=user,
+                email=user.email if user else None, # Will be updated by webhook if guest
+                total_paid=0.0, # Will be updated by webhook
+                shipping_data=address_data,
+                status=Order.STATUS_PENDING,
+                guest_order_token=guest_order_token
+            )
 
-    try:
-        # Determine if we need Stripe to collect address or if we already have it
-        # If we have calculated shipping, we usually don't want the user to change the country in Stripe 
-        # as that would invalidate our calculation.
-        
-        session_params = {
-            'ui_mode': 'embedded',
-            'payment_method_types': ['card'],
-            'line_items': line_items,
-            'mode': 'payment',
-            'return_url': request.build_absolute_uri(reverse('payments:payment_success')) + '?session_id={CHECKOUT_SESSION_ID}',
-            'metadata': {
-                'product_type': 'ecommerce_cart',
-                'cart_id': cart.id,
-                'user_id': request.user.id if request.user.is_authenticated else None,
-                # Store the address used for calculation in metadata for the webhook to use
-                'shipping_address_json': json.dumps(address_data) if address_data else ''
+            # 2. Create OrderItems from CartItems
+            for item in cart.items.all():
+                OrderItem.objects.create(
+                    order=order,
+                    variant=item.variant,
+                    price=item.variant.price,
+                    quantity=item.quantity
+                )
+
+            line_items = []
+            for item in cart.items.all():
+                line_items.append({
+                    'price_data': {
+                        'currency': 'gbp',
+                        'product_data': {
+                            'name': item.variant.product.name,
+                            'description': item.variant.name,
+                            'images': [request.build_absolute_uri(item.variant.get_image_url())],
+                        },
+                        'unit_amount': int(item.variant.price * 100),
+                    },
+                    'quantity': item.quantity,
+                })
+
+            # Add Shipping Line Item if applicable
+            if shipping_amount > 0:
+                line_items.append({
+                    'price_data': {
+                        'currency': 'gbp',
+                        'product_data': {
+                            'name': 'Shipping & Handling',
+                            'description': 'Standard Shipping',
+                        },
+                        'unit_amount': int(shipping_amount * 100),
+                    },
+                    'quantity': 1,
+                })
+
+            # Determine if we need Stripe to collect address or if we already have it
+            # If we have calculated shipping, we usually don't want the user to change the country in Stripe 
+            # as that would invalidate our calculation.
+            
+            session_params = {
+                'ui_mode': 'embedded',
+                'payment_method_types': ['card'],
+                'line_items': line_items,
+                'mode': 'payment',
+                'return_url': request.build_absolute_uri(reverse('payments:payment_success')) + '?session_id={CHECKOUT_SESSION_ID}',
+                'metadata': {
+                    'product_type': 'ecommerce_cart',
+                    'order_id': order.id, # Pass the newly created Order ID
+                    'user_id': request.user.id if request.user.is_authenticated else None, # Keep for convenience
+                    'guest_order_token': guest_order_token if guest_order_token else '',
+                    # Store the address used for calculation in metadata for the webhook to use
+                    'shipping_address_json': json.dumps(address_data) if address_data else ''
+                }
             }
-        }
 
-        # If we didn't calculate shipping (e.g. digital only), we might still want address for billing
-        # But if we did calculate it, we assume the address is "locked" or passed as pre-fill
-        # Stripe Embedded doesn't support 'pre-fill' address strictly in the same way as Hosted, 
-        # but we can pass 'customer_details' if we have them.
-        
-        if not address_data:
-             session_params['shipping_address_collection'] = {
-                'allowed_countries': ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'ES', 'IT', 'NL'],
-            }
+            # If we didn't calculate shipping (e.g. digital only), we might still want address for billing
+            # But if we did calculate it, we assume the address is "locked" or passed as pre-fill
+            # Stripe Embedded doesn't support 'pre-fill' address strictly in the same way as Hosted, 
+            # but we can pass 'customer_details' if we have them.
+            
+            if not address_data:
+                 session_params['shipping_address_collection'] = {
+                    'allowed_countries': ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'ES', 'IT', 'NL'],
+                }
 
-        checkout_session = stripe.checkout.Session.create(**session_params)
-        return JsonResponse({'clientSecret': checkout_session.client_secret})
+            checkout_session = stripe.checkout.Session.create(**session_params)
+            return JsonResponse({'clientSecret': checkout_session.client_secret})
     except Exception as e:
         print(f"Error creating Stripe checkout session: {e}")
         return JsonResponse({'error': str(e)}, status=500)
@@ -260,21 +287,33 @@ def stripe_webhook(request):
         
         # --- E-COMMERCE CART HANDLING ---
         if product_type == 'ecommerce_cart':
-            cart_id = metadata.get('cart_id')
-            if cart_id:
-                try:
-                    cart = Cart.objects.get(id=cart_id, status='open')
-                    
-                    # 1. Retrieve & Save Shipping Data
-                    # We look for the JSON we stored in metadata during checkout creation
+            order_id = metadata.get('order_id')
+            if not order_id:
+                print("FATAL ERROR in E-commerce Webhook: order_id not found in metadata.")
+                return HttpResponse("Missing order_id in metadata", status=400)
+            
+            try:
+                order = Order.objects.get(id=order_id)
+                
+                # Update Order status and total_paid
+                order.status = Order.STATUS_PAID
+                order.total_paid = session.amount_total / 100
+                # Update email if it was a guest user and email is now available from Stripe
+                if not order.user and session.get('customer_details', {}).get('email'):
+                    order.email = session.get('customer_details', {}).get('email')
+
+                # Update shipping_data if it wasn't present before or if Stripe has more complete data
+                if not order.shipping_data:
                     shipping_json = metadata.get('shipping_address_json')
-                    shipping_data = json.loads(shipping_json) if shipping_json else {}
+                    shipping_data_from_metadata = json.loads(shipping_json) if shipping_json else {}
                     
-                    # Fallback to Stripe's data if our metadata is empty
-                    if not shipping_data:
+                    if shipping_data_from_metadata:
+                        order.shipping_data = shipping_data_from_metadata
+                    else:
+                        # Fallback to Stripe's data if our metadata is empty
                         shipping_details = session.get('shipping_details') or {}
                         address = shipping_details.get('address') or {}
-                        shipping_data = {
+                        order.shipping_data = {
                             'name': shipping_details.get('name'),
                             'address1': address.get('line1'),
                             'address2': address.get('line2'),
@@ -283,142 +322,128 @@ def stripe_webhook(request):
                             'country_code': address.get('country'),
                             'zip': address.get('postal_code'),
                         }
+                order.save()
 
-                    # 2. Create the Order
-                    order = Order.objects.create(
-                        user_id=metadata.get('user_id'),
-                        email=session.get('customer_details', {}).get('email'),
-                        total_paid=session.amount_total / 100,
-                        shipping_data=shipping_data  # <--- SAVING THE ADDRESS
-                    )
+                printful_items = []
 
-                    printful_items = []
-
-                    # 3. Process Items & Deduct Stock
-                    for item in cart.items.all():
-                        OrderItem.objects.create(
-                            order=order,
-                            variant=item.variant,
-                            price=item.variant.price,
-                            quantity=item.quantity,
-                        )
-
-                        # A. Handle Printful Items
-                        if item.variant.printful_variant_id:
-                            printful_items.append({
-                                "variant_id": item.variant.printful_variant_id,
-                                "quantity": item.quantity,
-                            })
-                        
-                        # B. Handle Self-Fulfilled Stock Deduction
-                        # We only deduct if it's PHYSICAL and NOT a Printful item (or mixed)
-                        # Actually, Printful items use "Infinite" pools, so we can treat all physical same
-                        # as long as the pool is set up correctly.
-                        if item.variant.product.product_type == 'physical' and item.variant.stock_pool:
-                            try:
-                                # Lock the pool row to prevent race conditions
-                                pool = StockPool.objects.select_for_update().get(id=item.variant.stock_pool.id)
-                                
-                                # Check if this is our "Printful Infinite Pool" (usually 9999)
-                                # If it's a real inventory pool, deduct.
-                                if pool.available_stock < 9000: 
-                                    if pool.available_stock >= item.quantity:
-                                        pool.available_stock -= item.quantity
-                                        pool.save()
-                                        print(f"Stock deducted: {item.quantity} from {pool.name}")
-                                    else:
-                                        # Critical: Sold more than we have!
-                                        print(f"CRITICAL: Oversold {pool.name}. Had {pool.available_stock}, sold {item.quantity}.")
-                                        pool.available_stock = 0 # Zero it out
-                                        pool.save()
-                                        # TODO: Send alert email to Admin
-                            except StockPool.DoesNotExist:
-                                print(f"Error: StockPool not found for variant {item.variant.id}")
-
-                    # 4. Consolidate Cart
-                    cart.status = 'submitted'
-                    cart.save()
-
-                    # 5. Handle Printful Fulfillment
-                    if printful_items:
-                        auto_fulfill = getattr(settings, 'PRINTFUL_AUTO_FULFILLMENT', False)
-                        
-                        if auto_fulfill:
-                            # AUTOMATIC MODE
-                            printful_service = PrintfulService()
-                            # Construct recipient for Printful from saved data
-                            recipient = {
-                                "name": shipping_data.get('name'),
-                                "address1": shipping_data.get('address1'),
-                                "address2": shipping_data.get('address2', ''),
-                                "city": shipping_data.get('city'),
-                                "state_code": shipping_data.get('state_code'),
-                                "country_code": shipping_data.get('country_code'),
-                                "zip": shipping_data.get('zip'),
-                                "email": order.email
-                            }
+                # Process Items & Deduct Stock (using OrderItems now)
+                for item in order.items.all(): # order.items is OrderItem related_name
+                    # A. Handle Printful Items
+                    if item.variant.printful_variant_id:
+                        printful_items.append({
+                            "variant_id": item.variant.printful_variant_id,
+                            "quantity": item.quantity,
+                        })
+                    
+                    # B. Handle Self-Fulfilled Stock Deduction
+                    if item.variant.product.product_type == 'physical' and item.variant.stock_pool:
+                        try:
+                            # Lock the pool row to prevent race conditions
+                            pool = StockPool.objects.select_for_update().get(id=item.variant.stock_pool.id)
                             
-                            response = printful_service.create_order(recipient, printful_items)
-                            
-                            if 'result' in response and response['result'].get('id'):
-                                order.printful_order_id = response['result']['id']
-                                order.printful_order_status = response['result']['status']
-                                order.save()
-                            else:
-                                print(f"Printful Auto-Sync Failed: {response}")
-                                order.printful_order_status = 'failed_auto_sync'
-                                order.save()
-                        else:
-                            # MANUAL MODE (Safety Buffer)
-                            order.printful_order_status = 'pending_approval'
-                            order.save()
-                            print(f"Order #{order.id} queued for manual Printful approval.")
+                            if pool.available_stock < 9000: 
+                                if pool.available_stock >= item.quantity:
+                                    pool.available_stock -= item.quantity
+                                    pool.save()
+                                    print(f"Stock deducted: {item.quantity} from {pool.name}")
+                                else:
+                                    print(f"CRITICAL: Oversold {pool.name}. Had {pool.available_stock}, sold {item.quantity}.")
+                                    pool.available_stock = 0
+                                    pool.save()
+                        except StockPool.DoesNotExist:
+                            print(f"Error: StockPool not found for variant {item.variant.id}")
 
-                    # 6. Send Confirmation Emails
-                    # (Keep your existing email sending logic here)
+                # Consolidate Cart (find original cart and mark as submitted)
+                # We need the original cart_id from the metadata passed during checkout creation
+                cart_id_from_metadata = metadata.get('cart_id')
+                if cart_id_from_metadata:
                     try:
-                        customer_email = session.get('customer_details', {}).get('email')
-                        if not customer_email:
-                             raise ValueError("Customer email not found in Stripe session.")
+                        original_cart = Cart.objects.get(id=cart_id_from_metadata)
+                        original_cart.status = 'submitted'
+                        original_cart.save()
+                    except Cart.DoesNotExist:
+                        print(f"WARNING: Original cart {cart_id_from_metadata} not found during webhook processing.")
+                else:
+                    print(f"WARNING: No cart_id found in metadata for order {order_id}. Cannot mark original cart as submitted.")
 
-                        user = order.user
-                        if user:
-                            dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
-                        else:
-                            # For guests, generate a link to their specific order
-                            dashboard_url = request.build_absolute_uri(
-                                reverse('payments:order_detail_guest', args=[order.guest_order_token])
-                            )
 
-                        email_context = {
-                            'order': order,
-                            'user': user, # This can be None for guests
-                            'dashboard_url': dashboard_url,
+                # Handle Printful Fulfillment
+                if printful_items:
+                    auto_fulfill = getattr(settings, 'PRINTFUL_AUTO_FULFILLMENT', False)
+                    
+                    if auto_fulfill:
+                        printful_service = PrintfulService()
+                        recipient = {
+                            "name": order.shipping_data.get('name'),
+                            "address1": order.shipping_data.get('address1'),
+                            "address2": order.shipping_data.get('address2', ''),
+                            "city": order.shipping_data.get('city'),
+                            "state_code": order.shipping_data.get('state_code'),
+                            "country_code": order.shipping_data.get('country_code'),
+                            "zip": order.shipping_data.get('zip'),
+                            "email": order.email
                         }
+                        
+                        response = printful_service.create_order(recipient, printful_items)
+                        
+                        if 'result' in response and response['result'].get('id'):
+                            order.printful_order_id = response['result']['id']
+                            order.printful_order_status = response['result']['status']
+                            order.save()
+                        else:
+                            print(f"Printful Auto-Sync Failed: {response}")
+                            order.printful_order_status = 'failed_auto_sync'
+                            order.save()
+                    else:
+                        order.printful_order_status = 'pending_approval'
+                        order.save()
+                        print(f"Order #{order.id} queued for manual Printful approval.")
 
-                        send_transactional_email(
-                            recipient_email=customer_email,
-                            subject=f"Your JH Motiv LTD Order #{order.id} is Confirmed",
-                            template_name='emails/order_confirmation.html',
-                            context=email_context
+                # Send Confirmation Emails
+                try:
+                    customer_email = order.email # Use email from order, which is now guaranteed to be set
+                    if not customer_email:
+                         raise ValueError("Customer email not found on order after webhook processing.")
+
+                    user = order.user
+                    if user:
+                        dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
+                    else:
+                        dashboard_url = request.build_absolute_uri(
+                            reverse('payments:order_detail_guest', args=[order.guest_order_token])
                         )
-                        print(f"SUCCESS: Order confirmation email sent to {customer_email} for order {order.id}")
 
-                        # Send Payment Receipt Email
-                        send_transactional_email(
-                            recipient_email=customer_email,
-                            subject=f"Your Payment Receipt for Order #{order.id}",
-                            template_name='emails/payment_receipt.html',
-                            context=email_context
-                        )
-                        print(f"SUCCESS: Payment receipt email sent to {customer_email} for order {order.id}")
+                    email_context = {
+                        'order': order,
+                        'user': user,
+                        'dashboard_url': dashboard_url,
+                    }
 
-                    except Exception as email_error:
-                        print(f"CRITICAL: Order {order.id} created but failed to send email. Error: {email_error}")
+                    send_transactional_email(
+                        recipient_email=customer_email,
+                        subject=f"Your JH Motiv LTD Order #{order.id} is Confirmed",
+                        template_name='emails/order_confirmation.html',
+                        context=email_context
+                    )
+                    print(f"SUCCESS: Order confirmation email sent to {customer_email} for order {order.id}")
 
-                except Exception as e:
-                    print(f"FATAL ERROR in E-commerce Webhook: {e}")
-                    return HttpResponse("Webhook processing error", status=500)
+                    send_transactional_email(
+                        recipient_email=customer_email,
+                        subject=f"Your Payment Receipt for Order #{order.id}",
+                        template_name='emails/payment_receipt.html',
+                        context=email_context
+                    )
+                    print(f"SUCCESS: Payment receipt email sent to {customer_email} for order {order.id}")
+
+                except Exception as email_error:
+                    print(f"CRITICAL: Order {order.id} updated but failed to send email. Error: {email_error}")
+
+            except Order.DoesNotExist:
+                print(f"FATAL ERROR in E-commerce Webhook: Order matching ID {order_id} does not exist.")
+                return HttpResponse("Order not found", status=400)
+            except Exception as e:
+                print(f"FATAL ERROR in E-commerce Webhook processing Order {order_id}: {e}")
+                return HttpResponse("Webhook processing error", status=500)
 
         # --- COACHING HANDLING (Keep existing) ---
         elif product_type == 'coaching_offering':
