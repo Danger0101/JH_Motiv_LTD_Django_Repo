@@ -40,10 +40,14 @@
     {% include 'partials/navbar.html' %}
 
     <!-- Main Content -->
-    <main class="content-wrapper">{% block content %}{% endblock %}</main>
+    <main class="content-wrapper">
+        {% block content %}{% endblock %}
+    </main>
 
     <!-- Footer -->
-    {% include 'partials/footer.html' %} {% unicorn_scripts %}
+    {% include 'partials/footer.html' %} 
+    
+    {% unicorn_scripts %}
     {% block extra_scripts %}
       <script src="{% static 'js/carousel.js' %}"></script>
       <script>
