@@ -1,42 +1,20 @@
-<header class="bg-white shadow-md sticky top-0 z-40">
+<header class="main-header">
   <nav
     x-data="{ isOpen: false }"
-    class="container mx-auto px-6 py-4"
+    class="container nav-container"
     aria-label="Main Site Navigation"
   >
-    <div class="flex items-center justify-between">
-      <!-- Logo and Branding -->
-      <div class="text-xl font-bold text-gray-800">
-        <a href="{% url 'core:home' %}">JH MOTIV</a>
-      </div>
+    <div class="brand-logo">
+      <a href="{% url 'core:home' %}">JH MOTIV</a>
+    </div>
 
-      <!-- Desktop Menu -->
-      <div class="hidden md:flex items-center space-x-6">
-        <a
-          href="{% url 'products:product_list' %}"
-          class="text-gray-600 hover:text-blue-500"
-          >Shop</a
-        >
-        <a
-          href="{% url 'coaching_booking:coach_landing' %}"
-          class="text-gray-600 hover:text-blue-500"
-          >Coaching</a
-        >
-        <a
-          href="{% url 'core:faqs' %}"
-          class="text-gray-600 hover:text-blue-500"
-          >FAQs</a
-        >
-        <a
-          href="{% url 'core:about' %}"
-          class="text-gray-600 hover:text-blue-500"
-          >About Us</a
-        >
-      </div>
-
-      <!-- Right-side icons (Cart & Account) -->
-      <div class="flex items-center space-x-4">
-        <!-- Cart Icon -->
+    <div class="nav-links-desktop">
+        <a href="{% url 'products:product_list' %}" class="nav-link">Shop</a>
+        <a href="{% url 'coaching_booking:coach_landing' %}" class="nav-link">Coaching</a>
+        <a href="{% url 'core:faqs' %}" class="nav-link">FAQs</a>
+        <a href="{% url 'core:about' %}" class="nav-link">About Us</a>
+    
+      <div class="nav-actions">
         <div
           id="nav-cart-summary"
           hx-get="{% url 'cart:cart_summary_fragment' %}"
@@ -46,14 +24,14 @@
           {% include 'cart/partials/cart_summary.html' %}
         </div>
 
-        <!-- Account Dropdown -->
-        <div x-data="{ dropdownOpen: false }" class="relative hidden md:block">
+        <div x-data="{ dropdownOpen: false }" class="account-dropdown-wrapper">
           <button
             @click="dropdownOpen = !dropdownOpen"
-            class="relative z-10 block text-gray-600 hover:text-blue-500"
+            class="dropdown-btn"
           >
             <svg
               class="h-6 w-6"
+              style="height: 1.5rem; width: 1.5rem;"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -70,105 +48,55 @@
             x-show="dropdownOpen"
             @click.away="dropdownOpen = false"
             x-cloak
-            class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl z-20"
+            class="dropdown-menu"
           >
             {% if user.is_authenticated %}
-            <a
-              href="{% url 'account:account_profile' %}"
-              class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-500 hover:text-white"
-              >My Account</a
-            >
-            <a
-              href="{% url 'account:logout' %}"
-              class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-500 hover:text-white"
-              >Logout</a
-            >
+            <a href="{% url 'account:account_profile' %}" class="dropdown-item">My Account</a>
+            <a href="{% url 'account:logout' %}" class="dropdown-item">Logout</a>
             {% else %}
-            <a
-              href="{% url 'account:login' %}"
-              class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-500 hover:text-white"
-              >Login</a
-            >
-            <a
-              href="{% url 'account:signup' %}"
-              class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-500 hover:text-white"
-              >Sign Up</a
-            >
+            <a href="{% url 'account:login' %}" class="dropdown-item">Login</a>
+            <a href="{% url 'account:signup' %}" class="dropdown-item">Sign Up</a>
             {% endif %}
           </div>
-        </div>
-
-        <!-- Mobile Menu Button -->
-        <div class="md:hidden">
-          <button
-            @click="isOpen = !isOpen"
-            type="button"
-            class="text-gray-600 hover:text-gray-800 focus:outline-none focus:text-gray-800"
-            aria-label="toggle menu"
-          >
-            <svg viewBox="0 0 24 24" class="h-6 w-6 fill-current">
-              <path
-                x-show="!isOpen"
-                fill-rule="evenodd"
-                d="M4 5h16a1 1 0 0 1 0 2H4a1 1 0 1 1 0-2zm0 6h16a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2zm0 6h16a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2z"
-              ></path>
-              <path
-                x-show="isOpen"
-                fill-rule="evenodd"
-                d="M18.278 16.864a1 1 0 0 1-1.414 1.414l-4.829-4.828-4.828 4.828a1 1 0 0 1-1.414-1.414l4.828-4.829-4.828-4.828a1 1 0 0 1 1.414-1.414l4.829 4.828 4.828-4.828a1 1 0 1 1 1.414 1.414l-4.828 4.829 4.828 4.828z"
-                x-cloak
-              ></path>
-            </svg>
-          </button>
         </div>
       </div>
     </div>
 
-    <!-- Mobile Menu -->
-    <div x-show="isOpen" x-cloak class="mt-4 md:hidden">
-      <a
-        href="{% url 'products:product_list' %}"
-        class="block py-2 px-4 text-sm text-gray-700 hover:bg-blue-500 hover:text-white rounded"
-        >Shop</a
+    <div class="mobile-toggle-wrapper md:hidden">
+      <button
+        @click="isOpen = !isOpen"
+        type="button"
+        class="mobile-toggle-btn"
+        aria-label="toggle menu"
       >
-      <a
-        href="{% url 'coaching_booking:coach_landing' %}"
-        class="block py-2 px-4 text-sm text-gray-700 hover:bg-blue-500 hover:text-white rounded"
-        >Coaching</a
-      >
-      <a
-        href="{% url 'core:faqs' %}"
-        class="block py-2 px-4 text-sm text-gray-700 hover:bg-blue-500 hover:text-white rounded"
-        >FAQs</a
-      >
-      <a
-        href="{% url 'core:about' %}"
-        class="block py-2 px-4 text-sm text-gray-700 hover:bg-blue-500 hover:text-white rounded"
-        >About Us</a
-      >
-      <hr class="my-2" />
+        <svg viewBox="0 0 24 24" class="h-6 w-6 fill-current" style="height: 1.5rem; width: 1.5rem;">
+          <path
+            x-show="!isOpen"
+            fill-rule="evenodd"
+            d="M4 5h16a1 1 0 0 1 0 2H4a1 1 0 1 1 0-2zm0 6h16a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2zm0 6h16a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2z"
+          ></path>
+          <path
+            x-show="isOpen"
+            fill-rule="evenodd"
+            d="M18.278 16.864a1 1 0 0 1-1.414 1.414l-4.829-4.828-4.828 4.828a1 1 0 0 1-1.414-1.414l4.828-4.829-4.828-4.828a1 1 0 0 1 1.414-1.414l4.829 4.828 4.828-4.828a1 1 0 1 1 1.414 1.414l-4.828 4.829 4.828 4.828z"
+            x-cloak
+          ></path>
+        </svg>
+      </button>
+    </div>
+
+    <div x-show="isOpen" x-cloak class="mobile-menu">
+      <a href="{% url 'products:product_list' %}" class="nav-link">Shop</a>
+      <a href="{% url 'coaching_booking:coach_landing' %}" class="nav-link">Coaching</a>
+      <a href="{% url 'core:faqs' %}" class="nav-link">FAQs</a>
+      <a href="{% url 'core:about' %}" class="nav-link">About Us</a>
+      <hr style="margin: 0.5rem 0; border: 0; border-top: 1px solid var(--gray-400);" />
       {% if user.is_authenticated %}
-      <a
-        href="{% url 'account:account_profile' %}"
-        class="block py-2 px-4 text-sm text-gray-700 hover:bg-blue-500 hover:text-white rounded"
-        >My Account</a
-      >
-      <a
-        href="{% url 'account:logout' %}"
-        class="block py-2 px-4 text-sm text-gray-700 hover:bg-blue-500 hover:text-white rounded"
-        >Logout</a
-      >
+      <a href="{% url 'account:account_profile' %}" class="nav-link">My Account</a>
+      <a href="{% url 'account:logout' %}" class="nav-link">Logout</a>
       {% else %}
-      <a
-        href="{% url 'account:login' %}"
-        class="block py-2 px-4 text-sm text-gray-700 hover:bg-blue-500 hover:text-white rounded"
-        >Login</a
-      >
-      <a
-        href="{% url 'account:signup' %}"
-        class="block py-2 px-4 text-sm text-gray-700 hover:bg-blue-500 hover:text-white rounded"
-        >Sign Up</a
-      >
+      <a href="{% url 'account:login' %}" class="nav-link">Login</a>
+      <a href="{% url 'account:signup' %}" class="nav-link">Sign Up</a>
       {% endif %}
     </div>
   </nav>
