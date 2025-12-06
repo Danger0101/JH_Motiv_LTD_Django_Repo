@@ -13,7 +13,6 @@ venv/
 # Distribution / packaging
 .Python
 build/
-dist/
 downloads/
 eggs/
 .eggs/
