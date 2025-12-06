@@ -5,196 +5,158 @@
 
 {% block extra_head %}
     <meta name="description" content="Find the perfect coach to help you achieve your personal and professional goals. Explore our coaching services and book a session.">
+    <link rel="stylesheet" href="{% static 'css/coaching.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="bg-gray-50">
-    {# --- HERO SECTION (Updated) --- #}
-    <div class="text-center py-16 px-4">
-        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900">Find Your Path to Success</h1>
-        <p class="mt-4 text-lg text-gray-600">Unlock your potential with our expert coaches.</p>
-        <a href="#expert-coaches" class="mt-8 inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300">
+<div>
+    {# --- HERO SECTION --- #}
+    <div class="coaching-hero">
+        <h1>Find Your Path to Success</h1>
+        <p>Unlock your potential with our expert coaches.</p>
+        <a href="#expert-coaches" class="btn-hero-cta">
             Find a Coach
         </a>
     </div>
 
-    {# --- COACHING VS MENTORSHIP (Retained from Original) --- #}
-    <div class="bg-white">
-        <div class="py-16 bg-white">
-            <div class="container mx-auto px-4">
-                <h2 class="text-3xl font-bold text-center text-gray-800 mb-12">Coaching vs. Mentorship: Find Your Fit</h2>
-                <div class="grid md:grid-cols-2 gap-12">
-                    {# COACHING: Guiding Your Expertise #}
-                    <div class="p-8 border border-green-200 rounded-lg bg-green-50 shadow-lg">
-                        <h3 class="text-2xl font-extrabold text-green-700">🎯 Coaching: Guiding Your Expertise</h3>
-                        <p class="mt-4 text-gray-700 font-semibold">Coaches work with you using your expertise to guide you to long-lasting, self-discovered solutions. It's <strong>forward-focused</strong> and performance-driven.</p>
-                        <hr class="my-4 border-green-300">
-                        <h4 class="text-xl font-bold text-gray-800 mb-3">Unique Value & Benefits</h4>
-                        <ul class="space-y-3 text-gray-600 list-disc list-inside ml-4">
-                            <li><strong>Deep Self-Discovery:</strong> The coach helps you unlock *your own* potential and answers through powerful questioning.</li>
-                            <li><strong>Sustainable Change:</strong> Solutions are internal, ensuring habits and changes are <strong>long-lasting</strong> and self-owned.</li>
-                            <li><strong>High ROI:</strong> Companies report an average <strong>ROI of 7 times</strong> their initial coaching spend (ICF).</li>
-                            <li><strong>Increased Confidence:</strong> Over <strong>80% of people</strong> who receive coaching report increased self-confidence.</li>
-                            <li><strong>Goal-Driven:</strong> Strictly focused on measurable goals, action planning, and accountability.</li>
-                        </ul>
-                    </div>
-                    {# MENTORSHIP: Sharing Their Experience #}
-                    <div class="p-8 border border-blue-200 rounded-lg bg-blue-50 shadow-lg">
-                        <h3 class="text-2xl font-extrabold text-blue-700">🗺️ Mentorship: Sharing Their Experience</h3>
-                        <p class="mt-4 text-gray-700 font-semibold">Mentors use their own expertise, experience, and knowledge to guide you through what they have found to work. It's <strong>experience-based</strong> and career-focused.</p>
-                        <hr class="my-4 border-blue-300">
-                        <h4 class="text-xl font-bold text-gray-800 mb-3">Unique Value & Benefits</h4>
-                        <ul class="space-y-3 text-gray-600 list-disc list-inside ml-4">
-                            <li><strong>Direct Knowledge Transfer:</strong> You gain immediate insights and learn <strong>best practices</strong> directly from an expert's past success/failure.</li>
-                            <li><strong>Accelerated Career Growth:</strong> Mentees are often <strong>promoted 5x more often</strong> than those not in a program (Wharton).</li>
-                            <li><strong>Networking & Sponsorship:</strong> Mentors provide access to their professional network and can act as a sponsor or advocate.</li>
-                            <li><strong>Increased Retention:</strong> Mentored employees are <strong>49% less likely to leave</strong> a company.</li>
-                            <li><strong>Industry-Specific Wisdom:</strong> Provides a roadmap for navigating a specific career path or industry.</li>
-                        </ul>
-                    </div>
+    {# --- COACHING VS MENTORSHIP --- #}
+    <div class="comparison-wrapper">
+        <div class="container mx-auto">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-12" style="text-align:center; margin-bottom:3rem;">Coaching vs. Mentorship: Find Your Fit</h2>
+            <div class="comparison-grid">
+                {# COACHING #}
+                <div class="comparison-card coaching">
+                    <h3>🎯 Coaching: Guiding Your Expertise</h3>
+                    <p class="mt-4 font-semibold">Coaches work with you using your expertise to guide you to long-lasting, self-discovered solutions. It's <strong>forward-focused</strong> and performance-driven.</p>
+                    <hr>
+                    <h4 class="font-bold mb-3">Unique Value & Benefits</h4>
+                    <ul>
+                        <li><strong>Deep Self-Discovery:</strong> The coach helps you unlock *your own* potential and answers through powerful questioning.</li>
+                        <li><strong>Sustainable Change:</strong> Solutions are internal, ensuring habits and changes are <strong>long-lasting</strong> and self-owned.</li>
+                        <li><strong>High ROI:</strong> Companies report an average <strong>ROI of 7 times</strong> their initial coaching spend (ICF).</li>
+                        <li><strong>Increased Confidence:</strong> Over <strong>80% of people</strong> who receive coaching report increased self-confidence.</li>
+                        <li><strong>Goal-Driven:</strong> Strictly focused on measurable goals, action planning, and accountability.</li>
+                    </ul>
+                </div>
+                {# MENTORSHIP #}
+                <div class="comparison-card mentorship">
+                    <h3>🗺️ Mentorship: Sharing Their Experience</h3>
+                    <p class="mt-4 font-semibold">Mentors use their own expertise, experience, and knowledge to guide you through what they have found to work. It's <strong>experience-based</strong> and career-focused.</p>
+                    <hr>
+                    <h4 class="font-bold mb-3">Unique Value & Benefits</h4>
+                    <ul>
+                        <li><strong>Direct Knowledge Transfer:</strong> You gain immediate insights and learn <strong>best practices</strong> directly from an expert's past success/failure.</li>
+                        <li><strong>Accelerated Career Growth:</strong> Mentees are often <strong>promoted 5x more often</strong> than those not in a program (Wharton).</li>
+                        <li><strong>Networking & Sponsorship:</strong> Mentors provide access to their professional network and can act as a sponsor or advocate.</li>
+                        <li><strong>Increased Retention:</strong> Mentored employees are <strong>49% less likely to leave</strong> a company.</li>
+                        <li><strong>Industry-Specific Wisdom:</strong> Provides a roadmap for navigating a specific career path or industry.</li>
+                    </ul>
                 </div>
             </div>
         </div>
     </div>
 
-    {# --- COACHING OFFERINGS CAROUSEL (Retained from Original) --- #}
-    <div class="py-16 bg-gray-50">
-        <div class="container mx-auto px-4">
-            <h2 id="coaching-offerings" class="text-3xl font-bold text-center text-gray-800 scroll-mt-20">Our Coaching Offerings</h2>
+    {# --- COACHING OFFERINGS CAROUSEL --- #}
+    <div class="offerings-section">
+        <div class="container mx-auto">
+            <h2 id="coaching-offerings" class="text-3xl font-bold text-center text-gray-800" style="text-align:center;">Our Coaching Offerings</h2>
             <p class="mt-4 text-lg text-center text-gray-600">Find the perfect package to start your journey.</p>
-            <div x-data="carousel()" x-init="init()" class="relative w-full max-w-6xl mx-auto mt-12">
-                <div class="overflow-hidden">
-                    <div x-ref="track" class="flex transition-transform duration-500 ease-in-out" :style="'transform: translateX(-' + (currentIndex * (100 / slidesVisible)) + '%)'">
+            
+            <div x-data="carousel()" x-init="init()" class="carousel-container">
+                <div class="carousel-viewport">
+                    <div x-ref="track" class="carousel-track" :style="'transform: translateX(-' + (currentIndex * (100 / slidesVisible)) + '%)'">
                         {% for offering in offerings %}
-                        <div class="w-full flex-shrink-0" :style="'flex-basis: ' + (100 / slidesVisible) + '%'">
-                            <div class="p-4">
-                                <div class="bg-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition duration-300 flex flex-col h-full">
-                                    <h3 class="text-xl font-bold text-gray-800 mb-2">{{ offering.name }}</h3>
-                                    <p class="text-3xl font-extrabold text-green-600 mb-4">£{{ offering.price|floatformat:2 }}</p>
-                                    <p class="text-gray-600 text-sm mb-4 flex-grow">{{ offering.description|truncatechars:100 }}</p>
-                                    <ul class="text-sm text-gray-500 mb-4 space-y-1">
-                                        <li><i class="fas fa-clock text-green-500 mr-2"></i> Duration: {{ offering.display_length }}</li>
-                                        <li><i class="fas fa-calendar-check text-green-500 mr-2"></i> Sessions: {{ offering.total_number_of_sessions }}</li>
-                                        <li><i class="fas fa-users text-green-500 mr-2"></i> Coaches: {{ offering.coaches.count }}</li>
-                                    </ul>
-                                    <a href="{% url 'coaching_booking:offer-enroll' slug=offering.slug %}" class="mt-auto inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 text-center">View Details & Enroll</a>
-                                </div>
+                        <div class="carousel-slide" :style="'flex-basis: ' + (100 / slidesVisible) + '%'">
+                            <div class="offering-card">
+                                <h3 class="text-xl font-bold text-gray-800 mb-2">{{ offering.name }}</h3>
+                                <p class="offering-price">£{{ offering.price|floatformat:2 }}</p>
+                                <p class="text-sm mb-4 flex-grow" style="color: var(--gray-600);">{{ offering.description|truncatechars:100 }}</p>
+                                <ul class="offering-details-list">
+                                    <li><i class="fas fa-clock"></i> Duration: {{ offering.display_length }}</li>
+                                    <li><i class="fas fa-calendar-check"></i> Sessions: {{ offering.total_number_of_sessions }}</li>
+                                    <li><i class="fas fa-users"></i> Coaches: {{ offering.coaches.count }}</li>
+                                </ul>
+                                <a href="{% url 'coaching_booking:offer-enroll' slug=offering.slug %}" class="btn-enroll">View Details & Enroll</a>
                             </div>
                         </div>
                         {% empty %}
-                        <p class="text-center text-gray-600 col-span-3">No active offerings available at the moment. Please check back soon!</p>
+                        <p class="text-center text-gray-600 w-full p-4">No active offerings available at the moment. Please check back soon!</p>
                         {% endfor %}
                     </div>
                 </div>
-                <button @click="prev()" class="absolute top-1/2 left-0 transform -translate-y-1/2 bg-white bg-opacity-75 hover:bg-opacity-100 rounded-full p-2 ml-2 transition z-10">
+                
+                <button @click="prev()" class="carousel-nav-btn prev">
                     <i class="fas fa-chevron-left text-gray-800"></i>
                 </button>
-                <button @click="next()" class="absolute top-1/2 right-0 transform -translate-y-1/2 bg-white bg-opacity-75 hover:bg-opacity-100 rounded-full p-2 mr-2 transition z-10">
+                <button @click="next()" class="carousel-nav-btn next">
                     <i class="fas fa-chevron-right text-gray-800"></i>
                 </button>
             </div>
+            
             <div class="text-center mt-12">
-                <a href="{% url 'coaching_booking:offer-list' %}" class="inline-block text-green-500 hover:text-green-600 font-bold">See All Offerings &rarr;</a>
+                <a href="{% url 'coaching_booking:offer-list' %}" class="text-green-500 hover:text-green-600 font-bold" style="color: #22c55e;">See All Offerings &rarr;</a>
             </div>
         </div>
     </div>
 
-    {# --- KNOWLEDGE BASE (Retained from Original) --- #}
-    <div class="py-16 bg-white">
-        <div class="container mx-auto px-4">
+    {# --- KNOWLEDGE BASE --- #}
+    <div class="knowledge-section">
+        <div class="container mx-auto">
             <h2 class="text-3xl font-bold text-center text-gray-800">📚 Knowledge Base & Research</h2>
             <p class="mt-4 text-lg text-center text-gray-600">Evidence-based results that prove the value of coaching and mentorship.</p>
-            <div class="mt-12 relative h-96 overflow-hidden border border-gray-200 rounded-lg shadow-xl">
-                {# Auto-scrolling container #}
-                <ul id="auto-scroll-list" class="absolute w-full p-6 space-y-4">
+            <div class="scrolling-frame">
+                <ul class="scrolling-list">
                     {# List Items #}
-                    <li class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <p class="text-gray-700 italic">"<strong>70% of individuals</strong> who receive coaching benefit from improved work performance, relationships, and more effective communication skills."</p>
-                        <a href="https://www.icf-cf.com/wp-content/uploads/2021/03/ICF-Fact-Sheet.pdf" target="_blank" class="text-sm text-green-500 hover:text-green-600 font-bold mt-2 inline-block">Source: ICF Global Coaching Study &rarr;</a>
+                    <li class="knowledge-item">
+                        <p class="italic">"<strong>70% of individuals</strong> who receive coaching benefit from improved work performance, relationships, and more effective communication skills."</p>
+                        <a href="https://www.icf-cf.com/wp-content/uploads/2021/03/ICF-Fact-Sheet.pdf" target="_blank" class="knowledge-source">Source: ICF Global Coaching Study &rarr;</a>
                     </li>
-                    <li class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <p class="text-gray-700 italic">"The average <strong>ROI of executive coaching is almost six times</strong> the cost of the coaching."</p>
-                        <a href="https://www.cmu.edu/tepper/executive-education/accel-exchange/thought-leadership/articles/2019/june/the-benefits-of-executive-coaching.html" target="_blank" class="text-sm text-green-500 hover:text-green-600 font-bold mt-2 inline-block">Source: Manchester Inc. Study &rarr;</a>
+                    <li class="knowledge-item">
+                        <p class="italic">"The average <strong>ROI of executive coaching is almost six times</strong> the cost of the coaching."</p>
+                        <a href="https://www.cmu.edu/tepper/executive-education/accel-exchange/thought-leadership/articles/2019/june/the-benefits-of-executive-coaching.html" target="_blank" class="knowledge-source">Source: Manchester Inc. Study &rarr;</a>
                     </li>
-                    <li class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <p class="text-gray-700 italic">"Coaching leads to enhanced leadership development and increased <strong>employee engagement and commitment</strong>."</p>
-                        <a href="https://coachingfederation.org/research/building-a-coaching-culture" target="_blank" class="text-sm text-green-500 hover:text-green-600 font-bold mt-2 inline-block">Source: ICF Coaching Cultures Report &rarr;</a>
+                    <li class="knowledge-item">
+                        <p class="italic">"Coaching leads to enhanced leadership development and increased <strong>employee engagement and commitment</strong>."</p>
+                        <a href="https://coachingfederation.org/research/building-a-coaching-culture" target="_blank" class="knowledge-source">Source: ICF Coaching Cultures Report &rarr;</a>
                     </li>
-                    <li class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <p class="text-gray-700 italic">"Executive coaching can yield a return of <strong>$7.90 for every $1 invested</strong>—a powerful 790% return."</p>
-                        <a href="https://www.forbes.com/sites/forbescoachescouncil/2022/03/11/15-ways-coaching-can-impact-a-leaders-performance/?sh=534346062d98" target="_blank" class="text-sm text-green-500 hover:text-green-600 font-bold mt-2 inline-block">Source: MetrixGlobal / Forbes &rarr;</a>
+                    <li class="knowledge-item">
+                        <p class="italic">"Executive coaching can yield a return of <strong>$7.90 for every $1 invested</strong>—a powerful 790% return."</p>
+                        <a href="https://www.forbes.com/sites/forbescoachescouncil/2022/03/11/15-ways-coaching-can-impact-a-leaders-performance/?sh=534346062d98" target="_blank" class="knowledge-source">Source: MetrixGlobal / Forbes &rarr;</a>
                     </li>
-                    <li class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <p class="text-gray-700 italic">"<strong>86% of companies</strong> report that they recouped their initial investment on coaching and more."</p>
-                        <a href="https://coachingfederation.org/research/global-coaching-client-study" target="_blank" class="text-sm text-green-500 hover:text-green-600 font-bold mt-2 inline-block">Source: ICF Global Coaching Study &rarr;</a>
+                    <li class="knowledge-item">
+                        <p class="italic">"<strong>86% of companies</strong> report that they recouped their initial investment on coaching and more."</p>
+                        <a href="https://coachingfederation.org/research/global-coaching-client-study" target="_blank" class="knowledge-source">Source: ICF Global Coaching Study &rarr;</a>
                     </li>
-                    <li class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <p class="text-gray-700 italic">"Over <strong>80% of people</strong> who receive coaching report increased self-confidence."</p>
-                        <a href="https://instituteofcoaching.org/coaching-overview/coaching-benefits" target="_blank" class="text-sm text-green-500 hover:text-green-600 font-bold mt-2 inline-block">Source: Institute of Coaching &rarr;</a>
+                    <li class="knowledge-item">
+                        <p class="italic">"Over <strong>80% of people</strong> who receive coaching report increased self-confidence."</p>
+                        <a href="https://instituteofcoaching.org/coaching-overview/coaching-benefits" target="_blank" class="knowledge-source">Source: Institute of Coaching &rarr;</a>
                     </li>
                     {# Duplicate list for infinite scroll #}
-                    <li class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <p class="text-gray-700 italic">"<strong>70% of individuals</strong> who receive coaching benefit from improved work performance, relationships, and more effective communication skills."</p>
-                        <a href="https://www.icf-cf.com/wp-content/uploads/2021/03/ICF-Fact-Sheet.pdf" target="_blank" class="text-sm text-green-500 hover:text-green-600 font-bold mt-2 inline-block">Source: ICF Global Coaching Study &rarr;</a>
-                    </li>
-                    <li class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <p class="text-gray-700 italic">"The average <strong>ROI of executive coaching is almost six times</strong> the cost of the coaching."</p>
-                        <a href="https://www.cmu.edu/tepper/executive-education/accel-exchange/thought-leadership/articles/2019/june/the-benefits-of-executive-coaching.html" target="_blank" class="text-sm text-green-500 hover:text-green-600 font-bold mt-2 inline-block">Source: Manchester Inc. Study &rarr;</a>
-                    </li>
-                    <li class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <p class="text-gray-700 italic">"Coaching leads to enhanced leadership development and increased <strong>employee engagement and commitment</strong>."</p>
-                        <a href="https://coachingfederation.org/research/building-a-coaching-culture" target="_blank" class="text-sm text-green-500 hover:text-green-600 font-bold mt-2 inline-block">Source: ICF Coaching Cultures Report &rarr;</a>
-                    </li>
-                    <li class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <p class="text-gray-700 italic">"Executive coaching can yield a return of <strong>$7.90 for every $1 invested</strong>—a powerful 790% return."</p>
-                        <a href="https://www.forbes.com/sites/forbescoachescouncil/2022/03/11/15-ways-coaching-can-impact-a-leaders-performance/?sh=534346062d98" target="_blank" class="text-sm text-green-500 hover:text-green-600 font-bold mt-2 inline-block">Source: MetrixGlobal / Forbes &rarr;</a>
-                    </li>
-                    <li class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <p class="text-gray-700 italic">"<strong>86% of companies</strong> report that they recouped their initial investment on coaching and more."</p>
-                        <a href="https://coachingfederation.org/research/global-coaching-client-study" target="_blank" class="text-sm text-green-500 hover:text-green-600 font-bold mt-2 inline-block">Source: ICF Global Coaching Study &rarr;</a>
-                    </li>
-                    <li class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <p class="text-gray-700 italic">"Over <strong>80% of people</strong> who receive coaching report increased self-confidence."</p>
-                        <a href="https://instituteofcoaching.org/coaching-overview/coaching-benefits" target="_blank" class="text-sm text-green-500 hover:text-green-600 font-bold mt-2 inline-block">Source: Institute of Coaching &rarr;</a>
-                    </li>
+                    <li class="knowledge-item"><p class="italic">"<strong>70% of individuals</strong> who receive coaching benefit..."</p><a href="#" class="knowledge-source">Source: ICF Global Coaching Study &rarr;</a></li>
+                    <li class="knowledge-item"><p class="italic">"The average <strong>ROI of executive coaching is almost six times</strong>..."</p><a href="#" class="knowledge-source">Source: Manchester Inc. Study &rarr;</a></li>
                 </ul>
             </div>
         </div>
     </div>
 
-    {# CSS for Auto-Scrolling Animation #}
-    <style>
-        :root {
-            --scroll-speed: 60s;
-            --list-height: 100%;
-        }
-        #auto-scroll-list {
-            animation: scroll-up var(--scroll-speed) linear infinite;
-        }
-        @keyframes scroll-up {
-            0% { transform: translateY(0); }
-            100% { transform: translateY(-50%); }
-        }
-    </style>
-
-    {# --- EXPERT COACHES & FREE SESSION (Updated Logic) --- #}
-    <div id="expert-coaches" class="py-16 bg-white">
-        <div class="container mx-auto px-4">
+    {# --- EXPERT COACHES --- #}
+    <div id="expert-coaches" class="coaches-section">
+        <div class="container mx-auto">
             
             {# Free Session Status Messages #}
             {% if user.is_authenticated %}
                 <div class="mb-12 text-center" id="free-session-status-container">
                     {% with latest_offer=user.free_offers.all|first %}
                         {% if latest_offer and latest_offer.is_redeemed %}
-                            <div class="p-4 bg-green-50 text-green-700 rounded-lg inline-block">
+                            <div class="status-msg success">
                                 🎉 You have a taster session booked! Check your <a href="{% url 'accounts:account_profile' %}" class="underline font-bold">Profile</a>.
                             </div>
                         {% elif latest_offer and latest_offer.is_approved %}
-                            <div class="p-4 bg-blue-50 text-blue-700 rounded-lg inline-block">
+                            <div class="status-msg info">
                                 ✅ Your taster session is approved! <a href="{% url 'accounts:account_profile' %}" class="underline font-bold">Book it now in your Profile</a>.
                             </div>
                         {% elif latest_offer %}
-                            <div class="p-4 bg-yellow-50 text-yellow-700 rounded-lg inline-block">
+                            <div class="status-msg warning">
                                 ⏳ You have a pending request with {{ latest_offer.coach.user.get_full_name }}. Please wait for approval.
                             </div>
                         {% endif %}
@@ -202,28 +164,27 @@
                 </div>
             {% else %}
                 <div class="mb-12 text-center">
-                    <a href="{% url 'account_login' %}?next={% url 'coaching_booking:coach_landing' %}" class="inline-block px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg shadow hover:bg-indigo-700 transition">
+                    <a href="{% url 'account_login' %}?next={% url 'coaching_booking:coach_landing' %}" class="btn-hero-cta" style="background-color: #4f46e5;">
                         Login to Apply for a Free Taster Session
                     </a>
                 </div>
             {% endif %}
 
-            {# Coach List with Integrated Buttons #}
             <h2 class="text-3xl font-bold text-center text-gray-800">Meet Our Expert Coaches</h2>
-            <div class="mt-12 grid md:grid-cols-3 gap-8">
+            <div class="coaches-grid">
                 {% for coach in coaches %}
-                <div class="bg-gray-50 p-6 rounded-lg shadow-md text-center flex flex-col h-full">
+                <div class="coach-card">
                     {% if coach.public_photo %}
-                        <img class="w-32 h-32 rounded-full mx-auto object-cover" src="{{ coach.public_photo.url }}" alt="{{ coach.user.get_full_name }}">
+                        <img class="coach-avatar" src="{{ coach.public_photo.url }}" alt="{{ coach.user.get_full_name }}">
                     {% else %}
-                        <img class="w-32 h-32 rounded-full mx-auto object-cover" src="{% static 'images/default_coach_avatar.png' %}" alt="Default Coach Avatar">
+                        <img class="coach-avatar" src="{% static 'images/default_coach_avatar.png' %}" alt="Default Coach Avatar">
                     {% endif %}
                     
-                    <h3 class="mt-4 text-xl font-bold text-gray-800">{{ coach.user.get_full_name }}</h3>
-                    <p class="mt-2 text-gray-600 text-sm italic flex-grow">{{ coach.bio|truncatewords:20 }}</p>
+                    <h3 class="coach-name">{{ coach.user.get_full_name }}</h3>
+                    <p class="coach-bio">{{ coach.bio|truncatewords:20 }}</p>
                     
-                    <div class="mt-6 space-y-3">
-                        <a href="{% url 'coaching_booking:offer-list' %}?coach={{ coach.user.username }}" class="block w-full py-2 px-4 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition">
+                    <div class="coach-actions">
+                        <a href="{% url 'coaching_booking:offer-list' %}?coach={{ coach.user.username }}" class="btn-coach-view">
                             View Paid Offers
                         </a>
 
@@ -233,7 +194,7 @@
                                     <form hx-post="{% url 'coaching_booking:apply_for_free_session' %}" hx-swap="outerHTML" hx-target="#free-session-status-container">
                                         {% csrf_token %}
                                         <input type="hidden" name="coach_id" value="{{ coach.id }}">
-                                        <button type="submit" class="block w-full py-2 px-4 bg-pink-600 text-white font-bold rounded-lg hover:bg-pink-700 transition shadow-sm">
+                                        <button type="submit" class="btn-coach-taster">
                                             Apply for Taster
                                         </button>
                                     </form>
@@ -243,7 +204,7 @@
                     </div>
                 </div>
                 {% empty %}
-                <p class="text-center text-gray-600 col-span-3">No active coaches are available at the moment.</p>
+                <p class="text-center text-gray-600" style="grid-column: 1 / -1;">No active coaches are available at the moment.</p>
                 {% endfor %}
             </div>
         </div>

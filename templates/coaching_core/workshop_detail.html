@@ -1,20 +1,29 @@
 {% extends 'base.html' %}
-{% block content %}
-<div class="container">
-    <div class="card">
-        <div class="card-body">
-            <h1 class="card-title">{{ workshop.name }}</h1>
-            <p class="card-text">{{ workshop.description }}</p>
-            <p class="card-text"><strong>Coach:</strong> {{ workshop.coach.user.get_full_name }}</p>
-            <p class="card-text"><strong>Date:</strong> {{ workshop.date }}</p>
-            <p class="card-text"><strong>Time:</strong> {{ workshop.start_time }} - {{ workshop.end_time }}</p>
-            <p class="card-text"><strong>Price:</strong> ${{ workshop.price }}</p>
-            <p class="card-text"><strong>Spaces Left:</strong> {{ workshop.remaining_spaces }} / {{ workshop.total_attendees }}</p>
+{% load static %}
 
+{% block extra_head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/coaching.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="workshop-container">
+    <div class="workshop-card">
+        <h1 class="workshop-title">{{ workshop.name }}</h1>
+        <div class="workshop-info">
+            <p><strong>Description:</strong> {{ workshop.description }}</p>
+            <p><strong>Coach:</strong> {{ workshop.coach.user.get_full_name }}</p>
+            <p><strong>Date:</strong> {{ workshop.date }}</p>
+            <p><strong>Time:</strong> {{ workshop.start_time }} - {{ workshop.end_time }}</p>
+            <p><strong>Price:</strong> £{{ workshop.price|floatformat:2 }}</p>
+            <p><strong>Spaces Left:</strong> {{ workshop.remaining_spaces }} / {{ workshop.total_attendees }}</p>
+        </div>
+
+        <div class="workshop-actions">
             {% if workshop.is_full %}
-                <p class="text-danger">This workshop is full.</p>
+                <p class="status-msg warning">This workshop is full.</p>
             {% else %}
-                <a href="#" class="btn btn-success">Book Now</a>
+                <a href="#" class="btn-hero-cta">Book Now</a>
             {% endif %}
         </div>
     </div>

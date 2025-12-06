@@ -1,0 +1,378 @@
+/* static/css/coaching.css */
+
+/* --- Coaching Landing Hero --- */
+.coaching-hero {
+    background-color: var(--gray-100); /* gray-50 equivalent */
+    text-align: center;
+    padding: 4rem 1rem;
+}
+
+.coaching-hero h1 {
+    font-size: 2.25rem; /* text-4xl */
+    font-weight: 800;
+    color: var(--gray-800); /* gray-900 */
+    margin-bottom: 1rem;
+}
+
+.coaching-hero p {
+    font-size: 1.125rem; /* text-lg */
+    color: var(--gray-600);
+    margin-top: 1rem;
+}
+
+.btn-hero-cta {
+    margin-top: 2rem;
+    display: inline-block;
+    background-color: #22c55e; /* green-500 */
+    color: var(--white);
+    font-weight: 700;
+    padding: 0.75rem 2rem;
+    border-radius: 0.5rem;
+    transition: background-color 0.3s;
+}
+
+.btn-hero-cta:hover {
+    background-color: #16a34a; /* green-600 */
+}
+
+/* --- Comparison Section (Coaching vs Mentorship) --- */
+.comparison-wrapper {
+    padding: 4rem 1rem;
+    background-color: var(--white);
+}
+
+.comparison-grid {
+    display: grid;
+    gap: 3rem;
+    grid-template-columns: 1fr;
+    max-width: var(--container-width);
+    margin: 0 auto;
+}
+
+.comparison-card {
+    padding: 2rem;
+    border-radius: 0.5rem;
+    border: 1px solid;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.comparison-card h3 {
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+
+.comparison-card hr {
+    margin: 1rem 0;
+    border: 0;
+    border-top: 1px solid;
+}
+
+.comparison-card ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+    color: var(--gray-600);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* Specific variants */
+.comparison-card.coaching {
+    background-color: #f0fdf4; /* green-50 */
+    border-color: #bbf7d0; /* green-200 */
+}
+.comparison-card.coaching h3 { color: #15803d; /* green-700 */ }
+.comparison-card.coaching hr { border-color: #86efac; /* green-300 */ }
+
+.comparison-card.mentorship {
+    background-color: #eff6ff; /* blue-50 */
+    border-color: #bfdbfe; /* blue-200 */
+}
+.comparison-card.mentorship h3 { color: #1d4ed8; /* blue-700 */ }
+.comparison-card.mentorship hr { border-color: #93c5fd; /* blue-300 */ }
+
+/* --- Carousel & Offering Cards --- */
+.offerings-section {
+    padding: 4rem 1rem;
+    background-color: var(--gray-100);
+}
+
+.carousel-container {
+    position: relative;
+    max-width: 72rem; /* 6xl */
+    margin: 3rem auto 0;
+}
+
+.carousel-viewport {
+    overflow: hidden;
+}
+
+.carousel-track {
+    display: flex;
+    transition: transform 0.5s ease-in-out;
+}
+
+.carousel-slide {
+    flex-shrink: 0;
+    padding: 1rem;
+}
+
+.offering-card {
+    background-color: var(--white);
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 0.3s;
+}
+
+.offering-card:hover {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.offering-price {
+    font-size: 1.875rem; /* 3xl */
+    font-weight: 800;
+    color: #16a34a; /* green-600 */
+    margin-bottom: 1rem;
+}
+
+.offering-details-list {
+    font-size: 0.875rem;
+    color: var(--gray-600); /* gray-500 */
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    list-style: none;
+    padding-left: 0;
+}
+
+.offering-details-list i {
+    color: #22c55e; /* green-500 */
+    margin-right: 0.5rem;
+    width: 1.25rem;
+    text-align: center;
+}
+
+.btn-enroll {
+    margin-top: auto;
+    display: inline-block;
+    background-color: #22c55e;
+    color: var(--white);
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    text-align: center;
+    transition: background-color 0.3s;
+}
+
+.btn-enroll:hover {
+    background-color: #16a34a;
+}
+
+.carousel-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(255, 255, 255, 0.75);
+    border-radius: 9999px;
+    padding: 0.5rem;
+    cursor: pointer;
+    border: none;
+    z-index: 10;
+    transition: background-color 0.2s;
+}
+
+.carousel-nav-btn:hover {
+    background-color: var(--white);
+}
+
+.carousel-nav-btn.prev { left: 0; margin-left: 0.5rem; }
+.carousel-nav-btn.next { right: 0; margin-right: 0.5rem; }
+
+/* --- Knowledge Base (Infinite Scroll) --- */
+.knowledge-section {
+    padding: 4rem 1rem;
+    background-color: var(--white);
+}
+
+.scrolling-frame {
+    margin-top: 3rem;
+    position: relative;
+    height: 24rem;
+    overflow: hidden;
+    border: 1px solid var(--gray-400); /* gray-200 */
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.scrolling-list {
+    position: absolute;
+    width: 100%;
+    padding: 1.5rem;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    animation: scroll-up 60s linear infinite;
+    margin: 0;
+}
+
+.knowledge-item {
+    background-color: var(--gray-100); /* gray-50 */
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.knowledge-source {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #22c55e;
+    margin-top: 0.5rem;
+    display: inline-block;
+}
+
+@keyframes scroll-up {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-50%); }
+}
+
+/* --- Coach Grid & Cards --- */
+.coaches-section {
+    padding: 4rem 1rem;
+    background-color: var(--white);
+}
+
+.coaches-grid {
+    display: grid;
+    gap: 2rem;
+    grid-template-columns: 1fr;
+    margin-top: 3rem;
+}
+
+.coach-card {
+    background-color: var(--gray-100);
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.coach-avatar {
+    width: 8rem;
+    height: 8rem;
+    border-radius: 50%;
+    margin: 0 auto;
+    object-fit: cover;
+}
+
+.coach-name {
+    margin-top: 1rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gray-800);
+}
+
+.coach-bio {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    font-style: italic;
+    color: var(--gray-600);
+    flex-grow: 1;
+}
+
+.coach-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.btn-coach-view {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    background-color: var(--white);
+    border: 1px solid #d1d5db; /* gray-300 */
+    color: var(--gray-700);
+    font-weight: 600;
+    border-radius: 0.5rem;
+    transition: background-color 0.2s;
+}
+
+.btn-coach-view:hover {
+    background-color: var(--gray-100);
+}
+
+.btn-coach-taster {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    background-color: #db2777; /* pink-600 */
+    color: var(--white);
+    font-weight: 700;
+    border-radius: 0.5rem;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-coach-taster:hover {
+    background-color: #be185d; /* pink-700 */
+}
+
+/* --- Status Messages --- */
+.status-msg {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    display: inline-block;
+    margin-bottom: 2rem;
+}
+.status-msg.success { background-color: #d1fae5; color: #15803d; } /* green */
+.status-msg.info { background-color: #dbeafe; color: #1d4ed8; } /* blue */
+.status-msg.warning { background-color: #fef9c3; color: #a16207; } /* yellow */
+
+/* --- Workshop Detail --- */
+.workshop-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.workshop-card {
+    background-color: var(--white);
+    border: 1px solid var(--gray-400);
+    border-radius: 0.5rem;
+    padding: 2rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.workshop-title {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: var(--gray-800);
+}
+
+.workshop-info p {
+    margin-bottom: 0.5rem;
+    color: var(--gray-700);
+}
+
+.workshop-actions {
+    margin-top: 1.5rem;
+}
+
+/* Responsive */
+@media (min-width: 768px) {
+    .comparison-grid { grid-template-columns: 1fr 1fr; }
+    .coaches-grid { grid-template-columns: repeat(3, 1fr); }
+    .coaching-hero h1 { font-size: 3rem; }
+}
