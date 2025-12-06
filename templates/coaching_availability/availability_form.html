@@ -11,9 +11,7 @@
 {% block content %}
 <div class="management-container">
     <div class="manage-form-card">
-        <h1 class="page-title" style="margin-bottom: 2rem; border-bottom: 1px solid var(--gray-200); padding-bottom: 1rem;">
-            {% if form.instance.pk %}Edit Availability Slot{% else %}Add Single Availability Slot{% endif %}
-        </h1>
+        <h1 class="page-title form-title">{% if form.instance.pk %}Edit Availability Slot{% else %}Add Single Availability Slot{% endif %}</h1>
 
         <form method="post">
             {% csrf_token %}
@@ -22,7 +20,7 @@
                     <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                     {{ field }}
                     {% if field.errors %}
-                        <div style="color: #dc2626; font-size: 0.875rem; margin-top: 0.25rem;">{{ field.errors }}</div>
+                        <div class="form-error">{{ field.errors }}</div>
                     {% endif %}
                 </div>
             {% endfor %}
