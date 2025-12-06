@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.template.loader import render_to_string
+import logging
 from .models import MarketingPreference
 from allauth.account.views import LoginView, SignupView, PasswordResetView, PasswordChangeView, PasswordSetView, LogoutView, PasswordResetDoneView, PasswordResetDoneView, EmailView
 from allauth.socialaccount.views import ConnectionsView
@@ -28,6 +29,8 @@ from django.views import View
 from django.contrib.auth import get_user_model
 from datetime import timedelta, date, datetime
 from decimal import Decimal
+
+logger = logging.getLogger(__name__)
 
 try:
     from weasyprint import HTML
@@ -226,6 +229,14 @@ def update_marketing_preference(request):
     if request.method == 'POST':
         is_subscribed = request.POST.get('is_subscribed') == 'on' 
         preference, created = MarketingPreference.objects.get_or_create(user=request.user)
+        
+        # --- ADD THIS LOGIC ---
+        if is_subscribed and not preference.is_subscribed:
+            # If they are turning it ON, record the timestamp
+            # Ensure your model has a 'subscribed_at' field, or add it to models.py first
+            preference.subscribed_at = timezone.now() 
+        # ----------------------
+
         preference.is_subscribed = is_subscribed
         preference.save()
         return render(request, 'account/partials/marketing_status_fragment.html', 
@@ -470,6 +481,10 @@ def staff_customer_lookup(request):
     if user_id:
         customer = get_object_or_404(User, id=user_id)
         
+        # --- ADD THIS LOGGING LINE ---
+        logger.info(f"AUDIT: Staff member {request.user.id} ({request.user.email}) accessed profile of customer {customer.id} ({customer.email})")
+        # -----------------------------
+
         # Fetch key data
         recent_orders = Order.objects.filter(user=customer).order_by('-created_at')[:5]
         active_enrollments = ClientOfferingEnrollment.objects.filter(
