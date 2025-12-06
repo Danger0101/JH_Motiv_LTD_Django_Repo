@@ -7,8 +7,6 @@
     background-color: var(--white);
     border-radius: 1rem;
     padding: 1.5rem;
-    border: 1px solid var(--gray-200);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .wizard-header {
@@ -29,27 +27,12 @@
 }
 
 /* --- Calendar Widget --- */
-.calendar-layout {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-}
-
-@media (min-width: 768px) {
-    .calendar-layout {
-        flex-direction: row;
-        align-items: flex-start;
-    }
-    
-    #calendar-widget { flex: 3; }
-    #time-slots-container { flex: 2; }
-}
-
 .calendar-container {
     background-color: var(--white);
     border: 1px solid var(--gray-200);
     border-radius: 0.75rem;
     padding: 1.5rem;
+    margin-bottom: 1.5rem;
 }
 
 .calendar-header {
@@ -88,7 +71,6 @@
     color: var(--gray-500);
     font-weight: 600;
     margin-bottom: 0.5rem;
-    text-transform: uppercase;
 }
 
 .days-grid {
@@ -106,8 +88,9 @@
     border-radius: 9999px; /* Circle */
     border: none;
     background: none;
-    cursor: default;
-    color: var(--gray-400);
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--gray-700);
     margin: 0 auto;
     width: 2.5rem;
     height: 2.5rem;
@@ -118,38 +101,49 @@
     background-color: #f0fdf4; /* green-50 */
     color: #15803d; /* green-700 */
     font-weight: 600;
-    cursor: pointer;
 }
 
 .day-cell.available:hover {
     background-color: #dcfce7; /* green-100 */
-    transform: scale(1.1);
 }
 
 .day-cell.selected {
     background-color: #2563eb; /* blue-600 */
     color: var(--white);
     font-weight: 700;
-    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
 }
 
 .day-cell.today {
-    border: 2px solid #2563eb;
+    border: 1px solid #2563eb;
+}
+
+.day-cell.empty {
+    cursor: default;
+}
+
+.day-cell.disabled {
+    color: var(--gray-300);
+    cursor: not-allowed;
+    text-decoration: line-through;
 }
 
 /* --- Time Slots --- */
 .slots-container {
-    background-color: var(--gray-50);
-    border: 1px solid var(--gray-200);
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-    animation: fadeIn 0.3s ease-out;
+    margin-top: 2rem;
+    border-top: 1px solid var(--gray-100);
+    padding-top: 1.5rem;
 }
 
 .slots-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+    .slots-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
 }
 
 .slot-btn {
@@ -161,16 +155,35 @@
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
-    width: 100%;
 }
 
 .slot-btn:hover {
     border-color: #3b82f6; /* blue-500 */
     color: #2563eb; /* blue-600 */
-    background-color: #eff6ff;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
+.slot-btn.selected {
+    background-color: #2563eb; /* blue-600 */
+    color: var(--white);
+    border-color: #2563eb;
+}
+
+/* --- Summary Card (Checkout Preview) --- */
+.booking-summary {
+    background-color: var(--gray-50);
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--gray-200);
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    color: var(--gray-700);
+}
+
+.summary-label {
+    font-weight: 600;
 }
