@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'django_htmx',
     'django_unicorn',
     'widget_tweaks',
+    'tailwind',
+    'theme',
     
     # Allauth Apps
     'allauth',
@@ -146,6 +148,13 @@ ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
 ACCOUNT_LOGIN_METHOD = 'username_email'
 ACCOUNT_EMAIL_VERIFICATION = 'optional'
 
+# Tailwind Configuration
+TAILWIND_APP_NAME = 'theme'
+
+# Required for the browser auto-reload during development
+INTERNAL_IPS = [
+    "127.0.0.1",
+]
 
 # Redirects and Logout Behavior
 LOGIN_REDIRECT_URL = '/'
