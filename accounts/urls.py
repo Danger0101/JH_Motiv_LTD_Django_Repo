@@ -3,7 +3,7 @@ from . import views
 from allauth.account import views as allauth_views
 
 
-app_name = 'accounts'
+app_name = 'account'
 
 urlpatterns = [
     path('update-marketing-preference/', views.update_marketing_preference, name='update_marketing_preference'),
