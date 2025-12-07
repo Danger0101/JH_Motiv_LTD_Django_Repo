@@ -125,12 +125,12 @@ def create_checkout_session(request):
         # but we can pass 'customer_details' if we have them.
         
         if not address_data:
-             session_params['shipping_address_collection'] = {
-                    'allowed_countries': ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'ES', 'IT', 'NL'],
-                }
+            session_params['shipping_address_collection'] = {
+                'allowed_countries': ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'ES', 'IT', 'NL'],
+            }
 
-            checkout_session = stripe.checkout.Session.create(**session_params)
-            return JsonResponse({'clientSecret': checkout_session.client_secret})
+        checkout_session = stripe.checkout.Session.create(**session_params)
+        return JsonResponse({'clientSecret': checkout_session.client_secret})
     except Exception as e:
         print(f"Error creating Stripe checkout session: {e}")
         return JsonResponse({'error': str(e)}, status=500)
