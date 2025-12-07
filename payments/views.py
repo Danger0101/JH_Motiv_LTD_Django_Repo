@@ -22,6 +22,7 @@ from django.utils import timezone
 from .shipping_utils import calculate_cart_shipping
 import json
 
+import logging
 # Custom imports for email sending
 from core.email_utils import send_transactional_email
 
@@ -29,6 +30,7 @@ from core.email_utils import send_transactional_email
 User = get_user_model() # Get the user model
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
+logger = logging.getLogger(__name__)
 def checkout_cart_view(request):
     """
     Renders the dedicated Cart Checkout page (Physical products).
@@ -220,7 +222,7 @@ def payment_success(request):
     except stripe.InvalidRequestError:
         return HttpResponse("Invalid or expired payment session.", status=400)
     except Exception as e:
-        print(f"Error in payment_success view: {e}")
+        logger.error(f"Error in payment_success view for session {session_id}: {e}")
         return HttpResponse("An error occurred while confirming your payment.", status=500)
 
 def order_detail_guest(request, guest_order_token):
@@ -244,9 +246,11 @@ def stripe_webhook(request):
         event = stripe.Webhook.construct_event(
             payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
         )
-    except ValueError:
+    except ValueError as e:
+        logger.warning(f"Stripe webhook error: Invalid payload. {e}")
         return HttpResponse("Invalid payload", status=400)
-    except stripe.SignatureVerificationError:
+    except stripe.error.SignatureVerificationError as e:
+        logger.warning(f"Stripe webhook error: Invalid signature. {e}")
         return HttpResponse("Invalid signature", status=400)
 
     if event['type'] == 'checkout.session.completed':
@@ -258,8 +262,16 @@ def stripe_webhook(request):
         if product_type == 'ecommerce_cart':
             cart_id = metadata.get('cart_id')
             if cart_id:
+                # Idempotency check: If an order for this cart already exists, we're done.
+                if Order.objects.filter(cart_id=cart_id).exists():
+                    logger.info(f"Webhook for cart_id {cart_id} already processed. Skipping.")
+                    return HttpResponse(status=200)
+
                 try:
-                    cart = Cart.objects.get(id=cart_id, status='open')
+                    cart = Cart.objects.get(id=cart_id)
+                    if cart.status != 'open':
+                        logger.warning(f"Webhook received for cart {cart_id} with status '{cart.status}'. Expected 'open'.")
+                        return HttpResponse("Cart not in 'open' state.", status=400)
                     
                     shipping_json = metadata.get('shipping_address_json')
                     shipping_data = json.loads(shipping_json) if shipping_json else {}
@@ -281,7 +293,8 @@ def stripe_webhook(request):
                         user_id=metadata.get('user_id'),
                         email=session.get('customer_details', {}).get('email'),
                         total_paid=session.amount_total / 100,
-                        shipping_data=shipping_data
+                        shipping_data=shipping_data,
+                        cart_id=cart_id # Link order to cart for idempotency
                     )
 
                     printful_items = []
@@ -309,13 +322,13 @@ def stripe_webhook(request):
                                     if pool.available_stock >= item.quantity:
                                         pool.available_stock -= item.quantity
                                         pool.save()
-                                        print(f"Stock deducted: {item.quantity} from {pool.name}")
+                                        logger.info(f"Stock deducted for Order {order.id}: {item.quantity} from {pool.name}")
                                     else:
-                                        print(f"CRITICAL: Oversold {pool.name}. Had {pool.available_stock}, sold {item.quantity}.")
+                                        logger.critical(f"Oversold on Order {order.id}: {pool.name}. Had {pool.available_stock}, sold {item.quantity}.")
                                         pool.available_stock = 0
                                         pool.save()
                             except StockPool.DoesNotExist:
-                                print(f"Error: StockPool not found for variant {item.variant.id}")
+                                logger.error(f"StockPool not found for variant {item.variant.id} in Order {order.id}")
 
                     cart.status = 'submitted'
                     cart.save()
@@ -343,13 +356,13 @@ def stripe_webhook(request):
                                 order.printful_order_status = response['result']['status']
                                 order.save()
                             else:
-                                print(f"Printful Auto-Sync Failed: {response}")
+                                logger.error(f"Printful Auto-Sync Failed for Order {order.id}: {response}")
                                 order.printful_order_status = 'failed_auto_sync'
                                 order.save()
                         else:
                             order.printful_order_status = 'pending_approval'
                             order.save()
-                            print(f"Order #{order.id} queued for manual Printful approval.")
+                            logger.info(f"Order #{order.id} queued for manual Printful approval.")
 
                     try:
                         customer_email = session.get('customer_details', {}).get('email')
@@ -385,11 +398,14 @@ def stripe_webhook(request):
                         )
 
                     except Exception as email_error:
-                        print(f"CRITICAL: Order {order.id} created but failed to send email. Error: {email_error}")
+                        logger.critical(f"Order {order.id} created but failed to send confirmation email. Error: {email_error}")
 
+                except Cart.DoesNotExist:
+                    logger.error(f"FATAL ERROR in E-commerce Webhook: Cart with ID {cart_id} not found.")
+                    return HttpResponse("Cart not found", status=404)
                 except Exception as e:
-                    print(f"FATAL ERROR in E-commerce Webhook: {e}")
-                    return HttpResponse("Webhook processing error", status=500)
+                    logger.critical(f"FATAL ERROR in E-commerce Webhook for cart {cart_id}: {e}", exc_info=True)
+                    return HttpResponse("Internal server error during webhook processing", status=500)
 
         # --- COACHING HANDLING (Keep existing) ---
         elif product_type == 'coaching_offering':
