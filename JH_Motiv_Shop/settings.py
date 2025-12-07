@@ -41,9 +41,7 @@ INSTALLED_APPS = [
     'django_htmx',
     'django_unicorn',
     'widget_tweaks',
-    'tailwind',
-    'theme',
-    
+
     # Allauth Apps
     'allauth',
     'allauth.account',
