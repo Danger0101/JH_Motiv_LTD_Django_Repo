@@ -3,7 +3,7 @@ from . import views
 from allauth.account import views as allauth_views
 
 
-app_name = 'account'
+app_name = 'accounts'
 
 urlpatterns = [
     path('update-marketing-preference/', views.update_marketing_preference, name='update_marketing_preference'),
@@ -15,8 +15,6 @@ urlpatterns = [
     path('profile/get-coaches-for-offering/', views.get_coaches_for_offering, name='get_coaches_for_offering'),
     path('profile/coach-clients-partial/', views.coach_clients_partial, name='coach_clients_partial'),
     path('profile/invoice/<int:order_id>/', views.generate_invoice_pdf, name='generate_invoice_pdf'),
-    path('staff/order/<int:order_id>/update/', views.staff_update_order, name='staff_update_order'),
-    path('staff/customer-lookup/', views.staff_customer_lookup, name='staff_customer_lookup'),
     
 
 

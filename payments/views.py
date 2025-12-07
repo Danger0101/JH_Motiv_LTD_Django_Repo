@@ -1,434 +1,523 @@
+import stripe
 from django.conf import settings
-from django.shortcuts import render, get_object_or_404
-from django.views.decorators.http import require_POST
-from django.contrib import messages
-from django.urls import reverse
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import TemplateView
-from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
-from django.utils import timezone
-from django.core.paginator import Paginator
-from django.db.models import Q
-from django.template.loader import render_to_string
-from .models import MarketingPreference
-from allauth.account.views import LoginView, SignupView, PasswordResetView, PasswordChangeView, PasswordSetView, LogoutView, PasswordResetDoneView, PasswordResetDoneView, EmailView
-from allauth.socialaccount.views import ConnectionsView
+from django.urls import reverse
+from django.db import transaction, models # ADDED: models for coach query
+from django.contrib.auth import get_user_model # ADDED: Better way to get User model
+from datetime import timedelta # NEW IMPORT
+
 from cart.utils import get_or_create_cart, get_cart_summary_data
-from coaching_booking.models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer
+from cart.models import Cart
+# NEW/UPDATED IMPORTS
+from coaching_booking.models import ClientOfferingEnrollment 
 from coaching_core.models import Offering
-from accounts.models import CoachProfile 
-from gcal.models import GoogleCredentials
-from coaching_availability.forms import DateOverrideForm, CoachVacationForm, WeeklyScheduleForm
-from django.forms import modelformset_factory
-from coaching_availability.models import CoachAvailability, CoachVacation, DateOverride
-from django.db import transaction
-from collections import defaultdict
-from django.views import View
-from django.contrib.auth import get_user_model
-from datetime import timedelta, date, datetime
-from decimal import Decimal
+from accounts.models import CoachProfile
+from .models import Order, OrderItem, CoachingOrder
+from products.models import Product, Variant
+from products.printful_service import PrintfulService
+from django.utils import timezone
+from .shipping_utils import calculate_cart_shipping
+import json
+import uuid
 
-try:
-    from weasyprint import HTML
-except ImportError:
-    HTML = None
-
-# --- FIX IMPORTS HERE ---
-try:
-    from dreamers.models import Dreamer
-except ImportError:
-    Dreamer = None
-
-try:
-    from products.models import StockItem
-except ImportError:
-    StockItem = None
-
-try:
-    from payments.models import Order, CoachingOrder, OrderItem
-except ImportError:
-    Order = None
-    CoachingOrder = None
-    OrderItem = None
-# ------------------------
-
-from coaching_availability.utils import get_coach_available_slots 
+# Custom imports for email sending
+from core.email_utils import send_transactional_email
 
 
-class CustomLoginView(LoginView):
-    template_name = 'account/login.html'
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        cart = get_or_create_cart(self.request)
-        context['summary'] = get_cart_summary_data(cart)
-        context['ACCOUNT_ALLOW_REGISTRATION'] = getattr(settings, 'ACCOUNT_ALLOW_REGISTRATION', True) 
-        return context
+User = get_user_model() # Get the user model
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
-    def form_valid(self, form):
-        response = super().form_valid(form)
-        if self.request.htmx:
-            return HttpResponse(status=204, headers={'HX-Redirect': response.url})
-        return response
-
-class CustomSignupView(SignupView):
-    template_name = 'account/signup.html'
-
-class CustomPasswordResetView(PasswordResetView):
-    template_name = 'account/password_reset.html'
-
-class CustomPasswordChangeView(PasswordChangeView):
-    template_name = 'account/password_change.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['base_template'] = 'socialaccount/empty_base.html' if self.request.htmx else 'base.html'
-        return context
-
-class CustomPasswordSetView(PasswordSetView):
-    template_name = 'account/password_set.html'
-
-class CustomLogoutView(LogoutView):
-    template_name = 'account/logout.html'
-
-class CustomEmailView(EmailView):
-    template_name = 'account/email.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['base_template'] = 'socialaccount/empty_base.html' if self.request.htmx else 'base.html'
-        return context
-
-class CustomPasswordResetDoneView(PasswordResetDoneView):
-    template_name = 'account/password_reset_done.html'
-
-class CustomSocialAccountListView(ConnectionsView):
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        if self.request.htmx:
-            context['base_template'] = 'socialaccount/empty_base.html'
-        else:
-            context['base_template'] = 'base.html'
-        return context
-
-class ProfileView(LoginRequiredMixin, TemplateView):
-    template_name = 'account/profile.html'
+def checkout_cart_view(request):
+    """
+    Renders the dedicated Cart Checkout page (Physical products).
+    This is where the user enters their address for shipping calculation.
+    """
+    cart = get_or_create_cart(request)
+    if not cart or not cart.items.exists():
+        return redirect('cart:cart_detail')
+        
+    # Calculate initial totals (without shipping)
+    summary = {
+        'subtotal': cart.get_total_price(),
+        'total': cart.get_total_price() # Shipping added via JS later
+    }
     
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-
-        # --- COACHING DASHBOARD DATA ---
-        context['coach_upcoming_sessions'] = []
-        context['pending_taster_requests'] = [] # Initialize
-
-        if hasattr(self.request.user, 'coach_profile'):
-            coach_profile = self.request.user.coach_profile
-            # ... existing session query ...
-            context['coach_upcoming_sessions'] = SessionBooking.objects.filter(
-                coach=coach_profile,
-                start_datetime__gte=timezone.now(),
-                status__in=['BOOKED', 'RESCHEDULED']
-            ).select_related('client').order_by('start_datetime')
-
-            # Fetch Pending Taster Requests
-            context['pending_taster_requests'] = OneSessionFreeOffer.objects.filter(
-                coach=coach_profile,
-                is_approved=False,
-                is_redeemed=False,
-                redemption_deadline__gte=timezone.now()
-            ).select_related('client')
-
-        # For Client: My Taster Status (Already accessible via user.free_offers.all in template, 
-        # but explicitly adding it can be cleaner)
-        context['my_taster_status'] = OneSessionFreeOffer.objects.filter(
-            client=self.request.user
-        ).order_by('-date_offered').first()
-
-        # Initialized as empty; loaded via HTMX
-        context['coach_clients'] = []
-        
-        # --- STAFF DASHBOARD DATA ---
-        context['is_staff'] = self.request.user.is_staff
-        if self.request.user.is_staff:
-            # 1. Recent Orders (Sales Pulse)
-            if Order:
-                # FIX: Changed '-created' to '-created_at' to match Order model
-                context['staff_recent_orders'] = Order.objects.select_related('user').order_by('-created_at')[:5]
-            
-            # 2. Low Stock Alerts (Inventory Risk)
-            if StockItem:
-                context['staff_low_stock'] = StockItem.objects.filter(quantity__lt=5).select_related('variant__product', 'pool')[:5]
-            
-            # 3. Community Stats
-            if Dreamer:
-                context['staff_dreamer_count'] = Dreamer.objects.count()
-
-        # --- CLIENT ORDER HISTORY ---
-        if Order:
-            context['ecomm_orders'] = Order.objects.filter(user=self.request.user).order_by('-created_at')
-        
-        if CoachingOrder:
-            # Coaching orders are linked via ClientOfferingEnrollment
-            context['coaching_orders'] = CoachingOrder.objects.filter(
-                enrollment__client=self.request.user
-            ).select_related('enrollment', 'enrollment__offering').order_by('-created_at')
-
-        # --- EXISTING CONTEXT ---
-        cart = get_or_create_cart(self.request)
-        context['summary'] = get_cart_summary_data(cart)
-        
-        preference, created = MarketingPreference.objects.get_or_create(user=self.request.user)
-        context['marketing_preference'] = preference
-        context['user_offerings'] = ClientOfferingEnrollment.objects.filter(client=self.request.user).order_by('-enrolled_on')
-
-        context['is_coach'] = self.request.user.is_coach
-        
-        google_calendar_connected = False
-        if self.request.user.is_coach:
-            try:
-                if hasattr(self.request.user, 'coach_profile'):
-                    google_calendar_connected = GoogleCredentials.objects.filter(coach=self.request.user.coach_profile).exists()
-            except Exception:
-                pass 
-        context['google_calendar_connected'] = google_calendar_connected
-
-        context['weekly_schedule_formset'] = None
-        context['vacation_form'] = None
-        context['override_form'] = None
-        context['days_of_week'] = None
-
-        if hasattr(self.request.user, 'coach_profile'):
-            coach_profile = self.request.user.coach_profile
-            WeeklyScheduleFormSet = modelformset_factory(
-                CoachAvailability,
-                form=WeeklyScheduleForm,
-                extra=0,
-                can_delete=True
-            )
-            queryset = CoachAvailability.objects.filter(coach=self.request.user).order_by('day_of_week')
-            context['weekly_schedule_formset'] = WeeklyScheduleFormSet(queryset=queryset)
-            context['vacation_form'] = CoachVacationForm()
-            context['override_form'] = DateOverrideForm()
-            context['days_of_week'] = CoachAvailability.DAYS_OF_WEEK
-
-        context['available_credits'] = ClientOfferingEnrollment.objects.filter(
-            client=self.request.user,
-            remaining_sessions__gt=0,
-            is_active=True,
-            expiration_date__gte=timezone.now()
-        ).order_by('-enrolled_on')
-        
-        context['active_tab'] = 'account'
-        return context
-
-@login_required
-def update_marketing_preference(request):
-    if request.method == 'POST':
-        is_subscribed = request.POST.get('is_subscribed') == 'on' 
-        preference, created = MarketingPreference.objects.get_or_create(user=request.user)
-        preference.is_subscribed = is_subscribed
-        preference.save()
-        return render(request, 'account/partials/marketing_status_fragment.html', 
-                      {'marketing_preference': preference})
-    return HttpResponse("Invalid request", status=400)
-
-# HTMX Profile Views
-@login_required
-def profile_offerings_partial(request):
-    user_offerings = ClientOfferingEnrollment.objects.filter(client=request.user).order_by('-enrolled_on')
-    available_credits = ClientOfferingEnrollment.objects.filter(
-        client=request.user,
-        remaining_sessions__gt=0,
-        is_active=True,
-        expiration_date__gte=timezone.now().date()
-    ).order_by('-enrolled_on')
-    return render(request, 'account/partials/profile_offerings_list.html', {
-        'user_offerings': user_offerings,
-        'available_credits': available_credits,
-        'active_tab': 'offerings'
+    return render(request, 'payments/checkout_cart.html', {
+        'cart': cart,
+        'summary': summary,
+        'STRIPE_PUBLISHABLE_KEY': settings.STRIPE_PUBLISHABLE_KEY
     })
 
-@login_required
-def profile_bookings_partial(request):
-    now = timezone.now()
-    active_tab = request.GET.get('tab', 'upcoming')
-    bookings_qs = SessionBooking.objects.filter(client=request.user)
-
-    if active_tab == 'upcoming':
-        bookings_list = bookings_qs.filter(
-            status__in=['BOOKED', 'RESCHEDULED'],
-            start_datetime__gte=now
-        ).order_by('start_datetime')
-    elif active_tab == 'past':
-        bookings_list = bookings_qs.filter(
-            Q(status='COMPLETED') |
-            Q(status__in=['BOOKED', 'RESCHEDULED'], start_datetime__lt=now)
-        ).order_by('-start_datetime')
-    elif active_tab == 'canceled':
-        bookings_list = bookings_qs.filter(status='CANCELED').order_by('-start_datetime')
-    else:
-        active_tab = 'upcoming'
-        bookings_list = bookings_qs.filter(
-            status__in=['BOOKED', 'RESCHEDULED'],
-            start_datetime__gte=now
-        ).order_by('start_datetime')
-
-    paginator = Paginator(bookings_list, 10)
-    page_number = request.GET.get('page')
-    user_bookings_page = paginator.get_page(page_number)
-
-    context = {
-        'user_bookings_page': user_bookings_page,
-        'active_tab': active_tab,
-    }
-    return render(request, 'account/partials/_booking_list.html', context)
-
-@login_required
-def get_coaches_for_offering(request):
-    enrollment_id_str = request.GET.get('enrollment_id')
-    html_options = '<option value="">-- Select a Coach --</option>'
-
-    if enrollment_id_str:
-        try:
-            enrollment_id = int(enrollment_id_str)
-            enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id, client=request.user)
-            
-            if enrollment.coach:
-                coaches_to_display = [enrollment.coach]
-            else:
-                coaches_to_display = enrollment.offering.coaches.filter(
-                    user__is_active=True, 
-                    is_available_for_new_clients=True
-                ).distinct()
-            
-            for coach in coaches_to_display:
-                html_options += f'<option value="{coach.id}">{coach.user.get_full_name() or coach.user.username}</option>'
-
-        except (ValueError, ClientOfferingEnrollment.DoesNotExist):
-            pass
-    
-    return HttpResponse(html_options)
-
-@login_required
-def coach_clients_partial(request):
-    # Ensure user is a coach
-    if not hasattr(request.user, 'coach_profile'):
-        return HttpResponse("Unauthorized", status=401)
-
-    coach_profile = request.user.coach_profile
-    now = timezone.now()
-    
-    # 1. Enrollments explicitly assigned to this coach
-    direct_query = Q(coach=coach_profile) & (
-        Q(is_active=True) | 
-        Q(expiration_date__gte=now)
-    )
-
-    # 2. Enrollments linked via upcoming sessions
-    session_enrollment_ids = SessionBooking.objects.filter(
-        coach=coach_profile,
-        start_datetime__gte=now,
-        status__in=['BOOKED', 'RESCHEDULED'],
-        enrollment__isnull=False
-    ).values_list('enrollment_id', flat=True).distinct()
-
-    implied_query = Q(id__in=session_enrollment_ids) & Q(is_active=True)
-
-    # Combine queries
-    client_enrollments_qs = ClientOfferingEnrollment.objects.filter(
-        direct_query | implied_query
-    ).distinct().select_related('client', 'offering').order_by('client__last_name')
-
-    # Pagination
-    paginator = Paginator(client_enrollments_qs, 10) 
-    page_number = request.GET.get('page')
-    coach_clients_page = paginator.get_page(page_number)
-
-    context = {
-        'coach_clients_page': coach_clients_page,
-    }
-    return render(request, 'account/partials/_coach_clients_list.html', context)
-
-@login_required
-def generate_invoice_pdf(request, order_id):
+def create_checkout_session(request):
     """
-    Generates a PDF invoice for a given e-commerce or coaching order.
-    Users can only access their own invoices, unless they are staff.
+    Creates a Stripe Checkout session. 
+    NOW SUPPORTS: Pre-calculated shipping.
     """
-    order = None
-    coaching_order = None
-    order_type = ''
+    cart = get_or_create_cart(request)
+    if not cart.items.exists():
+        return redirect('cart:cart_detail')
 
-    if Order:
+    # Parse request body for address data if provided (from JS)
+    shipping_amount = 0
+    address_data = {}
+    
+    if request.method == 'POST':
         try:
-            possible_order = Order.objects.select_related('user').prefetch_related('items__variant__product').get(id=order_id)
-            if possible_order.user == request.user or request.user.is_staff:
-                order = possible_order
-                order_type = 'E-commerce'
-        except Order.DoesNotExist:
+            body = json.loads(request.body)
+            address_data = body.get('address', {})
+            
+            # Calculate dynamic shipping if address is present
+            if address_data:
+                shipping_amount = calculate_cart_shipping(cart, address_data)
+        except json.JSONDecodeError:
             pass
 
-    if not order and CoachingOrder:
+    try: # This try now wraps the entire order creation and Stripe session
+        with transaction.atomic():
+            # 1. Create a pending Order
+            user = request.user if request.user.is_authenticated else None
+            guest_order_token = None
+            if not user:
+                guest_order_token = str(uuid.uuid4())
+
+            order = Order.objects.create(
+                user=user,
+                email=user.email if user else None, # Will be updated by webhook if guest
+                total_paid=0.0, # Will be updated by webhook
+                shipping_data=address_data,
+                status=Order.STATUS_PENDING,
+                guest_order_token=guest_order_token
+            )
+
+            # 2. Create OrderItems from CartItems
+            for item in cart.items.all():
+                OrderItem.objects.create(
+                    order=order,
+                    variant=item.variant,
+                    price=item.variant.price,
+                    quantity=item.quantity
+                )
+
+            line_items = []
+            for item in cart.items.all():
+                line_items.append({
+                    'price_data': {
+                        'currency': 'gbp',
+                        'product_data': {
+                            'name': item.variant.product.name,
+                            'description': item.variant.name,
+                            'images': [request.build_absolute_uri(item.variant.get_image_url())],
+                        },
+                        'unit_amount': int(item.variant.price * 100),
+                    },
+                    'quantity': item.quantity,
+                })
+
+            # Add Shipping Line Item if applicable
+            if shipping_amount > 0:
+                line_items.append({
+                    'price_data': {
+                        'currency': 'gbp',
+                        'product_data': {
+                            'name': 'Shipping & Handling',
+                            'description': 'Standard Shipping',
+                        },
+                        'unit_amount': int(shipping_amount * 100),
+                    },
+                    'quantity': 1,
+                })
+
+            # Determine if we need Stripe to collect address or if we already have it
+            # If we have calculated shipping, we usually don't want the user to change the country in Stripe 
+            # as that would invalidate our calculation.
+            
+            session_params = {
+                'ui_mode': 'embedded',
+                'payment_method_types': ['card'],
+                'line_items': line_items,
+                'mode': 'payment',
+                'return_url': request.build_absolute_uri(reverse('payments:payment_success')) + '?session_id={CHECKOUT_SESSION_ID}',
+                'metadata': {
+                    'product_type': 'ecommerce_cart',
+                    'order_id': order.id, # Pass the newly created Order ID
+                    'user_id': request.user.id if request.user.is_authenticated else None, # Keep for convenience
+                    'guest_order_token': guest_order_token if guest_order_token else '',
+                    # Store the address used for calculation in metadata for the webhook to use
+                    'shipping_address_json': json.dumps(address_data) if address_data else ''
+                }
+            }
+
+            # If we didn't calculate shipping (e.g. digital only), we might still want address for billing
+            # But if we did calculate it, we assume the address is "locked" or passed as pre-fill
+            # Stripe Embedded doesn't support 'pre-fill' address strictly in the same way as Hosted, 
+            # but we can pass 'customer_details' if we have them.
+            
+            if not address_data:
+                 session_params['shipping_address_collection'] = {
+                    'allowed_countries': ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'ES', 'IT', 'NL'],
+                }
+
+            checkout_session = stripe.checkout.Session.create(**session_params)
+            return JsonResponse({'clientSecret': checkout_session.client_secret})
+    except Exception as e:
+        print(f"Error creating Stripe checkout session: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# NEW VIEW for calculating shipping via AJAX/HTMX
+@csrf_exempt
+def calculate_shipping_api(request):
+    if request.method == 'POST':
         try:
-            possible_coaching_order = CoachingOrder.objects.select_related('enrollment__client', 'enrollment__offering').get(id=order_id)
-            if possible_coaching_order.enrollment.client == request.user or request.user.is_staff:
-                coaching_order = possible_coaching_order
-                order_type = 'Coaching'
-        except CoachingOrder.DoesNotExist:
-            pass
-
-    if not order and not coaching_order:
-        messages.error(request, "Invoice not found or you do not have permission to view it.")
-        return HttpResponse("Order not found or unauthorized", status=404)
-
-    # --- Calculate totals for the invoice ---
-    if order:
-        try:
-            order_items = order.items.all()
-            for item in order_items:
-                item.line_total = item.price * item.quantity
-
-            subtotal = sum(item.line_total for item in order_items)
-            grand_total = order.total_paid
-            delivery_cost = grand_total - subtotal
-
-            order.subtotal = subtotal
-            order.delivery_cost = delivery_cost
-            order.grand_total = grand_total
-            order.total_before_vat = subtotal + delivery_cost
-            order.vat_amount = Decimal('0.00')
-
+            data = json.loads(request.body)
+            address = data.get('address')
+            cart = get_or_create_cart(request)
+            
+            cost = calculate_cart_shipping(cart, address)
+            return JsonResponse({'shipping_cost': float(cost)})
         except Exception as e:
-            messages.error(request, f"Could not calculate all order totals: {e}")
-            return HttpResponse("Error generating invoice data.", status=500)
+            return JsonResponse({'error': str(e)}, status=400)
+    return JsonResponse({'error': 'POST required'}, status=405)
 
-    elif coaching_order:
-        coaching_order.total_before_vat = coaching_order.total_paid
-        coaching_order.vat_amount = Decimal('0.00')
-        coaching_order.grand_total = coaching_order.total_paid
-
-
-    # Prepare context for the template
+def payment_success(request):
+    """
+    Handles the successful payment redirect from Stripe.
+    Displays a confirmation message and ensures all required template variables are present.
+    """
+    session_id = request.GET.get('session_id')
+    cart = get_or_create_cart(request)
+    
+    # Base context for all paths to prevent KeyErrors in templates.
     context = {
-        'order': order,
-        'coaching_order': coaching_order,
-        'order_type': order_type,
-        'user': request.user,
+        'summary': get_cart_summary_data(cart),
+        'order_summary': {},
+        'title': "Payment Successful!",
+        'message': "Thank you for your payment.",
+        'coach': None,
     }
 
-    # Render HTML template to a string
-    html_string = render_to_string('account/invoice_template.html', context)
+    if not session_id:
+        # If no session ID is provided, show a generic success page with dummy data as requested.
+        coach_profile = None
+        try:
+            # Attempt to find the specific coach 'John Hummel'.
+            user = User.objects.get(first_name="John", last_name="Hummel", is_coach=True)
+            coach_profile = CoachProfile.objects.get(user=user)
+        except (User.DoesNotExist, CoachProfile.DoesNotExist, User.MultipleObjectsReturned):
+            # Fallback to the first available coach if not found.
+            coach_profile = CoachProfile.objects.first()
 
-    if not HTML:
-        messages.error(request, "Could not generate PDF invoice. The PDF generation service is currently unavailable. Please contact support.")
-        return HttpResponse("PDF generation service is unavailable.", status=500)
+        context.update({
+            'title': 'Enrollment Confirmed',
+            'message': 'Thank you for your coaching enrollment! You will receive a confirmation email shortly.',
+            'order_summary': {'name': 'Executive Scale Mastermind', 'price': '€1999'},
+            'coach': coach_profile,
+        })
+        return render(request, 'payments/success.html', context)
 
-    # Generate PDF
-    html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
-    pdf = html.write_pdf()
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+        metadata = session.metadata
+        product_type = metadata.get('product_type')
 
-    # Create HTTP response to trigger download
-    response = HttpResponse(pdf, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="invoice_{order_id}.pdf"'
-    
-    return response
+        if product_type == 'coaching_offering':
+            context['title'] = "Enrollment Successful!"
+            offering_id = metadata.get('offering_id')
+            offering = get_object_or_404(Offering, pk=offering_id) if offering_id else None
+            
+            if offering:
+                context['offering'] = offering
+                context['order_summary'] = {'name': offering.name, 'price': f"€{offering.price}"}
+
+            coach_id = metadata.get('coach_id')
+            if coach_id:
+                coach = get_object_or_404(CoachProfile, pk=coach_id)
+                context['coach'] = coach
+                context['message'] = (
+                    f"You have been successfully enrolled and assigned to coach {coach.user.get_full_name()}. "
+                    f"You can now visit your dashboard to book your first session."
+                )
+            else:
+                context['message'] = "Thank you for enrolling. You will receive a confirmation email with details on how to book your sessions."
+
+        elif product_type == 'ecommerce_cart':
+            context['message'] = "Thank you for your purchase. Your order is being processed and you will receive a confirmation email shortly."
+        
+        return render(request, 'payments/success.html', context)
+
+    except stripe.InvalidRequestError:
+        return HttpResponse("Invalid or expired payment session.", status=400)
+    except Exception as e:
+        print(f"Error in payment_success view: {e}")
+        return HttpResponse("An error occurred while confirming your payment.", status=500)
+
+def order_detail_guest(request, guest_order_token):
+    """Displays a guest's order details using a secure token."""
+    order = get_object_or_404(Order, guest_order_token=guest_order_token)
+    return render(request, 'payments/order_detail.html', {'order': order})
+
+def payment_cancel(request):
+    return render(request, 'payments/cancel.html')
+
+from products.models import StockPool # Ensure this is imported
+
+@csrf_exempt
+@transaction.atomic
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+    event = None
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError:
+        return HttpResponse("Invalid payload", status=400)
+    except stripe.SignatureVerificationError:
+        return HttpResponse("Invalid signature", status=400)
+
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        metadata = session.get('metadata', {})
+        product_type = metadata.get('product_type')
+        
+        # --- E-COMMERCE CART HANDLING ---
+        if product_type == 'ecommerce_cart':
+            order_id = metadata.get('order_id')
+            if not order_id:
+                print("FATAL ERROR in E-commerce Webhook: order_id not found in metadata.")
+                return HttpResponse("Missing order_id in metadata", status=400)
+            
+            try:
+                order = Order.objects.get(id=order_id)
+                
+                # Update Order status and total_paid
+                order.status = Order.STATUS_PAID
+                order.total_paid = session.amount_total / 100
+                # Update email if it was a guest user and email is now available from Stripe
+                if not order.user and session.get('customer_details', {}).get('email'):
+                    order.email = session.get('customer_details', {}).get('email')
+
+                # Update shipping_data if it wasn't present before or if Stripe has more complete data
+                if not order.shipping_data:
+                    shipping_json = metadata.get('shipping_address_json')
+                    shipping_data_from_metadata = json.loads(shipping_json) if shipping_json else {}
+                    
+                    if shipping_data_from_metadata:
+                        order.shipping_data = shipping_data_from_metadata
+                    else:
+                        # Fallback to Stripe's data if our metadata is empty
+                        shipping_details = session.get('shipping_details') or {}
+                        address = shipping_details.get('address') or {}
+                        order.shipping_data = {
+                            'name': shipping_details.get('name'),
+                            'address1': address.get('line1'),
+                            'address2': address.get('line2'),
+                            'city': address.get('city'),
+                            'state_code': address.get('state'),
+                            'country_code': address.get('country'),
+                            'zip': address.get('postal_code'),
+                        }
+                order.save()
+
+                printful_items = []
+
+                # Process Items & Deduct Stock (using OrderItems now)
+                for item in order.items.all(): # order.items is OrderItem related_name
+                    # A. Handle Printful Items
+                    if item.variant.printful_variant_id:
+                        printful_items.append({
+                            "variant_id": item.variant.printful_variant_id,
+                            "quantity": item.quantity,
+                        })
+                    
+                    # B. Handle Self-Fulfilled Stock Deduction
+                    if item.variant.product.product_type == 'physical' and item.variant.stock_pool:
+                        try:
+                            # Lock the pool row to prevent race conditions
+                            pool = StockPool.objects.select_for_update().get(id=item.variant.stock_pool.id)
+                            
+                            if pool.available_stock < 9000: 
+                                if pool.available_stock >= item.quantity:
+                                    pool.available_stock -= item.quantity
+                                    pool.save()
+                                    print(f"Stock deducted: {item.quantity} from {pool.name}")
+                                else:
+                                    print(f"CRITICAL: Oversold {pool.name}. Had {pool.available_stock}, sold {item.quantity}.")
+                                    pool.available_stock = 0
+                                    pool.save()
+                        except StockPool.DoesNotExist:
+                            print(f"Error: StockPool not found for variant {item.variant.id}")
+
+                # Consolidate Cart (find original cart and mark as submitted)
+                # We need the original cart_id from the metadata passed during checkout creation
+                cart_id_from_metadata = metadata.get('cart_id')
+                if cart_id_from_metadata:
+                    try:
+                        original_cart = Cart.objects.get(id=cart_id_from_metadata)
+                        original_cart.status = 'submitted'
+                        original_cart.save()
+                    except Cart.DoesNotExist:
+                        print(f"WARNING: Original cart {cart_id_from_metadata} not found during webhook processing.")
+                else:
+                    print(f"WARNING: No cart_id found in metadata for order {order_id}. Cannot mark original cart as submitted.")
+
+
+                # Handle Printful Fulfillment
+                if printful_items:
+                    auto_fulfill = getattr(settings, 'PRINTFUL_AUTO_FULFILLMENT', False)
+                    
+                    if auto_fulfill:
+                        printful_service = PrintfulService()
+                        recipient = {
+                            "name": order.shipping_data.get('name'),
+                            "address1": order.shipping_data.get('address1'),
+                            "address2": order.shipping_data.get('address2', ''),
+                            "city": order.shipping_data.get('city'),
+                            "state_code": order.shipping_data.get('state_code'),
+                            "country_code": order.shipping_data.get('country_code'),
+                            "zip": order.shipping_data.get('zip'),
+                            "email": order.email
+                        }
+                        
+                        response = printful_service.create_order(recipient, printful_items)
+                        
+                        if 'result' in response and response['result'].get('id'):
+                            order.printful_order_id = response['result']['id']
+                            order.printful_order_status = response['result']['status']
+                            order.save()
+                        else:
+                            print(f"Printful Auto-Sync Failed: {response}")
+                            order.printful_order_status = 'failed_auto_sync'
+                            order.save()
+                    else:
+                        order.printful_order_status = 'pending_approval'
+                        order.save()
+                        print(f"Order #{order.id} queued for manual Printful approval.")
+
+                # Send Confirmation Emails
+                try:
+                    customer_email = order.email # Use email from order, which is now guaranteed to be set
+                    if not customer_email:
+                         raise ValueError("Customer email not found on order after webhook processing.")
+
+                    user = order.user
+                    if user:
+                        dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
+                    else:
+                        dashboard_url = request.build_absolute_uri(
+                            reverse('payments:order_detail_guest', args=[order.guest_order_token])
+                        )
+
+                    email_context = {
+                        'order': order,
+                        'user': user,
+                        'dashboard_url': dashboard_url,
+                    }
+
+                    send_transactional_email(
+                        recipient_email=customer_email,
+                        subject=f"Your JH Motiv LTD Order #{order.id} is Confirmed",
+                        template_name='emails/order_confirmation.html',
+                        context=email_context
+                    )
+                    print(f"SUCCESS: Order confirmation email sent to {customer_email} for order {order.id}")
+
+                    send_transactional_email(
+                        recipient_email=customer_email,
+                        subject=f"Your Payment Receipt for Order #{order.id}",
+                        template_name='emails/payment_receipt.html',
+                        context=email_context
+                    )
+                    print(f"SUCCESS: Payment receipt email sent to {customer_email} for order {order.id}")
+
+                except Exception as email_error:
+                    print(f"CRITICAL: Order {order.id} updated but failed to send email. Error: {email_error}")
+
+            except Order.DoesNotExist:
+                print(f"FATAL ERROR in E-commerce Webhook: Order matching ID {order_id} does not exist.")
+                return HttpResponse("Order not found", status=400)
+            except Exception as e:
+                print(f"FATAL ERROR in E-commerce Webhook processing Order {order_id}: {e}")
+                return HttpResponse("Webhook processing error", status=500)
+
+        # --- COACHING HANDLING (Keep existing) ---
+        elif product_type == 'coaching_offering':
+             pass # (Paste your existing coaching logic here)
+
+    return HttpResponse(status=200)
+
+
+def create_coaching_checkout_session_view(request, offering_id):
+    """
+    Handles the creation of a Stripe embedded checkout session for a coaching offering.
+    This is intended to be called via a POST request from the checkout page.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "User not authenticated"}, status=403)
+
+    offering = get_object_or_404(Offering, pk=offering_id) 
+
+    if request.method == 'POST':
+        available_coaches = CoachProfile.objects.filter(
+            offerings=offering, 
+            user__is_active=True,
+            is_available_for_new_clients=True
+        )
+
+        if not available_coaches.exists():
+            return JsonResponse({"error": "No coach currently available for this offering."}, status=400)
+
+        coach = available_coaches.annotate(
+            active_enrollment_count=models.Count(
+                'client_enrollments', 
+                filter=models.Q(client_enrollments__offering=offering, client_enrollments__is_active=True)
+            )
+        ).order_by('active_enrollment_count').first()
+
+        if not coach:
+            return JsonResponse({"error": "Error: No assignable coach found."}, status=400)
+
+        try:
+            checkout_session = stripe.checkout.Session.create(
+                ui_mode='embedded',
+                payment_method_types=['card'],
+                line_items=[{
+                    'price_data': {
+                        'currency': 'gbp',
+                        'unit_amount': int(offering.price * 100),
+                        'product_data': {
+                            'name': f"Coaching: {offering.name}"
+                        },
+                    },
+                    'quantity': 1,
+                }],
+                mode='payment',
+                return_url=request.build_absolute_uri(reverse('payments:payment_success')) + '?session_id={CHECKOUT_SESSION_ID}',
+                metadata={
+                    'product_type': 'coaching_offering', 
+                    'offering_id': str(offering.id),
+                    'user_id': str(request.user.id),
+                    'coach_id': str(coach.id),
+                },
+            )
+            
+            return JsonResponse({'clientSecret': checkout_session.client_secret})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    # This view should only handle POST requests for creating the session
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+@login_required
+def order_detail(request, order_id):
+    """
+    Displays order details for a logged-in user.
+    Ensures the user can only see their own orders.
+    """
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    return render(request, 'payments/order_detail.html', {'order': order})
