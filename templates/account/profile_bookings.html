@@ -1,23 +1,36 @@
-{% if bookings %}
-    <div class="bookings-list">
-        {% for booking in bookings %}
-            <div class="booking-card">
-                <div class="booking-details">
-                    <p class="booking-title">{{ booking.offering.name }} with {{ booking.coach.get_full_name }}</p>
-                    <p class="booking-time">{{ booking.start_time|date:"D, M d, Y" }} at {{ booking.start_time|time:"g:i A" }}</p>
-                </div>
-                <div class="booking-status-actions">
-                    <span class="status-pill">{{ booking.status|title }}</span>
-                    {% if booking.can_be_rescheduled %}
-                        <div class="booking-actions">
-                            <a href="#" class="link-button">Reschedule</a>
-                            <a href="#" class="link-button link-danger">Cancel</a>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        {% endfor %}
+<div class="bg-white p-6 rounded-lg shadow-lg">
+    <h2 class="text-xl font-semibold text-gray-800 mb-4">My Booked Sessions</h2>
+
+    <div class="border-b border-gray-200 mb-4">
+        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+            <a href="#" 
+               hx-get="{% url 'accounts:profile_bookings' %}?tab=upcoming" 
+               hx-target="#session-list-container"
+               hx-swap="innerHTML"
+               class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm {% if active_tab == 'upcoming' or not active_tab %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
+                Upcoming
+            </a>
+            <a href="#" 
+               hx-get="{% url 'accounts:profile_bookings' %}?tab=past" 
+               hx-target="#session-list-container"
+               hx-swap="innerHTML"
+               class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm {% if active_tab == 'past' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
+                Past
+            </a>
+            <a href="#" 
+               hx-get="{% url 'accounts:profile_bookings' %}?tab=canceled" 
+               hx-target="#session-list-container"
+               hx-swap="innerHTML"
+               class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm {% if active_tab == 'canceled' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
+                Canceled
+            </a>
+        </nav>
     </div>
-{% else %}
-    <p class="empty-state-text">You have no upcoming bookings.</p>
-{% endif %}
+
+    <div id="session-list-container" 
+         hx-get="{% url 'accounts:profile_bookings' %}?tab={{ active_tab|default:'upcoming' }}" 
+         hx-trigger="load"
+         hx-swap="innerHTML">
+        <p class="text-gray-500 italic py-4">Loading sessions...</p>
+    </div>
+</div>

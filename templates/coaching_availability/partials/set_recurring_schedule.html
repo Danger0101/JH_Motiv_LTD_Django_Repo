@@ -1,53 +1,121 @@
-<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" 
-     style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background-color: rgba(0,0,0,0.5);">
-    
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-screen overflow-y-auto p-6" 
-         style="background-color: white; border-radius: 0.5rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 56rem; max-height: 100vh; overflow-y: auto; padding: 1.5rem;"
-         @click.away="open = false">
-        
-        <div class="flex justify-between items-center mb-6" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h2 class="text-2xl font-bold text-gray-800" style="font-size: 1.5rem; font-weight: 700; color: var(--gray-800);">Set Recurring Schedule</h2>
-            <button onclick="document.getElementById('dialog-container').innerHTML = ''" style="color: var(--gray-500); font-size: 1.5rem; border: none; background: none; cursor: pointer;">&times;</button>
+{% extends 'base.html' %}
+
+{% block title %}Set Recurring Weekly Schedule{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6">Set Your Weekly Recurring Schedule</h1>
+
+    {% if formset.non_form_errors %}
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <strong class="font-bold">Error!</strong>
+            <span class="block sm:inline">{{ formset.non_form_errors }}</span>
         </div>
+    {% endif %}
 
-        <div x-data="scheduleEditor('{{ schedule_json|escapejs }}')">
-            
-            <div class="schedule-grid">
-                <template x-for="(day, dayIndex) in schedule" :key="dayIndex">
-                    <div class="day-card">
-                        <div class="day-title">
-                            <span x-text="day.name"></span>
-                            <button @click="addSlot(dayIndex)" class="text-blue-600 hover:text-blue-800 text-sm font-bold" style="color: #2563eb; font-size: 0.875rem; border: none; background: none; cursor: pointer;">+ Add</button>
-                        </div>
+    <form method="post" id="schedule-form">
+        {% csrf_token %}
+        {{ formset.management_form }}
 
-                        <div class="slot-list">
-                            <template x-for="(slot, slotIndex) in day.slots" :key="slotIndex">
-                                <div class="slot-item">
-                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                        <input type="time" x-model="slot.start" class="border rounded px-2 py-1 text-sm" style="border: 1px solid #d1d5db; border-radius: 0.25rem; padding: 0.25rem 0.5rem;">
-                                        <span>-</span>
-                                        <input type="time" x-model="slot.end" class="border rounded px-2 py-1 text-sm" style="border: 1px solid #d1d5db; border-radius: 0.25rem; padding: 0.25rem 0.5rem;">
-                                    </div>
-                                    <button @click="removeSlot(dayIndex, slotIndex)" class="btn-remove-slot">&times;</button>
+        <div class="space-y-8">
+            {% for day_name, day_forms in forms_by_day.items %}
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-semibold mb-4">{{ day_name }}</h2>
+                    <div id="form-container-{{ forloop.counter0 }}" class="space-y-4">
+                        {% for form in day_forms %}
+                            <div class="flex items-center space-x-4 p-4 border rounded-md time-slot-form">
+                                {{ form.day_of_week }}
+                                <div class="flex-1">
+                                    <label class="block text-sm font-medium text-gray-700">Start Time</label>
+                                    {{ form.start_time }}
+                                    {% if form.start_time.errors %}
+                                        <p class="text-red-500 text-xs italic">{{ form.start_time.errors|join:", " }}</p>
+                                    {% endif %}
                                 </div>
-                            </template>
-                            <div x-show="day.slots.length === 0" style="color: var(--gray-400); font-style: italic; font-size: 0.875rem;">Unavailable</div>
-                        </div>
+                                <div class="flex-1">
+                                    <label class="block text-sm font-medium text-gray-700">End Time</label>
+                                    {{ form.end_time }}
+                                    {% if form.end_time.errors %}
+                                        <p class="text-red-500 text-xs italic">{{ form.end_time.errors|join:", " }}</p>
+                                    {% endif %}
+                                </div>
+                                <button type="button" class="text-red-500 hover:text-red-700 remove-time-slot">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        {% endfor %}
                     </div>
-                </template>
-            </div>
-
-            <div x-show="isError" style="margin-top: 1.5rem; padding: 1rem; background-color: #fee2e2; color: #b91c1c; border-radius: 0.5rem;" x-text="message" x-cloak></div>
-            
-            <div x-show="!isError && message" style="margin-top: 1.5rem; padding: 1rem; background-color: #d1fae5; color: #065f46; border-radius: 0.5rem;" x-text="message" x-cloak></div>
-
-            <div class="mt-8 flex justify-end gap-4" style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
-                <button onclick="document.getElementById('dialog-container').innerHTML = ''" class="btn-action btn-secondary-action">Cancel</button>
-                <button @click="saveSchedule" class="btn-action btn-primary-action" :disabled="isSaving">
-                    <span x-show="!isSaving">Save Changes</span>
-                    <span x-show="isSaving">Saving...</span>
-                </button>
-            </div>
+                    <button type="button" class="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded add-time-slot" data-day-index="{{ forloop.counter0 }}">
+                        <i class="fas fa-plus"></i> Add Time Slot
+                    </button>
+                </div>
+            {% endfor %}
         </div>
+
+        <div class="mt-8">
+            <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                Save Schedule
+            </button>
+        </div>
+    </form>
+</div>
+
+<div id="time-slot-template" class="hidden">
+    <div class="flex items-center space-x-4 p-4 border rounded-md time-slot-form">
+        <div class="flex-1">
+            <label class="block text-sm font-medium text-gray-700">Start Time</label>
+            <input type="time" name="" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+        </div>
+        <div class="flex-1">
+            <label class="block text-sm font-medium text-gray-700">End Time</label>
+            <input type="time" name="" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+        </div>
+        <button type="button" class="text-red-500 hover:text-red-700 remove-time-slot">
+            <i class="fas fa-trash"></i>
+        </button>
     </div>
 </div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+{{ super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let formIdx = {{ formset.total_form_count }};
+
+    document.querySelectorAll('.add-time-slot').forEach(button => {
+        button.addEventListener('click', function() {
+            const dayIndex = this.dataset.dayIndex;
+            const formContainer = document.getElementById(`form-container-${dayIndex}`);
+            const template = document.getElementById('time-slot-template').firstElementChild.cloneNode(true);
+
+            template.querySelectorAll('input').forEach(input => {
+                const nameAttr = `form-${formIdx}-${input.name.split('-')[2]}`;
+                input.name = nameAttr;
+                input.id = `id_${nameAttr}`;
+            });
+            
+            // Set day_of_week hidden input
+            const dayOfWeekInput = document.createElement('input');
+            dayOfWeekInput.type = 'hidden';
+            dayOfWeekInput.name = `form-${formIdx}-day_of_week`;
+            dayOfWeekInput.value = dayIndex;
+            template.insertBefore(dayOfWeekInput, template.firstChild);
+
+            formContainer.appendChild(template);
+            formIdx++;
+            
+            // Update management form
+            document.querySelector('input[name="form-TOTAL_FORMS"]').value = formIdx;
+        });
+    });
+
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.closest('.remove-time-slot')) {
+            e.target.closest('.time-slot-form').remove();
+        }
+    });
+});
+</script>
+{% endblock %}

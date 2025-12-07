@@ -2,16 +2,18 @@
 __pycache__/
 *.py[cod]
 *$py.class
-*.pyc
-*.pyo
+venv/
+/venv/
+.venv/
+.ipynb_checkpoints
 
 # C extensions
 *.so
-venv
 
 # Distribution / packaging
 .Python
 build/
+dist/
 downloads/
 eggs/
 .eggs/
@@ -54,9 +56,10 @@ coverage.xml
 
 # Django Stuff:
 db.sqlite3
-/media/ # If you are handling user-uploaded media
-staticfiles/
+/media/
 
+# Django Generated Static Files (CRITICAL ADDITION)
+staticfiles/
 
 # Scrapy stuff:
 .scrapy
@@ -84,8 +87,10 @@ celerybeat-schedule
 .env
 .venv
 env/
+venv/
 ENV/
 env.bak/
+venv.bak/
 
 # Spyder project settings
 .spyderproject
@@ -114,6 +119,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+venv/
 # Operating System Files (ADDED)
 .DS_Store
 Thumbs.db

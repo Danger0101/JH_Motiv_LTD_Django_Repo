@@ -1,29 +1,20 @@
 {% extends 'base.html' %}
-{% load static %}
 
 {% block title %}Checkout{% endblock %}
 
-{% block extra_head %}
-{{ block.super }}
-<link rel="stylesheet" href="{% static 'css/cart.css' %}">
-{% endblock %}
-
 {% block content %}
-<div class="cart-page-wrapper">
-    <div class="cart-container">
-        <h1 class="cart-header">Checkout</h1>
-        <div class="content-card" style="max-width: 32rem; margin: 0 auto;">
-            <h2 class="card-title" style="margin-bottom: 0.5rem; border: none;">{{ offering.name }}</h2>
-            <p style="color: var(--gray-600); margin-bottom: 1.5rem;">{{ offering.description }}</p>
-            <p style="font-size: 2rem; font-weight: 700; color: var(--gray-800); margin-bottom: 1.5rem;">£{{ offering.price }}</p>
-            
-            <form action="{% url 'payments:create_checkout_session' offering.id %}" method="POST">
-                {% csrf_token %}
-                <button type="submit" class="btn-start-shopping" style="background-color: #16a34a; width: 100%; text-align: center;">
-                    Proceed to Checkout
-                </button>
-            </form>
-        </div>
+<div class="container mx-auto px-6 py-10">
+    <h1 class="text-3xl font-bold text-gray-800 mb-8 text-center">Checkout</h1>
+    <div class="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8">
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">{{ offering.name }}</h2>
+        <p class="text-gray-600 mb-4">{{ offering.description }}</p>
+        <p class="text-3xl font-bold text-gray-800 mb-6">£{{ offering.price }}</p>
+        <form action="{% url 'payments:create_checkout_session' offering.id %}" method="POST">
+            {% csrf_token %}
+            <button type="submit" id="checkout-button" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-full transition duration-300">
+                Proceed to Checkout
+            </button>
+        </form>
     </div>
 </div>
 <script src="https://js.stripe.com/v3/"></script>

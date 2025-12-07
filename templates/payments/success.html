@@ -3,31 +3,47 @@
 
 {% block title %}{{ title|default:"Payment Successful" }}{% endblock %}
 
-{% block extra_head %}
-{{ block.super }}
-<link rel="stylesheet" href="{% static 'css/cart.css' %}">
-{% endblock %}
-
 {% block content %}
-<div class="c-eselhdfont-size: 1.125rem; color: var(--gray-700); margin-bottom: 1.5rem;">{{ message|default:"Thank you for your payment." }}</p>
+<div class="container mx-auto px-6 py-10 max-w-3xl">
+    <div class="bg-white shadow-lg rounded-lg p-8 text-center">
+        <h1 class="text-4xl font-bold text-green-600 mb-4" role="status">
+            <i class="fas fa-check-circle mr-2"></i>{{ title|default:"Payment Successful!" }}
+        </h1>
+        <p class="text-lg text-gray-700 mb-6">{{ message|default:"Thank you for your payment." }}</p>
 
-            {% if order_summary %}
-            <div style="border-top: 1px solid var(--gray-200); border-bottom: 1px solid var(--gray-200); padding: 1.5rem 0; margin-bottom: 1.5rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 600; color: var(--gray-800); margin-bottom: 1rem;">Your Purchase Summary</h2>
-                <dl style="color: var(--gray-700); display: flex; flex-direction: column; gap: 0.5rem;">
-                    <div style="display: flex; justify-content: space-between;">le   <h2 style="font-size: 1.5rem; font-weight: 600; color: var(--gray-800); margin-bottom: 1rem;">Welcome Aboard!</h2>
-style="color: var(--gray-700); margin-bottom: 1rem;">
-                    You have been successfully enrolled and assigned to coach {{ coach.user.get_full_name }}.
-                    Get started by visiting your profile where you can view your enrollment details and book your first session.
-                </p>
-                <a href="{% url 'account:account_profile' %}" class="btn-start-shopping">
-                    Go to My Profile
-                </a>
-            </div>
-            {% endif %}
-
-            <div style="margin-top: 2rem; color: var(--gray-600);">
-                <p>You will receive a confirmation email shortly with all the details of your purchase.</p>
-            </div>
+        {% if order_summary %}
+        <div class="border-t border-b border-gray-200 py-6 mb-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Your Purchase Summary</h2>
+            <dl class="text-gray-700 space-y-2">
+                <div class="flex justify-between">
+                    <dt class="font-medium">Item:</dt>
+                    <dd>{{ order_summary.name }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="font-medium">Price:</dt>
+                    <dd>{{ order_summary.price }}</dd>
+                </div>
+            </dl>
         </div>
-    </div>{% endblock content %}
+        {% endif %}
+
+        {# --- Coaching Enrollment Specific Section --- #}
+        {% if coach %}
+        <div class="mt-6 pt-6 border-t border-gray-200">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Welcome Aboard!</h2>
+            <p class="text-gray-700 mb-4">
+                You have been successfully enrolled and assigned to coach {{ coach.user.get_full_name }}.
+                Get started by visiting your profile where you can view your enrollment details and book your first session.
+            </p>
+            <a href="{% url 'account:account_profile' %}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                Go to My Profile
+            </a>
+        </div>
+        {% endif %}
+
+        <div class="mt-8 text-gray-600">
+            <p>You will receive a confirmation email shortly with all the details of your purchase.</p>
+        </div>
+    </div>
+</div>
+{% endblock content %}

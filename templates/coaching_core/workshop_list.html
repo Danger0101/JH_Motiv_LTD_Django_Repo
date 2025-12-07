@@ -1,63 +1,25 @@
 {% extends 'base.html' %}
-{% load static %}
-
-{% block title %}Manage Workshops{% endblock %}
-
-{% block extra_head %}
-{{ block.super }}
-<link rel="stylesheet" href="{% static 'css/management.css' %}">
-{% endblock %}
-
 {% block content %}
-<div class="management-container">
-    <div class="management-header">
-        <div>
-            <h1 class="page-title">My Workshops</h1>
-            <p class="page-subtitle">Schedule and manage group sessions.</p>
+<div class="container">
+    <h1>Upcoming Workshops</h1>
+    <div class="row">
+        {% for workshop in workshops %}
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">{{ workshop.name }}</h5>
+                    <p class="card-text">{{ workshop.description }}</p>
+                    <p class="card-text"><strong>Date:</strong> {{ workshop.date }}</p>
+                    <p class="card-text"><strong>Time:</strong> {{ workshop.start_time }} - {{ workshop.end_time }}</p>
+                    <p class="card-text"><strong>Price:</strong> ${{ workshop.price }}</p>
+                    <p class="card-text"><strong>Spaces Left:</strong> {{ workshop.remaining_spaces }}</p>
+                    <a href="{% url 'coaching_core:workshop-detail' workshop.slug %}" class="btn btn-primary">View Details</a>
+                </div>
+            </div>
         </div>
-        <div class="header-actions">
-            <a href="{% url 'coaching_core:workshop-create' %}" class="btn-action btn-primary-action">Create Workshop</a>
-        </div>
+        {% empty %}
+        <p>No upcoming workshops at the moment.</p>
+        {% endfor %}
     </div>
-
-    {% if workshops %}
-    <div class="table-container">
-        <table class="manage-table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Date</th>
-                    <th>Time</th>
-                    <th>Attendees</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for workshop in workshops %}
-                <tr>
-                    <td>
-                        <a href="{% url 'coaching_core:workshop-detail' slug=workshop.slug %}" style="font-weight: 600; color: var(--gray-900);">
-                            {{ workshop.name }}
-                        </a>
-                    </td>
-                    <td>{{ workshop.date|date:"M d, Y" }}</td>
-                    <td>{{ workshop.start_time|time:"H:i" }}</td>
-                    <td>{{ workshop.attendees.count }} / {{ workshop.max_attendees }}</td>
-                    <td><span class="status-pill {% if workshop.is_active %}status-active{% else %}status-inactive{% endif %}">{% if workshop.is_active %}Active{% else %}Inactive{% endif %}</span></td>
-                    <td>
-                        <a href="{% url 'coaching_core:workshop-update' slug=workshop.slug %}" style="color: #2563eb; font-weight: 500;">Edit</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="empty-state">
-        <p style="font-weight: 500; color: var(--gray-900);">No workshops found</p>
-        <a href="{% url 'coaching_core:workshop-create' %}" class="btn-action btn-primary-action" style="margin-top: 1rem;">Create Workshop</a>
-    </div>
-    {% endif %}
 </div>
-{% endblock %}
+{% endblock content %}

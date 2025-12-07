@@ -1,45 +1,51 @@
-{% load static %}
-
-{% if enrollments %}
-    <div style="display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
-        {% for enrollment in enrollments %}
-        <div class="dashboard-card" style="border: 1px solid var(--gray-200); position: relative; overflow: hidden;">
-            <div style="background-color: #f0fdf4; padding: 0.5rem 1rem; border-bottom: 1px solid #bbf7d0; display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-weight: 700; color: #15803d; font-size: 0.875rem;">Active Plan</span>
-                <span style="font-size: 0.75rem; color: #166534;">Purchased: {{ enrollment.created_at|date:"M d, Y" }}</span>
-            </div>
+<div class="bg-white p-6 rounded-lg shadow-lg mb-8">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">My Coaching Offerings</h2>
+    <ul class="space-y-4" role="list">
+        {% for user_offering in user_offerings %}
+        <li class="border-b pb-4 last:border-b-0">
+            <h3 class="text-xl font-semibold text-gray-800">{{ user_offering.offering.name }}</h3>
             
-            <div style="padding: 1.5rem;">
-                <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--gray-900); margin-bottom: 0.5rem;">{{ enrollment.offering.name }}</h3>
-                
-                <div style="display: flex; align-items: center; margin-bottom: 1.5rem;">
-                    <div style="flex: 1;">
-                        <span style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--gray-500); font-weight: 700;">Sessions Left</span>
-                        <span style="font-size: 1.5rem; font-weight: 700; color: #2563eb;">{{ enrollment.remaining_sessions }}</span>
-                        <span style="color: var(--gray-400); font-size: 1rem;">/ {{ enrollment.offering.total_number_of_sessions }}</span>
-                    </div>
-                    {% if enrollment.expiration_date %}
-                    <div style="text-align: right;">
-                        <span style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--gray-500); font-weight: 700;">Expires</span>
-                        <span style="font-size: 0.875rem; color: var(--gray-700);">{{ enrollment.expiration_date|date:"M d, Y" }}</span>
-                    </div>
-                    {% endif %}
-                </div>
-
-                <div style="border-top: 1px solid var(--gray-100); padding-top: 1rem;">
-                    <a href="{% url 'coaching_booking:profile_book_session' %}?enrollment_id={{ enrollment.id }}" 
-                       class="btn-primary" 
-                       style="text-decoration: none;">
-                        Use Credit & Book Session
-                    </a>
-                </div>
-            </div>
-        </div>
+            {# FIX: Use correct attribute names (purchase_date / expiration_date) #}
+            <p class="text-gray-600">Purchased on: <strong>{{ user_offering.purchase_date|date:"M d, Y" }}</strong></p>
+            
+            <p class="text-gray-600">Sessions remaining: <strong>{{ user_offering.remaining_sessions }}</strong> / {{ user_offering.total_sessions }}</p>
+            
+            <p class="text-gray-600">Access valid until: <strong>{{ user_offering.expiration_date|date:"M d, Y" }}</strong></p>
+            
+            {% if user_offering.remaining_sessions > 0 and user_offering.is_active and not user_offering.is_expired %}
+            <button hx-get="{% url 'accounts:profile_book_session' %}?enrollment_id={{ user_offering.id }}" hx-target="#profile-content" hx-swap="innerHTML"
+                    class="mt-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Book a Session
+            </button>
+            {% elif user_offering.is_expired %}
+            <p class="text-red-600 mt-2">This offering has expired.</p>
+            {% else %}
+            <p class="text-gray-500 mt-2">No sessions remaining or offering is inactive.</p>
+            {% endif %}
+        </li>
+        {% empty %}
+        <li>
+            <p class="text-gray-500">You have not purchased any coaching offerings yet.</p>
+            <a href="{% url 'coaching_booking:offer-list' %}" class="text-indigo-600 hover:underline">View available offerings</a>
+        </li>
         {% endfor %}
-    </div>
-{% else %}
-    <div class="dashboard-card" style="text-align: center; border: 1px dashed var(--gray-300); background-color: var(--gray-50);">
-        <p style="color: var(--gray-500); margin-bottom: 1rem;">You don't have any active coaching plans.</p>
-        <a href="{% url 'coaching_booking:offer-list' %}" class="btn-primary" style="display: inline-block; width: auto;">Browse Offerings</a>
-    </div>
-{% endif %}
+    </ul>
+</div>
+
+<div class="bg-white p-6 rounded-lg shadow-lg">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">My Session Credits</h2>
+    {# The credit logic seems generally correct based on your model field names #}
+    <p class="text-lg font-semibold text-gray-700 mb-4">You have <span class="text-indigo-600">{{ available_credits.count }}</span> available credits.</p>
+    <ul class="space-y-2" role="list">
+        {% for credit in available_credits %}
+        <li class="p-3 bg-gray-50 rounded-md flex justify-between items-center">
+            <span class="text-gray-800">Credit purchased on {{ credit.purchase_date|date:"M d, Y" }}</span>
+            <span class="text-sm font-medium text-red-600">Expires on {{ credit.expiration_date|date:"M d, Y" }}</span>
+        </li>
+        {% empty %}
+        <li>
+            <p class="text-gray-500">You have no available session credits.</p>
+        </li>
+        {% endfor %}
+    </ul>
+</div>

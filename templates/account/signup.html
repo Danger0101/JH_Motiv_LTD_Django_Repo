@@ -4,95 +4,102 @@
 
 {% block title %}Sign Up{% endblock %} 
 
-{% block extra_head %}
-{{ block.super }}
-<link rel="stylesheet" href="{% static 'css/account.css' %}">
-{% endblock %}
-
 {% block content %}
-<div class="auth-page-wrapper">
-    <div class="auth-container" id="signup-form-container">
-        <div class="auth-card">
-            <h2 class="auth-title">{% translate "Create Account" %}</h2>
+<div class="max-w-md mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div 
+        class="p-6 bg-white shadow-lg rounded-lg border" 
+        id="signup-form-container"
+    >
+        <h2 class="text-2xl font-bold mb-6 text-gray-900">{% translate "Create Account" %}</h2>
 
-            <form id="signup_form" method="post" action="{% url 'account:signup' %}">
-                {% csrf_token %} 
+        <form id="signup_form" method="post" action="{% url 'account:signup' %}">
+            {% csrf_token %} 
 
-                {% if form.non_field_errors %}
-                <div style="padding: 0.75rem; margin-bottom: 1rem; font-size: 0.875rem; color: #b91c1c; background-color: #fee2e2; border-radius: 0.25rem;" role="alert">
-                    {% for error in form.non_field_errors %}
-                    <p>{{ error }}</p>
-                    {% endfor %}
-                </div>
-                {% endif %}
-                
-                {% for field in form %}
-                    {% if field.name not in 'policy_agreement,marketing_opt_in' %}
-                    <div class="form-group">
-                        <label for="{{ field.id_for_label }}" class="form-label">
-                            {{ field.label }}
-                            {% if field.field.required %}
-                                <span style="color: #ef4444;">*</span>
-                            {% endif %}
-                        </label>
-                        {{ field }}
-                        {% if field.errors %}
-                        <p style="margin-top: 0.25rem; font-size: 0.75rem; color: #ef4444;">{{ field.errors|striptags }}</p>
-                        {% endif %}
-                    </div>
-                    {% endif %}
+            {% if form.non_field_errors %}
+            <div class="p-3 mb-4 text-sm text-red-700 bg-red-100 rounded" role="alert">
+                {% for error in form.non_field_errors %}
+                <p>{{ error }}</p>
                 {% endfor %}
-                
-                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--gray-200);">
-                    
-                    {# 1. POLICY AGREEMENT #}
-                    <div style="display: flex; align-items: start; margin-bottom: 1rem;">
-                        <div style="margin-top: 0.25rem;">
-                            {{ form.policy_agreement }}
-                        </div>
-                        <div style="margin-left: 0.75rem; font-size: 0.875rem;">
-                            <label for="{{ form.policy_agreement.id_for_label }}" style="color: var(--gray-700);">
-                                I have read and agree to the 
-                                <a href="{% url 'core:terms_of_service' %}" target="_blank" class="auth-link">Terms of Service</a> 
-                                and 
-                                <a href="{% url 'core:privacy_policy' %}" target="_blank" class="auth-link">Privacy Policy</a>.
-                                <span style="color: #ef4444;">*</span>
-                            </label>
-                        </div>
-                    </div>
-                    {% if form.policy_agreement.errors %}
-                        <p style="margin-top: 0.25rem; font-size: 0.75rem; color: #ef4444;">{{ form.policy_agreement.errors.0 }}</p>
+            </div>
+            {% endif %} 
+            
+            {% for field in form %}
+                {% if field.name not in 'policy_agreement,marketing_opt_in' %}
+                <div class="mb-4">
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        {{ field.label }}
+                        {% if field.field.required %}
+                            <span class="text-red-500">*</span>
+                        {% endif %}
+                    </label>
+                    {{ field }} 
+                    {% if field.errors %}
+                    <p class="mt-1 text-xs text-red-500">{{ field.errors|striptags }}</p>
                     {% endif %}
-
-                    {# 2. MARKETING OPT-IN #}
-                    <div style="display: flex; align-items: start;">
-                        <div style="margin-top: 0.25rem;">
-                            {{ form.marketing_opt_in }}
-                        </div>
-                        <div style="margin-left: 0.75rem; font-size: 0.875rem;">
-                            <label for="{{ form.marketing_opt_in.id_for_label }}" style="color: var(--gray-700);">
-                                I would like to receive motivational content and updates (optional).
-                            </label>
-                        </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+            
+            <div class="space-y-4 pt-4 border-t mt-6">
+                
+                {# 1. POLICY AGREEMENT (REQUIRED) - NOW USING STANDARD LINKS #}
+                <div class="flex items-start">
+                    <div class="flex items-center h-5 mt-1">
+                        {{ form.policy_agreement }}
+                    </div>
+                    <div class="ml-3 text-sm">
+                        <label for="{{ form.policy_agreement.id_for_label }}" class="font-medium text-gray-700">
+                            I have read and agree to the 
+                            <a href="{% url 'core:terms_of_service' %}" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                class="text-blue-600 hover:text-blue-500 underline font-semibold focus:outline-none"
+                            >Terms of Service</a> 
+                            and 
+                            
+                            <a href="{% url 'core:privacy_policy' %}" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                class="text-blue-600 hover:text-blue-500 underline font-semibold focus:outline-none"
+                            >Privacy Policy</a>.
+                            <span class="text-red-500">*</span>
+                        </label>
                     </div>
                 </div>
-
-                {% if redirect_field_value %}
-                <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+                {% if form.policy_agreement.errors %}
+                    <p class="mt-1 text-xs text-red-500">{{ form.policy_agreement.errors.0 }}</p>
                 {% endif %}
 
-                <button type="submit" class="btn-primary" style="margin-top: 1.5rem;">
-                    {% translate "Sign Up" %}
-                </button>
-            </form> 
+                {# 2. MARKETING OPT-IN (OPTIONAL) #}
+                <div class="flex items-start">
+                    <div class="flex items-center h-5">
+                        {{ form.marketing_opt_in }}
+                    </div>
+                    <div class="ml-3 text-sm">
+                        <label for="{{ form.marketing_opt_in.id_for_label }}" class="font-medium text-gray-700">
+                            I would like to receive motivational content and updates (optional).
+                        </label>
+                    </div>
+                </div>
+            </div>
 
-            <p class="auth-links">
-                {% translate "Already have an account?" %}
-                <a href="{% url 'account:login' %}" class="auth-link">
-                    {% translate "Log in here" %}
-                </a>
-            </p>
-        </div>
+            {% if redirect_field_value %}
+            <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+            {% endif %}
+
+            <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mt-6">
+                {% translate "Sign Up" %}
+            </button>
+        </form> 
+
+        <p class="mt-4 text-center text-sm text-gray-600">
+            {% translate "Already have an account?" %}
+            <a href="{% url 'account:login' %}" class="font-medium text-blue-600 hover:text-blue-500">
+                {% translate "Log in here" %}
+            </a>
+        </p>
     </div>
 </div>
+
+
 {% endblock %}

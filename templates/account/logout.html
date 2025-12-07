@@ -4,18 +4,16 @@
 {% block title %}{% translate "Log Out" %}{% endblock %}
 
 {% block content %}
-<div class="auth-page-wrapper">
-    <div class="auth-container">
-        <div class="auth-card">
-            <h2 class="auth-title">{% translate "Log Out" %}</h2>
-            <p style="text-align: center; color: var(--gray-600); margin-bottom: 1.5rem;">{% translate "Are you sure you want to log out?" %}</p>
-            <form method="post" action="{% url 'account:logout' %}">
-                {% csrf_token %}
-                <button type="submit" class="btn-danger">
-                    {% translate "Log Out" %}
-                </button>
-            </form>
-        </div>
+<div class="max-w-md mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div class="p-6 bg-white shadow-lg rounded-lg border">
+        <h2 class="text-2xl font-bold mb-6 text-gray-900">{% translate "Log Out" %}</h2>
+        <p class="text-gray-600 mb-6">{% translate "Are you sure you want to log out?" %}</p>
+        <form method="post" action="{% url 'account:logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                {% translate "Log Out" %}
+            </button>
+        </form>
     </div>
 </div>
 {% endblock %}

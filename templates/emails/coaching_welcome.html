@@ -1,31 +1,20 @@
 {% extends "emails/base_email.html" %}
 
-{% block title %}Welcome to Coaching!{% endblock %}
-
 {% block content %}
-    <h1>Welcome to Your Coaching Journey!</h1>
-    
-    <p>Hi {{ user.first_name }},</p>
-    
-    <p>We are thrilled to have you on board. You have successfully enrolled in <strong>{{ offering_name }}</strong>.</p>
+<p>Hi {{ user.first_name|default:user.username }},</p>
 
-    <div class="info-box" style="text-align: center;">
-        <strong>Your Coach:</strong> {{ coach_name }}
-    </div>
+<p>Welcome to <strong>{{ site_name }}</strong>! We are thrilled to have you join us.</p>
 
-    <p>Here is what happens next:</p>
-    <ul style="padding-left: 20px; color: #374151;">
-        <li>Log in to your profile dashboard.</li>
-        <li>View your available credits.</li>
-        <li>Book your first session at a time that suits you.</li>
-    </ul>
+<p>You have successfully enrolled in the <strong>"{{ offering_name }}"</strong> coaching program. This is your first step on a new and exciting journey of growth, and we are honored to be a part of it.</p>
 
-    <div style="text-align: center;">
-        <a href="{{ dashboard_url }}" class="btn-primary">Go to Dashboard</a>
-    </div>
+<p><strong>What's next?</strong></p>
+<p>You can now start booking your coaching sessions. Please head to your client dashboard to view your available sessions and schedule them at your convenience.</p>
 
-    <p>If you have any questions, simply reply to this email.</p>
-    
-    <p>Let's achieve great things together!</p>
-    <p><strong>The JH Motiv Team</strong></p>
+<p>
+    <a href="{{ dashboard_url }}" class="button">Go to Your Dashboard</a>
+</p>
+
+<p>If you have any questions or need assistance, please don't hesitate to reply to this email.</p>
+
+<p>Best regards,<br>The {{ site_name }} Team</p>
 {% endblock %}

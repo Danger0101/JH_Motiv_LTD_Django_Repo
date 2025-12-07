@@ -2,45 +2,55 @@
 This partial is rendered via HTMX from accounts.views.profile_bookings_partial
 It displays a list of session bookings (upcoming, past, or canceled)
 {% endcomment %}
-{% if bookings %}
-<div class="history-table-wrapper">
-    <table class="history-table">
-        <thead>
-            <tr>
-                <th>Date & Time</th>
-                <th>Service</th>
-                <th>Coach</th>
-                <th>Status</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for booking in bookings %}
-            <tr>
-                <td>
-                    <div style="font-weight: 500; color: var(--gray-900);">{{ booking.start_datetime|date:"M d, Y" }}</div>
-                    <div style="font-size: 0.75rem; color: var(--gray-500);">{{ booking.start_datetime|time:"H:i" }}</div>
-                </td>
-                <td>{{ booking.enrollment.offering.name }}</td>
-                <td>{{ booking.coach.user.get_full_name }}</td>
-                <td>
-                    <span class="status-pill" style="{% if booking.status == 'confirmed' %}background-color: #d1fae5; color: #065f46; border-color: #bbf7d0;{% elif booking.status == 'cancelled' %}background-color: #f3f4f6; color: #374151; border-color: #e5e7eb;{% else %}background-color: #fef3c7; color: #92400e; border-color: #fde68a;{% endif %}">
-                        {{ booking.get_status_display }}
-                    </span>
-                </td>
-                <td style="text-align: right;">
-                    {% if booking.status == 'confirmed' %}
-                        <a href="{{ booking.meeting_link }}" target="_blank" style="color: #2563eb; font-weight: 600; margin-right: 0.75rem; text-decoration: none;">Join</a>
-                        {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+
+{% if user_bookings_page %}
+    <ul class="list-disc list-inside space-y-2">
+        {% for session in user_bookings_page %}
+            <li>
+                {{ session.start_datetime|date:"M d, H:i" }} 
+                with {{ session.coach.user.get_full_name|default:session.coach.user.username }} 
+                (Status: {{ session.status }})
+                
+                {% if active_tab == 'upcoming' %}
+                    <button hx-get="{% url 'coaching_booking:reschedule_session_form' session.id %}" 
+                            hx-target="#reschedule-form-container-{{ session.id }}"
+                            hx-swap="outerHTML"
+                            class="ml-2 px-3 py-1 text-sm font-medium text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200">
+                        Reschedule
+                    </button>
+                    <button hx-post="{% url 'coaching_booking:cancel_session' session.id %}" 
+                            hx-confirm="Are you sure you want to cancel this session?"
+                            hx-target="#profile-bookings"
+                            hx-swap="innerHTML"
+                            class="ml-2 px-3 py-1 text-sm font-medium text-red-600 bg-red-100 rounded-md hover:bg-red-200">
+                        Cancel
+                    </button>
+                    <div id="reschedule-form-container-{{ session.id }}"></div>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+
+    {# Pagination controls #}
+    <nav class="flex items-center justify-between border-t border-gray-200 px-4 py-3 sm:px-6 mt-4" aria-label="Pagination">
+        <div class="flex flex-1 justify-between sm:justify-end">
+            {% if user_bookings_page.has_previous %}
+                <button hx-get="{% url 'accounts:profile_bookings' %}?tab={{ active_tab }}&page={{ user_bookings_page.previous_page_number }}" 
+                        hx-target="#session-list-container" hx-swap="innerHTML"
+                        class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Previous
+                </button>
+            {% endif %}
+            {% if user_bookings_page.has_next %}
+                <button hx-get="{% url 'accounts:profile_bookings' %}?tab={{ active_tab }}&page={{ user_bookings_page.next_page_number }}" 
+                        hx-target="#session-list-container" hx-swap="innerHTML"
+                        class="ml-3 relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Next
+                </button>
+            {% endif %}
+        </div>
+    </nav>
+
 {% else %}
-<div style="text-align: center; padding: 3rem; background-color: var(--gray-50); border-radius: 0.75rem; border: 1px dashed var(--gray-300);">
-    <p style="color: var(--gray-500); margin-bottom: 1rem;">No upcoming bookings found.</p>
-    <a href="{% url 'coaching_booking:profile_book_session' %}" class="btn-primary" style="display: inline-block; width: auto;">Book a Session</a>
-</div>
+    <p class="text-gray-500 italic">No {{ active_tab }} sessions found.</p>
 {% endif %}

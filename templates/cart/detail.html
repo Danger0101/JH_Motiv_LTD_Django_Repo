@@ -1,31 +1,25 @@
 {% extends 'base.html' %}
-{% load static %}
 
 {% block title %}Checkout{% endblock %}
 
-{% block extra_head %}
-{{ block.super }}
-<link rel="stylesheet" href="{% static 'css/cart.css' %}">
-{% endblock %}
-
 {% block content %}
-<div class="cart-page-wrapper">
-    <div class="cart-container">
+<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 min-h-screen bg-gray-50">
+    <div class="max-w-7xl mx-auto">
         
-        <header class="cart-header">
-            <h1>Checkout</h1>
+        <header class="mb-8 text-center md:text-left">
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-800">Checkout</h1>
         </header>
 
         {% if not cart.items.exists %}
-            <div class="empty-cart">
-                <p style="font-size: 1.25rem; color: var(--gray-600); margin-bottom: 1.5rem;">Your cart is currently empty.</p>
-                <a href="{% url 'products:product_list' %}" class="btn-start-shopping">Start Shopping</a>
+            <div class="text-center py-20 bg-white rounded-xl shadow">
+                <p class="text-xl text-gray-600 mb-6">Your cart is currently empty.</p>
+                <a href="{% url 'products:product_list' %}" class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition">Start Shopping</a>
             </div>
         {% else %}
-            <div class="checkout-grid">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
                 
-                <div class="items-col content-card">
-                    <h2 class="card-title">Order Items</h2>
+                <div class="lg:col-span-7 bg-white rounded-xl shadow-lg p-6 order-2 lg:order-1">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-4">Order Items</h2>
                     
                     <div id="cart-item-list" 
                          hx-trigger="load, cartUpdated from:body" 
@@ -34,56 +28,66 @@
                         {% include 'cart/partials/cart_item_list.html' %}
                     </div>
 
-                    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--gray-100);">
-                        <a href="{% url 'products:product_list' %}" style="color: #2563eb; font-weight: 500; display: flex; align-items: center;">
+                    <div class="mt-6 pt-4 border-t border-gray-100">
+                        <a href="{% url 'products:product_list' %}" class="text-blue-600 hover:text-blue-800 font-medium flex items-center">
                             ← Continue Shopping
                         </a>
                     </div>
                 </div>
 
-                <div class="order-summary-col">
+                <div class="lg:col-span-5 space-y-6 order-1 lg:order-2">
                     
-                    <div class="content-card">
-                        <h2 class="card-title">
-                            <svg class="w-5 h-5 mr-2" style="width: 1.25rem; height: 1.25rem; color: #16a34a;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
                             Shipping Address
                         </h2>
                         
-                        <form id="shipping-form" class="form-stack">
+                        <form id="shipping-form" class="space-y-4">
                             <div>
-                                <label for="name" class="form-label">Full Name</label>
-                                <input type="text" id="name" name="name" required autocomplete="name" class="form-input" placeholder="John Doe">
+                                <label for="name" class="block text-sm font-semibold text-gray-700 mb-1">Full Name</label>
+                                <input type="text" id="name" name="name" required autocomplete="name"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
+                                       placeholder="John Doe">
                             </div>
 
                             <div>
-                                <label for="address1" class="form-label">Address Line 1</label>
-                                <input type="text" id="address1" name="address1" required autocomplete="shipping street-address" class="form-input" placeholder="123 Main St">
+                                <label for="address1" class="block text-sm font-semibold text-gray-700 mb-1">Address Line 1</label>
+                                <input type="text" id="address1" name="address1" required autocomplete="shipping street-address"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition"
+                                       placeholder="123 Main St">
                             </div>
 
                             <div>
-                                <label for="address2" class="form-label">Address Line 2 (Optional)</label>
-                                <input type="text" id="address2" name="address2" autocomplete="shipping address-line2" class="form-input" placeholder="Apt, Suite, etc.">
+                                <label for="address2" class="block text-sm font-semibold text-gray-700 mb-1">Address Line 2 (Optional)</label>
+                                <input type="text" id="address2" name="address2" autocomplete="shipping address-line2"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition"
+                                       placeholder="Apt, Suite, etc.">
                             </div>
                             
-                            <div class="form-row">
+                            <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label for="city" class="form-label">City</label>
-                                    <input type="text" id="city" name="city" required autocomplete="shipping locality" class="form-input">
+                                    <label for="city" class="block text-sm font-semibold text-gray-700 mb-1">City</label>
+                                    <input type="text" id="city" name="city" required autocomplete="shipping locality"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
                                 </div>
                                 <div>
-                                    <label for="state_code" class="form-label">State / Province</label>
-                                    <input type="text" id="state_code" name="state_code" autocomplete="shipping region" class="form-input">
+                                    <label for="state_code" class="block text-sm font-semibold text-gray-700 mb-1">State / Province</label>
+                                    <input type="text" id="state_code" name="state_code" autocomplete="shipping region"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
                                 </div>
                             </div>
 
-                            <div class="form-row">
+                            <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label for="zip" class="form-label">Zip / Postal Code</label>
-                                    <input type="text" id="zip" name="zip" required autocomplete="shipping postal-code" class="form-input">
+                                    <label for="zip" class="block text-sm font-semibold text-gray-700 mb-1">Zip / Postal Code</label>
+                                    <input type="text" id="zip" name="zip" required autocomplete="shipping postal-code"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
                                 </div>
                                 <div>
-                                    <label for="country_code" class="form-label">Country</label>
-                                    <select id="country_code" name="country_code" required autocomplete="shipping country" class="form-select">
+                                    <label for="country_code" class="block text-sm font-semibold text-gray-700 mb-1">Country</label>
+                                    <select id="country_code" name="country_code" required autocomplete="shipping country"
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 bg-white">
                                         <option value="GB">United Kingdom</option>
                                         <option value="US">United States</option>
                                         <option value="CA">Canada</option>
@@ -97,35 +101,38 @@
                                 </div>
                             </div>
 
-                            <button type="button" id="calc-shipping-btn" class="btn-calc">
+                            <button type="button" id="calc-shipping-btn" 
+                                    class="w-full mt-4 bg-gray-800 hover:bg-gray-900 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 flex justify-center items-center">
                                 <span>Calculate Shipping</span>
-                                <div id="calc-spinner" class="hidden ml-2 animate-spin rounded-full h-4 w-4 border-b-2 border-white" style="display: none; width: 1rem; height: 1rem; border-radius: 50%; border: 2px solid white; border-bottom-color: transparent; animation: spin 1s linear infinite; margin-left: 0.5rem;"></div>
+                                <div id="calc-spinner" class="hidden ml-2 animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                             </button>
                         </form>
                     </div>
 
-                    <div class="summary-card">
-                        <h2 class="text-xl font-bold text-gray-800 mb-4" style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">Total</h2>
+                    <div class="bg-gray-50 border border-gray-200 rounded-xl shadow-lg p-6 sticky top-8">
+                        <h2 class="text-xl font-bold text-gray-800 mb-4">Total</h2>
                         
-                        <div style="border-bottom: 1px solid #e5e7eb; padding-bottom: 1rem; margin-bottom: 1rem;">
-                            <div class="summary-row">
+                        <div class="space-y-3 text-gray-600 text-sm mb-4 border-b pb-4">
+                            <div class="flex justify-between">
                                 <span>Subtotal</span>
                                 <span id="summary-subtotal">£{{ summary.subtotal }}</span>
                             </div>
-                            <div class="summary-row">
+                            <div class="flex justify-between">
                                 <span>Shipping</span>
-                                <span id="summary-shipping" style="font-weight: 500; color: #ea580c;">Calculated at next step</span>
+                                <span id="summary-shipping" class="font-medium text-orange-600">Calculated at next step</span>
                             </div>
                         </div>
 
-                        <div class="summary-total">
+                        <div class="flex justify-between text-2xl font-bold text-gray-900 mb-6">
                             <span>Total</span>
                             <span id="summary-total">£{{ summary.subtotal }}</span>
                         </div>
 
-                        <div id="stripe-checkout-container" class="hidden" style="margin-bottom: 1rem;"></div>
+                        <div id="stripe-checkout-container" class="hidden">
+                            </div>
 
-                        <button id="pay-button-placeholder" disabled class="btn-pay">
+                        <button id="pay-button-placeholder" disabled
+                                class="w-full bg-gray-300 text-gray-500 font-bold py-3 rounded-xl cursor-not-allowed">
                             Enter Address to Pay
                         </button>
                     </div>
@@ -135,11 +142,6 @@
         {% endif %}
     </div>
 </div>
-
-<style>
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .hidden { display: none !important; }
-</style>
 
 <script src="https://js.stripe.com/v3/"></script>
 <script>
@@ -151,6 +153,7 @@
         
         const summaryShipping = document.getElementById('summary-shipping');
         const summaryTotal = document.getElementById('summary-total');
+        const subtotalEl = document.getElementById('summary-subtotal');
         
         const payPlaceholder = document.getElementById('pay-button-placeholder');
         const stripeContainer = document.getElementById('stripe-checkout-container');
@@ -158,16 +161,22 @@
         let currentSubtotal = parseFloat("{{ summary.subtotal }}");
         let currentShipping = 0;
 
+        // --- Event Listener: Cart Updated ---
+        // If the user changes quantities via HTMX, we must reset shipping because weight/price changed
         document.body.addEventListener('cartUpdated', function(evt) {
-            summaryShipping.innerHTML = '<span style="color: #ea580c;">Please recalculate</span>';
+            // Reset UI
+            summaryShipping.innerHTML = '<span class="text-orange-600">Please recalculate</span>';
             payPlaceholder.classList.remove('hidden');
-            payPlaceholder.disabled = true;
             stripeContainer.classList.add('hidden');
-            stripeContainer.innerHTML = ''; 
+            stripeContainer.innerHTML = ''; // Unmount Stripe
             calcBtn.classList.remove('hidden');
             calcBtn.innerText = "Recalculate Shipping";
+            
+            // Optionally fetch new subtotal via AJAX if not updated in DOM yet
+            // For simplicity, we assume the user will hit recalculate which fetches fresh data
         });
 
+        // --- Calculate Shipping Logic ---
         calcBtn.addEventListener('click', async () => {
             const form = document.getElementById('shipping-form');
             if(!form.checkValidity()) {
@@ -178,10 +187,12 @@
             const formData = new FormData(form);
             const address = Object.fromEntries(formData);
 
+            // UI Loading State
             calcBtn.disabled = true;
-            calcSpinner.style.display = 'inline-block';
+            calcSpinner.classList.remove('hidden');
 
             try {
+                // 1. Calculate Shipping Cost
                 const shippingResp = await fetch("{% url 'payments:calculate_shipping' %}", {
                     method: "POST",
                     headers: {
@@ -196,10 +207,15 @@
                 if (!shippingResp.ok) throw new Error(shippingData.error || "Shipping calc failed");
 
                 currentShipping = parseFloat(shippingData.shipping_cost);
+                
+                // Update Summary UI
                 summaryShipping.innerText = `£${currentShipping.toFixed(2)}`;
+                // Note: Ideally fetch the fresh subtotal here too, but we use the initial context one
+                // or updated one if you add logic to parse it from the DOM
                 const total = currentSubtotal + currentShipping;
                 summaryTotal.innerText = `£${total.toFixed(2)}`;
 
+                // 2. Create Stripe Session
                 const sessionResp = await fetch("{% url 'payments:create_checkout_session' %}", {
                     method: "POST",
                     headers: {
@@ -212,13 +228,17 @@
                 const sessionData = await sessionResp.json();
 
                 if (sessionData.clientSecret) {
+                    // Hide Placeholder, Show Stripe
                     payPlaceholder.classList.add('hidden');
                     stripeContainer.classList.remove('hidden');
                     
+                    // Initialize Embedded Checkout
                     const checkout = await stripe.initEmbeddedCheckout({
                         clientSecret: sessionData.clientSecret,
                     });
                     checkout.mount('#stripe-checkout-container');
+                    
+                    // Hide calc button to prevent confusion (or change text)
                     calcBtn.innerText = "Update Address";
                 } else {
                     alert("Error initializing payment: " + sessionData.error);
@@ -229,7 +249,7 @@
                 alert("Error: " + error.message);
             } finally {
                 calcBtn.disabled = false;
-                calcSpinner.style.display = 'none';
+                calcSpinner.classList.add('hidden');
             }
         });
     });

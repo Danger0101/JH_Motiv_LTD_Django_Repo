@@ -1,35 +1,17 @@
 {% extends 'base.html' %}
-{% load static %}
-
-{% block title %}{% if form.instance.pk %}Edit Slot{% else %}Add Availability{% endif %}{% endblock %}
-
-{% block extra_head %}
-{{ block.super }}
-<link rel="stylesheet" href="{% static 'css/management.css' %}">
-{% endblock %}
 
 {% block content %}
-<div class="management-container">
-    <div class="manage-form-card">
-        <h1 class="page-title form-title">{% if form.instance.pk %}Edit Availability Slot{% else %}Add Single Availability Slot{% endif %}</h1>
+<div class="container mx-auto p-4">
+    <h1 class="text-3xl font-bold mb-6">Add New Availability Block</h1>
 
-        <form method="post">
+    <div class="bg-white shadow-lg rounded-lg p-6">
+        <form method="post" class="space-y-4">
             {% csrf_token %}
-            {% for field in form %}
-                <div class="form-group">
-                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.errors %}
-                        <div class="form-error">{{ field.errors }}</div>
-                    {% endif %}
-                </div>
-            {% endfor %}
-            
-            <div class="form-actions">
-                <button type="submit" class="btn-action btn-primary-action">Save Slot</button>
-                <a href="{% url 'coaching_availability:availability_list' %}" class="btn-action btn-secondary-action">Cancel</a>
-            </div>
+            {{ form.as_p }}
+            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition duration-300">
+                Save Availability
+            </button>
         </form>
     </div>
 </div>
-{% endblock %}
+{% endblock content %}

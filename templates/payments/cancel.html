@@ -1,28 +1,24 @@
 {% extends 'base.html' %}
-{% load static %}
 
-{% block title %}Payment Cancelled{% endblock %}
-
-{% block extra_head %}
-{{ block.super }}
-<link rel="stylesheet" href="{% static 'css/cart.css' %}">
-{% endblock %}
+{% block title %}Payment Canceled{% endblock %}
 
 {% block content %}
-<div class="cart-page-wrapper">
-    <div class="success-container">
-        <div class="success-card">
-            <h1 class="success-header success-header-error">Payment Cancelled</h1>
-            <p class="success-message">
-                Your payment was not processed. No charges were made.
-            </p>
+<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 min-h-screen bg-gray-50">
+    <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-8 text-center">
+        <svg class="mx-auto h-16 w-16 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <h1 class="mt-4 text-3xl font-extrabold text-gray-800">Payment Canceled</h1>
+        <p class="mt-2 text-lg text-gray-600">Your payment was not processed. You have not been charged.</p>
+        <p class="mt-1 text-gray-600">You can return to your cart to try again or continue shopping.</p>
 
-            <div class="success-actions">
-                <p class="success-prompt">You can try again or continue shopping.</p>
-                <a href="{% url 'cart:cart_detail' %}" class="btn-start-shopping">
-                    Return to Cart
-                </a>
-            </div>
+        <div class="mt-8 flex justify-center space-x-4">
+            <a href="{% url 'cart:cart_detail' %}" class="bg-gray-200 text-gray-800 font-bold py-3 px-6 rounded-lg hover:bg-gray-300 transition duration-300">
+                Return to Cart
+            </a>
+            <a href="{% url 'products:product_list' %}" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
+                Continue Shopping
+            </a>
         </div>
     </div>
 </div>

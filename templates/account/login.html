@@ -4,84 +4,75 @@
 
 {% block title %}Log In{% endblock %}
 
-{% block extra_head %}
-{{ block.super }}
-<link rel="stylesheet" href="{% static 'css/account.css' %}">
-{% endblock %}
-
 {% block content %}
-<div class="auth-page-wrapper">
-    <div class="auth-container" id="login-form-container">
-        <div class="auth-card">
-            <h2 class="auth-title">{% translate "Log In" %}</h2>
+<div class="max-w-md mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div class="p-6 bg-white shadow-lg rounded-lg border" id="login-form-container">
+        <h2 class="text-2xl font-bold mb-6 text-gray-900">{% translate "Log In" %}</h2>
 
-            {% url 'account:login' as login_url %}
+        {% url 'account:login' as login_url %}
+        
+        <form method="post" action="{{ login_url }}" hx-post="{{ login_url }}" hx-target="#login-form-container" hx-swap="outerHTML">
+            {% csrf_token %}
             
-            <form method="post" action="{{ login_url }}" hx-post="{{ login_url }}" hx-target="#login-form-container" hx-swap="outerHTML">
-                {% csrf_token %}
-                
-                {% if form.non_field_errors %}
-                    <div style="padding: 0.75rem; margin-bottom: 1rem; font-size: 0.875rem; color: #b91c1c; background-color: #fee2e2; border-radius: 0.25rem;" role="alert">
-                        {% for error in form.non_field_errors %}
-                            <p>{{ error }}</p>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-
-                {% for field in form %}
-                    {% if field.name != 'remember' %}
-                    <div class="form-group">
-                        <label for="{{ field.id_for_label }}" class="form-label">
-                            {{ field.label }}
-                        </label>
-                        {{ field }} 
-                        {% if field.errors %}
-                            <p style="margin-top: 0.25rem; font-size: 0.75rem; color: #ef4444;">{{ field.errors|striptags }}</p>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                {% endfor %}
-                
-                <div style="text-align: right; margin-bottom: 1rem;">
-                    <a class="auth-link" href="{% url 'account:password_reset' %}" style="font-size: 0.875rem;">
-                        {% translate "Forgot Password?" %}
-                    </a>
+            {% if form.non_field_errors %}
+                <div class="p-3 mb-4 text-sm text-red-700 bg-red-100 rounded" role="alert">
+                    {% for error in form.non_field_errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
                 </div>
-                
-                {% if form.remember %}
-                <div class="form-group" style="display: flex; align-items: center;">
-                    {{ form.remember }}
-                    <label for="{{ form.remember.id_for_label }}" style="margin-left: 0.5rem; font-size: 0.875rem; color: var(--gray-900);">
-                        {% translate "Remember Me" %}
+            {% endif %}
+
+            {% for field in form %}
+                {% if field.name != 'remember' %}
+                <div class="mb-4">
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        {{ field.label }}
                     </label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <p class="mt-1 text-xs text-red-500">{{ field.errors|striptags }}</p>
+                    {% endif %}
                 </div>
                 {% endif %}
-
-                {% if redirect_field_value %}
-                <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
-                {% endif %}
-                
-                <button type="submit" class="btn-primary">
-                    {% translate "Log In" %}
-                </button>
-            </form>
+            {% endfor %}
             
-            {% if ACCOUNT_ALLOW_REGISTRATION %}
-            <div class="auth-links">
-                <p>
-                    {% translate "Don't have an account?" %}
-                    <a href="{% url 'account:signup' %}" class="auth-link">
-                        {% translate "Sign up here" %}
-                    </a>
-                </p>
-                <p style="margin-top: 1rem;">
-                    By logging in, you agree to our
-                    <a href="{% url 'core:terms_of_service' %}" class="auth-link">Terms of Service</a> and
-                    <a href="{% url 'core:privacy_policy' %}" class="auth-link">Privacy Policy</a>.
+            {# RENDER FORGOT PASSWORD LINK HERE #}
+            <div class="text-right mb-4">
+                <a class="text-sm font-medium text-blue-600 hover:text-blue-500" href="{% url 'account:password_reset' %}">
+                    {% translate "Forgot Password?" %}
                 </a>
             </div>
+            
+            {% if form.remember %}
+            <div class="mb-4 flex items-center">
+                {{ form.remember }}
+                <label for="{{ form.remember.id_for_label }}" class="ml-2 block text-sm text-gray-900">
+                    {% translate "Remember Me" %}
+                </label>
+            </div>
             {% endif %}
-        </div>
+
+            {% if redirect_field_value %}
+            <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+            {% endif %}
+            
+            <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                {% translate "Log In" %}
+            </button>
+        </form>
+        
+        {% if ACCOUNT_ALLOW_REGISTRATION %}
+        <p class="mt-4 text-center text-sm text-gray-600">
+            {% translate "Don't have an account?" %}
+            <a href="{% url 'account:signup' %}" class="font-medium text-blue-600 hover:text-blue-500">
+                {% translate "Sign up here" %}
+            </a>
+        <p class="mt-4 text-center text-sm text-gray-600">
+            By logging in, you agree to our
+            <a href="{% url 'core:terms_of_service' %}" class="font-medium text-blue-600 hover:text-blue-500">Terms of Service</a> and
+            <a href="{% url 'core:privacy_policy' %}" class="font-medium text-blue-600 hover:text-blue-500">Privacy Policy</a>.
+        </p>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

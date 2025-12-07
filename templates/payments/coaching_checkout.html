@@ -1,67 +1,85 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Confirm Booking{% endblock %}
-
-{% block extra_head %}
-{{ block.super }}
-<link rel="stylesheet" href="{% static 'css/cart.css' %}">
-{% endblock %}
+{% block title %}Checkout - {{ offering.name }}{% endblock %}
 
 {% block content %}
-<div class="cart-page-wrapper">
-    <div class="cart-container" style="max-width: 36rem;">
-        
-        <header class="cart-header">
-            <h1>Confirm Session</h1>
-        </header>
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="card shadow-sm">
+                <div class="card-body p-4 p-md-5">
+                    <h1 class="h3 font-weight-bold mb-3">Complete Your Enrollment</h1>
+                    <p class="text-muted">You are enrolling in: <strong>{{ offering.name }}</strong></p>
+                    <p class="h4 font-weight-bold mb-4">Price: £{{ offering.price }}</p>
 
-        <div class="content-card">
-            <h2 class="card-title">Session Details</h2>
-            
-            <div style="margin-bottom: 2rem;">
-                <div class="summary-row">
-                    <span style="font-weight: 600;">Coach</span>
-                    <span>{{ coach.user.get_full_name }}</span>
+                    <div id="checkout">
+                        <p class="text-center text-secondary">Loading payment form...</p>
+                        <div id="payment-element" class="mt-4"></div>
+                        
+                        <div id="error-message" class="text-danger mt-3"></div>
+                    </div>
                 </div>
-                <div class="summary-row">
-                    <span style="font-weight: 600;">Date</span>
-                    <span>{{ date_display }}</span>
-                </div>
-                <div class="summary-row">
-                    <span style="font-weight: 600;">Time</span>
-                    <span>{{ time_display }}</span>
-                </div>
-                <div class="summary-row">
-                    <span style="font-weight: 600;">Plan</span>
-                    <span>{{ enrollment.offering.name }}</span>
-                </div>
-                
-                <div style="border-top: 1px solid var(--gray-200); margin-top: 1rem; padding-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-weight: 700; color: var(--gray-900);">Total Cost</span>
-                    <span style="font-weight: 700; color: #16a34a;">1 Credit</span>
-                </div>
-                <p style="text-align: right; font-size: 0.75rem; color: var(--gray-500); margin-top: 0.25rem;">
-                    You will have {{ enrollment.remaining_sessions|add:"-1" }} credits remaining.
-                </p>
-            </div>
-
-            <form action="{% url 'coaching_booking:confirm_booking' %}" method="post">
-                {% csrf_token %}
-                <input type="hidden" name="enrollment_id" value="{{ enrollment.id }}" />
-                <input type="hidden" name="date" value="{{ date_raw }}" />
-                <input type="hidden" name="time" value="{{ time_raw }}" />
-                
-                <button type="submit" class="btn-pay">
-                    Confirm & Book
-                </button>
-            </form>
-
-            <div style="text-align: center; margin-top: 1.5rem;">
-                <a href="{% url 'account:account_profile' %}" style="color: var(--gray-500); font-weight: 500; font-size: 0.875rem;">Cancel</a>
             </div>
         </div>
-
     </div>
 </div>
+
+<script src="https://js.stripe.com/v3/"></script>
+
+<script>
+    // Ensure the offering ID is available for the API call
+    const offeringId = {{ offering.id }}; 
+    
+    // The URL of your Django API view that creates the Stripe Session
+    const apiEndpoint = `{% url 'payments:coaching_checkout_page' offering_id=offering.id %}`;
+    
+    // The public key is passed from your Django view context
+    const stripePublishableKey = "{{ stripe_publishable_key }}";
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const stripe = Stripe(stripePublishableKey);
+        const errorMessageElement = document.getElementById('error-message');
+        const checkoutElement = document.getElementById('checkout');
+
+        try {
+            // 1. Fetch the clientSecret from your Django API view
+            const response = await fetch(apiEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Include CSRF token for the POST request
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value, 
+                },
+                // Send a body, even if empty, to ensure Django reads the request correctly
+                body: JSON.stringify({}) 
+            });
+            const data = await response.json();
+
+            if (data.error) {
+                checkoutElement.innerHTML = `<p class="text-danger">Error: ${data.error}</p>`;
+                return;
+            }
+
+            const clientSecret = data.clientSecret;
+
+            // 2. Initialize and mount the Embedded Checkout form
+            // The return_url is where the user goes after a successful payment
+            const checkout = await stripe.initEmbeddedCheckout({
+                clientSecret,
+                onComplete: () => {
+                    // Optional: You can trigger extra client-side actions here if needed
+                    console.log("Payment complete, redirecting...");
+                }
+            });
+
+            // Replace the full placeholder div with the Stripe form
+            checkout.mount('#checkout'); 
+
+        } catch (e) {
+            errorMessageElement.innerText = 'A critical error occurred: ' + e.message;
+            checkoutElement.innerHTML = `<p class="text-danger">Failed to load payment form.</p>`;
+        }
+    });
+</script>
 {% endblock content %}
