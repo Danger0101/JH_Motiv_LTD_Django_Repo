@@ -125,3 +125,4 @@ venv/
 Thumbs.db
 tailwindcss-4.1.17
 /static/css/styles.css
+staticfiles_backup
