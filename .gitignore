@@ -124,3 +124,4 @@ venv/
 .DS_Store
 Thumbs.db
 tailwindcss-4.1.17
+/static/css/styles.css
