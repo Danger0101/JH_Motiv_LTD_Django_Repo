@@ -16,7 +16,9 @@ urlpatterns = [
     path('profile/coach-clients-partial/', views.coach_clients_partial, name='coach_clients_partial'),
     path('profile/invoice/<int:order_id>/', views.generate_invoice_pdf, name='generate_invoice_pdf'),
     
-
+    # Staff/Admin URLs for the profile dashboard
+    path('staff/customer-lookup/', views.staff_customer_lookup, name='staff_customer_lookup'),
+    path('staff/update-order/<int:order_id>/', views.staff_update_order, name='staff_update_order'),
 
     # allauth urls (explicitly defined for namespacing)
     path('login/', views.CustomLoginView.as_view(), name='login'),
