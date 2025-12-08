@@ -22,9 +22,7 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'jhmotiv-shop-ltd-official-040e4cbd58
 CSRF_TRUSTED_ORIGINS = ['https://jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com', 'https://*.127.0.0.1', 'https://*.localhost', 'https://jhmotiv.shop']
 
 # Application definition
-INSTALLED_APPS = [
-    'cloudinary_storage',
-    
+INSTALLED_APPS = [    
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -37,6 +35,7 @@ INSTALLED_APPS = [
     # Tailwind CSS
     'tailwind',
     'theme',
+    'cloudinary_storage',
     
     # Accounts
     'accounts',
@@ -177,10 +176,11 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
-    os.path.join(BASE_DIR, 'theme', 'static'),  # Add this line
 ]
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
 
 # Define Storages (Django 5.x Standard)
 STORAGES = {
