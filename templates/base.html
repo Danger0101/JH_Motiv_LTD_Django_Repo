@@ -7,13 +7,16 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>{% block title %}JH Motiv LTD{% endblock %}</title>
 
+    <!-- Favicon -->
     <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
 
-    {% comment %} <script src="https://cdn.tailwindcss.com"></script> {% endcomment %}
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <!-- TailwindCSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- HTMX and Alpine.js -->
     <script
       src="https://unpkg.com/htmx.org@1.9.10"
       integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC"
@@ -26,10 +29,15 @@
     ></script>
 
     <style>
-      /* --- START: Retained Alpine.js specific styles --- */
-      /* Alpine.js control flow CSS is kept in HTML for now as per previous solution,
-         but the core layout styles are moved to styles.css */
-
+      /* Flexbox Sticky Footer */
+      body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      .content-wrapper {
+        flex: 1 0 auto;
+      }
       /* Simple transition for Alpine dropdown */
       [x-cloak] {
         display: none !important;
@@ -42,8 +50,6 @@
       .transition-leave-to {
         opacity: 0;
       }
-
-      /* --- END: Retained Alpine.js specific styles --- */
     </style>
         {% block extra_head %}
     <link rel="stylesheet" href="{% static 'css/carousel.css' %}">
@@ -55,10 +61,13 @@
   >
     {% include 'partials/cookie_consent.html' %}
 
+    <!-- Header -->
     {% include 'partials/navbar.html' %}
 
+    <!-- Main Content -->
     <main class="content-wrapper">{% block content %}{% endblock %}</main>
 
+    <!-- Footer -->
     {% include 'partials/footer.html' %} {% unicorn_scripts %}
     {% block extra_scripts %}
       <script src="{% static 'js/carousel.js' %}"></script>
