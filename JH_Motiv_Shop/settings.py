@@ -34,6 +34,10 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.humanize',
     
+    # Tailwind CSS
+    'tailwind',
+    'theme',
+    
     # Accounts
     'accounts',
     
@@ -332,3 +336,11 @@ SOCIALACCOUNT_PROVIDERS = {
         # }
     }
 }
+
+# =======================================================
+# DJANGO-TAILWIND CONFIGURATION
+# =======================================================
+
+TAILWIND_APP_NAME = 'theme'
+TAILWIND_CSS_PATH = 'css/styles.css'
+TAILWIND_CLI_ARGS = ['--minify']
