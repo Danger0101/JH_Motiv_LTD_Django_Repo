@@ -69,7 +69,7 @@ def terms_of_service_page(request):
     # --- HTMX FRAGMENT HANDLING FOR POPUP ---
     if request.headers.get('hx-request'):
         # If HTMX requests this view, render only the content fragment
-        return render(request, 'core/partials/policy_content_fragment.html', {'tos_data': TOS_DATA, 'policy_type': 'tos'})
+        return render(request, 'core/partials/policy_content_fragment.html', {'policy_data': TOS_DATA, 'policy_type': 'tos'})
 
     return render(request, 'core/terms_of_service.html', {'tos_data': TOS_DATA})
 
