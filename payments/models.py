@@ -15,6 +15,7 @@ class Order(models.Model):
     email = models.EmailField(null=True, blank=True)
     guest_order_token = models.UUIDField(unique=True, null=True, blank=True, editable=False)
     printful_order_id = models.CharField(max_length=255, null=True, blank=True)
+    stripe_checkout_id = models.CharField(max_length=255, null=True, blank=True, unique=True, help_text="Stripe Checkout Session ID for idempotency.")
     printful_order_status = models.CharField(max_length=100, null=True, blank=True)
     shipping_data = JSONField(null=True, blank=True)
     total_paid = models.DecimalField(max_digits=10, decimal_places=2)
@@ -88,6 +89,7 @@ class OrderItem(models.Model):
 class CoachingOrder(models.Model):
     enrollment = models.OneToOneField(ClientOfferingEnrollment, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
+    stripe_checkout_id = models.CharField(max_length=255, null=True, blank=True, unique=True, help_text="Stripe Checkout Session ID for idempotency.")
     updated_at = models.DateTimeField(auto_now=True)
 
     # Referral Tracking

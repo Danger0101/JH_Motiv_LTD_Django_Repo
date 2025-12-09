@@ -9,7 +9,7 @@ from django.db import transaction, models # ADDED: models for coach query
 from django.contrib.auth import get_user_model # ADDED: Better way to get User model
 from datetime import timedelta # NEW IMPORT
 from decimal import Decimal
-from cart.utils import get_or_create_cart, get_cart_summary_data
+from cart.utils import get_or_create_cart, get_cart_summary_data, calculate_discount # Import calculate_discount
 from cart.models import Cart
 # NEW/UPDATED IMPORTS
 from coaching_booking.models import ClientOfferingEnrollment 
@@ -19,6 +19,8 @@ from .models import Order, OrderItem, CoachingOrder, Coupon
 from products.models import Product, Variant, StockPool
 from products.printful_service import PrintfulService
 from django.utils import timezone
+from django.views.generic import ListView, View
+from django.db.models import F, Value, CharField # Import F, Value, and CharField for annotations
 from .finance_utils import calculate_coaching_split
 from .shipping_utils import calculate_cart_shipping
 import logging
@@ -203,11 +205,6 @@ def payment_success(request):
     """
     session_id = request.GET.get('session_id')
     cart = get_or_create_cart(request)
-    
-    # Clear coupon from cart after successful payment
-    if cart.coupon:
-        cart.coupon = None
-        cart.save()
 
     # Base context for all paths to prevent KeyErrors in templates.
     context = {
@@ -302,6 +299,14 @@ def stripe_webhook(request):
         session = event['data']['object']
         metadata = session.get('metadata', {})
         product_type = metadata.get('product_type')
+        checkout_session_id = session.id
+
+        # --- IDEMPOTENCY CHECK ---
+        # Check if a CoachingOrder or Order has already been successfully processed for this session
+        if Order.objects.filter(stripe_checkout_id=checkout_session_id).exists() or \
+           CoachingOrder.objects.filter(stripe_checkout_id=checkout_session_id).exists():
+            print(f"Webhook for session {checkout_session_id} already processed. Skipping.")
+            return HttpResponse(status=200)
         
         # --- E-COMMERCE CART HANDLING ---
         if product_type == 'ecommerce_cart':
@@ -321,6 +326,11 @@ def stripe_webhook(request):
                 # Update Order status and total_paid
                 order.status = Order.STATUS_PAID
                 order.total_paid = session.amount_total / 100
+                order.stripe_checkout_id = checkout_session_id # Record the session ID
+
+                # Clear coupon from cart after successful payment (moved from payment_success)
+                if order.coupon and metadata.get('cart_id'):
+                    Cart.objects.filter(id=metadata.get('cart_id')).update(coupon=None)
                 # Update email if it was a guest user and email is now available from Stripe
                 if not order.user and session.get('customer_details', {}).get('email'):
                     # If it's a guest, try to find a user by this email to check for self-referral
@@ -364,7 +374,7 @@ def stripe_webhook(request):
                 order.save()
 
                 # If a coupon was used, create a usage record
-                if order.coupon:
+                if order.coupon: # Check if coupon was applied to the order
                     # --- HANDLE RACE CONDITION ---
                     try:
                         # Lock the coupon row until this transaction is complete
@@ -372,7 +382,7 @@ def stripe_webhook(request):
                         
                         # Re-check usage limit inside the lock
                         if coupon.usage_limit is not None and coupon.usages.count() >= coupon.usage_limit:
-                            logger.warning(f"Coupon {coupon.code} was oversold on Order {order.id}. Payment was processed, but usage limit was exceeded.")
+                            logger.warning(f"Coupon {coupon.code} was oversold on Order {order.id}. Usage limit was exceeded.")
                         
                         from .models import CouponUsage
                         CouponUsage.objects.create(
@@ -530,6 +540,7 @@ def stripe_webhook(request):
                 # Check for Coupon/Referrer in metadata
                 coupon_code = session.metadata.get('coupon_code')
                 referrer = None
+                coupon = None # Initialize coupon to None
                 
                 if coupon_code:
                     try:
@@ -542,8 +553,13 @@ def stripe_webhook(request):
                 coaching_order = CoachingOrder.objects.create(
                     enrollment=enrollment,
                     referrer=referrer,
-                    amount_gross=total_paid_amount
+                    amount_gross=total_paid_amount,
+                    stripe_checkout_id=checkout_session_id # Record the session ID
                 )
+
+                # If a coupon was used, create a usage record for coaching orders
+                if coupon: # 'coupon' variable from above referrer check
+                    Coupon.objects.get(code=coupon_code).usages.create(user=user, email=user.email, order=None) # No direct Order model for coaching
                 
                 # RUN THE SPLIT CALCULATION
                 splits = calculate_coaching_split(total_paid_amount, enrollment.offering, referrer, client=user)

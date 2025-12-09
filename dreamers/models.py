@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from accounts.fields import CustomEncryptedJSONField
+from django.utils.text import slugify
 
 class Dreamer(models.Model):
     # Basic fields for a newsletter subscriber/community member
@@ -18,6 +19,7 @@ class DreamerProfile(models.Model):
     
     # Core Data
     name = models.CharField(max_length=150, help_text="Full Name or Business Name (e.g., Ashley Johnson | Haijahr)")
+    slug = models.SlugField(max_length=150, unique=True, blank=True, help_text="Unique URL-friendly identifier. Auto-generated from name if left blank.")
     story_excerpt = models.TextField(blank=True, help_text="A short paragraph about their journey or dream.")
     
     # Display Control
@@ -47,6 +49,13 @@ class DreamerProfile(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        # Ensure slug is unique before saving
+        # (A more robust solution might handle collisions with a counter)
+        super().save(*args, **kwargs)
 
 class ChannelLink(models.Model):
     """

@@ -1,6 +1,6 @@
 # d:\GitHub\JH_Motiv_LTD_Django_Repo\payments\urls.py
 from django.urls import path
-from . import views
+from .views import MyEarningsView # Import MyEarningsView
 
 app_name = 'payments'
 
@@ -19,4 +19,7 @@ urlpatterns = [
     
     # Corrected URL for creating a coaching checkout session
     path('create-coaching-checkout-session/<int:offering_id>/', views.create_coaching_checkout_session_view, name='create_coaching_checkout_session'),
+
+    # NEW: My Earnings Dashboard
+    path('my-earnings/', MyEarningsView.as_view(), name='my_earnings'),
 ]

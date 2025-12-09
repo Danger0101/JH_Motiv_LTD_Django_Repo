@@ -231,9 +231,8 @@ def cancel_session(request, booking_id):
     
     is_refunded = booking.cancel()
     
-    client_msg = ""
     if is_refunded and booking.enrollment:
-        # Check if there is a related financial order and void commissions if necessary
+        # Check if there is a related financial order
         try:
             order = CoachingOrder.objects.get(enrollment=booking.enrollment)
             
@@ -249,7 +248,9 @@ def cancel_session(request, booking_id):
                 
         except CoachingOrder.DoesNotExist:
             pass # No financial order linked, so nothing to void.
-
+    
+    client_msg = ""
+    if is_refunded and booking.enrollment:
         client_msg = "Your session credit has been successfully restored to your account."
         messages.success(request, "Session canceled successfully. Your credit has been restored.")
     elif not is_refunded:
