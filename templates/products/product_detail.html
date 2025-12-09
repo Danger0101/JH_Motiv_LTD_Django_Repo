@@ -26,6 +26,7 @@
                     selectedVariantId: '{{ first_variant.id|default:'0' }}', 
                     currentPrice: '{{ first_variant.price|floatformat:2|default:'0.00' }}',
                     isInStock: true,
+                    showSuccess: false,
                     
                     // FIX: Using |escapejs to ensure the JSON string is safe for the HTML attribute
                     variantMap: JSON.parse('{{ variant_lookup_json|escapejs }}'),
@@ -55,7 +56,15 @@
                         </span>
                     </div>
 
-                    <form action="{% url 'cart:add_to_cart' 0 %}" method="post" id="add-to-cart-form" class="space-y-8">
+                    <form x-ref="addToCartForm"
+                          method="post"
+                          class="space-y-8"
+                          hx-post="{% url 'cart:add_to_cart' 0 %}"
+                          hx-trigger="submit"
+                          hx-indicator="#add-to-cart-spinner"
+                          @htmx:after-request="if ($event.detail.successful) { showSuccess = true; setTimeout(() => showSuccess = false, 3000); }"
+                          x-on:submit.prevent="const form = $refs.addToCartForm; const variantId = selectedVariantId; if (variantId && variantId !== '0') { form.setAttribute('hx-post', '{% url 'cart:add_to_cart' 0 %}'.replace('0', variantId)); htmx.process(form); form.dispatchEvent(new Event('submit', {bubbles: true})); } else { console.error('Invalid variant ID'); }"
+                          >
                         {% csrf_token %}
                         
                         <div class="space-y-3">
@@ -104,14 +113,20 @@
                             <input type="number" id="quantity-input" name="quantity" value="1" min="1" max="99" class="mt-1 block w-full max-w-xs pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md" aria-label="Product quantity">
                         </div>
 
-                        <button type="submit" 
-                                :disabled="!isInStock || selectedVariantId === '0'" 
-                                :class="{ 'bg-blue-600 hover:bg-blue-700': isInStock && selectedVariantId !== '0', 'bg-gray-400 cursor-not-allowed': !isInStock || selectedVariantId === '0' }"
-                                class="w-full text-white font-bold py-3 px-6 rounded-md transition duration-300 ease-in-out transform hover:-translate-y-0.5" 
-                                aria-label="Add selected product to cart">
-                            <span x-show="isInStock && selectedVariantId !== '0'">Add to Cart</span>
-                            <span x-show="!isInStock || selectedVariantId === '0'">Out of Stock / Invalid Selection</span>
-                        </button>
+                        <div class="relative">
+                            <button type="submit" 
+                                    :disabled="!isInStock || selectedVariantId === '0'" 
+                                    :class="{ 'bg-blue-600 hover:bg-blue-700': isInStock && selectedVariantId !== '0', 'bg-gray-400 cursor-not-allowed': !isInStock || selectedVariantId === '0' }"
+                                    class="w-full text-white font-bold py-3 px-6 rounded-md transition duration-300 ease-in-out transform hover:-translate-y-0.5 flex items-center justify-center" 
+                                    aria-label="Add selected product to cart">
+                                <span id="add-to-cart-spinner" class="htmx-indicator animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></span>
+                                <span x-show="isInStock && selectedVariantId !== '0'">Add to Cart</span>
+                                <span x-show="!isInStock || selectedVariantId === '0'">Out of Stock / Invalid Selection</span>
+                            </button>
+                            <div x-show="showSuccess" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 transform translate-y-0" x-transition:leave-end="opacity-0 transform translate-y-2" class="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-green-500 text-white text-sm px-3 py-1 rounded-full shadow-lg" style="display: none;">
+                                Added to cart!
+                            </div>
+                        </div>
                     </form>
                 </div>
                 {% endwith %}
@@ -122,48 +137,4 @@
     </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const addToCartForm = document.getElementById('add-to-cart-form');
-    const hiddenVariantIdInput = addToCartForm.querySelector('input[name="variant_id"]');
-    const baseUrlInput = document.getElementById('base-url-input');
-
-    function updateFormAction() {
-        const selectedVariantId = hiddenVariantIdInput.value;
-        const baseUrl = baseUrlInput.value;
-
-        // Construct the new URL by replacing the placeholder '0' with the actual variant ID
-        if (selectedVariantId && selectedVariantId !== '0') {
-            // Correctly forms the URL, e.g., /cart/add/123/
-            addToCartForm.action = baseUrl.replace('0', selectedVariantId);
-            return true; // Indicate success
-        }
-        return false; // Indicate failure
-    }
-
-    // Use a MutationObserver to react to changes in the hidden input's value
-    const observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            if (mutation.attributeName === 'value') {
-                updateFormAction();
-            }
-        });
-    });
-
-    observer.observe(hiddenVariantIdInput, {
-        attributes: true // Observe attribute changes
-    });
-
-    // Also, run on form submit for a final check
-    addToCartForm.addEventListener('submit', function(event) {
-        if (!updateFormAction()) {
-            console.error('Invalid variant ID. Halting submission.');
-            event.preventDefault(); // Stop the form from submitting
-        }
-    });
-
-    // Initial setup
-    updateFormAction();
-});
-</script>
 {% endblock %}
