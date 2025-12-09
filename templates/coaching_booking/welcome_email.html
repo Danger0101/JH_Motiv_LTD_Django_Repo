@@ -1,23 +1,16 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Welcome to {{ offering_name }}!</title>
-</head>
-<body style="font-family: sans-serif; line-height: 1.6;">
-    <h2>Welcome Aboard, {{ client_name }}!</h2>
-    
-    <p>Congratulations on enrolling in the <strong>{{ offering_name }}</strong> program!</p>
-    
-    <p>We are thrilled to have you join us and are excited to support you on your journey. You have been assigned to <strong>{{ coach_name }}</strong>, who will be your guide and partner in achieving your goals.</p>
-    
-    <h3>What's Next?</h3>
-    <p>
-        You can now head to your client dashboard to book your first session. Your coach will have their availability updated, so you can find a time that works best for you.
-    </p>
-    
-    <p>If you have any questions before your first session, please don't hesitate to reach out.</p>
-    
-    <p>Best regards,</p>
-    <p>The JH Motiv Team</p>
-</body>
-</html>
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h3>Welcome Aboard, {{ client_name }}!</h3>
+
+<p>Congratulations on enrolling in the <strong>{{ offering_name }}</strong> program!</p>
+
+<p>We are thrilled to have you join us and are excited to support you on your journey. You have been assigned to <strong>{{ coach_name }}</strong>, who will be your guide and partner in achieving your goals.</p>
+
+<h4>What's Next?</h4>
+<p>You can now head to your client dashboard to book your first session. Your coach will have their availability updated, so you can find a time that works best for you.</p>
+
+<p>If you have any questions before your first session, please don't hesitate to reach out.</p>
+
+<p>Best regards,<br>The {{ site_name }} Team</p>
+{% endblock %}

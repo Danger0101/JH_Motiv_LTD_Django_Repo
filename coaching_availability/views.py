@@ -36,8 +36,6 @@ def profile_availability(request):
                 start_time=time(9, 0),  # Default start time
                 end_time=time(17, 0)   # Default end time
             )
-            # For HTMX, re-render the partial
-            return HttpResponseRedirect(request.path) # Redirect to GET to re-render the entire availability block
 
         elif 'delete_slot' in request.POST:
             slot_id = request.POST.get('delete_slot')
@@ -45,8 +43,6 @@ def profile_availability(request):
                 CoachAvailability.objects.filter(pk=slot_id, coach=request.user).delete()
             except CoachAvailability.DoesNotExist:
                 pass # Already deleted or not found
-            # For HTMX, re-render the partial
-            return HttpResponseRedirect(request.path) # Redirect to GET to re-render the entire availability block
 
         else: # Process formset submission for updates/deletions
             queryset = CoachAvailability.objects.filter(coach=request.user).order_by('day_of_week', 'start_time')
@@ -57,8 +53,7 @@ def profile_availability(request):
                     formset.save()
                     # Any new instances added via 'add_slot_for_day' would not be handled here,
                     # as 'extra' is 0 for this formset. New instances are created directly above.
-                # For HTMX, re-render the partial with updated data
-                return HttpResponseRedirect(request.path) # Redirect to GET to re-render the entire availability block
+                # After saving, we fall through to re-render the partial directly
             else:
                 # If formset is invalid, re-render with errors
                 context = {
@@ -69,6 +64,17 @@ def profile_availability(request):
                     'days_of_week': CoachAvailability.DAYS_OF_WEEK,
                 }
                 return render(request, 'accounts/partials/_availability.html', context)
+
+        # For all successful POST actions, re-query and render the partial directly
+        queryset = CoachAvailability.objects.filter(coach=request.user).order_by('day_of_week', 'start_time')
+        weekly_schedule_formset = WeeklyScheduleFormSet(queryset=queryset)
+        context = {
+            'weekly_schedule_formset': weekly_schedule_formset,
+            'vacation_form': CoachVacationForm(),
+            'override_form': DateOverrideForm(),
+            'days_of_week': CoachAvailability.DAYS_OF_WEEK,
+        }
+        return render(request, 'account/partials/_availability.html', context)
 
     # Handle GET requests
     queryset = CoachAvailability.objects.filter(coach=request.user).order_by('day_of_week', 'start_time')

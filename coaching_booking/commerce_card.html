@@ -1,0 +1,31 @@
+{% comment %}
+A reusable card component for commercial items like products or offerings.
+
+Expects the following context variables:
+- image_url: URL for the card's image.
+- image_alt: Alt text for the image.
+- title: The main title of the item.
+- detail_url: The URL to the item's detail page.
+- description: A short description of the item.
+- price_html: The HTML for displaying the price (e.g., "£19.99" or "From £10.00").
+- cta_text: The text for the call-to-action button (e.g., "View Details").
+{% endcomment %}
+<div class="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col group h-full">
+    <a href="{{ detail_url }}" class="block" aria-label="View details for {{ title }}">
+        {% if image_url %}
+            <img src="{{ image_url }}" alt="{{ image_alt }}" class="h-56 w-full object-cover group-hover:opacity-80 transition-opacity duration-300 bg-gray-200" loading="lazy" decoding="async">
+        {% else %}
+            <div class="h-56 w-full bg-gray-200 flex items-center justify-center">
+                <span class="text-gray-500">No image</span>
+            </div>
+        {% endif %}
+    </a>
+    <div class="p-4 flex flex-col flex-grow">
+        <h3 class="text-xl font-semibold text-gray-800 mb-2"><a href="{{ detail_url }}" class="hover:text-blue-600">{{ title }}</a></h3>
+        <p class="text-gray-600 text-sm mb-4 flex-grow">{{ description|truncatewords:20 }}</p>
+        <div class="mt-auto flex items-center justify-between">
+            <p class="text-lg font-bold text-gray-900">{{ price_html|safe }}</p>
+            <a href="{{ detail_url }}" class="bg-gray-800 text-white text-sm font-bold py-2 px-4 rounded-md hover:bg-gray-900 transition duration-300">{{ cta_text }}</a>
+        </div>
+    </div>
+</div>

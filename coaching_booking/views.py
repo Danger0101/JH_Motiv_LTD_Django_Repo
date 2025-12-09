@@ -421,6 +421,7 @@ def profile_book_session_partial(request):
     ).select_related('coach__user')
 
     coaches = CoachProfile.objects.filter(
+        # Only show coaches who are available for booking
         user__is_active=True,
         is_available_for_new_clients=True
     ).select_related('user')
@@ -428,6 +429,7 @@ def profile_book_session_partial(request):
     today = timezone.now().date()
 
     context = {
+        # This partial is used for booking, so it's part of the 'book' tab
         'user_offerings': user_offerings,
         'free_offers': free_offers,
         'coaches': coaches,
