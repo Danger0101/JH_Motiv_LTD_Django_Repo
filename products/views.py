@@ -39,15 +39,14 @@ class ProductListView(ListView):
 
     def render_to_response(self, context, **response_kwargs):
         if self.request.htmx:
-            # Add a small delay in development to see the spinner
             if settings.DEBUG:
                 time.sleep(0.5)
-            # For HTMX requests, render only the partial
-            return super().render_to_response(
-                context, template_name='products/partials/product_list_partial.html', **response_kwargs
-            )
-        # For regular requests, render the full page
-        return super().render_to_response(context, template_name=self.get_template_names(), **response_kwargs)
+            
+            # Switch the template to the partial for HTMX requests
+            self.template_name = 'products/partials/product_list_partial.html'
+            
+        # Call super() which will use self.template_name internally
+        return super().render_to_response(context, **response_kwargs)
 
 # ----------------------------------------------------------------------
 
