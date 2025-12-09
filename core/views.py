@@ -51,11 +51,11 @@ def about_page(request):
 
 def faqs_page(request): 
     """Renders the FAQ page with structured data for Alpine.js tabs/accordions."""
-    context = {'faq_data': FAQ_DATA}
+    context = {'faq_items': FAQ_DATA.get('retail', [])} # Default to retail
     
     # For an HTMX request, render only the content partial.
     if request.htmx:
-        return render(request, 'core/partials/faq_content.html', context)
+        return render(request, 'core/partials/faq_tab_content.html', context)
     
     return render(request, 'core/faqs.html', context)
 

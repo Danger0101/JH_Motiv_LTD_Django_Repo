@@ -11,6 +11,6 @@
         <p class="mt-4 text-lg text-gray-500">Can't find the answer you're looking for? Reach out to our support team.</p>
     </div>
 
-    {% include "core/partials/faq_content.html" %}
+    {% include "core/partials/faq_content.html" with faq_items=faq_items %}
 </div>
 {% endblock %}

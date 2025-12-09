@@ -50,10 +50,12 @@ except ImportError:
     
 try:
     from payments.models import Order, CoachingOrder, OrderItem
+    from payments.models import Coupon
 except ImportError:
     Order = None
     CoachingOrder = None
     OrderItem = None
+    Coupon = None
 # ------------------------
 
 from coaching_availability.utils import get_coach_available_slots 
