@@ -35,7 +35,7 @@
     {% if products %}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {% for product in products %}
-                {% with image_url=product.featured_image.url|default:'' image_alt=product.name title=product.name detail_url=product.get_absolute_url description=product.description price_html="£"|add:product.get_price_range.min_price|floatformat:2 cta_text="View Details" %}
+                {% with image_url=product.featured_image.url|default:'' image_alt=product.name title=product.name detail_url=product.get_absolute_url description=product.description price_html="From £"|add:product.get_price_range.min_price|floatformat:2 cta_text="View Details" %}
                     {% include "components/cards/commerce_card.html" %}
                 {% endwith %}
             {% endfor %}

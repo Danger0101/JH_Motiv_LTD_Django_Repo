@@ -428,6 +428,9 @@ def profile_book_session_partial(request):
     
     today = timezone.now().date()
 
+    # Add an empty div for HTMX error swapping
+    # <div id="booking-errors"></div>
+
     context = {
         # This partial is used for booking, so it's part of the 'book' tab
         'user_offerings': user_offerings,
@@ -440,6 +443,63 @@ def profile_book_session_partial(request):
         'selected_free_offer_id': '',
     }
     return render(request, 'coaching_booking/profile_book_session.html', context)
+
+@login_required
+@require_POST
+def coach_approve_free_session(request):
+    offer_id = request.POST.get('offer_id')
+    coach_user = request.user
+
+    try:
+        coach_profile = CoachProfile.objects.get(user=coach_user)
+    except CoachProfile.DoesNotExist:
+        messages.error(request, "You are not recognized as a coach.")
+        return HttpResponse(status=403)
+
+    try:
+        free_offer = get_object_or_404(OneSessionFreeOffer, id=offer_id)
+
+        if free_offer.coach != coach_profile:
+            messages.error(request, "You are not authorized to approve this offer.")
+            return HttpResponse(status=403)
+
+        if free_offer.is_approved:
+            messages.info(request, "This offer has already been approved.")
+            return HttpResponse(status=200)
+            
+        if free_offer.is_redeemed:
+            messages.info(request, "This offer has already been redeemed.")
+            return HttpResponse(status=200)
+
+        free_offer.is_approved = True
+        free_offer.save()
+
+        client_context = {
+            'client': free_offer.client,
+            'coach': coach_profile,
+            'offer': free_offer,
+            'dashboard_url': request.build_absolute_uri(reverse('accounts:account_profile'))
+        }
+        send_transactional_email(
+            recipient_email=free_offer.client.email,
+            subject=f"Your Free Session with {coach_profile.user.get_full_name()} is Approved!",
+            template_name='emails/client_free_session_approved.html',
+            context=client_context
+        )
+        
+        messages.success(request, f"Free session offer for {free_offer.client.get_full_name()} approved.")
+        response = HttpResponse(status=200)
+        response['HX-Trigger'] = 'refreshProfile'
+        return response
+
+    except OneSessionFreeOffer.DoesNotExist:
+        messages.error(request, "Free session offer not found.")
+    except Exception as e:
+        messages.error(request, f"An error occurred: {e}")
+    
+    response = HttpResponse(status=400)
+    response['HX-Trigger'] = 'refreshProfile'
+    return response
 
 @login_required
 @require_POST

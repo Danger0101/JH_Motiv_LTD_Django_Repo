@@ -37,13 +37,6 @@ def profile_availability(request):
                 end_time=time(17, 0)   # Default end time
             )
 
-        elif 'delete_slot' in request.POST:
-            slot_id = request.POST.get('delete_slot')
-            try:
-                CoachAvailability.objects.filter(pk=slot_id, coach=request.user).delete()
-            except CoachAvailability.DoesNotExist:
-                pass # Already deleted or not found
-
         else: # Process formset submission for updates/deletions
             queryset = CoachAvailability.objects.filter(coach=request.user).order_by('day_of_week', 'start_time')
             formset = WeeklyScheduleFormSet(request.POST, queryset=queryset)
@@ -51,8 +44,6 @@ def profile_availability(request):
                 with transaction.atomic():
                     # Save existing instances and handle deletions
                     formset.save()
-                    # Any new instances added via 'add_slot_for_day' would not be handled here,
-                    # as 'extra' is 0 for this formset. New instances are created directly above.
                 # After saving, we fall through to re-render the partial directly
             else:
                 # If formset is invalid, re-render with errors
