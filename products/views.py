@@ -21,7 +21,7 @@ class ProductListView(ListView):
     context_object_name = 'products'
     
     def get_queryset(self):
-        queryset = Product.objects.all().order_by('-created_at')
+        queryset = Product.objects.filter(is_active=True).order_by('-created_at')
         search_query = self.request.GET.get('q', '')
         if search_query:
             queryset = queryset.filter(name__icontains=search_query)
@@ -47,7 +47,7 @@ class ProductListView(ListView):
                 context, template_name='products/partials/product_list_partial.html', **response_kwargs
             )
         # For regular requests, render the full page
-        return super().render_to_response(context, **response_kwargs)
+        return super().render_to_response(context, template_name=self.get_template_names(), **response_kwargs)
 
 # ----------------------------------------------------------------------
 
