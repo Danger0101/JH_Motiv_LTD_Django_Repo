@@ -1,0 +1,5 @@
+<div x-data="{ openItem: null }" role="presentation">
+    {% with items=faq_items %}
+        {% include "core/partials/faq_accordion.html" %}
+    {% endwith %}
+</div>

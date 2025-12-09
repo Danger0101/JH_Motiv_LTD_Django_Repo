@@ -1,42 +1,35 @@
-<div x-data="{ activeTab: 'retail' }" class="mt-12">
+<div class="mt-12">
     <div class="flex justify-center border-b border-gray-200" role="tablist" aria-label="FAQ Categories">
-        <button 
-            @click="activeTab = 'retail'"
-            :class="{ 'border-blue-500 text-blue-600': activeTab === 'retail', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'retail' }"
-            class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm focus:outline-none"
+        <a href="{% url 'core:faq_tab' 'retail' %}"
+            class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm focus:outline-none hx-active:border-blue-500 hx-active:text-blue-600 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             id="retail-tab"
             role="tab"
             aria-controls="retail-panel"
-            :aria-selected="activeTab === 'retail'"
+            hx-get="{% url 'core:faq_tab' 'retail' %}"
+            hx-target="#faq-tab-content"
+            hx-swap="innerHTML"
+            hx-push-url="true"
         >
             Retail & Products
-        </button>
-        <button 
-            @click="activeTab = 'coaching'"
-            :class="{ 'border-blue-500 text-blue-600': activeTab === 'coaching', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'coaching' }"
-            class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm focus:outline-none"
+        </a>
+        <a href="{% url 'core:faq_tab' 'coaching' %}"
+            class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm focus:outline-none hx-active:border-blue-500 hx-active:text-blue-600 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             id="coaching-tab"
             role="tab"
             aria-controls="coaching-panel"
-            :aria-selected="activeTab === 'coaching'"
+            hx-get="{% url 'core:faq_tab' 'coaching' %}"
+            hx-target="#faq-tab-content"
+            hx-swap="innerHTML"
+            hx-push-url="true"
         >
             Coaching Services
-        </button>
+        </a>
     </div>
 
     <div class="mt-8">
-        <div x-data="{ openItem: null }" role="presentation">
-            <div x-show="activeTab === 'retail'" role="tabpanel" id="retail-panel" aria-labelledby="retail-tab" x-cloak>
-                {% with category='retail' items=faq_data.retail %}
-                    {% include "core/partials/faq_accordion.html" %}
-                {% endwith %}
-            </div>
-
-            <div x-show="activeTab === 'coaching'" role="tabpanel" id="coaching-panel" aria-labelledby="coaching-tab" x-cloak>
-                {% with category='coaching' items=faq_data.coaching %}
-                    {% include "core/partials/faq_accordion.html" %}
-                {% endwith %}
-            </div>
+        <div id="faq-tab-content">
+            {# Initial content is loaded here by the main FAQ view #}
+            {% include "core/partials/faq_tab_content.html" with faq_items=faq_items %}
         </div>
     </div>
 </div>
