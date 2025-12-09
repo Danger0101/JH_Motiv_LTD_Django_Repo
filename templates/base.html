@@ -7,6 +7,10 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>{% block title %}JH Motiv LTD{% endblock %}</title>
 
+    <!-- Social Media Meta Tags (Open Graph) -->
+    <meta property="og:title" content="{% block og_title %}JH Motiv LTD{% endblock %}" />
+    <meta property="og:image" content="{% block og_image %}{% static 'images/default-share.jpg' %}{% endblock %}" />
+
     <!-- Favicon -->
     <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
 
