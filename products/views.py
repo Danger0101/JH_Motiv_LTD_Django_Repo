@@ -21,7 +21,7 @@ class ProductListView(ListView):
     context_object_name = 'products'
     
     def get_queryset(self):
-        queryset = Product.objects.filter(is_active=True).order_by('-created_at')
+        queryset = Product.objects.all().order_by('-created_at')
         search_query = self.request.GET.get('q', '')
         if search_query:
             queryset = queryset.filter(name__icontains=search_query)
