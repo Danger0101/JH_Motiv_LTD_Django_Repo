@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal  # <--- ADDED THIS IMPORT
 from django.db import models
 from django.db.models import JSONField
 from django.contrib.auth import get_user_model
@@ -181,7 +182,6 @@ class Coupon(models.Model):
 
     def is_valid(self, user=None, cart_value=Decimal('0.00')):
         from django.utils import timezone
-        from .models import Order # Local import to avoid circular dependency
         now = timezone.now()
         if not self.active or not (self.valid_from <= now <= self.valid_to):
             return False, "This coupon is not active or has expired."
