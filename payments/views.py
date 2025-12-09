@@ -178,8 +178,8 @@ def create_checkout_session(request):
 
             checkout_session = stripe.checkout.Session.create(**session_params)
             return JsonResponse({'clientSecret': checkout_session.client_secret})
-    except Exception as e:
-        print(f"Error creating Stripe checkout session: {e}")
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error creating checkout session: {e}", exc_info=True)
         return JsonResponse({'error': str(e)}, status=500)
 
 
@@ -266,8 +266,8 @@ def payment_success(request):
 
     except stripe.InvalidRequestError:
         return HttpResponse("Invalid or expired payment session.", status=400)
-    except Exception as e:
-        print(f"Error in payment_success view: {e}")
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error in payment_success view: {e}", exc_info=True)
         return HttpResponse("An error occurred while confirming your payment.", status=500)
 
 def order_detail_guest(request, guest_order_token):
@@ -312,7 +312,7 @@ def stripe_webhook(request):
         if product_type == 'ecommerce_cart':
             order_id = metadata.get('order_id')
             if not order_id:
-                print("FATAL ERROR in E-commerce Webhook: order_id not found in metadata.")
+                logger.error("FATAL ERROR in E-commerce Webhook: order_id not found in metadata.")
                 return HttpResponse("Missing order_id in metadata", status=400)
             
             try:
@@ -320,7 +320,7 @@ def stripe_webhook(request):
 
                 # Prevent reprocessing
                 if order.status != Order.STATUS_PENDING:
-                    print(f"Webhook for order {order_id} already processed. Status: {order.status}")
+                    logger.info(f"Webhook for order {order_id} already processed. Status: {order.status}")
                     return HttpResponse(status=200)
                 
                 # Update Order status and total_paid
@@ -415,13 +415,13 @@ def stripe_webhook(request):
                                 if pool.available_stock >= item.quantity:
                                     pool.available_stock -= item.quantity
                                     pool.save()
-                                    print(f"Stock deducted: {item.quantity} from {pool.name}")
+                                    logger.info(f"Stock deducted: {item.quantity} from {pool.name}")
                                 else:
-                                    print(f"CRITICAL: Oversold {pool.name}. Had {pool.available_stock}, sold {item.quantity}.")
+                                    logger.critical(f"Oversold {pool.name}. Had {pool.available_stock}, sold {item.quantity}.")
                                     pool.available_stock = 0
                                     pool.save()
                         except StockPool.DoesNotExist:
-                            print(f"Error: StockPool not found for variant {item.variant.id}")
+                            logger.error(f"Error: StockPool not found for variant {item.variant.id}")
 
                 # Clear the user's cart now that the order is complete
                 cart_id_from_metadata = metadata.get('cart_id')
@@ -431,11 +431,11 @@ def stripe_webhook(request):
                         # This preserves the cart for logged-in users.
                         original_cart = Cart.objects.get(id=cart_id_from_metadata)
                         original_cart.items.all().delete()
-                        print(f"Cart {cart_id_from_metadata} cleared after order {order_id} completion.")
+                        logger.info(f"Cart {cart_id_from_metadata} cleared after order {order_id} completion.")
                     except Cart.DoesNotExist:
-                        print(f"WARNING: Original cart {cart_id_from_metadata} not found during webhook processing.")
+                        logger.warning(f"Original cart {cart_id_from_metadata} not found during webhook processing.")
                 else:
-                    print(f"WARNING: No cart_id found in metadata for order {order_id}. Cannot clear original cart.")
+                    logger.warning(f"No cart_id found in metadata for order {order.id}. Cannot clear original cart.")
 
 
                 # Handle Printful Fulfillment
@@ -461,14 +461,14 @@ def stripe_webhook(request):
                             order.printful_order_id = response['result']['id']
                             order.printful_order_status = response['result']['status']
                             order.save()
-                        else:
-                            print(f"Printful Auto-Sync Failed: {response}")
+                        else: # Log Printful API errors
+                            logger.error(f"Printful Auto-Sync Failed for order {order.id}: {response}")
                             order.printful_order_status = 'failed_auto_sync'
                             order.save()
                     else:
                         order.printful_order_status = 'pending_approval'
                         order.save()
-                        print(f"Order #{order.id} queued for manual Printful approval.")
+                        logger.info(f"Order #{order.id} queued for manual Printful approval.")
 
                 # Send Confirmation Emails
                 try:
@@ -496,7 +496,7 @@ def stripe_webhook(request):
                         template_name='emails/order_confirmation.html',
                         context=email_context
                     )
-                    print(f"SUCCESS: Order confirmation email sent to {customer_email} for order {order.id}")
+                    logger.info(f"Order confirmation email sent to {customer_email} for order {order.id}")
 
                     send_transactional_email(
                         recipient_email=customer_email,
@@ -504,16 +504,16 @@ def stripe_webhook(request):
                         template_name='emails/payment_receipt.html',
                         context=email_context
                     )
-                    print(f"SUCCESS: Payment receipt email sent to {customer_email} for order {order.id}")
-
+                    logger.info(f"Payment receipt email sent to {customer_email} for order {order.id}")
+                
                 except Exception as email_error:
-                    print(f"CRITICAL: Order {order.id} updated but failed to send email. Error: {email_error}")
+                    logger.critical(f"Order {order.id} updated but failed to send email. Error: {email_error}", exc_info=True)
 
             except Order.DoesNotExist:
-                print(f"FATAL ERROR in E-commerce Webhook: Order matching ID {order_id} does not exist.")
+                logger.error(f"FATAL ERROR in E-commerce Webhook: Order matching ID {order_id} does not exist.")
                 return HttpResponse("Order not found", status=400)
             except Exception as e:
-                print(f"FATAL ERROR in E-commerce Webhook processing Order {order_id}: {e}")
+                logger.error(f"FATAL ERROR in E-commerce Webhook processing Order {order_id}: {e}", exc_info=True)
                 return HttpResponse("Webhook processing error", status=500)
 
         # --- COACHING HANDLING (Keep existing) ---
@@ -637,7 +637,8 @@ def create_coaching_checkout_session_view(request, offering_id):
             )
             
             return JsonResponse({'clientSecret': checkout_session.client_secret})
-        except Exception as e:
+        except stripe.error.StripeError as e:
+            logger.error(f"Stripe error creating coaching checkout session: {e}", exc_info=True)
             return JsonResponse({'error': str(e)}, status=500)
 
     # This view should only handle POST requests for creating the session
