@@ -98,6 +98,12 @@ class CoachProfile(models.Model):
         default=True,
         help_text="Allows staff to quickly block new enrollments to this coach."
     )
+    
+    # Secure Payment Info
+    payout_details = CustomEncryptedJSONField(
+        blank=True, null=True,
+        help_text="Encrypted JSON: {'bank_name': '...', 'sort_code': '...', 'account_number': '...'}"
+    )
 
     def __str__(self):
         return f"Profile for {self.user.get_full_name()}"

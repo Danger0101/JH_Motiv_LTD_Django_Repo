@@ -15,6 +15,7 @@ from django.views.decorators.http import require_POST
 from django.http import HttpResponse
 
 from core.email_utils import send_transactional_email
+from payments.models import CoachingOrder
 from .models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer
 from accounts.models import CoachProfile
 from coaching_availability.utils import get_coach_available_slots
@@ -230,16 +231,33 @@ def cancel_session(request, booking_id):
     
     is_refunded = booking.cancel()
     
-    if is_refunded:
+    client_msg = ""
+    if is_refunded and booking.enrollment:
+        # Check if there is a related financial order and void commissions if necessary
+        try:
+            order = CoachingOrder.objects.get(enrollment=booking.enrollment)
+            
+            # AUTOMATICALLY VOID COMMISSIONS
+            if order.payout_status == 'unpaid':
+                order.payout_status = 'void'
+                order.save()
+                logger.info(f"Commissions for Order {order.id} VOIDED due to session cancellation.")
+            elif order.payout_status == 'paid':
+                # CRITICAL ALERT: You already paid the coach, but the client got a refund!
+                # You need to manually claw this back from future earnings.
+                logger.warning(f"ALERT: Refund issued for PAID Order {order.id}. Manual clawback required.")
+                
+        except CoachingOrder.DoesNotExist:
+            pass # No financial order linked, so nothing to void.
+
         client_msg = "Your session credit has been successfully restored to your account."
         messages.success(request, "Session canceled successfully. Your credit has been restored.")
-    else:
-        client_msg = "Your session was canceled. Because this was within 24 hours of the start time, the session credit was forfeited per our Terms of Service."
+    elif not is_refunded:
+        client_msg = "Your session was canceled. As this was within 24 hours of the start time, the session credit was forfeited per our Terms of Service."
         messages.warning(request, "Session canceled. The credit was forfeited due to late cancellation.")
 
     try:
         dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
-        
         send_transactional_email(
             recipient_email=client.email,
             subject="Your Coaching Session Has Been Canceled",

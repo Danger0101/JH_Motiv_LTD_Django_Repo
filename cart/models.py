@@ -15,6 +15,7 @@ class Cart(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='open')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    abandoned_cart_sent = models.BooleanField(default=False, help_text="True if an abandoned cart reminder has been sent for this cart.")
     coupon = models.ForeignKey(Coupon, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):

@@ -1,4 +1,6 @@
 from django.db import models
+from django.conf import settings
+from accounts.fields import CustomEncryptedJSONField
 
 class Dreamer(models.Model):
     # Basic fields for a newsletter subscriber/community member
@@ -21,6 +23,22 @@ class DreamerProfile(models.Model):
     # Display Control
     is_featured = models.BooleanField(default=False, help_text="Check to feature this dreamer prominently.")
     order = models.PositiveIntegerField(default=0, help_text="Manual ordering for display on the site.")
+
+    # NEW: Link to the User for login/dashboard access
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='dreamer_profile',
+        help_text="Link this profile to a user account to enable the Affiliate Dashboard."
+    )
+
+    # Secure Payment Info
+    payout_details = CustomEncryptedJSONField(
+        blank=True, null=True,
+        help_text="Encrypted JSON: {'bank_name': '...', 'sort_code': '...', 'account_number': '...'}"
+    )
 
     class Meta:
         ordering = ['order', 'name']

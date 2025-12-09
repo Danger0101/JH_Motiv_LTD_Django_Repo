@@ -87,12 +87,34 @@ class OrderItem(models.Model):
 
 class CoachingOrder(models.Model):
     enrollment = models.OneToOneField(ClientOfferingEnrollment, on_delete=models.CASCADE)
-    total_paid = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Referral Tracking
+    referrer = models.ForeignKey(
+        DreamerProfile, on_delete=models.SET_NULL, null=True, blank=True,
+        help_text="The Dreamer who referred this sale."
+    )
+    
+    # The Financial Split (Recorded at time of purchase)
+    amount_gross = models.DecimalField(max_digits=10, decimal_places=2, help_text="Total paid by client")
+    amount_coach = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Owed to Coach")
+    amount_referrer = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Owed to Dreamer")
+    amount_company = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Retained by JH Motiv")
+    
+    # Status
+    payout_status = models.CharField(
+        max_length=20, 
+        choices=[('unpaid', 'Unpaid'), ('paid', 'Paid'), ('void', 'Void')], 
+        default='unpaid'
+    )
+
     def __str__(self):
         return f"Coaching Order for {self.enrollment.client.get_full_name()}"
+    
+    @property
+    def total_paid(self):
+        return self.amount_gross
 
 class CoachingOrderItem(models.Model):
     order = models.ForeignKey(CoachingOrder, related_name='items', on_delete=models.CASCADE)
@@ -190,6 +212,16 @@ class Coupon(models.Model):
         elif self.discount_type == self.DISCOUNT_TYPE_FIXED:
             return f"£{self.discount_value} off"
         return "Discount"
+
+    def get_qr_code_url(self):
+        """
+        Returns a URL to a dynamically generated QR code for this coupon.
+        Uses a free and simple QR code API.
+        Format: Scans to https://jhmotiv.shop/?coupon=CODE
+        """
+        # Note: Ensure your frontend can handle the '?coupon=CODE' query parameter.
+        target_url = f"https://jhmotiv.shop/?coupon={self.code}"
+        return f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={target_url}"
 
 
 class CouponUsage(models.Model):

@@ -73,6 +73,22 @@ class Offering(models.Model):
         blank=True, 
         related_name='offerings_updated'
     )
+    
+    # Financial Rules
+    coach_revenue_share = models.DecimalField(
+        max_digits=5, decimal_places=2, default=70.00, 
+        help_text="Percentage of the final sale price that goes to the Coach (e.g. 70.00)."
+    )
+    referral_commission_type = models.CharField(
+        max_length=10, 
+        choices=[('percent', 'Percent'), ('fixed', 'Fixed Amount')],
+        default='percent'
+    )
+    referral_commission_value = models.DecimalField(
+        max_digits=10, decimal_places=2, default=10.00,
+        help_text="Finder's fee for the Dreamer/Affiliate (e.g. 10% or £50)."
+    )
+
 
     class Meta:
         ordering = ['name']

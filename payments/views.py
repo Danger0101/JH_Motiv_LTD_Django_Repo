@@ -15,10 +15,11 @@ from cart.models import Cart
 from coaching_booking.models import ClientOfferingEnrollment 
 from coaching_core.models import Offering
 from accounts.models import CoachProfile
-from .models import Order, OrderItem, CoachingOrder
+from .models import Order, OrderItem, CoachingOrder, Coupon
 from products.models import Product, Variant, StockPool
 from products.printful_service import PrintfulService
 from django.utils import timezone
+from .finance_utils import calculate_coaching_split
 from .shipping_utils import calculate_cart_shipping
 import logging
 import json
@@ -154,6 +155,7 @@ def create_checkout_session(request):
                     'guest_order_token': guest_order_token if guest_order_token else '',
                     'shipping_address_json': json.dumps(address_data) if address_data else '',
                     'cart_id': cart.id, # Pass cart_id for later cleanup
+                    'coupon_code': coupon.code if coupon else '', # Pass coupon code for webhook logic
                 }
             }
 
@@ -321,6 +323,22 @@ def stripe_webhook(request):
                 order.total_paid = session.amount_total / 100
                 # Update email if it was a guest user and email is now available from Stripe
                 if not order.user and session.get('customer_details', {}).get('email'):
+                    # If it's a guest, try to find a user by this email to check for self-referral
+                    try:
+                        potential_user = User.objects.get(email=session.get('customer_details', {}).get('email'))
+                        # If a coupon was used, check if this user is the referrer
+                        coupon_code = metadata.get('coupon_code')
+                        if coupon_code:
+                            try:
+                                coupon = Coupon.objects.get(code=coupon_code)
+                                if coupon.affiliate_dreamer and coupon.affiliate_dreamer.user == potential_user:
+                                    # This is a self-referral by a guest who has an account
+                                    # We can log this, but the main logic is in finance_utils
+                                    logger.info(f"Potential self-referral detected for guest order {order.id} with email {potential_user.email}")
+                            except Coupon.DoesNotExist:
+                                pass
+                    except User.DoesNotExist:
+                        pass # It's a true guest
                     order.email = session.get('customer_details', {}).get('email')
 
                 # Update shipping_data if it wasn't present before or if Stripe has more complete data
@@ -490,7 +508,58 @@ def stripe_webhook(request):
 
         # --- COACHING HANDLING (Keep existing) ---
         elif product_type == 'coaching_offering':
-             pass # (Paste your existing coaching logic here)
+            user_id = metadata.get('user_id')
+            offering_id = metadata.get('offering_id')
+            coach_id = metadata.get('coach_id')
+            total_paid_amount = Decimal(session.amount_total) / Decimal('100')
+
+            try:
+                user = User.objects.get(id=user_id)
+                offering = Offering.objects.get(id=offering_id)
+                coach = CoachProfile.objects.get(id=coach_id)
+
+                # Create the enrollment record
+                enrollment = ClientOfferingEnrollment.objects.create(
+                    client=user,
+                    offering=offering,
+                    coach=coach,
+                    remaining_sessions=offering.total_number_of_sessions,
+                    is_active=True
+                )
+
+                # Check for Coupon/Referrer in metadata
+                coupon_code = session.metadata.get('coupon_code')
+                referrer = None
+                
+                if coupon_code:
+                    try:
+                        coupon = Coupon.objects.get(code=coupon_code)
+                        referrer = coupon.affiliate_dreamer # From our previous design
+                    except Coupon.DoesNotExist:
+                        pass
+
+                # Create the CoachingOrder
+                coaching_order = CoachingOrder.objects.create(
+                    enrollment=enrollment,
+                    referrer=referrer,
+                    amount_gross=total_paid_amount
+                )
+                
+                # RUN THE SPLIT CALCULATION
+                splits = calculate_coaching_split(total_paid_amount, enrollment.offering, referrer, client=user)
+                
+                # Save the splits
+                coaching_order.amount_coach = splits['coach']
+                coaching_order.amount_referrer = splits['referrer']
+                coaching_order.amount_company = splits['company']
+                coaching_order.save()
+
+            except (User.DoesNotExist, Offering.DoesNotExist, CoachProfile.DoesNotExist) as e:
+                logger.error(f"FATAL ERROR in Coaching Webhook: Could not find object. {e}. Metadata: {metadata}")
+                return HttpResponse("Webhook processing error: object not found", status=400)
+            except Exception as e:
+                logger.error(f"FATAL ERROR in Coaching Webhook processing: {e}. Metadata: {metadata}")
+                return HttpResponse("Webhook processing error", status=500)
 
     return HttpResponse(status=200)
 
@@ -546,6 +615,8 @@ def create_coaching_checkout_session_view(request, offering_id):
                     'offering_id': str(offering.id),
                     'user_id': str(request.user.id),
                     'coach_id': str(coach.id),
+                    'cart_id': get_or_create_cart(request).id, # Add cart_id for potential clearing
+                    'coupon_code': request.POST.get('coupon_code', ''), # Pass coupon from the form
                 },
             )
             
@@ -994,6 +1065,7 @@ def create_coaching_checkout_session_view(request, offering_id):
                     'offering_id': str(offering.id),
                     'user_id': str(request.user.id),
                     'coach_id': str(coach.id),
+                    'coupon_code': request.POST.get('coupon_code', ''), # Pass coupon from the form
                 },
             )
             
