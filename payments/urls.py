@@ -1,6 +1,6 @@
-# d:\GitHub\JH_Motiv_LTD_Django_Repo\payments\urls.py
 from django.urls import path
-from .views import MyEarningsView # Import MyEarningsView
+from . import views
+from .views import MyEarningsView 
 
 app_name = 'payments'
 
