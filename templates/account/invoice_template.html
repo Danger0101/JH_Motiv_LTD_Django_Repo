@@ -218,6 +218,12 @@
                                 <td class="text-right" style="padding: 5px;">Subtotal:</td>
                                 <td class="text-right" style="padding: 5px;">£{{ order.subtotal|floatformat:2 }}</td>
                             </tr>
+                            {% if order.discount_amount > 0 %}
+                            <tr>
+                                <td class="text-right" style="padding: 5px;">Discount ({{ order.coupon_code_snapshot }}):</td>
+                                <td class="text-right" style="padding: 5px;">-£{{ order.discount_amount|floatformat:2 }}</td>
+                            </tr>
+                            {% endif %}
                             <tr>
                                 <td class="text-right" style="padding: 5px;">Delivery:</td>
                                 <td class="text-right" style="padding: 5px;">£{{ order.delivery_cost|floatformat:2 }}</td>

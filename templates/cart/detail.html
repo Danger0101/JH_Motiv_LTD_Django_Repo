@@ -45,6 +45,27 @@
                     {% include 'cart/partials/cart_summary_panel.html' %}
                 </div>
 
+                <!-- Coupon Code Input -->
+                <div class="mt-6">
+                    <h3 class="text-lg font-medium text-gray-900">Have a coupon?</h3>
+                    <form hx-post="{% url 'cart:apply_coupon' %}" 
+                          hx-target="#coupon-message-area" 
+                          hx-swap="innerHTML"
+                          class="mt-2">
+                        {% csrf_token %}
+                        <div class="flex space-x-2">
+                            <input type="text" name="code" id="coupon-code" placeholder="Enter coupon code" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                            <button type="submit" class="rounded-md bg-gray-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                    aria-label="Apply Coupon">
+                                Apply
+                            </button>
+                        </div>
+                    </form>
+                    <div id="coupon-message-area">
+                        {% include 'cart/partials/coupon_message.html' %}
+                    </div>
+                </div>
+
             </div>
             
         </div>

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Order, OrderItem, CoachingOrder, CoachingOrderItem
+from .models import Order, OrderItem, CoachingOrder, CoachingOrderItem, Coupon, CouponUsage
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
@@ -55,3 +55,37 @@ class CoachingOrderAdmin(admin.ModelAdmin):
     @admin.display(description='Offering', ordering='enrollment__offering')
     def offering_name(self, obj):
         return obj.enrollment.offering.name
+
+
+class CouponUsageInline(admin.TabularInline):
+    model = CouponUsage
+    fields = ['user', 'order', 'email', 'used_at']
+    readonly_fields = ['user', 'order', 'email', 'used_at']
+    extra = 0
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+@admin.register(Coupon)
+class CouponAdmin(admin.ModelAdmin):
+    list_display = ['code', 'discount_type', 'value_display', 'active', 'valid_from', 'valid_to', 'times_used', 'usage_limit']
+    list_filter = ['active', 'discount_type', 'valid_from', 'valid_to']
+    search_fields = ['code']
+    inlines = [CouponUsageInline]
+    fieldsets = (
+        (None, {'fields': ('code', 'active')}),
+        ('Discount Logic', {'fields': ('discount_type', 'discount_value', 'free_shipping')}),
+        ('Scope & Constraints', {'fields': ('limit_to_product_type', 'min_cart_value', 'valid_from', 'valid_to', 'usage_limit', 'one_per_customer')}),
+        ('Scope (Leave blank to apply to all)', {'fields': ('specific_products', 'specific_offerings')}),
+        ('Tracking', {'fields': ('referrer',)}),
+    )
+    filter_horizontal = ('specific_products', 'specific_offerings',)
+
+    @admin.display(description='Value', ordering='discount_value')
+    def value_display(self, obj):
+        return f"{obj.discount_value}%" if obj.discount_type == 'percent' else f"£{obj.discount_value}"
+
+    @admin.display(description='Times Used')
+    def times_used(self, obj):
+        return obj.usages.count()

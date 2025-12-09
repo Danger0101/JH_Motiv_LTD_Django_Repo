@@ -30,6 +30,16 @@
         {% endfor %}
     </tbody>
     <tfoot>
+        {% if order.discount_amount > 0 %}
+        <tr>
+            <td colspan="2" style="text-align: right; padding: 8px;">Subtotal</td>
+            <td style="text-align: right; padding: 8px;">£{{ order.subtotal|floatformat:2|intcomma }}</td>
+        </tr>
+        <tr>
+            <td colspan="2" style="text-align: right; padding: 8px;">Discount ({{ order.coupon_code_snapshot }})</td>
+            <td style="text-align: right; padding: 8px;">-£{{ order.discount_amount|floatformat:2|intcomma }}</td>
+        </tr>
+        {% endif %}
         <tr>
             <td colspan="2" style="text-align: right; padding: 8px; font-weight: bold;">Total Paid</td>
             <td style="text-align: right; padding: 8px; font-weight: bold;">£{{ order.total_paid|floatformat:2|intcomma }}</td>

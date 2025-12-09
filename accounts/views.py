@@ -47,7 +47,7 @@ try:
     from products.models import StockItem
 except ImportError:
     StockItem = None
-
+    
 try:
     from payments.models import Order, CoachingOrder, OrderItem
 except ImportError:
@@ -220,6 +220,21 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             is_active=True,
             expiration_date__gte=timezone.now()
         ).order_by('-enrolled_on')
+
+        # --- NEW: "My Rewards" Wallet ---
+        now = timezone.now()
+        # 1. Public, active coupons that are not user-specific
+        public_coupons = Coupon.objects.filter(
+            active=True, valid_from__lte=now, valid_to__gte=now, user_specific=None
+        )
+        # 2. Coupons specifically assigned to this user
+        user_specific_coupons = Coupon.objects.filter(
+            active=True, valid_from__lte=now, valid_to__gte=now, user_specific=self.request.user
+        )
+        # Combine and remove duplicates
+        context['my_coupons'] = list(set(list(public_coupons) + list(user_specific_coupons)))
+        # You might want to add logic here to exclude coupons the user has already used.
+        # For example: .exclude(usages__user=self.request.user)
         
         context['active_tab'] = 'account'
         return context
@@ -400,13 +415,14 @@ def generate_invoice_pdf(request, order_id):
                 item.line_total = item.price * item.quantity
 
             subtotal = sum(item.line_total for item in order_items)
+            discount = order.discount_amount or Decimal('0.00')
             grand_total = order.total_paid
-            delivery_cost = grand_total - subtotal
+            delivery_cost = grand_total - (subtotal - discount)
 
             order.subtotal = subtotal
             order.delivery_cost = delivery_cost
             order.grand_total = grand_total
-            order.total_before_vat = subtotal + delivery_cost
+            order.total_before_vat = subtotal - discount + delivery_cost
             order.vat_amount = Decimal('0.00')
 
         except Exception as e:

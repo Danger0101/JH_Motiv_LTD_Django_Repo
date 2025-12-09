@@ -1,0 +1,13 @@
+{% if messages %}
+    {% for message in messages %}
+        <div class="mt-2 text-sm {% if message.tags == 'success' %}text-green-600{% else %}text-red-600{% endif %}" role="alert">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+{% if summary.coupon_message and not messages %}
+    <div class="mt-2 text-sm text-green-600" role="alert">
+        {{ summary.coupon_message }}
+    </div>
+{% endif %}

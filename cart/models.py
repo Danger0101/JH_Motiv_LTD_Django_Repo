@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from products.models import Variant
 from decimal import Decimal # ADDED: Import Decimal for safe currency calculations
+from payments.models import Coupon
 
 class Cart(models.Model):
     STATUS_CHOICES = (
@@ -14,6 +15,7 @@ class Cart(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='open')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    coupon = models.ForeignKey(Coupon, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         if self.user:

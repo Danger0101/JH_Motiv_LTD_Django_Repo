@@ -3,7 +3,9 @@ from django.db import models
 from django.db.models import JSONField
 from django.contrib.auth import get_user_model
 from products.models import Variant
+from products.models import Product
 from coaching_booking.models import ClientOfferingEnrollment
+from dreamers.models import DreamerProfile
 from coaching_core.models import Offering
 
 User = get_user_model()
@@ -58,6 +60,12 @@ class Order(models.Model):
     tracking_number = models.CharField(max_length=100, null=True, blank=True)
     tracking_url = models.URLField(max_length=500, null=True, blank=True, help_text="Optional direct link to tracking")
 
+    coupon = models.ForeignKey('Coupon', on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
+    # --- IMMUTABLE ORDER HISTORY (SNAPSHOT) ---
+    coupon_code_snapshot = models.CharField(max_length=50, null=True, blank=True, help_text="The code used (e.g. SUMMER20)")
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    coupon_data_snapshot = models.JSONField(null=True, blank=True, help_text="A snapshot of the coupon's rules at time of purchase.")
+
     def save(self, *args, **kwargs):
         if not self.pk and self.user is None and self.guest_order_token is None:
             self.guest_order_token = uuid.uuid4()
@@ -93,3 +101,103 @@ class CoachingOrderItem(models.Model):
 
     def __str__(self):
         return f"Coaching Order Item for {self.offering.name}"
+
+
+class Coupon(models.Model):
+    code = models.CharField(max_length=50, unique=True)
+
+    # Discount Logic
+    DISCOUNT_TYPE_PERCENT = 'percent'
+    DISCOUNT_TYPE_FIXED = 'fixed'
+    DISCOUNT_TYPES = [
+        (DISCOUNT_TYPE_PERCENT, 'Percentage Off'),
+        (DISCOUNT_TYPE_FIXED, 'Fixed Amount Off'),
+    ]
+    discount_type = models.CharField(max_length=10, choices=DISCOUNT_TYPES)
+    discount_value = models.DecimalField(max_digits=10, decimal_places=2, help_text="e.g., 10.00 for fixed amount, or 15 for 15%")
+
+    # --- NEW: GIFT CARD VS. DISCOUNT ---
+    COUPON_TYPE_DISCOUNT = 'discount'
+    COUPON_TYPE_GIFT_CARD = 'gift_card'
+    COUPON_TYPE_CHOICES = [
+        (COUPON_TYPE_DISCOUNT, 'Discount (Reduces subtotal, affects tax)'),
+        (COUPON_TYPE_GIFT_CARD, 'Gift Card (Acts as payment, reduces grand total)'),
+    ]
+    coupon_type = models.CharField(max_length=10, choices=COUPON_TYPE_CHOICES, default=COUPON_TYPE_DISCOUNT)
+    free_shipping = models.BooleanField(default=False)
+
+    # Scope
+    specific_products = models.ManyToManyField(Product, blank=True, help_text="Applies only to these products.")
+    specific_offerings = models.ManyToManyField(Offering, blank=True, help_text="Applies only to these coaching packages.")
+
+    # "Smart Scope"
+    LIMIT_TYPE_ALL = 'all'
+    LIMIT_TYPE_PHYSICAL = 'physical'
+    LIMIT_TYPE_COACHING = 'coaching'
+    LIMIT_CHOICES = [
+        (LIMIT_TYPE_ALL, 'All Products & Coaching'),
+        (LIMIT_TYPE_PHYSICAL, 'Physical Products Only'),
+        (LIMIT_TYPE_COACHING, 'Coaching Only'),
+    ]
+    limit_to_product_type = models.CharField(max_length=20, choices=LIMIT_CHOICES, default=LIMIT_TYPE_ALL)
+
+    # Constraints
+    min_cart_value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    valid_from = models.DateTimeField(default=models.functions.Now)
+    valid_to = models.DateTimeField()
+    active = models.BooleanField(default=True)
+    usage_limit = models.PositiveIntegerField(null=True, blank=True, help_text="Total times this code can be used.")
+    one_per_customer = models.BooleanField(default=False, help_text="Limit to one use per customer.")
+    new_customers_only = models.BooleanField(default=False, help_text="Can only be used on a customer's first order.")
+    user_specific = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE, related_name='coupons', help_text="If set, only this user can use this coupon.")
+
+    # Referral Tracking
+    referrer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='referred_coupons', help_text="The user who 'owns' this coupon (for affiliate tracking).")
+    affiliate_dreamer = models.ForeignKey(DreamerProfile, null=True, blank=True, on_delete=models.SET_NULL, related_name='coupons', help_text="Link this coupon to a Dreamer for affiliate tracking.")
+
+    def is_valid(self, user=None, cart_value=Decimal('0.00')):
+        from django.utils import timezone
+        from .models import Order # Local import to avoid circular dependency
+        now = timezone.now()
+        if not self.active or not (self.valid_from <= now <= self.valid_to):
+            return False, "This coupon is not active or has expired."
+        if self.usage_limit is not None and self.usages.count() >= self.usage_limit:
+            return False, "This coupon has reached its usage limit."
+        if cart_value < self.min_cart_value:
+            # "The Nudge" logic
+            amount_needed = self.min_cart_value - cart_value
+            return False, f"You are only £{amount_needed:.2f} away from using this coupon!"
+        if self.one_per_customer and user and user.is_authenticated:
+            if self.usages.filter(user=user).exists():
+                return False, "You have already used this coupon."
+        if self.new_customers_only and user and user.is_authenticated:
+            has_prior_orders = Order.objects.filter(
+                user=user, status__in=[Order.STATUS_PAID, Order.STATUS_SHIPPED, Order.STATUS_DELIVERED]
+            ).exists()
+            if has_prior_orders:
+                return False, "This code is for new customers only."
+        if self.user_specific and self.user_specific != user:
+            return False, "This coupon is not valid for your account."
+        return True, "Valid"
+
+    def __str__(self):
+        return self.code
+
+    @property
+    def description(self):
+        if self.discount_type == self.DISCOUNT_TYPE_PERCENT:
+            return f"{int(self.discount_value)}% off"
+        elif self.discount_type == self.DISCOUNT_TYPE_FIXED:
+            return f"£{self.discount_value} off"
+        return "Discount"
+
+
+class CouponUsage(models.Model):
+    coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE, related_name='usages')
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    email = models.EmailField(blank=True, null=True) # For guest checkouts
+    used_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Coupon {self.coupon.code} used on {self.used_at.strftime('%Y-%m-%d')}"
