@@ -58,16 +58,18 @@ class ProductAdmin(admin.ModelAdmin):
     
     list_display = (
         'name', 
-        'product_type', 
+        'product_type',
+        'is_active',
         'current_price_range',
         'current_stock_status',
     )
-    list_filter = ('product_type',)
+    list_filter = ('product_type', 'is_active')
+    list_editable = ('is_active',)
     search_fields = ('name', 'description')
     
     fieldsets = (
         (None, {
-            'fields': ('name', 'description', 'product_type', 'featured_image'),
+            'fields': ('name', 'description', ('product_type', 'is_active'), 'featured_image'),
         }),
     )
 
