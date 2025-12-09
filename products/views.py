@@ -2,6 +2,7 @@ import json
 import logging
 import hmac
 import hashlib
+import time # For development demonstration of loading spinner
 from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -19,11 +20,34 @@ class ProductListView(ListView):
     template_name = 'products/product_list.html'
     context_object_name = 'products'
     
+    def get_queryset(self):
+        queryset = Product.objects.filter(is_active=True).order_by('-created_at')
+        search_query = self.request.GET.get('q', '')
+        if search_query:
+            queryset = queryset.filter(name__icontains=search_query)
+        return queryset
+
+    def get_paginate_by(self, queryset):
+        per_page = self.request.GET.get('per_page', '12')
+        return int(per_page) if per_page.isdigit() else 12
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search_query'] = self.request.GET.get('q', '')
-        context['per_page'] = self.request.GET.get('per_page', '12')
+        context['per_page'] = str(self.get_paginate_by(self.object_list))
         return context
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.htmx:
+            # Add a small delay in development to see the spinner
+            if settings.DEBUG:
+                time.sleep(0.5)
+            # For HTMX requests, render only the partial
+            return super().render_to_response(
+                context, template_name='products/partials/product_list_partial.html', **response_kwargs
+            )
+        # For regular requests, render the full page
+        return super().render_to_response(context, **response_kwargs)
 
 # ----------------------------------------------------------------------
 
