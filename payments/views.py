@@ -651,452 +651,76 @@ def order_detail(request, order_id):
     """
     order = get_object_or_404(Order, id=order_id, user=request.user)
     return render(request, 'payments/order_detail.html', {'order': order})
-            pass
 
-    try: # This try now wraps the entire order creation and Stripe session
-        with transaction.atomic():
-            # 1. Create a pending Order
-            user = request.user if request.user.is_authenticated else None
-            guest_order_token = None
-            if not user:
-                guest_order_token = str(uuid.uuid4())
+# NEW: My Earnings View
+class MyEarningsView(ListView):
+    model = CoachingOrder
+    template_name = 'payments/my_earnings.html'
+    context_object_name = 'earnings_records'
+    paginate_by = 10
 
-            order = Order.objects.create(
-                user=user,
-                email=user.email if user else None, # Will be updated by webhook if guest
-                total_paid=0.0, # Will be updated by webhook
-                shipping_data=address_data,
-                status=Order.STATUS_PENDING,
-                guest_order_token=guest_order_token
+    def get_queryset(self):
+        user = self.request.user
+        queryset = CoachingOrder.objects.none()
+
+        # Is user a coach?
+        if hasattr(user, 'coach_profile'):
+            queryset = queryset | CoachingOrder.objects.filter(enrollment__coach=user.coach_profile).annotate(
+                earning_type=Value('Coach Fee', output_field=CharField()),
+                user_share=F('amount_coach')
             )
-
-            # 2. Create OrderItems from CartItems
-            for item in cart.items.all():
-                OrderItem.objects.create(
-                    order=order,
-                    variant=item.variant,
-                    price=item.variant.price,
-                    quantity=item.quantity
-                )
-
-            line_items = []
-            for item in cart.items.all():
-                line_items.append({
-                    'price_data': {
-                        'currency': 'gbp',
-                        'product_data': {
-                            'name': item.variant.product.name,
-                            'description': item.variant.name,
-                            'images': [request.build_absolute_uri(item.variant.get_image_url())],
-                        },
-                        'unit_amount': int(item.variant.price * 100),
-                    },
-                    'quantity': item.quantity,
-                })
-
-            # Add Shipping Line Item if applicable
-            if shipping_amount > 0:
-                line_items.append({
-                    'price_data': {
-                        'currency': 'gbp',
-                        'product_data': {
-                            'name': 'Shipping & Handling',
-                            'description': 'Standard Shipping',
-                        },
-                        'unit_amount': int(shipping_amount * 100),
-                    },
-                    'quantity': 1,
-                })
-
-            # Determine if we need Stripe to collect address or if we already have it
-            # If we have calculated shipping, we usually don't want the user to change the country in Stripe 
-            # as that would invalidate our calculation.
-            
-            session_params = {
-                'ui_mode': 'embedded',
-                'payment_method_types': ['card'],
-                'line_items': line_items,
-                'mode': 'payment',
-                'return_url': request.build_absolute_uri(reverse('payments:payment_success')) + '?session_id={CHECKOUT_SESSION_ID}',
-                'metadata': {
-                    'product_type': 'ecommerce_cart',
-                    'order_id': order.id, # Pass the newly created Order ID
-                    'user_id': request.user.id if request.user.is_authenticated else None, # Keep for convenience
-                    'guest_order_token': guest_order_token if guest_order_token else '',
-                    # Store the address used for calculation in metadata for the webhook to use
-                    'shipping_address_json': json.dumps(address_data) if address_data else ''
-                }
-            }
-
-            # If we didn't calculate shipping (e.g. digital only), we might still want address for billing
-            # But if we did calculate it, we assume the address is "locked" or passed as pre-fill
-            # Stripe Embedded doesn't support 'pre-fill' address strictly in the same way as Hosted, 
-            # but we can pass 'customer_details' if we have them.
-            
-            if not address_data:
-                 session_params['shipping_address_collection'] = {
-                    'allowed_countries': ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'ES', 'IT', 'NL'],
-                }
-
-            checkout_session = stripe.checkout.Session.create(**session_params)
-            return JsonResponse({'clientSecret': checkout_session.client_secret})
-    except Exception as e:
-        print(f"Error creating Stripe checkout session: {e}")
-        return JsonResponse({'error': str(e)}, status=500)
-
-
-# NEW VIEW for calculating shipping via AJAX/HTMX
-@csrf_exempt
-def calculate_shipping_api(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            address = data.get('address')
-            cart = get_or_create_cart(request)
-            
-            cost = calculate_cart_shipping(cart, address)
-            return JsonResponse({'shipping_cost': float(cost)})
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
-    return JsonResponse({'error': 'POST required'}, status=405)
-
-def payment_success(request):
-    """
-    Handles the successful payment redirect from Stripe.
-    Displays a confirmation message and ensures all required template variables are present.
-    """
-    session_id = request.GET.get('session_id')
-    cart = get_or_create_cart(request)
-    
-    # Base context for all paths to prevent KeyErrors in templates.
-    context = {
-        'summary': get_cart_summary_data(cart),
-        'order_summary': {},
-        'title': "Payment Successful!",
-        'message': "Thank you for your payment.",
-        'coach': None,
-    }
-
-    if not session_id:
-        # If no session ID is provided, show a generic success page with dummy data as requested.
-        coach_profile = None
-        try:
-            # Attempt to find the specific coach 'John Hummel'.
-            user = User.objects.get(first_name="John", last_name="Hummel", is_coach=True)
-            coach_profile = CoachProfile.objects.get(user=user)
-        except (User.DoesNotExist, CoachProfile.DoesNotExist, User.MultipleObjectsReturned):
-            # Fallback to the first available coach if not found.
-            coach_profile = CoachProfile.objects.first()
-
-        context.update({
-            'title': 'Enrollment Confirmed',
-            'message': 'Thank you for your coaching enrollment! You will receive a confirmation email shortly.',
-            'order_summary': {'name': 'Executive Scale Mastermind', 'price': '€1999'},
-            'coach': coach_profile,
-        })
-        return render(request, 'payments/success.html', context)
-
-    try:
-        session = stripe.checkout.Session.retrieve(session_id)
-        metadata = session.metadata
-        product_type = metadata.get('product_type')
-
-        if product_type == 'coaching_offering':
-            context['title'] = "Enrollment Successful!"
-            offering_id = metadata.get('offering_id')
-            offering = get_object_or_404(Offering, pk=offering_id) if offering_id else None
-            
-            if offering:
-                context['offering'] = offering
-                context['order_summary'] = {'name': offering.name, 'price': f"€{offering.price}"}
-
-            coach_id = metadata.get('coach_id')
-            if coach_id:
-                coach = get_object_or_404(CoachProfile, pk=coach_id)
-                context['coach'] = coach
-                context['message'] = (
-                    f"You have been successfully enrolled and assigned to coach {coach.user.get_full_name()}. "
-                    f"You can now visit your dashboard to book your first session."
-                )
-            else:
-                context['message'] = "Thank you for enrolling. You will receive a confirmation email with details on how to book your sessions."
-
-        elif product_type == 'ecommerce_cart':
-            context['message'] = "Thank you for your purchase. Your order is being processed and you will receive a confirmation email shortly."
         
-        return render(request, 'payments/success.html', context)
-
-    except stripe.InvalidRequestError:
-        return HttpResponse("Invalid or expired payment session.", status=400)
-    except Exception as e:
-        print(f"Error in payment_success view: {e}")
-        return HttpResponse("An error occurred while confirming your payment.", status=500)
-
-def order_detail_guest(request, guest_order_token):
-    """Displays a guest's order details using a secure token."""
-    order = get_object_or_404(Order, guest_order_token=guest_order_token)
-    return render(request, 'payments/order_detail.html', {'order': order})
-
-def payment_cancel(request):
-    return render(request, 'payments/cancel.html')
-
-from products.models import StockPool # Ensure this is imported
-
-@csrf_exempt
-@transaction.atomic
-def stripe_webhook(request):
-    payload = request.body
-    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
-    event = None
-
-    try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
-        )
-    except ValueError:
-        return HttpResponse("Invalid payload", status=400)
-    except stripe.SignatureVerificationError:
-        return HttpResponse("Invalid signature", status=400)
-
-    if event['type'] == 'checkout.session.completed':
-        session = event['data']['object']
-        metadata = session.get('metadata', {})
-        product_type = metadata.get('product_type')
+        # Is user a dreamer/referrer?
+        if hasattr(user, 'dreamer_profile'):
+            queryset = queryset | CoachingOrder.objects.filter(referrer=user.dreamer_profile).annotate(
+                earning_type=Value('Referral Fee', output_field=CharField()),
+                user_share=F('amount_referrer')
+            )
         
-        # --- E-COMMERCE CART HANDLING ---
-        if product_type == 'ecommerce_cart':
-            order_id = metadata.get('order_id')
-            if not order_id:
-                print("FATAL ERROR in E-commerce Webhook: order_id not found in metadata.")
-                return HttpResponse("Missing order_id in metadata", status=400)
-            
-            try:
-                order = Order.objects.get(id=order_id)
-                
-                # Update Order status and total_paid
-                order.status = Order.STATUS_PAID
-                order.total_paid = session.amount_total / 100
-                # Update email if it was a guest user and email is now available from Stripe
-                if not order.user and session.get('customer_details', {}).get('email'):
-                    order.email = session.get('customer_details', {}).get('email')
+        # Filter out records with 0 share for this user
+        queryset = queryset.filter(user_share__gt=0)
 
-                # Update shipping_data if it wasn't present before or if Stripe has more complete data
-                if not order.shipping_data:
-                    shipping_json = metadata.get('shipping_address_json')
-                    shipping_data_from_metadata = json.loads(shipping_json) if shipping_json else {}
-                    
-                    if shipping_data_from_metadata:
-                        order.shipping_data = shipping_data_from_metadata
-                    else:
-                        # Fallback to Stripe's data if our metadata is empty
-                        shipping_details = session.get('shipping_details') or {}
-                        address = shipping_details.get('address') or {}
-                        order.shipping_data = {
-                            'name': shipping_details.get('name'),
-                            'address1': address.get('line1'),
-                            'address2': address.get('line2'),
-                            'city': address.get('city'),
-                            'state_code': address.get('state'),
-                            'country_code': address.get('country'),
-                            'zip': address.get('postal_code'),
-                        }
-                order.save()
+        # Apply status filter if present
+        status_filter = self.request.GET.get('status')
+        if status_filter and status_filter != 'all':
+            queryset = queryset.filter(payout_status=status_filter)
 
-                printful_items = []
+        return queryset.order_by('-created_at')
 
-                # Process Items & Deduct Stock (using OrderItems now)
-                for item in order.items.all(): # order.items is OrderItem related_name
-                    # A. Handle Printful Items
-                    if item.variant.printful_variant_id:
-                        printful_items.append({
-                            "variant_id": item.variant.printful_variant_id,
-                            "quantity": item.quantity,
-                        })
-                    
-                    # B. Handle Self-Fulfilled Stock Deduction
-                    if item.variant.product.product_type == 'physical' and item.variant.stock_pool:
-                        try:
-                            # Lock the pool row to prevent race conditions
-                            pool = StockPool.objects.select_for_update().get(id=item.variant.stock_pool.id)
-                            
-                            if pool.available_stock < 9000: 
-                                if pool.available_stock >= item.quantity:
-                                    pool.available_stock -= item.quantity
-                                    pool.save()
-                                    print(f"Stock deducted: {item.quantity} from {pool.name}")
-                                else:
-                                    print(f"CRITICAL: Oversold {pool.name}. Had {pool.available_stock}, sold {item.quantity}.")
-                                    pool.available_stock = 0
-                                    pool.save()
-                        except StockPool.DoesNotExist:
-                            print(f"Error: StockPool not found for variant {item.variant.id}")
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        
+        # Calculate Totals
+        total_unpaid = Decimal('0.00')
+        total_unpaid_coach = Decimal('0.00')
+        total_unpaid_referrer = Decimal('0.00')
 
-                # Consolidate Cart (find original cart and mark as submitted)
-                # We need the original cart_id from the metadata passed during checkout creation
-                cart_id_from_metadata = metadata.get('cart_id')
-                if cart_id_from_metadata:
-                    try:
-                        original_cart = Cart.objects.get(id=cart_id_from_metadata)
-                        original_cart.status = 'submitted'
-                        original_cart.save()
-                    except Cart.DoesNotExist:
-                        print(f"WARNING: Original cart {cart_id_from_metadata} not found during webhook processing.")
-                else:
-                    print(f"WARNING: No cart_id found in metadata for order {order_id}. Cannot mark original cart as submitted.")
+        if hasattr(user, 'coach_profile'):
+            coach_unpaid = CoachingOrder.objects.filter(
+                enrollment__coach=user.coach_profile, 
+                payout_status='unpaid'
+            ).aggregate(total=models.Sum('amount_coach'))['total'] or 0
+            total_unpaid_coach = Decimal(coach_unpaid)
 
+        if hasattr(user, 'dreamer_profile'):
+            ref_unpaid = CoachingOrder.objects.filter(
+                referrer=user.dreamer_profile, 
+                payout_status='unpaid'
+            ).aggregate(total=models.Sum('amount_referrer'))['total'] or 0
+            total_unpaid_referrer = Decimal(ref_unpaid)
 
-                # Handle Printful Fulfillment
-                if printful_items:
-                    auto_fulfill = getattr(settings, 'PRINTFUL_AUTO_FULFILLMENT', False)
-                    
-                    if auto_fulfill:
-                        printful_service = PrintfulService()
-                        recipient = {
-                            "name": order.shipping_data.get('name'),
-                            "address1": order.shipping_data.get('address1'),
-                            "address2": order.shipping_data.get('address2', ''),
-                            "city": order.shipping_data.get('city'),
-                            "state_code": order.shipping_data.get('state_code'),
-                            "country_code": order.shipping_data.get('country_code'),
-                            "zip": order.shipping_data.get('zip'),
-                            "email": order.email
-                        }
-                        
-                        response = printful_service.create_order(recipient, printful_items)
-                        
-                        if 'result' in response and response['result'].get('id'):
-                            order.printful_order_id = response['result']['id']
-                            order.printful_order_status = response['result']['status']
-                            order.save()
-                        else:
-                            print(f"Printful Auto-Sync Failed: {response}")
-                            order.printful_order_status = 'failed_auto_sync'
-                            order.save()
-                    else:
-                        order.printful_order_status = 'pending_approval'
-                        order.save()
-                        print(f"Order #{order.id} queued for manual Printful approval.")
+        context['total_unpaid_combined'] = total_unpaid_coach + total_unpaid_referrer
+        context['total_unpaid_coach'] = total_unpaid_coach
+        context['total_unpaid_referrer'] = total_unpaid_referrer
+        
+        context['is_coach_profile'] = hasattr(user, 'coach_profile')
+        context['is_dreamer_profile'] = hasattr(user, 'dreamer_profile')
+        context['selected_status'] = self.request.GET.get('status', 'all')
+        context['payout_statuses'] = CoachingOrder._meta.get_field('payout_status').choices
+        
+        # Required for the sidebar highlighting
+        context['active_tab'] = 'earnings' 
+        context['has_earnings_profile'] = context['is_coach_profile'] or context['is_dreamer_profile']
 
-                # Send Confirmation Emails
-                try:
-                    customer_email = order.email # Use email from order, which is now guaranteed to be set
-                    if not customer_email:
-                         raise ValueError("Customer email not found on order after webhook processing.")
-
-                    user = order.user
-                    if user:
-                        dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
-                    else:
-                        dashboard_url = request.build_absolute_uri(
-                            reverse('payments:order_detail_guest', args=[order.guest_order_token])
-                        )
-
-                    email_context = {
-                        'order': order,
-                        'user': user,
-                        'dashboard_url': dashboard_url,
-                    }
-
-                    send_transactional_email(
-                        recipient_email=customer_email,
-                        subject=f"Your JH Motiv LTD Order #{order.id} is Confirmed",
-                        template_name='emails/order_confirmation.html',
-                        context=email_context
-                    )
-                    print(f"SUCCESS: Order confirmation email sent to {customer_email} for order {order.id}")
-
-                    send_transactional_email(
-                        recipient_email=customer_email,
-                        subject=f"Your Payment Receipt for Order #{order.id}",
-                        template_name='emails/payment_receipt.html',
-                        context=email_context
-                    )
-                    print(f"SUCCESS: Payment receipt email sent to {customer_email} for order {order.id}")
-
-                except Exception as email_error:
-                    print(f"CRITICAL: Order {order.id} updated but failed to send email. Error: {email_error}")
-
-            except Order.DoesNotExist:
-                print(f"FATAL ERROR in E-commerce Webhook: Order matching ID {order_id} does not exist.")
-                return HttpResponse("Order not found", status=400)
-            except Exception as e:
-                print(f"FATAL ERROR in E-commerce Webhook processing Order {order_id}: {e}")
-                return HttpResponse("Webhook processing error", status=500)
-
-        # --- COACHING HANDLING (Keep existing) ---
-        elif product_type == 'coaching_offering':
-             pass # (Paste your existing coaching logic here)
-
-    return HttpResponse(status=200)
-
-
-def create_coaching_checkout_session_view(request, offering_id):
-    """
-    Handles the creation of a Stripe embedded checkout session for a coaching offering.
-    This is intended to be called via a POST request from the checkout page.
-    """
-    if not request.user.is_authenticated:
-        return JsonResponse({"error": "User not authenticated"}, status=403)
-
-    offering = get_object_or_404(Offering, pk=offering_id) 
-
-    if request.method == 'POST':
-        available_coaches = CoachProfile.objects.filter(
-            offerings=offering, 
-            user__is_active=True,
-            is_available_for_new_clients=True
-        )
-
-        if not available_coaches.exists():
-            return JsonResponse({"error": "No coach currently available for this offering."}, status=400)
-
-        coach = available_coaches.annotate(
-            active_enrollment_count=models.Count(
-                'client_enrollments', 
-                filter=models.Q(client_enrollments__offering=offering, client_enrollments__is_active=True)
-            )
-        ).order_by('active_enrollment_count').first()
-
-        if not coach:
-            return JsonResponse({"error": "Error: No assignable coach found."}, status=400)
-
-        try:
-            checkout_session = stripe.checkout.Session.create(
-                ui_mode='embedded',
-                payment_method_types=['card'],
-                line_items=[{
-                    'price_data': {
-                        'currency': 'gbp',
-                        'unit_amount': int(offering.price * 100),
-                        'product_data': {
-                            'name': f"Coaching: {offering.name}"
-                        },
-                    },
-                    'quantity': 1,
-                }],
-                mode='payment',
-                return_url=request.build_absolute_uri(reverse('payments:payment_success')) + '?session_id={CHECKOUT_SESSION_ID}',
-                metadata={
-                    'product_type': 'coaching_offering', 
-                    'offering_id': str(offering.id),
-                    'user_id': str(request.user.id),
-                    'coach_id': str(coach.id),
-                    'coupon_code': request.POST.get('coupon_code', ''), # Pass coupon from the form
-                },
-            )
-            
-            return JsonResponse({'clientSecret': checkout_session.client_secret})
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-
-    # This view should only handle POST requests for creating the session
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
-
-@login_required
-def order_detail(request, order_id):
-    """
-    Displays order details for a logged-in user.
-    Ensures the user can only see their own orders.
-    """
-    order = get_object_or_404(Order, id=order_id, user=request.user)
-    return render(request, 'payments/order_detail.html', {'order': order})
+        return context
