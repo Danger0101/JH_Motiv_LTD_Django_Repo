@@ -71,12 +71,12 @@ class CouponUsageInline(admin.TabularInline):
 class CouponAdmin(admin.ModelAdmin):
     list_display = ['code', 'discount_type', 'value_display', 'active', 'valid_from', 'valid_to', 'times_used', 'usage_limit']
     list_filter = ['active', 'discount_type', 'valid_from', 'valid_to']
-    search_fields = ['code']
+    search_fields = ['code', 'affiliate_dreamer__name', 'user_specific__email']
     inlines = [CouponUsageInline]
     fieldsets = (
         (None, {'fields': ('code', 'active')}),
-        ('Discount Logic', {'fields': ('discount_type', 'discount_value', 'free_shipping')}),
-        ('Scope & Constraints', {'fields': ('limit_to_product_type', 'min_cart_value', 'valid_from', 'valid_to', 'usage_limit', 'one_per_customer')}),
+        ('Discount Logic', {'fields': ('coupon_type', 'discount_type', 'discount_value', 'free_shipping')}),
+        ('Scope & Constraints', {'fields': ('limit_to_product_type', 'min_cart_value', 'valid_from', 'valid_to', 'usage_limit', 'one_per_customer', 'new_customers_only', 'user_specific')}),
         ('Scope (Leave blank to apply to all)', {'fields': ('specific_products', 'specific_offerings')}),
         ('Tracking', {'fields': ('referrer',)}),
     )
