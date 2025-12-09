@@ -6,6 +6,13 @@ from payments.models import Coupon
 from .utils import get_or_create_cart, get_cart_summary_data
 from django.http import HttpResponse
 
+def cart_detail(request):
+    """Renders the main cart page."""
+    cart = get_or_create_cart(request)
+    summary = get_cart_summary_data(cart)
+    # The template path should be 'cart/detail.html'
+    return render(request, 'cart/detail.html', {'cart': cart, 'summary': summary})
+
 @require_POST
 def apply_coupon(request):
     """

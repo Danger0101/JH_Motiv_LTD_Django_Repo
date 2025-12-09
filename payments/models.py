@@ -100,7 +100,8 @@ class CoachingOrder(models.Model):
     )
     
     # The Financial Split (Recorded at time of purchase)
-    amount_gross = models.DecimalField(max_digits=10, decimal_places=2, help_text="Total paid by client")
+    # FIX: Added default=0.00 here to solve the migration error
+    amount_gross = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Total paid by client")
     amount_coach = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Owed to Coach")
     amount_referrer = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Owed to Dreamer")
     amount_company = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Retained by JH Motiv")
