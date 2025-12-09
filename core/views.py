@@ -59,6 +59,16 @@ def faqs_page(request):
     
     return render(request, 'core/faqs.html', context)
 
+def faq_tab(request, category):
+    """
+    HTMX view to fetch and render FAQ content for a specific category.
+    """
+    # Get the list of FAQs for the requested category, default to an empty list if not found.
+    faq_items = FAQ_DATA.get(category, [])
+    context = {'faq_items': faq_items}
+    # Render only the partial containing the list of questions and answers.
+    return render(request, 'core/partials/faq_tab_content.html', context)
+
 def privacy_policy_page(request):
     """Renders the Privacy Policy page with data and Alpine.js tabs."""
     
