@@ -27,23 +27,31 @@ document.addEventListener("alpine:init", () => {
     removeSlot(dayIndex, slotIndex) {
       this.schedule[dayIndex].slots.splice(slotIndex, 1);
     },
-    async saveSchedule() {
-      this.isSaving = true;
-      this.message = "";
-      this.isError = false;
-
+    // Private helper to validate the schedule for overlapping time slots
+    _validateSchedule() {
       for (const day of this.schedule) {
         const sortedSlots = [...day.slots].sort((a, b) =>
           a.start.localeCompare(b.start)
         );
         for (let i = 0; i < sortedSlots.length - 1; i++) {
           if (sortedSlots[i].end > sortedSlots[i + 1].start) {
-            this.isError = true;
-            this.message = `Error on ${day.name}: Time slots cannot overlap.`;
-            this.isSaving = false;
-            return;
+            return `Error on ${day.name}: Time slots cannot overlap.`;
           }
         }
+      }
+      return null; // No validation errors
+    },
+    async saveSchedule() {
+      this.isSaving = true;
+      this.message = "";
+      this.isError = false;
+
+      const validationError = this._validateSchedule();
+      if (validationError) {
+        this.isError = true;
+        this.message = validationError;
+        this.isSaving = false;
+        return;
       }
 
       try {
@@ -59,6 +67,7 @@ document.addEventListener("alpine:init", () => {
         if (!response.ok) {
           throw new Error(data.error || "An unknown error occurred.");
         }
+
         this.message = data.message;
         htmx.trigger("body", "recurring-schedule-updated");
       } catch (error) {
