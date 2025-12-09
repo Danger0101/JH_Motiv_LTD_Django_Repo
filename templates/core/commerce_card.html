@@ -1,0 +1,27 @@
+<div class="group relative bg-white border border-gray-200 rounded-lg flex flex-col overflow-hidden hover:shadow-lg transition-shadow duration-300">
+    <div class="aspect-w-3 aspect-h-4 bg-gray-200 group-hover:opacity-75 sm:aspect-none sm:h-96">
+        <img src="{{ image_url }}" 
+             alt="{{ image_alt }}" 
+             class="w-full h-full object-center object-cover sm:w-full sm:h-full">
+    </div>
+
+    <div class="flex-1 p-4 space-y-2 flex flex-col">
+        <h3 class="text-sm font-medium text-gray-900">
+            <a href="{{ detail_url }}">
+                <span aria-hidden="true" class="absolute inset-0"></span>
+                {{ title }}
+            </a>
+        </h3>
+        <p class="text-sm text-gray-500 line-clamp-2 flex-1">{{ description }}</p>
+        
+        <div class="flex-1 flex items-end justify-between">
+            <p class="text-sm font-medium text-gray-900">{{ price_html }}</p>
+        </div>
+    </div>
+    
+    <div class="p-4 pt-0">
+        <div class="w-full bg-blue-600 text-white text-center py-2 rounded-md text-sm font-bold group-hover:bg-blue-700">
+            {{ cta_text }}
+        </div>
+    </div>
+</div>
