@@ -51,7 +51,13 @@ def about_page(request):
 
 def faqs_page(request): 
     """Renders the FAQ page with structured data for Alpine.js tabs/accordions."""
-    return render(request, 'core/faqs.html', {'faq_data': FAQ_DATA}) 
+    context = {'faq_data': FAQ_DATA}
+    
+    # For an HTMX request, render only the content partial.
+    if request.htmx:
+        return render(request, 'core/partials/faq_content.html', context)
+    
+    return render(request, 'core/faqs.html', context)
 
 def privacy_policy_page(request):
     """Renders the Privacy Policy page with data and Alpine.js tabs."""
