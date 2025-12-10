@@ -1,5 +1,6 @@
 from django.urls import path, include
 from . import views
+from . import webhooks
 
 app_name = 'coaching_booking'
 
@@ -14,8 +15,11 @@ urlpatterns = [
     path('reschedule-session-form/<int:booking_id>/', views.reschedule_session_form, name='reschedule_session_form'),
     path('profile/book-session/', views.profile_book_session_partial, name='profile_book_session'),
     path('get-booking-calendar/', views.get_booking_calendar, name='get_booking_calendar'),
+    path('confirm-booking-modal/', views.confirm_booking_modal, name='confirm_booking_modal'),
     path('get-daily-slots/', views.get_daily_slots, name='get_daily_slots'),
     path('apply-for-free-session/', views.apply_for_free_session, name='apply_for_free_session'),
     path('coach-approve-free-session/', views.coach_approve_free_session, name='coach_approve_free_session'),
     path('coach-deny-free-session/', views.coach_deny_free_session, name='coach_deny_free_session'),
+    path('webhooks/stripe/', webhooks.stripe_webhook, name='stripe_webhook'),
+    path('booking/verify/<int:booking_id>/', views.check_payment_status, name='check_payment_status'),
 ]

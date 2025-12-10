@@ -1,1 +1,0 @@
-default_app_config = 'coaching_booking.apps.CoachingBookingConfig'

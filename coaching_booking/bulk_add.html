@@ -1,0 +1,16 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block content %}
+<div id="content-main">
+    <form method="post">
+        {% csrf_token %}
+        <div>
+            {{ form.as_p }}
+        </div>
+        <div class="submit-row">
+            <input type="submit" value="Generate Slots" class="default">
+        </div>
+    </form>
+</div>
+{% endblock %}

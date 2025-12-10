@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; }
+        .btn { background: #4F46E5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
+        .details { background: #F3F4F6; padding: 15px; border-radius: 5px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h2>Hi {{ name }},</h2>
+    
+    <p>Your spot is secured! Here are your booking details:</p>
+    
+    <div class="details">
+        <strong>Event:</strong> {{ details }}<br>
+        <strong>When:</strong> {{ date|date:"l, F jS @ g:i A" }}<br>
+    </div>
+    
+    <p>See you there,<br>The Coaching Team</p>
+</body>
+</html>

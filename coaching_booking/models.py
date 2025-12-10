@@ -2,11 +2,12 @@ from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 from accounts.models import User
-from coaching_core.models import CoachProfile, Offering
+from coaching_core.models import CoachProfile, Offering, Workshop
 from dateutil.relativedelta import relativedelta
 from django.core.exceptions import ValidationError
 
 SESSION_STATUS_CHOICES = (
+    ('PENDING_PAYMENT', 'Awaiting Payment'),
     ('BOOKED', 'Booked'),
     ('COMPLETED', 'Completed'),
     ('CANCELED', 'Canceled'),
@@ -81,13 +82,26 @@ class ClientOfferingEnrollment(models.Model):
 
 class SessionBooking(models.Model):
     enrollment = models.ForeignKey(ClientOfferingEnrollment, on_delete=models.CASCADE, related_name='bookings', verbose_name="Enrollment", null=True, blank=True)
-    coach = models.ForeignKey(CoachProfile, on_delete=models.CASCADE, related_name='bookings', verbose_name="Coach")
-    client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bookings', verbose_name="Client")
+    # Decoupled Booking Fields
+    workshop = models.ForeignKey(Workshop, on_delete=models.CASCADE, related_name='bookings', verbose_name="Workshop", null=True, blank=True)
+    coach = models.ForeignKey(CoachProfile, on_delete=models.CASCADE, related_name='bookings', verbose_name="Coach", null=True, blank=True)
+    
+    # User / Guest Fields
+    client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bookings', verbose_name="Client", null=True, blank=True)
+    guest_email = models.EmailField(blank=True, verbose_name="Guest Email")
+    guest_name = models.CharField(max_length=255, blank=True, verbose_name="Guest Name")
+    
     start_datetime = models.DateTimeField(verbose_name="Start Time", db_index=True)
     end_datetime = models.DateTimeField(verbose_name="End Time")
     status = models.CharField(max_length=20, choices=SESSION_STATUS_CHOICES, default='BOOKED', verbose_name="Status")
     gcal_event_id = models.CharField(max_length=255, blank=True, null=True, verbose_name="Google Calendar Event ID", help_text="The unique ID for the event in Google Calendar.")
     reminder_sent = models.BooleanField(default=False, verbose_name="Reminder Sent", help_text="True if a reminder email has been sent for this session.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Payment Fields
+    stripe_checkout_session_id = models.CharField(max_length=255, blank=True, null=True)
+    amount_paid = models.IntegerField(default=0) # In cents
+    is_paid = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = "Session Booking"
@@ -97,7 +111,7 @@ class SessionBooking(models.Model):
 
     def clean(self):
         from django.core.exceptions import ValidationError
-        if self.start_datetime and self.end_datetime and self.coach:
+        if self.start_datetime and self.end_datetime and self.coach and not self.workshop:
             # Check for overlapping sessions for the same coach
             # Exclude self from query for updates
             query = SessionBooking.objects.filter(
@@ -121,7 +135,7 @@ class SessionBooking(models.Model):
         return 0
 
     def save(self, *args, **kwargs):
-        if self.enrollment and not self.client_id:
+        if self.enrollment and not self.client_id and not self.guest_email:
             self.client = self.enrollment.client
         if self.enrollment and not self.coach_id:
             self.coach = self.enrollment.coach
@@ -226,3 +240,20 @@ class OneSessionFreeOffer(models.Model):
         if self.redemption_deadline:
             return timezone.now() > self.redemption_deadline
         return False
+
+class CoachBusySlot(models.Model):
+    """
+    A local cache of external calendar events (Google/Outlook).
+    If a record exists here, the time is BLOCKED.
+    """
+    coach = models.ForeignKey(CoachProfile, on_delete=models.CASCADE, related_name='busy_slots')
+    external_id = models.CharField(max_length=255, unique=True) # Google Event ID
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+    
+    # Metadata for debugging
+    source = models.CharField(max_length=50, default='GOOGLE_CALENDAR')
+    last_synced = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['coach', 'start_time', 'end_time'])]
