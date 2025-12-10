@@ -1,0 +1,42 @@
+{% comment %}
+This fragment renders the content for either the Privacy Policy or Terms of Service.
+It relies on Alpine.js (activePolicy variable) for tab switching within the consuming page/modal.
+Context expected: 'policy_data' (TOS_DATA or PRIVACY_POLICY_DATA) and 'policy_type' ('tos' or 'privacy').
+{% endcomment %}
+
+<div class="bg-white shadow-none rounded-lg p-0">
+    
+    {# Retail Content #}
+    {% with retail_policy=policy_data.retail %}
+    <div x-show="activePolicy === 'retail'" role="tabpanel" id="retail-{{ policy_type }}-panel" aria-labelledby="retail-{{ policy_type }}-tab">
+        <h2 class="text-2xl font-bold mb-4">{{ retail_policy.title }}</h2>
+        <p class="text-sm text-gray-600 mb-8">Effective Date: {{ retail_policy.effective_date }}</p>
+        
+        {% for section in retail_policy.sections %}
+            <section class="mb-8">
+                <h3 class="text-xl font-semibold mb-3">{{ section.heading }}</h3>
+                <div class="text-gray-700 leading-relaxed space-y-4">
+                    {{ section.content|safe }}
+                </div>
+            </section>
+        {% endfor %}
+    </div>
+    {% endwith %}
+
+    {# Coaching Content #}
+    {% with coaching_policy=policy_data.coaching %}
+    <div x-show="activePolicy === 'coaching'" role="tabpanel" id="coaching-{{ policy_type }}-panel" aria-labelledby="coaching-{{ policy_type }}-tab" x-cloak>
+        <h2 class="text-2xl font-bold mb-4">{{ coaching_policy.title }}</h2>
+        <p class="text-sm text-gray-600 mb-8">Effective Date: {{ coaching_policy.effective_date }}</p>
+
+        {% for section in coaching_policy.sections %}
+            <section class="mb-8">
+                <h3 class="text-xl font-semibold mb-3">{{ section.heading }}</h3>
+                <div class="text-gray-700 leading-relaxed space-y-4">
+                    {{ section.content|safe }}
+                </div>
+            </section>
+        {% endfor %}
+    </div>
+    {% endwith %}
+</div>
