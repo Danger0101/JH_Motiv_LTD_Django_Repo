@@ -3,7 +3,10 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
 from django.urls import reverse
 from .models import User, MarketingPreference, Address, CoachProfile
-
+from django.conf import settings
+from django.contrib import messages
+import stripe
+import logging
 # --- INLINES ---
 
 class CoachProfileInline(admin.StackedInline):
@@ -34,13 +37,13 @@ class AddressInline(admin.StackedInline):
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     inlines = (CoachProfileInline, MarketingPreferenceInline, AddressInline)
-    list_display = ('username', 'email', 'full_name_display', 'is_coach', 'is_client', 'date_joined')
+    list_display = ('username', 'email', 'full_name_display', 'is_coach', 'is_client', 'stripe_link', 'date_joined')
     list_filter = BaseUserAdmin.list_filter + ('is_coach', 'is_client', 'is_on_vacation')
     search_fields = ('username', 'first_name', 'last_name', 'email', 'stripe_customer_id')
-    ordering = ('-date_joined',) # Show newest users first
+    ordering = ('-date_joined',)
     
-    # Optimization: Select related profile data if you display it in list view
-    # For standard UserAdmin, this helps if you add profile columns later
+    actions = ['sync_with_stripe']
+    
     list_select_related = ('coach_profile',)
 
     @admin.display(description='Full Name')
@@ -59,6 +62,54 @@ class UserAdmin(BaseUserAdmin):
         }),
         ('Important Dates', {'fields': ('last_login', 'date_joined')}),
     )
+
+    @admin.display(description='Stripe Profile')
+    def stripe_link(self, obj):
+        if not obj.stripe_customer_id:
+            return "N/A"
+        
+        is_live = settings.STRIPE_SECRET_KEY and not settings.STRIPE_SECRET_KEY.startswith('sk_test_')
+        
+        base_url = "https://dashboard.stripe.com"
+        path = "" if is_live else "/test"
+        url = f"{base_url}{path}/customers/{obj.stripe_customer_id}"
+        return format_html('<a href="{}" target="_blank">View on Stripe</a>', url)
+
+    @admin.action(description='Sync selected users with Stripe')
+    def sync_with_stripe(self, request, queryset):
+        if not settings.STRIPE_SECRET_KEY:
+            self.message_user(request, "Stripe is not configured.", level=messages.ERROR)
+            return
+
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        synced_count = 0
+        skipped_count = 0
+        failed_count = 0
+
+        for user in queryset:
+            if user.stripe_customer_id:
+                skipped_count += 1
+                continue
+
+            try:
+                customer = stripe.Customer.create(
+                    email=user.email,
+                    name=user.get_full_name(),
+                    metadata={'user_id': user.id, 'username': user.username}
+                )
+                user.stripe_customer_id = customer.id
+                user.save(update_fields=['stripe_customer_id'])
+                synced_count += 1
+            except Exception as e:
+                logging.getLogger(__name__).error(f"Failed to create Stripe customer for user {user.email}: {e}")
+                failed_count += 1
+
+        if synced_count > 0:
+            self.message_user(request, f"Successfully synced {synced_count} user(s) with Stripe.", level=messages.SUCCESS)
+        if skipped_count > 0:
+            self.message_user(request, f"Skipped {skipped_count} user(s) who already had a Stripe ID.", level=messages.INFO)
+        if failed_count > 0:
+            self.message_user(request, f"Failed to sync {failed_count} user(s). Check logs for details.", level=messages.ERROR)
 
 @admin.register(CoachProfile)
 class CoachProfileAdmin(admin.ModelAdmin):

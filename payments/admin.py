@@ -5,6 +5,7 @@ from django.http import HttpResponse
 from .models import Order, OrderItem, CoachingOrder, CoachingOrderItem, Coupon, CouponUsage
 from django.utils.html import format_html
 from django.urls import reverse
+from django.conf import settings
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
@@ -27,10 +28,10 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user_link', 'email', 'status', 'total_paid', 'created_at', 'item_count')
+    list_display = ('id', 'user_link', 'email', 'status', 'total_paid', 'created_at', 'item_count', 'stripe_payment_link')
     list_filter = ('status', 'created_at', 'carrier')
     search_fields = ('id', 'user__email', 'email', 'guest_order_token', 'stripe_checkout_id')
-    readonly_fields = ('id', 'created_at', 'updated_at', 'stripe_checkout_id', 'guest_order_token', 'total_paid', 'discount_amount', 'coupon_code_snapshot')
+    readonly_fields = ('id', 'created_at', 'updated_at', 'stripe_checkout_id', 'guest_order_token', 'total_paid', 'discount_amount', 'coupon_code_snapshot', 'stripe_payment_link')
     inlines = [OrderItemInline]
     date_hierarchy = 'created_at'
     
@@ -61,7 +62,7 @@ class OrderAdmin(admin.ModelAdmin):
             'fields': ('id', 'user_link', 'email', 'status', 'guest_order_token')
         }),
         ('Financials', {
-            'fields': ('total_paid', 'discount_amount', 'coupon_code_snapshot', 'stripe_checkout_id')
+            'fields': ('total_paid', 'discount_amount', 'coupon_code_snapshot', 'stripe_checkout_id', 'stripe_payment_link')
         }),
         ('Shipping & Fulfillment', {
             'fields': ('shipping_data', 'carrier', 'tracking_number', 'tracking_url', 'printful_order_id', 'printful_order_status')
@@ -75,6 +76,18 @@ class OrderAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj=None):
         # Make user_link readonly
         return self.readonly_fields + ('user_link',)
+
+    @admin.display(description='Stripe Payment')
+    def stripe_payment_link(self, obj):
+        if not obj.stripe_checkout_id:
+            return "-"
+        
+        is_live = settings.STRIPE_SECRET_KEY and not settings.STRIPE_SECRET_KEY.startswith('sk_test_')
+        
+        base_url = "https://dashboard.stripe.com"
+        path = "" if is_live else "/test"
+        url = f"{base_url}{path}/payments/{obj.stripe_checkout_id}"
+        return format_html('<a href="{}" target="_blank">View on Stripe</a>', url)
 
 class CoachingOrderItemInline(admin.TabularInline):
     model = CoachingOrderItem
