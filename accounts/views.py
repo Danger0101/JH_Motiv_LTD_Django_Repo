@@ -35,7 +35,8 @@ logger = logging.getLogger(__name__)
 
 try:
     from weasyprint import HTML
-except ImportError:
+except (ImportError, OSError):
+    # OSError handles the missing GTK+ DLLs on Windows
     HTML = None
 
 # --- FIX IMPORTS HERE ---

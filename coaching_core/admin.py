@@ -57,7 +57,7 @@ class OfferingAdmin(admin.ModelAdmin):
 
 @admin.register(Workshop)
 class WorkshopAdmin(admin.ModelAdmin):
-    list_display = ('name', 'coach_link', 'date', 'time_range', 'attendee_count', 'active_status')
+    list_display = ('name', 'coach_link', 'date', 'time_range', 'booking_capacity_status', 'active_status')
     list_filter = ('active_status', 'is_free', 'date', 'coach')
     search_fields = ('name', 'coach__user__email', 'coach__user__last_name')
     readonly_fields = ('slug', 'created_at', 'updated_at', 'created_by', 'updated_by')
@@ -73,9 +73,11 @@ class WorkshopAdmin(admin.ModelAdmin):
     def time_range(self, obj):
         return f"{obj.start_time.strftime('%H:%M')} - {obj.end_time.strftime('%H:%M')}"
 
-    @admin.display(description='Attendees')
-    def attendee_count(self, obj):
-        return f"{obj.attendees.count()} / {obj.total_attendees}"
+    @admin.display(description='Bookings / Cap')
+    def booking_capacity_status(self, obj):
+        # This uses the related_name='bookings' from SessionBooking model
+        count = obj.bookings.filter(status='BOOKED').count()
+        return f"{count} / {obj.total_attendees}"
 
     fieldsets = (
         ('Workshop Info', {

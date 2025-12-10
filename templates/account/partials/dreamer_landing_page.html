@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white">
+    <div class="max-w-7xl mx-auto py-16 px-4 sm:py-24 sm:px-6 lg:px-8">
+        <div class="text-center">
+            {% if dreamer.profile_picture %}
+                <img class="mx-auto h-32 w-32 rounded-full object-cover" src="{{ dreamer.profile_picture.url }}" alt="{{ dreamer.name }}">
+            {% else %}
+                <div class="mx-auto h-32 w-32 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-4xl font-bold">
+                    {{ dreamer.name|slice:":1" }}
+                </div>
+            {% endif %}
+            
+            <h1 class="mt-4 text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
+                {{ dreamer.name }}
+            </h1>
+            <p class="mt-4 max-w-2xl mx-auto text-xl text-gray-500">
+                {{ dreamer.bio|default:"Welcome to my page!" }}
+            </p>
+            
+            <div class="mt-8 flex justify-center gap-4">
+                {% for channel in dreamer.channels.all %}
+                    <a href="{{ channel.url }}" target="_blank" class="text-gray-400 hover:text-gray-500">
+                        <span class="sr-only">{{ channel.platform }}</span>
+                        {# You can add icons here based on platform #}
+                        {{ channel.platform }}
+                    </a>
+                {% endfor %}
+            </div>
+
+            <div class="mt-10">
+                <a href="{% url 'products:product_list' %}" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Shop My Recommendations
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
