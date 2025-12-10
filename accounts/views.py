@@ -234,6 +234,30 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             if Order:
                 context['staff_recent_orders'] = Order.objects.select_related('user').order_by('-created_at')[:5]
 
+        # --- "My Payouts" for Coach/Dreamer ---
+        is_coach_profile = hasattr(self.request.user, 'coach_profile')
+        is_dreamer_profile = hasattr(self.request.user, 'dreamer_profile')
+        context['has_earnings_profile'] = is_coach_profile or is_dreamer_profile
+
+        total_unpaid_coach = Decimal('0.00')
+        total_unpaid_referrer = Decimal('0.00')
+        
+        if is_coach_profile and CoachingOrder:
+            coach_unpaid = CoachingOrder.objects.filter(
+                enrollment__coach=self.request.user.coach_profile, 
+                payout_status='unpaid'
+            ).aggregate(total=models.Sum('amount_coach'))['total'] or Decimal('0.00')
+            total_unpaid_coach = coach_unpaid
+
+        if is_dreamer_profile and CoachingOrder:
+            ref_unpaid = CoachingOrder.objects.filter(
+                referrer=self.request.user.dreamer_profile, 
+                payout_status='unpaid'
+            ).aggregate(total=models.Sum('amount_referrer'))['total'] or Decimal('0.00')
+            total_unpaid_referrer = ref_unpaid
+
+        context['my_total_unpaid_earnings'] = total_unpaid_coach + total_unpaid_referrer
+
         # --- CLIENT ORDER HISTORY ---
         if Order:
             context['ecomm_orders'] = Order.objects.filter(user=self.request.user).order_by('-created_at')

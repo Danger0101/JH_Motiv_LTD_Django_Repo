@@ -116,6 +116,22 @@
             <div x-show="activeTab === 'dashboard'" x-cloak class="p-6 space-y-8">
                 <h2 class="text-2xl font-bold text-gray-800 border-b pb-4">Dashboard</h2>
 
+                {% if has_earnings_profile and my_total_unpaid_earnings > 0 %}
+                <div class="bg-gradient-to-r from-green-50 to-white border border-green-100 p-6 rounded-xl">
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">My Payouts</h3>
+                    <div class="flex items-center justify-between flex-wrap gap-4">
+                        <div>
+                            <p class="text-gray-600">You have <strong class="text-green-700">£{{ my_total_unpaid_earnings|floatformat:2 }}</strong> in pending earnings.</p>
+                            <p class="text-xs text-gray-500">Payouts are processed at the end of the month.</p>
+                        </div>
+                        <a href="{% url 'payments:my_earnings' %}" 
+                                class="px-5 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition shadow-sm">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
                 {% if my_coupons %}
                 <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-xl mb-6">
                     <h3 class="font-bold text-yellow-800 mb-3">Your Active Rewards</h3>
