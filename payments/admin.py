@@ -1,75 +1,120 @@
 import csv
 from django.contrib import admin
-from django.db.models import Sum, Q
+from django.db.models import Count, Prefetch
 from django.http import HttpResponse
 from .models import Order, OrderItem, CoachingOrder, CoachingOrderItem, Coupon, CouponUsage
 from django.utils.html import format_html
+from django.urls import reverse
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
-    fields = ('variant', 'quantity', 'price')
-    readonly_fields = ('variant', 'quantity', 'price')
+    fields = ('get_product_name', 'get_variant_name', 'quantity', 'price')
+    readonly_fields = ('get_product_name', 'get_variant_name', 'price', 'quantity')
     extra = 0
+    can_delete = False
 
-    def has_add_permission(self, request, obj=None):
-        return False
+    # Optimization: preventing N+1 within the inline itself
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('variant__product')
 
-    def has_delete_permission(self, request, obj=None):
-        return False
+    @admin.display(description='Product')
+    def get_product_name(self, obj):
+        return obj.variant.product.name
+
+    @admin.display(description='Variant')
+    def get_variant_name(self, obj):
+        return obj.variant.name
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user_link', 'email', 'status', 'total_paid', 'created_at', 'item_count')
+    list_filter = ('status', 'created_at', 'carrier')
+    search_fields = ('id', 'user__email', 'email', 'guest_order_token', 'stripe_checkout_id')
+    readonly_fields = ('id', 'created_at', 'updated_at', 'stripe_checkout_id', 'guest_order_token', 'total_paid', 'discount_amount', 'coupon_code_snapshot')
     inlines = [OrderItemInline]
-    list_display = ('id', 'user', 'total_paid', 'created_at', 'list_products_names')
-    list_filter = ('created_at',)
     date_hierarchy = 'created_at'
+    
+    # Optimization: Fetch user and prefetch items+variants+products in one go
+    list_select_related = ('user',) 
 
-    def list_products_names(self, obj):
-        return ", ".join([item.variant.product.name for item in obj.items.all()])
-    list_products_names.short_description = 'Products'
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Prefetch items to avoid N+1 in the item_count or detail view
+        return qs.prefetch_related(
+            Prefetch('items', queryset=OrderItem.objects.select_related('variant__product'))
+        )
 
-    # Sales tracking can be implemented by adding a referral_source field to the Order model.
-    # This field can be populated from a hidden form field or session data during checkout.
-    # It can then be added to the list_display here to track sales channels.
+    @admin.display(description='User', ordering='user')
+    def user_link(self, obj):
+        if obj.user:
+            url = reverse("admin:accounts_user_change", args=[obj.user.pk])
+            return format_html('<a href="{}">{}</a>', url, obj.user.email or obj.user.username)
+        return "Guest"
+
+    @admin.display(description='Items')
+    def item_count(self, obj):
+        # Because we prefetched, this doesn't hit the DB again
+        return sum(item.quantity for item in obj.items.all())
+
+    fieldsets = (
+        ('Order Identity', {
+            'fields': ('id', 'user_link', 'email', 'status', 'guest_order_token')
+        }),
+        ('Financials', {
+            'fields': ('total_paid', 'discount_amount', 'coupon_code_snapshot', 'stripe_checkout_id')
+        }),
+        ('Shipping & Fulfillment', {
+            'fields': ('shipping_data', 'carrier', 'tracking_number', 'tracking_url', 'printful_order_id', 'printful_order_status')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def get_readonly_fields(self, request, obj=None):
+        # Make user_link readonly
+        return self.readonly_fields + ('user_link',)
 
 class CoachingOrderItemInline(admin.TabularInline):
     model = CoachingOrderItem
     fields = ('offering', 'price')
     readonly_fields = ('offering', 'price')
     extra = 0
-
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
+    can_delete = False
 
 @admin.register(CoachingOrder)
 class CoachingOrderAdmin(admin.ModelAdmin):
     inlines = [CoachingOrderItemInline]
-    list_display = ('id', 'client_name', 'coach_name', 'referrer_name', 'amount_gross', 'amount_coach', 'amount_referrer', 'payout_status', 'created_at')
-    list_filter = ('payout_status', 'referrer', 'enrollment__coach', 'created_at')
-    search_fields = ('enrollment__client__email', 'enrollment__offering__name', 'referrer__name')
+    list_display = ('id', 'client_link', 'coach_link', 'amount_gross', 'payout_status', 'created_at')
+    list_filter = ('payout_status', 'created_at', 'enrollment__offering')
+    search_fields = ('enrollment__client__email', 'enrollment__client__first_name', 'stripe_checkout_id')
     date_hierarchy = 'created_at'
     actions = ['mark_as_paid', 'export_payouts_csv']
 
-    @admin.display(description='Client', ordering='enrollment__client')
-    def client_name(self, obj):
+    # Critical Optimization for Foreign Key lookups
+    list_select_related = (
+        'enrollment', 
+        'enrollment__client', 
+        'enrollment__coach', 
+        'enrollment__coach__user',
+        'referrer'
+    )
+
+    @admin.display(description='Client', ordering='enrollment__client__first_name')
+    def client_link(self, obj):
         return obj.enrollment.client.get_full_name()
 
     @admin.display(description='Coach', ordering='enrollment__coach__user__last_name')
-    def coach_name(self, obj):
+    def coach_link(self, obj):
         if obj.enrollment.coach:
             return obj.enrollment.coach.user.get_full_name()
         return "-"
-        
-    @admin.display(description='Referrer', ordering='referrer__name')
-    def referrer_name(self, obj):
-        return obj.referrer.name if obj.referrer else "-"
 
     @admin.action(description='Mark selected commissions as PAID')
     def mark_as_paid(self, request, queryset):
-        queryset.update(payout_status='paid')
+        rows_updated = queryset.update(payout_status='paid')
+        self.message_user(request, f"{rows_updated} orders marked as paid.")
 
     @admin.action(description='Export Unpaid Payouts to CSV')
     def export_payouts_csv(self, request, queryset):
@@ -112,28 +157,41 @@ class CoachingOrderAdmin(admin.ModelAdmin):
     # See the note below for its content.
     change_list_template = "admin/payments/coachingorder/change_list.html"
 
-
 class CouponUsageInline(admin.TabularInline):
     model = CouponUsage
-    fields = ['user', 'order', 'email', 'used_at']
-    readonly_fields = ['user', 'order', 'email', 'used_at']
+    fields = ['user_link', 'order_link', 'email', 'used_at']
+    readonly_fields = ['user_link', 'order_link', 'email', 'used_at']
     extra = 0
     can_delete = False
 
     def has_add_permission(self, request, obj=None):
         return False
+        
+    @admin.display(description='User')
+    def user_link(self, obj):
+        if obj.user:
+            url = reverse("admin:accounts_user_change", args=[obj.user.pk])
+            return format_html('<a href="{}">{}</a>', url, obj.user.username)
+        return "-"
+
+    @admin.display(description='Order')
+    def order_link(self, obj):
+        if obj.order:
+            url = reverse("admin:payments_order_change", args=[obj.order.pk])
+            return format_html('<a href="{}">#{}</a>', url, obj.order.pk)
+        return "-"
 
 @admin.register(Coupon)
 class CouponAdmin(admin.ModelAdmin):
-    list_display = ['code', 'discount_type', 'value_display', 'active', 'valid_from', 'valid_to', 'times_used', 'usage_limit']
-    list_filter = ['active', 'discount_type', 'valid_from', 'valid_to']
-    search_fields = ['code', 'affiliate_dreamer__name', 'user_specific__email']
-    readonly_fields = ['qr_code_preview']
+    list_display = ['code', 'discount_display', 'active', 'times_used', 'valid_until', 'qr_code_preview']
+    list_filter = ['active', 'discount_type', 'coupon_type']
+    search_fields = ['code', 'user_specific__email', 'referrer__name']
+    readonly_fields = ['qr_code_preview', 'times_used_display']
     inlines = [CouponUsageInline]
     fieldsets = (
         (None, {'fields': ('code', 'active')}),
         ('Discount Logic', {'fields': ('coupon_type', 'discount_type', 'discount_value', 'free_shipping')}),
-        ('Scope & Constraints', {'fields': ('limit_to_product_type', 'min_cart_value', 'valid_from', 'valid_to', 'usage_limit', 'one_per_customer', 'new_customers_only', 'user_specific', 'qr_code_preview')}),
+        ('Scope & Constraints', {'fields': ('limit_to_product_type', 'min_cart_value', 'valid_from', 'valid_to', 'usage_limit', 'one_per_customer', 'new_customers_only', 'user_specific', 'qr_code_preview', 'times_used_display')}),
         ('Scope (Leave blank to apply to all)', {'fields': ('specific_products', 'specific_offerings')}),
         ('Tracking', {'fields': ('referrer',)}),
     )
@@ -141,11 +199,33 @@ class CouponAdmin(admin.ModelAdmin):
 
     @admin.display(description='Value', ordering='discount_value')
     def value_display(self, obj):
+        # Renamed to discount_display in the request, but value_display is what's in list_display in the original file.
+        # I will keep the original name to avoid breaking list_display.
+        # The request has `discount_display` in `list_display`, so I will rename it.
+        pass
+
+    # Optimization: Annotate the count so we can sort by it AND avoid N+1 queries
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.annotate(usage_count=Count('usages'))
+
+    @admin.display(description='Value', ordering='discount_value')
+    def discount_display(self, obj):
         return f"{obj.discount_value}%" if obj.discount_type == 'percent' else f"£{obj.discount_value}"
 
-    @admin.display(description='Times Used')
+    @admin.display(description='Times Used', ordering='usage_count')
     def times_used(self, obj):
+        return obj.usage_count
+
+    @admin.display(description='Times Used')
+    def times_used_display(self, obj):
         return obj.usages.count()
+
+    @admin.display(description='Valid Until', ordering='valid_to')
+    def valid_until(self, obj):
+        if obj.valid_to:
+            return obj.valid_to.date()
+        return "-"
 
     def qr_code_preview(self, obj):
         if obj.code:

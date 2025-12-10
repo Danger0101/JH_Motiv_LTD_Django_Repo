@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from django.db.models import Sum
+from django.db.models import Min, Max, Sum, Count
 # Added StockItem to imports
 from .models import Product, Variant, StockPool, StockItem
 
@@ -10,42 +10,30 @@ from .models import Product, Variant, StockPool, StockItem
 @admin.register(StockPool)
 class StockPoolAdmin(admin.ModelAdmin):
     """Admin interface for managing shared inventory pools."""
-    list_display = ('name', 'available_stock', 'low_stock_threshold')
+    list_display = ('name', 'available_stock', 'low_stock_threshold', 'is_low_stock')
     search_fields = ('name',)
-    list_editable = ('available_stock', 'low_stock_threshold')
+    list_editable = ('available_stock',)
     fieldsets = (
         (None, {
             'fields': ('name', 'available_stock', 'low_stock_threshold'),
         }),
     )
 
+    @admin.display(boolean=True, description='Low Stock?')
+    def is_low_stock(self, obj):
+        return obj.available_stock <= obj.low_stock_threshold
+
 # =======================================================
 # 2. Variant Inline (Used inside Product Admin)
 # =======================================================
 class VariantInline(admin.TabularInline):
     model = Variant
-    extra = 1
+    extra = 0 # Cleaner UI, use 'Add another' if needed
+    fields = ('name', 'color', 'size', 'price', 'weight', 'sku', 'stock_pool', 'printful_variant_id')
     
-    # Group fields for clarity
-    fieldsets = (
-        (None, {
-            'fields': ('name', ('color', 'size'), 'price', 'stock_pool', 'get_inventory_display', 'sku', 'printful_variant_id'),
-        }),
-    )
-    
-    # Display stock information directly in the inline
-    readonly_fields = ['get_inventory_display']
-    
-    def get_inventory_display(self, obj):
-        """Displays the inventory value from the linked StockPool."""
-        inventory = obj.get_inventory()
-        if obj.stock_pool and inventory <= obj.stock_pool.low_stock_threshold:
-            return format_html(f'<strong style="color: orange;">{inventory}</strong>')
-        elif inventory == 0:
-            return format_html(f'<strong style="color: red;">0</strong>')
-        return inventory
-        
-    get_inventory_display.short_description = 'Pool Stock'
+    # Optimization: link stock_pool lookup
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('stock_pool')
 
 
 # =======================================================
@@ -54,53 +42,76 @@ class VariantInline(admin.TabularInline):
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     """Main interface for managing Products and their Variants."""
-    inlines = [VariantInline]
-    
     list_display = (
         'name', 
         'product_type',
         'is_active',
-        'current_price_range',
-        'current_stock_status',
+        'price_display', 
+        'variant_count'
     )
-    list_filter = ('product_type', 'is_active')
+    list_filter = ('product_type', 'is_active', 'created_at')
+    search_fields = ('name', 'description', 'printful_product_id')
     list_editable = ('is_active',)
-    search_fields = ('name', 'description')
+    readonly_fields = ('created_at', 'updated_at', 'printful_product_id')
+    inlines = [VariantInline]
+    
+    # Optimization: Annotate min/max price and count variants in the main query
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.annotate(
+            min_price=Min('variants__price'),
+            max_price=Max('variants__price'),
+            num_variants=Count('variants')
+        )
     
     fieldsets = (
-        (None, {
-            'fields': ('name', 'description', ('product_type', 'is_active'), 'featured_image'),
+        ('Product Info', {
+            'fields': ('name', 'description', 'featured_image')
+        }),
+        ('Settings', {
+            'fields': ('product_type', 'is_active', 'printful_product_id')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',),
         }),
     )
 
     # Custom Admin Methods for Display
 
-    def current_price_range(self, obj):
-        """Displays the price range across all variants."""
-        price_range = obj.get_price_range()
-        min_p = price_range['min_price']
-        max_p = price_range['max_price']
-        if min_p == max_p:
-            return f'£{min_p}' # Fixed currency: £
-        return f'£{min_p} - £{max_p}' # Fixed currency: £
-    current_price_range.short_description = 'Price'
+    @admin.display(description='Price Range', ordering='min_price')
+    def price_display(self, obj):
+        # Uses annotated data, zero extra DB hits
+        if obj.min_price is None: 
+            return "-"
+        if obj.min_price == obj.max_price:
+            return f"£{obj.min_price}"
+        return f"£{obj.min_price} - £{obj.max_price}"
 
-    def current_stock_status(self, obj):
-        """Displays the stock status based on the Product model logic."""
-        status_data = obj.get_stock_status()
-        return format_html(f'<span style="color: {status_data["color"]};">● {status_data["status"]}</span>')
-        
-    current_stock_status.short_description = 'Stock Status'
+    @admin.display(description='Variants', ordering='num_variants')
+    def variant_count(self, obj):
+        return obj.num_variants
 
 # =======================================================
 # 4. Variant Admin (NEW - to support autocomplete_fields)
 # =======================================================
 @admin.register(Variant)
 class VariantAdmin(admin.ModelAdmin):
-    list_display = ('product', 'name', 'color', 'size', 'price', 'stock_pool')
-    list_filter = ('product', 'color', 'size', 'stock_pool')
-    search_fields = ('name', 'product__name', 'color', 'size')
-    raw_id_fields = ('product',) # Use raw_id_fields for product if many products exist
+    list_display = ('full_name', 'price', 'stock_status', 'sku')
+    list_filter = ('product__product_type', 'stock_pool')
+    search_fields = ('name', 'sku', 'product__name')
+    autocomplete_fields = ('product', 'stock_pool')
+    list_select_related = ('product', 'stock_pool') # Fixes N+1
+
+    @admin.display(description='Variant Name')
+    def full_name(self, obj):
+        return str(obj)
+
+    @admin.display(description='Stock')
+    def stock_status(self, obj):
+        if not obj.stock_pool:
+            return "-"
+        return f"{obj.stock_pool.available_stock} (Pool: {obj.stock_pool.name})"
 
 # =======================================================
 # 5. Stock Item Admin (NEW - Fixes Staff Dashboard Error)
@@ -111,7 +122,8 @@ class StockItemAdmin(admin.ModelAdmin):
     Admin interface for specific StockItems (Variant + Pool link).
     Required for the 'Low Stock Alerts' link in the Staff Dashboard.
     """
-    list_display = ('variant', 'pool', 'quantity', 'updated_at')
-    list_filter = ('pool', 'updated_at')
-    search_fields = ('variant__name', 'variant__product__name', 'pool__name')
-    autocomplete_fields = ['variant', 'pool'] # Optional: improves UI if you have many products
+    list_display = ('variant', 'pool', 'quantity', 'updated_at')    
+    list_select_related = ('variant', 'variant__product', 'pool') # Deep selection
+    list_filter = ('pool', 'updated_at')    
+    search_fields = ('variant__sku', 'variant__product__name')
+    autocomplete_fields = ['variant', 'pool']

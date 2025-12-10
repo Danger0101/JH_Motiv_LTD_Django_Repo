@@ -1,58 +1,94 @@
 from django.contrib import admin
 from .models import Offering, Workshop
-from accounts.models import CoachProfile
 
-# Note: The inline configuration below assumes that your 'Offering' model
-# has a ManyToManyField named 'coaches'. If you have a custom 'through'
-
-# model, you should specify it directly in the inline.
+# --- INLINES ---
 
 class CoachAssignmentInline(admin.TabularInline):
-    # This will use the auto-generated through model for the 'coaches' ManyToManyField.
-    # If your field is named differently, update 'Offering.coaches.through'.
     model = Offering.coaches.through
     extra = 1
     verbose_name = "Coach Assignment"
     verbose_name_plural = "Coach Assignments"
+    autocomplete_fields = ('coachprofile',) # Requires search_fields on CoachProfileAdmin
+
+# --- MODEL ADMINS ---
 
 @admin.register(Offering)
 class OfferingAdmin(admin.ModelAdmin):
-    list_display = ('name', 'session_length_minutes', 'price', 'active_status', 'created_by')
+    list_display = ('name', 'duration_display', 'price', 'active_status', 'coach_count')
     list_filter = ('active_status', 'duration_type', 'is_whole_day')
     search_fields = ['name', 'description']
+    readonly_fields = ('slug', 'created_at', 'updated_at', 'created_by', 'updated_by')    
+    inlines = [CoachAssignmentInline]
+    exclude = ('coaches',) # Manage via inline to prevent massive multiselect box loading
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related('coaches')
+
+    @admin.display(description='Duration')
+    def duration_display(self, obj):
+        return obj.display_length
+
+    @admin.display(description='Coaches Assigned')
+    def coach_count(self, obj): # Renamed from 'Coaches' to 'Coaches Assigned'
+        return obj.coaches.count()
+
     fieldsets = (
         ('Service Details', {
-            'fields': ('name', 'description')
+            'fields': ('name', 'slug', 'description', 'active_status')
         }),
-        ('Pricing & Length', {
+        ('Pricing & Structure', {
             'fields': ('price', 'duration_type', 'total_length_units', 'session_length_minutes', 'total_number_of_sessions', 'is_whole_day')
         }),
-        ('Status & Audit', {
-            'fields': ('active_status', 'created_by', 'created_at')
+        ('Financials', {
+            'fields': ('coach_revenue_share', 'referral_commission_type', 'referral_commission_value'),
+            'classes': ('collapse',),
+        }),
+        ('Audit', {
+            'fields': ('created_by', 'created_at', 'updated_by', 'updated_at'),
+            'classes': ('collapse',),
         }),
     )
-    readonly_fields = ('created_at',)
-    inlines = [CoachAssignmentInline]
 
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by = request.user
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)
 
 @admin.register(Workshop)
 class WorkshopAdmin(admin.ModelAdmin):
-    list_display = ('name', 'coach', 'date', 'start_time', 'price', 'total_attendees', 'active_status')
-    list_filter = ('active_status', 'is_free', 'coach', 'date')
-    search_fields = ['name', 'description', 'coach__user__first_name', 'coach__user__last_name']
+    list_display = ('name', 'coach_link', 'date', 'time_range', 'attendee_count', 'active_status')
+    list_filter = ('active_status', 'is_free', 'date', 'coach')
+    search_fields = ('name', 'coach__user__email', 'coach__user__last_name')
+    readonly_fields = ('slug', 'created_at', 'updated_at', 'created_by', 'updated_by')
+    autocomplete_fields = ('coach',) # Critical for usability if you have many coaches
+    list_select_related = ('coach', 'coach__user')    
+    date_hierarchy = 'date'
+
+    @admin.display(description='Coach', ordering='coach__user__last_name')
+    def coach_link(self, obj):
+        return obj.coach.user.get_full_name()
+
+    @admin.display(description='Time')
+    def time_range(self, obj):
+        return f"{obj.start_time.strftime('%H:%M')} - {obj.end_time.strftime('%H:%M')}"
+
+    @admin.display(description='Attendees')
+    def attendee_count(self, obj):
+        return f"{obj.attendees.count()} / {obj.total_attendees}"
+
     fieldsets = (
-        ('Workshop Details', {
-            'fields': ('name', 'coach', 'description')
+        ('Workshop Info', {
+            'fields': ('name', 'slug', 'description', 'coach')
         }),
-        ('Time and Date', {
+        ('Schedule', {
             'fields': ('date', 'start_time', 'end_time')
         }),
-        ('Pricing and Capacity', {
-            'fields': ('price', 'is_free', 'total_attendees')
+        ('Capacity & Pricing', {
+            'fields': ('price', 'is_free', 'total_attendees', 'active_status')
         }),
-        ('Status & Audit', {
-            'fields': ('active_status', 'created_by', 'created_at')
+        ('Audit', {
+            'fields': ('created_by', 'created_at'),
+            'classes': ('collapse',),
         }),
     )
-    readonly_fields = ('created_at',)
-    autocomplete_fields = ['coach']

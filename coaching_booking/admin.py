@@ -1,83 +1,111 @@
 from django.contrib import admin
-from .models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer
-from coaching_core.models import Offering
 from django.db.models import F
-from django.urls import reverse
 from django.utils.html import format_html
+from django.urls import reverse
+from .models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer
+
+# --- INLINES ---
 
 class SessionBookingInline(admin.TabularInline):
     model = SessionBooking
     extra = 0  # Don't show extra forms for new bookings by default
-    readonly_fields = ('start_datetime', 'status', 'gcal_event_id')
+    fields = ('start_datetime', 'status', 'coach_link', 'gcal_event_id')
+    readonly_fields = ('start_datetime', 'status', 'coach_link', 'gcal_event_id')
     can_delete = False
+    show_change_link = True # Allows jumping to the full booking edit page
     verbose_name = "Scheduled Session"
     verbose_name_plural = "Scheduled Sessions"
 
     def has_add_permission(self, request, obj=None):
         return False
 
+    @admin.display(description='Coach')
+    def coach_link(self, obj):
+        return obj.coach.user.get_full_name()
+
+# --- MODEL ADMINS ---
+
 @admin.register(ClientOfferingEnrollment)
 class EnrollmentAdmin(admin.ModelAdmin):
-    list_display = ('client_link', 'coach_link', 'offering_link', 'remaining_sessions', 'expiration_date', 'is_active')
+    list_display = ('id', 'client_link', 'offering_link', 'coach_link', 'remaining_sessions', 'is_active', 'expiration_date')
     list_filter = ('is_active', 'coach', 'offering')
-    search_fields = ['client__email', 'client__first_name', 'client__last_name', 'coach__user__email', 'offering__name']
-    readonly_fields = ('enrolled_on', 'expiration_date')
+    search_fields = ('client__email', 'client__username', 'coach__user__email')
+    readonly_fields = ('enrolled_on', 'purchase_date', 'deactivated_on')
     inlines = [SessionBookingInline]
-    list_select_related = ('client', 'coach__user', 'offering') # Performance boost
-    actions = ['add_bonus_session']
+    
+    # Critical Optimization
+    list_select_related = ('client', 'offering', 'coach', 'coach__user') 
+    autocomplete_fields = ('client', 'coach', 'offering')
 
-    @admin.action(description='Add 1 bonus session to selected enrollments')
+    actions = ['add_bonus_session', 'deactivate_enrollments']
+
+    @admin.action(description='Add 1 bonus session to selected')
     def add_bonus_session(self, request, queryset):
         """
         Admin action to add one bonus session to the selected enrollments.
         This increments both total_sessions and remaining_sessions.
         """
         # Use F() expressions for a race-condition-safe update at the database level.
-        updated_count = queryset.update(
+        updated = queryset.update(
             total_sessions=F('total_sessions') + 1,
             remaining_sessions=F('remaining_sessions') + 1
         )
-        self.message_user(
-            request,
-            f'Successfully added 1 bonus session to {updated_count} enrollment(s).',
-        )
+        self.message_user(request, f"Added bonus session to {updated} enrollments.")
+
+    @admin.action(description='Deactivate selected enrollments')
+    def deactivate_enrollments(self, request, queryset):
+        queryset.update(is_active=False)
         
-    @admin.display(description='Client', ordering='client')
+    @admin.display(description='Client', ordering='client__last_name')
     def client_link(self, obj):
         url = reverse("admin:accounts_user_change", args=[obj.client.pk])
         return format_html('<a href="{}">{}</a>', url, obj.client.get_full_name())
 
-    @admin.display(description='Coach', ordering='coach')
+    @admin.display(description='Offering', ordering='offering__name')
+    def offering_link(self, obj):
+        return obj.offering.name
+
+    @admin.display(description='Coach', ordering='coach__user__last_name')
     def coach_link(self, obj):
         if not obj.coach:
             return "-"
         url = reverse("admin:accounts_coachprofile_change", args=[obj.coach.pk])
         return format_html('<a href="{}">{}</a>', url, obj.coach.user.get_full_name())
 
-    @admin.display(description='Offering', ordering='offering')
-    def offering_link(self, obj):
-        url = reverse("admin:coaching_core_offering_change", args=[obj.offering.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.offering.name)
-
 @admin.register(SessionBooking)
 class SessionBookingAdmin(admin.ModelAdmin):
-    list_display = ('client', 'coach', 'start_datetime', 'status', 'gcal_event_id')
+    list_display = ('id', 'start_datetime', 'client_name', 'coach_name', 'status', 'gcal_event_id')
     list_filter = ('status', 'coach', 'start_datetime')
-    date_hierarchy = 'start_datetime'
     search_fields = ['client__email', 'coach__user__email', 'gcal_event_id']
+    date_hierarchy = 'start_datetime'
+    
+    # Critical Optimization
+    list_select_related = ('client', 'coach', 'coach__user', 'enrollment')
+    autocomplete_fields = ('client', 'coach', 'enrollment')
+
+    @admin.display(ordering='client__last_name', description='Client')
+    def client_name(self, obj):
+        return obj.client.get_full_name()
+
+    @admin.display(ordering='coach__user__last_name', description='Coach')
+    def coach_name(self, obj):
+        return obj.coach.user.get_full_name()
 
 @admin.register(OneSessionFreeOffer)
 class OneSessionFreeOfferAdmin(admin.ModelAdmin):
-    list_display = ('client', 'coach', 'date_offered', 'redemption_deadline', 'is_approved', 'is_redeemed', 'session_link')
-    list_filter = ('is_approved', 'is_redeemed', 'coach')
+    list_display = ('client', 'coach', 'is_approved', 'is_redeemed', 'redemption_deadline', 'session_link')
+    list_filter = ('is_approved', 'is_redeemed', 'date_offered')
     search_fields = ('client__email', 'coach__user__email')
     readonly_fields = ('date_offered', 'redemption_deadline', 'session')
+    
+    list_select_related = ('client', 'coach', 'coach__user', 'session')
+    
     actions = ['approve_offers']
     
-    @admin.action(description='Approve selected free session offers')
+    @admin.action(description='Approve selected offers')
     def approve_offers(self, request, queryset):
-        count = queryset.filter(is_approved=False).update(is_approved=True)
-        self.message_user(request, f'{count} offer(s) successfully approved.')
+        queryset.update(is_approved=True)
+        self.message_user(request, "Selected offers approved.")
         
     @admin.display(description='Booked Session')
     def session_link(self, obj):
