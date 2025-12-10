@@ -110,10 +110,14 @@ class BookingService:
         )
         
         # Fetch Busy Slots for the whole range
+        # Convert dates to aware datetimes to avoid RuntimeWarning about naive datetimes
+        start_dt = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+        end_dt = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
+
         busy_slots = CoachBusySlot.objects.filter(
             coach=coach,
-            start_time__lt=end_date + timedelta(days=1), # end_date is a date object
-            end_time__gt=start_date
+            start_time__lt=end_dt,
+            end_time__gt=start_dt
         )
         
         session_delta = timedelta(minutes=session_length)
