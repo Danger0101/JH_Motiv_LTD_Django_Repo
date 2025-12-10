@@ -1,39 +1,40 @@
-<tr id="order-row-{{ order.id }}" class="hover:bg-gray-50 transition">
-    <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-        #{{ order.id }}
+<tr id="order-row-{{ order.id }}">
+    <td class="px-6 py-4 whitespace-nowrap">
+        <div class="text-sm font-medium text-gray-900">#{{ order.id }}</div>
+        <div class="text-sm text-gray-500">{{ order.created_at|date:"d M Y" }}</div>
     </td>
-    <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-        {{ order.user.username|default:"Guest" }}
-    </td>
-    <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-        {{ order.created_at|date:"M d, Y" }}
-    </td>
-    <td class="whitespace-nowrap px-3 py-4 text-sm">
-        <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset 
-            {% if order.status == 'paid' %}bg-green-50 text-green-700 ring-green-600/20
-            {% elif order.status == 'shipped' %}bg-blue-50 text-blue-700 ring-blue-600/20
-            {% elif order.status == 'cancelled' %}bg-red-50 text-red-700 ring-red-600/20
-            {% else %}bg-yellow-50 text-yellow-800 ring-yellow-600/20{% endif %}">
-            {{ order.get_status_display }}
-        </span>
-    </td>
-    <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-        {% if order.carrier %}
-            {{ order.get_carrier_display }}<br>
-            {% if order.tracking_url %}
-                <a href="{{ order.tracking_url }}" target="_blank" class="text-blue-600 hover:underline">{{ order.tracking_number }}</a>
+    <td class="px-6 py-4 whitespace-nowrap">
+        <div class="text-sm text-gray-900">
+            {% if order.user %}
+                {{ order.user.get_full_name|default:order.user.username }}
             {% else %}
-                {{ order.tracking_number }}
+                Guest
             {% endif %}
-        {% else %}
-            <span class="text-gray-400">-</span>
-        {% endif %}
+        </div>
+        <div class="text-sm text-gray-500">{{ order.email }}</div>
     </td>
-    <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-        <button hx-get="{% url 'accounts:staff_update_order' order.id %}" 
-                hx-target="#order-row-{{ order.id }}" 
+    <td class="px-6 py-4 whitespace-nowrap">
+        {% with status=order.status|default:"processing" %}
+            {% if status == 'shipped' or status == 'delivered' %}
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                    {{ status|title }}
+                </span>
+            {% elif status == 'canceled' or status == 'refunded' %}
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                    {{ status|title }}
+                </span>
+            {% else %}
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                    {{ status|title }}
+                </span>
+            {% endif %}
+        {% endwith %}
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+        <button hx-get="{% url 'accounts:staff_update_order' order.id %}"
+                hx-target="#order-row-{{ order.id }}"
                 hx-swap="outerHTML"
-                class="text-blue-600 hover:text-blue-900">
+                class="text-indigo-600 hover:text-indigo-900">
             Edit
         </button>
     </td>

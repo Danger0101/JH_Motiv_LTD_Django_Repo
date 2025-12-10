@@ -497,69 +497,204 @@
             {% endif %}
 
             {% if is_staff %}
-            <div x-show="activeTab === 'staff'" x-cloak class="p-6">
-                <h2 class="text-2xl font-bold text-gray-800 border-b pb-4 mb-6">Staff Dashboard</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="p-4 border rounded-xl bg-gray-50">
-                        <p class="text-sm text-gray-500">Dreamers Count</p>
-                        <p class="text-2xl font-bold">{{ staff_dreamer_count }}</p>
-                    </div>
-                    <div class="p-4 border rounded-xl bg-gray-50">
-                        <a href="{% url 'admin:index' %}" target="_blank" class="text-blue-600 hover:underline font-bold">Access Django Admin &rarr;</a>
-                    </div>
-                </div>
-
-                <div class="mb-10">
-                    <h3 class="font-bold text-gray-800 mb-4 text-lg">Customer Lookup</h3>
-                    
-                    <div class="relative max-w-xl mb-6">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                        </div>
-                        <input type="text" 
-                               id="customer-search-input"
-                               name="q"
-                               class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                               placeholder="Search by name, email, or username..."
-                               hx-get="{% url 'accounts:staff_customer_lookup' %}"
-                               hx-trigger="keyup changed delay:500ms"
-                               hx-target="#search-results">
-                        
-                        <div id="search-results"></div>
-                    </div>
-
-                    <div id="customer-detail-panel"></div>
-                </div>
-
-                <div class="mt-8">
-    <h3 class="font-bold text-gray-800 mb-4 text-lg">Manage Recent Orders</h3>
+            <div x-show="activeTab === 'staff'" x-cloak class="p-6 space-y-8 animate-fade-in-up">
     
-    {% if staff_recent_orders %}
-        <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-            <table class="min-w-full divide-y divide-gray-300">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Order #</th>
-                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">User</th>
-                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date</th>
-                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
-                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Shipping</th>
-                        <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                            <span class="sr-only">Edit</span>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200 bg-white">
-                    {% for order in staff_recent_orders %}
-                        {% include 'account/partials/staff_order_row.html' %}
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <p class="text-gray-500 italic">No recent orders found.</p>
-    {% endif %}
-</div>
+                <!-- Chart.js CDN -->
+                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+                <div class="flex justify-between items-center border-b pb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">Command Center</h2>
+                    <a href="{% url 'admin:index' %}" target="_blank" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        Full Admin Panel
+                    </a>
+                </div>
+            
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center">
+                        <div class="p-3 bg-green-100 text-green-600 rounded-lg mr-4">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 font-bold uppercase tracking-wide">30-Day Revenue</p>
+                            <p class="text-xl font-extrabold text-gray-900">£{{ staff_30d_revenue|floatformat:2 }}</p>
+                        </div>
+                    </div>
+            
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center">
+                        <div class="p-3 bg-orange-100 text-orange-600 rounded-lg mr-4">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 font-bold uppercase tracking-wide">Unpaid Commissions</p>
+                            <a href="{% url 'admin:payments_coachingorder_changelist' %}?payout_status__exact=unpaid" target="_blank" class="text-xl font-extrabold text-gray-900 hover:text-orange-600">
+                                £{{ staff_unpaid_commissions|floatformat:2 }}
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center">
+                        <div class="p-3 bg-blue-100 text-blue-600 rounded-lg mr-4">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 font-bold uppercase tracking-wide">New Users (7d)</p>
+                            <p class="text-xl font-extrabold text-gray-900">{{ staff_new_users_7d }}</p>
+                        </div>
+                    </div>
+            
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center">
+                        <div class="p-3 bg-purple-100 text-purple-600 rounded-lg mr-4">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 font-bold uppercase tracking-wide">Active Clients</p>
+                            <p class="text-xl font-extrabold text-gray-900">{{ staff_active_clients }}</p>
+                        </div>
+                    </div>
+            
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center">
+                        <div class="p-3 {% if staff_low_stock_count > 0 %}bg-red-100 text-red-600{% else %}bg-green-100 text-green-600{% endif %} rounded-lg mr-4">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 font-bold uppercase tracking-wide">Low Stock Items</p>
+                            <p class="text-xl font-extrabold text-gray-900">{{ staff_low_stock_count }}</p>
+                        </div>
+                    </div>
+                </div>
+            
+                <!-- Revenue Chart -->
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                    <h3 class="font-bold text-gray-800 mb-4">Revenue Trend (Last 30 Days)</h3>
+                    <div>
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                            <h3 class="font-bold text-gray-800 mb-4 flex items-center">
+                                <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                Customer Lookup
+                            </h3>
+                            <div class="relative">
+                                <input type="text" 
+                                       id="customer-search-input"
+                                       name="q"
+                                       class="block w-full pl-4 pr-10 py-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                       placeholder="Search by name, email, or username..."
+                                       hx-get="{% url 'accounts:staff_customer_lookup' %}"
+                                       hx-trigger="keyup changed delay:500ms"
+                                       hx-target="#search-results">
+                                <div id="search-results"></div>
+                            </div>
+                            <div id="customer-detail-panel" class="mt-4"></div>
+                        </div>
+            
+                        <div>
+                            <h3 class="font-bold text-gray-800 mb-4">Manage Recent Orders</h3>
+                            {% if staff_recent_orders %}
+                                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-200">
+                                            {% for order in staff_recent_orders %}
+                                                {% include 'account/partials/staff_order_row.html' %}
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-gray-500 italic p-4 bg-gray-50 rounded-lg">No recent orders.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+            
+                    <div class="space-y-6">
+                        
+                        {% if staff_low_stock_items %}
+                        <div class="bg-white p-5 rounded-xl border border-red-100 shadow-sm">
+                            <h3 class="font-bold text-red-700 mb-3 flex items-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                Stock Alerts
+                            </h3>
+                            <ul class="space-y-3">
+                                {% for item in staff_low_stock_items %}
+                                <li class="flex justify-between items-center text-sm border-b border-red-50 pb-2 last:border-0">
+                                    <span class="text-gray-700">{{ item.variant.product.name }} ({{ item.variant.name }})</span>
+                                    <span class="font-bold text-red-600">{{ item.quantity }} left</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            <a href="{% url 'admin:products_stockpool_changelist' %}" target="_blank" class="block mt-4 text-center text-xs font-bold text-red-600 hover:text-red-800 uppercase tracking-wide">
+                                Manage Inventory &rarr;
+                            </a>
+                        </div>
+                        {% endif %}
+            
+                        <div class="bg-gradient-to-br from-indigo-500 to-purple-600 p-5 rounded-xl shadow-md text-white">
+                            <h3 class="font-bold text-lg mb-1">Dreamer Community</h3>
+                            <p class="text-indigo-100 text-sm mb-4">Total registered affiliates</p>
+                            <div class="flex items-end justify-between">
+                                <span class="text-4xl font-extrabold">{{ staff_dreamer_count }}</span>
+                                <a href="{% url 'admin:dreamers_dreamerprofile_changelist' %}" target="_blank" class="bg-white bg-opacity-20 hover:bg-opacity-30 px-3 py-1 rounded text-xs font-bold transition">View All</a>
+                            </div>
+                        </div>
+            
+                    </div>
+                </div>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', function () {
+                        const ctx = document.getElementById('revenueChart');
+                        if (ctx) {
+                            const revenueLabels = {{ revenue_chart_labels|safe }};
+                            const revenueData = {{ revenue_chart_data|safe }};
+
+                            new Chart(ctx, {
+                                type: 'line',
+                                data: {
+                                    labels: revenueLabels,
+                                    datasets: [{
+                                        label: 'Daily Revenue',
+                                        data: revenueData,
+                                        fill: true,
+                                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                                        borderColor: 'rgba(79, 70, 229, 1)',
+                                        tension: 0.3,
+                                        pointBackgroundColor: 'rgba(79, 70, 229, 1)',
+                                        pointBorderColor: '#fff',
+                                        pointHoverRadius: 6,
+                                        pointHoverBackgroundColor: '#fff',
+                                        pointHoverBorderColor: 'rgba(79, 70, 229, 1)'
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true,
+                                            ticks: {
+                                                callback: function(value, index, values) { return '£' + value; }
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    });
+                </script>
             </div>
             {% endif %}
 

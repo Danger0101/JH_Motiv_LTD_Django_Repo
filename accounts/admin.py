@@ -36,7 +36,7 @@ class UserAdmin(BaseUserAdmin):
     inlines = (CoachProfileInline, MarketingPreferenceInline, AddressInline)
     list_display = ('username', 'email', 'full_name_display', 'is_coach', 'is_client', 'date_joined')
     list_filter = BaseUserAdmin.list_filter + ('is_coach', 'is_client', 'is_on_vacation')
-    search_fields = ('username', 'first_name', 'last_name', 'email')
+    search_fields = ('username', 'first_name', 'last_name', 'email', 'stripe_customer_id')
     ordering = ('-date_joined',) # Show newest users first
     
     # Optimization: Select related profile data if you display it in list view
@@ -55,7 +55,7 @@ class UserAdmin(BaseUserAdmin):
             'classes': ('collapse',),
         }),
         ('Roles & Status', {
-            'fields': ('is_coach', 'is_client', 'is_on_vacation', 'user_timezone', 'billing_notes')
+            'fields': ('is_coach', 'is_client', 'is_on_vacation', 'user_timezone', 'billing_notes', 'stripe_customer_id')
         }),
         ('Important Dates', {'fields': ('last_login', 'date_joined')}),
     )
@@ -65,7 +65,7 @@ class CoachProfileAdmin(admin.ModelAdmin):
     list_display = ('user_link', 'time_zone', 'is_available_for_new_clients', 'has_gcal_connected')
     list_filter = ('is_available_for_new_clients', 'time_zone')
     search_fields = ('user__email', 'user__first_name', 'user__last_name', 'bio')
-    list_select_related = ('user',) # Critical for performance
+    list_select_related = ('user', 'google_credentials') 
     
     @admin.display(description='User', ordering='user__username')
     def user_link(self, obj):
@@ -74,8 +74,7 @@ class CoachProfileAdmin(admin.ModelAdmin):
 
     @admin.display(boolean=True, description='GCal Synced?')
     def has_gcal_connected(self, obj):
-        # This is a placeholder. You need to define the relationship on the model.
-        return False
+        return hasattr(obj, 'google_credentials')
 
 # Also register Address model to be managed independently
 @admin.register(Address)

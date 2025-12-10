@@ -8,7 +8,7 @@ from django.views.generic import TemplateView
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 from django.template.loader import render_to_string
 import logging
@@ -23,11 +23,12 @@ from gcal.models import GoogleCredentials
 from coaching_availability.forms import DateOverrideForm, CoachVacationForm, WeeklyScheduleForm
 from django.forms import modelformset_factory
 from coaching_availability.models import CoachAvailability, CoachVacation, DateOverride
-from django.db import transaction
+from django.db import transaction, models
 from collections import defaultdict
 from django.views import View
 from django.contrib.auth import get_user_model
 from datetime import timedelta, date, datetime
+import json
 from decimal import Decimal
 
 logger = logging.getLogger(__name__)
@@ -152,21 +153,86 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         # Initialized as empty; loaded via HTMX
         context['coach_clients'] = []
         
-        # --- STAFF DASHBOARD DATA ---
+        # --- STAFF DASHBOARD METRICS ---
         context['is_staff'] = self.request.user.is_staff
         if self.request.user.is_staff:
-            # 1. Recent Orders (Sales Pulse)
+            now = timezone.now()
+            last_30_days_start = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=29)
+            last_7_days = now - timedelta(days=7)
+
+            # 1. Financial Pulse (Last 30 Days Revenue)
+            retail_revenue = Decimal('0.00')
+            coaching_revenue = Decimal('0.00')
+
             if Order:
-                # FIX: Changed '-created' to '-created_at' to match Order model
-                context['staff_recent_orders'] = Order.objects.select_related('user').order_by('-created_at')[:5]
-            
-            # 2. Low Stock Alerts (Inventory Risk)
+                retail_revenue = Order.objects.filter(
+                    created_at__gte=last_30_days_start,
+                    status__in=['paid', 'shipped', 'delivered']
+                ).aggregate(total=models.Sum('total_paid'))['total'] or Decimal('0.00')
+
+            if CoachingOrder:
+                coaching_revenue = CoachingOrder.objects.filter(
+                    created_at__gte=last_30_days_start
+                ).exclude(payout_status='void').aggregate(total=models.Sum('amount_gross'))['total'] or Decimal('0.00')
+
+            context['staff_30d_revenue'] = retail_revenue + coaching_revenue
+
+            # --- NEW: Chart Data ---
+            daily_revenue = { (last_30_days_start + timedelta(days=i)).date(): Decimal('0.00') for i in range(30) }
+
+            if Order:
+                retail_daily = Order.objects.filter(
+                    created_at__gte=last_30_days_start,
+                    status__in=['paid', 'shipped', 'delivered']
+                ).extra(
+                    select={'day': 'date(created_at)'}
+                ).values('day').annotate(daily_total=models.Sum('total_paid'))
+                for entry in retail_daily:
+                    day = entry['day']
+                    if isinstance(day, str): day = datetime.strptime(day, '%Y-%m-%d').date()
+                    if day in daily_revenue: daily_revenue[day] += entry['daily_total']
+
+            if CoachingOrder:
+                coaching_daily = CoachingOrder.objects.filter(
+                    created_at__gte=last_30_days_start
+                ).exclude(payout_status='void').extra(
+                    select={'day': 'date(created_at)'}
+                ).values('day').annotate(daily_total=models.Sum('amount_gross'))
+                for entry in coaching_daily:
+                    day = entry['day']
+                    if isinstance(day, str): day = datetime.strptime(day, '%Y-%m-%d').date()
+                    if day in daily_revenue: daily_revenue[day] += entry['daily_total']
+
+            context['revenue_chart_labels'] = json.dumps([d.strftime('%b %d') for d in daily_revenue.keys()])
+            context['revenue_chart_data'] = json.dumps([float(v) for v in daily_revenue.values()])
+
+            # 2. Growth Pulse (New Users Last 7 Days)
+            context['staff_new_users_7d'] = get_user_model().objects.filter(date_joined__gte=last_7_days).count()
+
+            # 3. Operational Pulse (Active Coaching Clients)
+            if ClientOfferingEnrollment:
+                context['staff_active_clients'] = ClientOfferingEnrollment.objects.filter(is_active=True).count()
+
+            # 4. Inventory Risks (Low Stock Items)
             if StockItem:
-                context['staff_low_stock'] = StockItem.objects.filter(quantity__lt=5).select_related('variant__product', 'pool')[:5]
-            
-            # 3. Community Stats
+                # Find variants with < 5 items in their pool
+                low_stock_qs = StockItem.objects.filter(quantity__lt=5).select_related('variant', 'variant__product')
+                context['staff_low_stock_count'] = low_stock_qs.count()
+                context['staff_low_stock_items'] = low_stock_qs[:5] # Show top 5 risks
+
+            # 5. Recent Orders (Existing logic, ensured)
             if Dreamer:
                 context['staff_dreamer_count'] = Dreamer.objects.count()
+
+            # 6. Unpaid Commissions
+            if CoachingOrder:
+                unpaid_totals = CoachingOrder.objects.filter(payout_status='unpaid').aggregate(
+                    coach_total=models.Sum('amount_coach'), referrer_total=models.Sum('amount_referrer')
+                )
+                context['staff_unpaid_commissions'] = (unpaid_totals['coach_total'] or Decimal('0.00')) + (unpaid_totals['referrer_total'] or Decimal('0.00'))
+
+            if Order:
+                context['staff_recent_orders'] = Order.objects.select_related('user').order_by('-created_at')[:5]
 
         # --- CLIENT ORDER HISTORY ---
         if Order:
@@ -484,6 +550,15 @@ def staff_update_order(request, order_id):
 
     # GET request returns the edit form
     return render(request, 'account/partials/staff_order_form.html', {'order': order})
+
+
+@staff_member_required
+def staff_get_order_row(request, order_id):
+    """
+    HTMX view to get a single, read-only order row. Used for canceling an edit.
+    """
+    order = get_object_or_404(Order, id=order_id)
+    return render(request, 'account/partials/staff_order_row.html', {'order': order})
 
 
 @staff_member_required

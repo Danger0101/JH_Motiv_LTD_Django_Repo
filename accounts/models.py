@@ -45,12 +45,17 @@ class User(AbstractUser):
         default=True,
         help_text=_("Designates whether this user is a client.")
     )
-    billing_notes = models.CharField(max_length=255, blank=True, null=True, 
+    # Existing field - keeping this!
+    billing_notes = models.CharField(max_length=255, blank=True, null=True,
                                      help_text="General notes or preferred billing address text.")
+    
+    # NEW FIELD: Stripe Customer ID
+    stripe_customer_id = models.CharField(max_length=255, blank=True, null=True,
+                                          help_text="The ID of this user in Stripe (e.g. cus_12345).")
+
     google_calendar_credentials = CustomEncryptedJSONField(max_length=4096, null=True, blank=True)
     
-    is_on_vacation = models.BooleanField(default=False, 
-                                         help_text="If checked, the coach is immediately unbookable.")
+    is_on_vacation = models.BooleanField(default=False, help_text="If checked, the coach is immediately unbookable.")
     user_timezone = TimeZoneField(
         default='UTC', 
         help_text="User's preferred time zone for display and defining working hours."
