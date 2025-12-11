@@ -599,6 +599,25 @@ def confirm_booking_modal(request):
     return render(request, 'coaching_booking/partials/booking_form.html', context)
 
 @login_required
+def confirm_reschedule_modal(request, booking_id):
+    booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
+    new_start_time_str = request.GET.get('new_start_time')
+    
+    try:
+        new_start_time = datetime.strptime(new_start_time_str, '%Y-%m-%dT%H:%M')
+        if timezone.is_naive(new_start_time):
+            new_start_time = timezone.make_aware(new_start_time)
+    except (ValueError, TypeError):
+        return HttpResponse("Invalid time format", status=400)
+
+    context = {
+        'booking': booking,
+        'new_start_time': new_start_time,
+        'new_start_time_iso': new_start_time_str,
+    }
+    return render(request, 'coaching_booking/partials/reschedule_confirmation_modal.html', context)
+
+@login_required
 def get_daily_slots(request):
     date_str = request.GET.get('date')
     coach_id = request.GET.get('coach_id')
