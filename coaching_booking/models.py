@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q, UniqueConstraint
 from django.utils import timezone
 from datetime import timedelta
 from accounts.models import User
@@ -106,8 +107,14 @@ class SessionBooking(models.Model):
     class Meta:
         verbose_name = "Session Booking"
         verbose_name_plural = "Session Bookings"
-        unique_together = ('coach', 'start_datetime')
         ordering = ['start_datetime']
+        constraints = [
+            UniqueConstraint(
+                fields=['coach', 'start_datetime'],
+                condition=Q(status__in=['BOOKED', 'PENDING_PAYMENT', 'COMPLETED']),
+                name='unique_active_coach_slot'
+            )
+        ]
 
     def clean(self):
         from django.core.exceptions import ValidationError
@@ -118,12 +125,14 @@ class SessionBooking(models.Model):
                 coach=self.coach,
                 start_datetime__lt=self.end_datetime,
                 end_datetime__gt=self.start_datetime,
+            ).exclude(
+                status__in=['CANCELED', 'RESCHEDULED']
             )
             if self.pk:
                 query = query.exclude(pk=self.pk)
 
             if query.exists():
-                raise ValidationError("This session overlaps with an existing session for this coach.")
+                raise ValidationError("This session overlaps with an existing active session for this coach.")
 
     def __str__(self):
         return f"Session for {self.client.get_full_name()} with {self.coach.user.get_full_name()} at {self.start_datetime.strftime('%Y-%m-%d %H:%M')}"
