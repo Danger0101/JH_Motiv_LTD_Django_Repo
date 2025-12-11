@@ -156,8 +156,8 @@ class BookingService:
         # 4. Fetch Workshops for this Month
         workshops = Workshop.objects.filter(
             coach=coach,
-            start_time__date__gte=start_date,
-            start_time__date__lte=end_date
+            date__gte=start_date,
+            date__lte=end_date
         ).annotate(
             booked_count=Count('bookings', filter=Q(bookings__status='BOOKED'))
         )
@@ -165,7 +165,10 @@ class BookingService:
         # 5. Merge Workshops into the Schedule
         for ws in workshops:
             # Convert to User Local Time
-            local_start = ws.start_time.astimezone(user_tz)
+            dt = datetime.combine(ws.date, ws.start_time)
+            if timezone.is_naive(dt):
+                dt = timezone.make_aware(dt)
+            local_start = dt.astimezone(user_tz)
             day_key = local_start.date()
             
             is_full = ws.booked_count >= ws.capacity
@@ -175,7 +178,7 @@ class BookingService:
                 'id': ws.id,
                 'title': ws.title,
                 'display_time': local_start.strftime('%I:%M %p'),
-                'iso_value': ws.start_time.isoformat(),
+                'iso_value': dt.isoformat(),
                 'available': not is_full,
                 'spots_left': ws.capacity - ws.booked_count
             }
@@ -270,13 +273,20 @@ class BookingService:
         
         status = 'BOOKED' if price_in_cents == 0 else 'PENDING_PAYMENT'
 
+        ws_start = datetime.combine(workshop.date, workshop.start_time)
+        ws_end = datetime.combine(workshop.date, workshop.end_time)
+        if timezone.is_naive(ws_start):
+            ws_start = timezone.make_aware(ws_start)
+        if timezone.is_naive(ws_end):
+            ws_end = timezone.make_aware(ws_end)
+
         booking = SessionBooking.objects.create(
             workshop=workshop,
             client=user,
             guest_email=guest_email,
             guest_name=guest_name,
-            start_datetime=workshop.start_time, # Workshops usually have fixed times
-            end_datetime=workshop.end_time,
+            start_datetime=ws_start,
+            end_datetime=ws_end,
             status=status
         )
         
