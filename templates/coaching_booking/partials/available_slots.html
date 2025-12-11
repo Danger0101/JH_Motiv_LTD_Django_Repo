@@ -17,7 +17,7 @@
                     {% if reschedule_booking_id %}
                         <form hx-post="{% url 'coaching_booking:reschedule_session' reschedule_booking_id %}" 
                               hx-target="#profile-bookings" 
-                              hx-swap="innerHTML">
+                              hx-swap="outerHTML">
                             {% csrf_token %}
                             <input type="hidden" name="new_start_time" value="{{ slot.start_time|date:'Y-m-d\TH:i' }}">
                             
