@@ -1,4 +1,6 @@
-{% extends "base.html" %} {% block title %}Welcome to JH Motiv LTD{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Welcome to JH Motiv LTD{% endblock %}
 {% block extra_head %}
 <style>
   .hero-section {
@@ -11,14 +13,12 @@
   }
 </style>
 {% endblock %} {% block content %}
-<div class="space-y-16">
-  <div class="container mx-auto px-4">
-    <div class="flex flex-col lg:flex-row lg:space-x-8 space-y-8 lg:space-y-0">
+<div class="flex flex-col lg:flex-row w-full">
       <!-- Retail/Products Hero Section -->
       <section
-        class="hero-section relative text-white py-20 md:py-32 w-full lg:w-1/2 rounded-lg overflow-hidden"
+        class="hero-section relative text-white py-20 md:py-32 w-full lg:w-1/2 overflow-hidden"
         style="
-          background-image: url('https://images.unsplash.com/photo-1524678606370-a47625cb810c?q=80&w=2070&auto=format&fit=crop');
+          background-image: url('{% static "images/shop.webp" %}');
         "
         aria-labelledby="retail-heading"
       >
@@ -44,9 +44,9 @@
 
       <!-- Coaching Hero Section -->
       <section
-        class="hero-section relative text-white py-20 md:py-32 w-full lg:w-1/2 rounded-lg overflow-hidden"
+        class="hero-section relative text-white py-20 md:py-32 w-full lg:w-1/2 overflow-hidden"
         style="
-          background-image: url('https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=2070&auto=format&fit=crop');
+          background-image: url('{% static "images/coaching_hero.webp" %}');
         "
         aria-labelledby="coaching-heading"
       >
@@ -69,6 +69,4 @@
         </div>
       </section>
     </div>
-  </div>
-</div>
 {% endblock %}
