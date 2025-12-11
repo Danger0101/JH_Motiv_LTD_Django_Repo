@@ -1,31 +1,31 @@
-<div class="bg-white p-6 rounded-lg shadow-lg border border-indigo-100">
-    <h2 class="text-xl font-bold text-gray-800 mb-4">Reschedule Session</h2>
-    <p class="text-gray-600 mb-4">
-        Current session: <strong>{{ booking.start_datetime|date:"M d, Y H:i" }}</strong> 
+<div class="bg-white p-6 rounded-lg shadow-lg border border-indigo-100 w-full">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-gray-800">Reschedule Session</h2>
+        <button hx-get="{% url 'accounts:profile_bookings' %}" 
+                hx-target="#profile-bookings" 
+                hx-swap="innerHTML"
+                class="text-gray-400 hover:text-gray-600">
+            Cancel
+        </button>
+    </div>
+    
+    <p class="text-gray-600 mb-6">
+        Current: <strong>{{ booking.start_datetime|date:"M d, Y H:i" }}</strong> 
         with {{ booking.coach.user.get_full_name }}
     </p>
 
-    <form hx-post="{% url 'coaching_booking:reschedule_session' booking.id %}" 
-          hx-target="#profile-bookings" 
-          hx-swap="innerHTML">
-        {% csrf_token %}
-        <div class="mb-4">
-            <label for="new_start_time" class="block text-sm font-medium text-gray-700">New Start Time:</label>
-            <input type="datetime-local" id="new_start_time" name="new_start_time" required
-                   class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+    <div class="flex flex-col md:flex-row gap-6">
+        <div id="calendar-wrapper" class="md:w-2/3"
+             hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={% now 'Y' %}&month={% now 'n' %}&coach_id={{ booking.coach.id }}&enrollment_id={{ booking.enrollment.id }}&reschedule_booking_id={{ booking.id }}"
+             hx-trigger="load">
+            
+            <div class="flex justify-center p-8">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            </div>
         </div>
-        <div class="flex space-x-3">
-            <button type="submit"
-                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                Confirm Reschedule
-            </button>
-            <button type="button" 
-                    hx-get="{% url 'accounts:profile_bookings' %}" 
-                    hx-target="#profile-bookings" 
-                    hx-swap="innerHTML"
-                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                Cancel
-            </button>
+
+        <div id="time-slots-column" class="md:w-1/3 border-l pl-6">
+            <p class="text-sm text-gray-500 text-center italic py-4">Select a date to see available reschedule times.</p>
         </div>
-    </form>
+    </div>
 </div>

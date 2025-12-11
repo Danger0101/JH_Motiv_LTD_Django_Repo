@@ -10,6 +10,7 @@ import logging
 import stripe
 from django.conf import settings
 from django.core.cache import cache
+from django.urls import reverse
 
 from .models import SessionBooking, ClientOfferingEnrollment, OneSessionFreeOffer, CoachBusySlot
 from coaching_core.models import CoachProfile, Workshop
@@ -441,7 +442,7 @@ class BookingService:
         Helper to send emails. 
         """
         try:
-            dashboard_url = request.build_absolute_uri('/accounts/profile/') 
+            dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
             
             # Client Email
             client_context = {

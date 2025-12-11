@@ -22,7 +22,7 @@
                     class="text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 rounded hover:bg-indigo-50 transition-colors"
                     hx-get="{% url 'coaching_booking:get_booking_calendar' %}"
                     hx-indicator="#calendar-spinner"
-                    hx-vals='{"month": "{{ prev_month }}", "year": "{{ prev_year }}", "coach_id": "{{ coach_id|default_if_none:"" }}", "enrollment_id": "{{ enrollment_id|default_if_none:"" }}"}'
+                    hx-vals='{"month": "{{ prev_month }}", "year": "{{ prev_year }}", "coach_id": "{{ coach_id|default_if_none:"" }}", "enrollment_id": "{{ enrollment_id|default_if_none:"" }}", "reschedule_booking_id": "{{ reschedule_booking_id|default_if_none:"" }}"}'
                     hx-target="#calendar-container"
                     hx-swap="outerHTML">
                 &larr; Prev
@@ -36,7 +36,7 @@
                         class="text-xs font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded transition-colors"
                         hx-get="{% url 'coaching_booking:get_booking_calendar' %}"
                         hx-indicator="#calendar-spinner"
-                        hx-vals='{"month": "{% now "n" %}", "year": "{% now "Y" %}", "coach_id": "{{ coach_id|default_if_none:"" }}", "enrollment_id": "{{ enrollment_id|default_if_none:"" }}"}'
+                        hx-vals='{"month": "{% now "n" %}", "year": "{% now "Y" %}", "coach_id": "{{ coach_id|default_if_none:"" }}", "enrollment_id": "{{ enrollment_id|default_if_none:"" }}", "reschedule_booking_id": "{{ reschedule_booking_id|default_if_none:"" }}"}'
                         hx-target="#calendar-container"
                         hx-swap="outerHTML">
                     Today
@@ -48,7 +48,7 @@
                 class="text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 rounded hover:bg-indigo-50 transition-colors"
                 hx-get="{% url 'coaching_booking:get_booking_calendar' %}"
                 hx-indicator="#calendar-spinner"
-                hx-vals='{"month": "{{ next_month }}", "year": "{{ next_year }}", "coach_id": "{{ coach_id|default_if_none:"" }}", "enrollment_id": "{{ enrollment_id|default_if_none:"" }}"}'
+                hx-vals='{"month": "{{ next_month }}", "year": "{{ next_year }}", "coach_id": "{{ coach_id|default_if_none:"" }}", "enrollment_id": "{{ enrollment_id|default_if_none:"" }}", "reschedule_booking_id": "{{ reschedule_booking_id|default_if_none:"" }}"}'
                 hx-target="#calendar-container"
                 hx-swap="outerHTML">
             Next &rarr;
@@ -91,7 +91,7 @@
                                                {% else %}
                                                    text-gray-700 hover:bg-gray-100
                                                {% endif %}"
-                                        hx-get="{% url 'coaching_booking:get_daily_slots' %}?date={{ day.date|date:'Y-m-d' }}&coach_id={{ coach_id }}&enrollment_id={{ enrollment_id }}"
+                                        hx-get="{% url 'coaching_booking:get_daily_slots' %}?date={{ day.date|date:'Y-m-d' }}&coach_id={{ coach_id }}&enrollment_id={{ enrollment_id }}&reschedule_booking_id={{ reschedule_booking_id|default_if_none:'' }}"
                                         hx-target="#time-slots-column"
                                         hx-swap="innerHTML">
                                         {{ day.number }}

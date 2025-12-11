@@ -491,6 +491,7 @@ def check_payment_status(request, booking_id):
 def get_booking_calendar(request):
     coach_id = request.GET.get('coach_id')
     enrollment_id = request.GET.get('enrollment_id')
+    reschedule_booking_id = request.GET.get('reschedule_booking_id')
 
     # Allow if either valid enrollment_id exists or it's a "free_X" string
     if not coach_id or not enrollment_id:
@@ -565,6 +566,7 @@ def get_booking_calendar(request):
         'coach': coach,
         'disable_prev': disable_prev,
         'is_current_month_view': is_current_month_view,
+        'reschedule_booking_id': reschedule_booking_id,
     }
     return render(request, 'coaching_booking/partials/_calendar_widget.html', context)
 
@@ -601,6 +603,7 @@ def get_daily_slots(request):
     date_str = request.GET.get('date')
     coach_id = request.GET.get('coach_id')
     enrollment_id_param = request.GET.get('enrollment_id')
+    reschedule_booking_id = request.GET.get('reschedule_booking_id')
 
     context = {
         'coach_id': coach_id,
@@ -608,7 +611,8 @@ def get_daily_slots(request):
         'free_offer_id': '', # Default empty
         'selected_date': None,
         'available_slots': [],
-        'error_message': None
+        'error_message': None,
+        'reschedule_booking_id': reschedule_booking_id,
     }
 
     if not all([date_str, coach_id, enrollment_id_param]):
