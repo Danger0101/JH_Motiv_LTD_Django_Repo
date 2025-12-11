@@ -245,16 +245,37 @@ def reschedule_session_form(request, booking_id):
 @require_POST
 def reschedule_session(request, booking_id):
     booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
+    
+    # --- 1. Prevent Rescheduling Canceled Sessions ---
+    if booking.status == 'CANCELED':
+        messages.error(request, "This session has been canceled and cannot be rescheduled. Please book a new session.")
+        return render(request, 'account/profile_bookings.html', {'active_tab': 'canceled'})
+        
+    if booking.status == 'COMPLETED':
+        messages.error(request, "Cannot reschedule a completed session.")
+        return render(request, 'account/profile_bookings.html', {'active_tab': 'past'})
+
     new_start_time_str = request.POST.get('new_start_time')
 
     if not new_start_time_str:
         messages.error(request, "Please select a new time.")
     else:
         try:
-            new_start_time = datetime.strptime(new_start_time_str, '%Y-%m-%dT%H:%M')
+            # Handle standard ISO format from code or browser
+            if 'T' in new_start_time_str:
+                new_start_time = datetime.strptime(new_start_time_str, '%Y-%m-%dT%H:%M')
+            else:
+                new_start_time = datetime.strptime(new_start_time_str, '%Y-%m-%d %H:%M')
+                
             new_start_time = timezone.make_aware(new_start_time)
 
-            session_length = booking.enrollment.offering.session_length_minutes
+            # --- 2. Safe Session Length Lookup (Fixes Free Session Crash) ---
+            if booking.enrollment:
+                session_length = booking.enrollment.offering.session_length_minutes
+            else:
+                # Fallback for Free/Direct sessions: use existing duration
+                session_length = booking.get_duration_minutes() or 60
+
             available_slots = get_coach_available_slots(
                 booking.coach, new_start_time.date(), new_start_time.date(), session_length, 'one_on_one'
             )
@@ -311,6 +332,7 @@ def reschedule_session(request, booking_id):
             messages.error(request, "Invalid date format.")
         except Exception as e:
             messages.error(request, f"An error occurred: {e}")
+            logger.error(f"Reschedule Error: {e}", exc_info=True)
 
     return render(request, 'account/profile_bookings.html', {'active_tab': 'upcoming'})
 
@@ -492,28 +514,45 @@ def get_booking_calendar(request):
     coach_id = request.GET.get('coach_id')
     enrollment_id = request.GET.get('enrollment_id')
     reschedule_booking_id = request.GET.get('reschedule_booking_id')
+    
+    session_length = 60 # Default
+    coach = None
 
-    # Allow if either valid enrollment_id exists or it's a "free_X" string
-    if not coach_id or not enrollment_id:
+    # --- 1. Reschedule Context Logic (Fixes Free Sessions) ---
+    if reschedule_booking_id:
+        try:
+            # If rescheduling, derive context from the booking
+            booking = SessionBooking.objects.get(id=reschedule_booking_id, client=request.user)
+            coach = booking.coach
+            coach_id = coach.id
+            # Use the existing session duration
+            session_length = booking.get_duration_minutes() or 60
+        except SessionBooking.DoesNotExist:
+            pass
+
+    # --- 2. Standard Booking Context Logic ---
+    if not coach and coach_id:
+        coach = get_object_or_404(CoachProfile, id=coach_id)
+
+    # --- 3. Validate Inputs ---
+    # We allow missing enrollment_id IF we are rescheduling
+    if not coach or (not enrollment_id and not reschedule_booking_id):
         return HttpResponse(
             '<div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center h-full flex flex-col justify-center items-center">'
             '<p class="text-gray-500 font-medium">Select an Offering and a Coach to view availability.</p>'
             '</div>'
         )
 
-    coach = get_object_or_404(CoachProfile, id=coach_id)
-    
-    # Determine Session Length based on Enrollment or Free Offer
-    session_length = 60 # Default
-    if str(enrollment_id).startswith('free_'):
-        # Free session logic
-        pass 
-    else:
-        try:
-            enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id, client=request.user)
-            session_length = enrollment.offering.session_length_minutes
-        except ClientOfferingEnrollment.DoesNotExist:
-            pass
+    # Determine Session Length for Standard Enrollment
+    if not reschedule_booking_id and enrollment_id:
+        if str(enrollment_id).startswith('free_'):
+            session_length = 60 
+        else:
+            try:
+                enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id, client=request.user)
+                session_length = enrollment.offering.session_length_minutes
+            except ClientOfferingEnrollment.DoesNotExist:
+                pass
 
     try:
         year = int(request.GET.get('year', timezone.now().year))
@@ -563,7 +602,7 @@ def get_booking_calendar(request):
         'next_year': next_date.year,
         'coach_id': coach_id,
         'enrollment_id': enrollment_id, # Can be "free_X" or normal ID
-        'coach': coach,
+        'coach': coach, # Pass the object, not just ID
         'disable_prev': disable_prev,
         'is_current_month_view': is_current_month_view,
         'reschedule_booking_id': reschedule_booking_id,
