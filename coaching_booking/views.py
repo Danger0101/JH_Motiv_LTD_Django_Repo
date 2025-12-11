@@ -234,12 +234,12 @@ def cancel_session(request, booking_id):
     except Exception as e:
         logger.error(f"CRITICAL: Cancellation for booking {booking.id} succeeded but failed to send emails. Error: {e}")
 
-    return render(request, 'accounts/profile_bookings.html', {'active_tab': 'canceled'})
+    return render(request, 'account/profile_bookings.html', {'active_tab': 'canceled'})
 
 @login_required
 def reschedule_session_form(request, booking_id):
     booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
-    return render(request, 'accounts/partials/reschedule_form.html', {'booking': booking})
+    return render(request, 'account/partials/reschedule_form.html', {'booking': booking})
 
 @login_required
 @require_POST
@@ -312,7 +312,7 @@ def reschedule_session(request, booking_id):
         except Exception as e:
             messages.error(request, f"An error occurred: {e}")
 
-    return render(request, 'accounts/profile_bookings.html', {'active_tab': 'upcoming'})
+    return render(request, 'account/profile_bookings.html', {'active_tab': 'upcoming'})
 
 @login_required
 @require_POST
@@ -535,6 +535,12 @@ def get_booking_calendar(request):
     # Navigation Logic
     current_date = date(year, month, 1)
     
+    # Disable 'Prev' if we are at the start of the current real month
+    now_date = timezone.now().date()
+    real_current_month_start = date(now_date.year, now_date.month, 1)
+    disable_prev = current_date <= real_current_month_start
+    is_current_month_view = (current_date.year == now_date.year and current_date.month == now_date.month)
+
     def get_month_link(d):
         return {'month': d.month, 'year': d.year}
 
@@ -557,6 +563,8 @@ def get_booking_calendar(request):
         'coach_id': coach_id,
         'enrollment_id': enrollment_id, # Can be "free_X" or normal ID
         'coach': coach,
+        'disable_prev': disable_prev,
+        'is_current_month_view': is_current_month_view,
     }
     return render(request, 'coaching_booking/partials/_calendar_widget.html', context)
 

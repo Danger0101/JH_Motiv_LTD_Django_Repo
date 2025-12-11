@@ -201,13 +201,21 @@ class BookingService:
 
         # 6. Construct the Grid Data
         schedule = []
+        today = timezone.now().date()
         for d in flat_dates:
+            day_slots = slots_by_date.get(d, [])
+            has_available = any(s['available'] for s in day_slots)
+            is_fully_booked = len(day_slots) > 0 and not has_available
+
             schedule.append({
                 'date': d,
                 'number': d.day,
-                'is_past': d < timezone.now().date(),
+                'is_past': d < today,
+                'is_today': d == today,
                 'is_current_month': d.month == month,
-                'slots': slots_by_date.get(d, [])
+                'slots': day_slots,
+                'has_available': has_available,
+                'is_fully_booked': is_fully_booked
             })
             
         # 4. Save to Cache (e.g., for 1 hour)
