@@ -15,18 +15,23 @@
             {% for slot in available_slots %}
                 <div class="p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors">
                     {% if reschedule_booking_id %}
-                        <div class="flex justify-between items-center">
-                            <div class="font-medium text-gray-800">
-                                {{ slot.start_time|date:"h:i A" }}
+                        <form hx-post="{% url 'coaching_booking:reschedule_session' reschedule_booking_id %}" 
+                              hx-target="#profile-bookings" 
+                              hx-swap="innerHTML">
+                            {% csrf_token %}
+                            <input type="hidden" name="new_start_time" value="{{ slot.start_time|date:'Y-m-d\TH:i' }}">
+                            
+                            <div class="flex justify-between items-center">
+                                <div class="font-medium text-gray-800">
+                                    {{ slot.start_time|date:"h:i A" }}
+                                </div>
+                                <button type="submit"
+                                        class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition-all"
+                                        hx-confirm="Confirm reschedule to {{ slot.start_time|date:'F j, Y \a\t h:i A' }}?">
+                                    Reschedule
+                                </button>
                             </div>
-                            <button type="button"
-                                    class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
-                                    hx-get="{% url 'coaching_booking:confirm_reschedule_modal' reschedule_booking_id %}?new_start_time={{ slot.start_time|date:'Y-m-d\TH:i' }}"
-                                    hx-target="#modal-container"
-                                    hx-swap="innerHTML">
-                                Reschedule
-                            </button>
-                        </div>
+                        </form>
                     {% else %}
                         <form hx-post="{% url 'coaching_booking:book_session' %}" hx-target="body">
                             {% csrf_token %}
