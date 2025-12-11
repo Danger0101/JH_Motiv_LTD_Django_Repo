@@ -159,7 +159,8 @@ class BookingService:
             date__gte=start_date,
             date__lte=end_date
         ).annotate(
-            booked_count=Count('bookings', filter=Q(bookings__status='BOOKED'))
+            booked_count=Count('bookings', filter=Q(bookings__status='BOOKED')),
+            total_held_count=Count('bookings', filter=Q(bookings__status__in=['BOOKED', 'PENDING_PAYMENT']))
         )
 
         # 5. Merge Workshops into the Schedule
@@ -171,16 +172,24 @@ class BookingService:
             local_start = dt.astimezone(user_tz)
             day_key = local_start.date()
             
-            is_full = ws.booked_count >= ws.capacity
+            # Determine Status
+            is_held_full = ws.total_held_count >= ws.total_attendees
+            
+            booking_status = 'AVAILABLE'
+            if ws.booked_count >= ws.total_attendees:
+                booking_status = 'FULL'
+            elif is_held_full:
+                booking_status = 'PENDING_FULL'
             
             workshop_slot = {
                 'type': 'WORKSHOP',
                 'id': ws.id,
-                'title': ws.title,
+                'title': ws.name,
                 'display_time': local_start.strftime('%I:%M %p'),
                 'iso_value': dt.isoformat(),
-                'available': not is_full,
-                'spots_left': ws.capacity - ws.booked_count
+                'available': not is_held_full,
+                'spots_left': ws.remaining_spaces,
+                'booking_status': booking_status
             }
 
             if day_key not in slots_by_date:
@@ -228,8 +237,11 @@ class BookingService:
                 start_datetime_naive = datetime.strptime(start_time_input, '%Y-%m-%d %H:%M')
                 start_datetime_obj = timezone.make_aware(start_datetime_naive)
             except ValueError:
-                start_datetime_naive = datetime.fromisoformat(start_time_input)
-                start_datetime_obj = timezone.make_aware(start_datetime_naive)
+                dt = datetime.fromisoformat(start_time_input)
+                if timezone.is_naive(dt):
+                    start_datetime_obj = timezone.make_aware(dt)
+                else:
+                    start_datetime_obj = dt
         else:
             start_datetime_obj = start_time_input
 
@@ -257,7 +269,7 @@ class BookingService:
         
         # Check Capacity
         current_bookings = workshop.bookings.filter(status__in=['BOOKED', 'PENDING_PAYMENT']).count()
-        if current_bookings >= workshop.capacity:
+        if current_bookings >= workshop.total_attendees:
             raise ValidationError("This workshop is fully booked.")
 
         # Guest Logic
@@ -268,8 +280,8 @@ class BookingService:
             raise ValidationError("User or Guest Email is required.")
 
         # Determine Price (Assuming Workshop has a price field, defaulting to 0 if not found/accessible)
-        price_in_cents = getattr(workshop, 'price', 0) 
-        product_name = f"Workshop: {workshop.title}"
+        price_in_cents = int(getattr(workshop, 'price', 0) * 100)
+        product_name = f"Workshop: {workshop.name}"
         
         status = 'BOOKED' if price_in_cents == 0 else 'PENDING_PAYMENT'
 

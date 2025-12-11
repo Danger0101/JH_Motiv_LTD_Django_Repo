@@ -223,7 +223,11 @@ class Workshop(models.Model):
         """
         Calculates the number of remaining spaces for the workshop.
         """
-        return self.total_attendees - self.attendees.count()
+        # Optimization: Use annotated count from services.py if available
+        if hasattr(self, 'booked_count'):
+            return self.total_attendees - self.booked_count
+        # Fallback: Count confirmed bookings directly via reverse relationship
+        return self.total_attendees - self.bookings.filter(status='BOOKED').count()
 
     @property
     def is_full(self):
