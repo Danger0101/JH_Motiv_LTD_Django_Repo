@@ -329,7 +329,7 @@ class BookingService:
         booking.stripe_checkout_session_id = checkout_session.id
         booking.save()
         
-        return {'type': 'checkout', 'url': checkout_session.url}
+        return {'type': 'checkout', 'url': checkout_session.url, 'booking_id': booking.id}
 
     @staticmethod
     def _create_1on1_booking(booking_data, user, start_datetime_obj):

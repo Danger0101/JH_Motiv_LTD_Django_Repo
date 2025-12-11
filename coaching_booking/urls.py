@@ -22,4 +22,5 @@ urlpatterns = [
     path('coach-deny-free-session/', views.coach_deny_free_session, name='coach_deny_free_session'),
     path('webhooks/stripe/', webhooks.stripe_webhook, name='stripe_webhook'),
     path('booking/verify/<int:booking_id>/', views.check_payment_status, name='check_payment_status'),
+    path('booking/pay/<int:booking_id>/', views.session_payment_page, name='session_payment_page'),
 ]

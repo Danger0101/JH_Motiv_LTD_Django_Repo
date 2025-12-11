@@ -10,7 +10,7 @@
             &larr; Prev
         </button>
         
-        <h3 class="font-bold text-lg text-gray-800">{{ current_month_name }} {{ year }}</h3>
+        <h3 class="font-bold text-lg text-gray-800">{{ current_month_name }} {{ current_year }}</h3>
         
         <button type="button"
                 class="text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 rounded hover:bg-indigo-50 transition-colors"
@@ -38,32 +38,35 @@
             {% for week in calendar_rows %}
                 <tr>
                     {% for day in week %}
-                        <td class="p-1 text-center">
-                            {% if day == 0 %}
-                                <div class="w-8 h-8 mx-auto"></div>
+                        <td class="p-1 text-center h-12 w-12 align-middle">
+                            
+                            {% if not day.is_current_month %}
+                                <span class="text-gray-300 text-sm">{{ day.number }}</span>
+                            
                             {% else %}
-                                {% with m=month|stringformat:"02d" d=day|stringformat:"02d" %}
+                                {% if day.is_past %}
+                                    <button type="button" disabled
+                                        class="w-8 h-8 flex items-center justify-center rounded-full text-gray-300 cursor-not-allowed mx-auto">
+                                        {{ day.number }}
+                                    </button>
+                                {% else %}
+                                    <button type="button"
+                                        class="w-8 h-8 flex items-center justify-center rounded-full text-sm font-medium mx-auto transition-all duration-200
+                                               {% if day.slots %}
+                                                   bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white ring-1 ring-indigo-200 font-bold
+                                               {% else %}
+                                                   text-gray-700 hover:bg-gray-100
+                                               {% endif %}"
+                                        hx-get="{% url 'coaching_booking:get_daily_slots' %}?date={{ day.date|date:'Y-m-d' }}&coach_id={{ coach_id }}&enrollment_id={{ enrollment_id }}"
+                                        hx-target="#time-slots-column"
+                                        hx-swap="innerHTML">
+                                        {{ day.number }}
+                                    </button>
                                     
-                                    {# Logic to disable Past OR Far Future dates #}
-                                    {% if year < today.year or year == today.year and month < today.month or year == today.year and month == today.month and day < today.day or year > max_date.year or year == max_date.year and month > max_date.month or year == max_date.year and month == max_date.month and day > max_date.day %}
-                                        
-                                        <button type="button" disabled
-                                            class="w-8 h-8 flex items-center justify-center rounded-full text-gray-300 cursor-not-allowed mx-auto">
-                                            {{ day }}
-                                        </button>
-
-                                    {% else %}
-                                        
-                                        <button type="button"
-                                            class="w-8 h-8 flex items-center justify-center rounded-full text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 focus:bg-indigo-600 focus:text-white font-medium mx-auto transition-all duration-200 {% if day == today.day and month == today.month and year == today.year %}ring-2 ring-indigo-500{% endif %}"
-                                            hx-get="{% url 'coaching_booking:get_daily_slots' %}?date={{ year }}-{{ m }}-{{ d }}&coach_id={{ coach_id }}&enrollment_id={{ enrollment_id }}"
-                                            hx-target="#time-slots-column"
-                                            hx-swap="innerHTML">
-                                            {{ day }}
-                                        </button>
-
+                                    {% if day.slots %}
+                                        <div class="h-1 w-1 bg-indigo-500 rounded-full mx-auto mt-0.5"></div>
                                     {% endif %}
-                                {% endwith %}
+                                {% endif %}
                             {% endif %}
                         </td>
                     {% endfor %}

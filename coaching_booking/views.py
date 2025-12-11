@@ -13,6 +13,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import HttpResponse
+import stripe
 
 from core.email_utils import send_transactional_email
 from payments.models import CoachingOrder
@@ -28,6 +29,7 @@ from django.core.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 BOOKING_WINDOW_DAYS = 90
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 class CoachLandingView(TemplateView):
     template_name = "coaching_booking/coach_landing.html"
@@ -117,10 +119,13 @@ def book_session(request):
             return response
             
         elif result['type'] == 'checkout':
-            # HTMX Magic: Use a client-side redirect header
-            # HTMX will see this header and redirect the whole window to Stripe
+            # Redirect to local payment page with timer
             response = HttpResponse(status=204)
-            response['HX-Redirect'] = result['url']
+            booking_id = result.get('booking_id')
+            if booking_id:
+                response['HX-Redirect'] = reverse('coaching_booking:session_payment_page', args=[booking_id])
+            else:
+                response['HX-Redirect'] = result['url']
             return response
 
     except ValidationError as e:
@@ -128,6 +133,42 @@ def book_session(request):
     except Exception as e:
         logger.error(f"Booking Error: {e}", exc_info=True)
         return htmx_error(f"An error occurred: {str(e)}")
+
+@login_required
+def session_payment_page(request, booking_id):
+    booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
+    
+    if booking.status != 'PENDING_PAYMENT':
+        messages.info(request, "This session is not pending payment.")
+        return redirect('accounts:account_profile')
+
+    # Calculate remaining time (15 minutes from creation)
+    expiration_time = booking.created_at + timedelta(minutes=15)
+    remaining_seconds = (expiration_time - timezone.now()).total_seconds()
+    
+    if remaining_seconds <= 0:
+        messages.error(request, "This hold has expired.")
+        return redirect('accounts:account_profile')
+
+    # Retrieve Stripe URL
+    checkout_url = None
+    if booking.stripe_checkout_session_id:
+        try:
+            session = stripe.checkout.Session.retrieve(booking.stripe_checkout_session_id)
+            checkout_url = session.url
+        except Exception as e:
+            logger.error(f"Stripe error: {e}")
+    
+    if not checkout_url:
+         messages.error(request, "Could not retrieve payment information.")
+         return redirect('accounts:account_profile')
+
+    context = {
+        'booking': booking,
+        'checkout_url': checkout_url,
+        'remaining_seconds': int(remaining_seconds)
+    }
+    return render(request, 'coaching_booking/session_payment.html', context)
 
 @login_required
 @require_POST
@@ -488,6 +529,9 @@ def get_booking_calendar(request):
         coach, year, month, user_tz, session_length
     )
 
+    # Convert the flat list of days into a list of weeks (7 days per week)
+    calendar_rows = [calendar_data[i:i+7] for i in range(0, len(calendar_data), 7)]
+
     # Navigation Logic
     current_date = date(year, month, 1)
     
@@ -502,7 +546,7 @@ def get_booking_calendar(request):
         next_date = date(year, month + 1, 1)
 
     context = {
-        'calendar_data': calendar_data, # The new grid structure
+        'calendar_rows': calendar_rows,
         'current_year': year,
         'current_month': month,
         'current_month_name': current_date.strftime('%B'),

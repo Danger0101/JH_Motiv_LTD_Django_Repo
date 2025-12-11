@@ -1,4 +1,4 @@
-from celery import shared_task
+from celery import shared_task, current_app
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.conf import settings
@@ -127,3 +127,11 @@ def health_check_email_worker():
     # Replace URL with your actual monitoring URL
     # requests.get("https://nosnch.in/YOUR_ID")
     pass
+
+@current_app.on_after_finalize.connect
+def setup_periodic_tasks(sender, **kwargs):
+    # Run release_expired_holds every 10 minutes (600 seconds)
+    sender.add_periodic_task(600.0, release_expired_holds.s(), name='release_expired_holds_every_10_mins')
+    
+    # Run sync_google_calendar_pull_all every 15 minutes (900 seconds)
+    sender.add_periodic_task(900.0, sync_google_calendar_pull_all.s(), name='sync_google_calendar_pull_all_every_15_mins')
