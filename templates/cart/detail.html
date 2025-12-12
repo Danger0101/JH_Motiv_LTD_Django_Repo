@@ -38,11 +38,36 @@
                 role="complementary" aria-label="Order Summary">
                 
                 <div id="cart-summary-panel-wrapper"
-                     hx-trigger="load, cartUpdated from:body"
-                     hx-get="{% url 'cart:cart_summary_panel' %}" 
+                     hx-trigger="cartUpdated from:body"
+                     hx-get="" 
+                     hx-select="#cart-summary-panel-wrapper"
                      hx-target="this"
-                     hx-swap="innerHTML">
-                    {% include 'cart/partials/cart_summary_panel.html' %}
+                     hx-swap="outerHTML">
+                    
+                    <h2 class="text-lg font-medium text-gray-900">Order summary</h2>
+                    <dl class="mt-6 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <dt class="text-sm text-gray-600">Subtotal</dt>
+                            <dd class="text-sm font-medium text-gray-900">£{{ summary.subtotal }}</dd>
+                        </div>
+                        {% if summary.discount_amount > 0 %}
+                        <div class="flex items-center justify-between border-t border-gray-200 pt-4 text-green-600">
+                            <dt class="text-sm">Discount ({{ summary.coupon.code }})</dt>
+                            <dd class="text-sm font-medium">-£{{ summary.discount_amount }}</dd>
+                        </div>
+                        {% endif %}
+                        <div class="flex items-center justify-between border-t border-gray-200 pt-4">
+                            <dt class="text-base font-medium text-gray-900">Total</dt>
+                            <dd class="text-base font-medium text-gray-900">£{{ summary.total }}</dd>
+                        </div>
+                    </dl>
+                    <p class="mt-1 text-xs text-gray-500">Shipping and taxes calculated at checkout.</p>
+
+                    <div class="mt-6">
+                        <a href="{% url 'payments:checkout_cart' %}" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Checkout
+                        </a>
+                    </div>
                 </div>
 
                 <!-- Coupon Code Input -->

@@ -100,8 +100,7 @@
         loader: 'auto'
     });
 
-    // Create Address Element - Enables Autofill
-    const addressElement = elements.create("address", { mode: "shipping", allowedCountries: ['GB', 'US'] });
+    const addressElement = elements.create("address", { mode: "shipping", allowedCountries: ['GB', 'US', 'CA', 'AU', 'EU'] });
     const paymentElement = elements.create("payment");
     
     addressElement.mount("#address-element");

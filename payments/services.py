@@ -74,7 +74,6 @@ def handle_ecommerce_checkout(session, request):
                     'state_code': address.get('state'),
                     'country_code': address.get('country'),
                     'zip': address.get('postal_code'),
-                    'phone': shipping_details.get('phone'),
                 }
         order.save()
 
@@ -129,7 +128,6 @@ def handle_payment_intent_checkout(payment_intent, request=None):
             'state_code': address.get('state'),
             'country_code': address.get('country'),
             'zip': address.get('postal_code'),
-            'phone': shipping.get('phone'),
         }
 
     # Determine User and Email
@@ -229,8 +227,7 @@ def _fulfill_ecommerce_order(order, request=None, original_cart_id=None):
                     "state_code": order.shipping_data.get('state_code'),
                     "country_code": order.shipping_data.get('country_code'),
                     "zip": order.shipping_data.get('zip'),
-                    "email": order.email,
-                    "phone": order.shipping_data.get('phone')
+                    "email": order.email
                 }
                 response = printful_service.create_order(recipient, printful_items)
                 if 'result' in response and response['result'].get('id'):

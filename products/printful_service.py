@@ -20,16 +20,15 @@ class PrintfulService:
 
     def validate_recipient(self, recipient):
         """
-        Validates the recipient dictionary to ensure required fields for Printful are present.
-        Returns (bool, error_message).
+        Validates the recipient dictionary.
         """
-        required_fields = ['name', 'address1', 'city', 'country_code', 'zip']
-        # State code is mandatory for US, CA, AU, etc., but we'll warn rather than block strictly if missing
+        required_fields = ['address1', 'city', 'country_code', 'zip']
+        # 'name' is often required for Orders but not necessarily for Rates, 
+        # but we'll check it to be safe if creating an order.
         
         missing = [field for field in required_fields if not recipient.get(field)]
         if missing:
-            return False, f"Missing required shipping fields: {', '.join(missing)}"
-        
+            return False, f"Missing required fields: {', '.join(missing)}"
         return True, ""
 
     def get_store_products(self):
@@ -79,17 +78,21 @@ class PrintfulService:
     
     def calculate_shipping_rates(self, recipient, items, currency='GBP', locale='en_US'):
         """
-        Calculates shipping rates for a list of items to a specific recipient.
-        
-        Args:
-            recipient (dict): { 'address1': ..., 'city': ..., 'country_code': ..., 'zip': ... }
-            items (list): [{ 'variant_id': 123, 'quantity': 1 }, ...]
-            currency (str): Currency code (e.g., 'GBP', 'USD').
-            locale (str): Locale (e.g., 'en_US').
+        Calculates live shipping rates.
         """
         url = f"{self.BASE_URL}/shipping/rates"
+        
+        # Ensure payload strictly follows API specs
         payload = {
-            "recipient": recipient,
+            "recipient": {
+                "address1": recipient.get('address1'),
+                "address2": recipient.get('address2', ''),
+                "city": recipient.get('city'),
+                "state_code": recipient.get('state_code', ''),
+                "country_code": recipient.get('country_code'),
+                "zip": recipient.get('zip'),
+                "phone": recipient.get('phone', '') # Optional but recommended
+            },
             "items": items,
             "currency": currency,
             "locale": locale
@@ -97,42 +100,36 @@ class PrintfulService:
         
         try:
             response = requests.post(url, json=payload, headers=self.headers)
-            if response.status_code == 200:
-                result = response.json().get('result', [])
-                # Return the cheapest or 'STANDARD' rate
-                # Printful returns a list of available rates (Standard, Express, etc.)
-                # We default to the first one (usually cheapest) or look for 'STANDARD'
-                return result
-            else:
-                logger.error(f"Printful Shipping Calc Error: {response.status_code} - {response.text}")
-                return []
+            response.raise_for_status() # Raise error for 4xx/5xx
+            
+            result = response.json().get('result', [])
+            return result
+            
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"Printful API Error: {e.response.text}")
+            return []
         except Exception as e:
-            logger.exception(f"Exception calculating shipping: {e}")
+            logger.exception(f"Printful Service Error: {e}")
             return []
     
     def create_order(self, recipient, items):
         """
         Creates an order in Printful.
         """
-        # 1. Validate Payload locally before sending
-        is_valid, error_msg = self.validate_recipient(recipient)
-        if not is_valid:
-            logger.error(f"Validation Failed: {error_msg}")
-            return {'error': error_msg, 'code': 400}
-
+        url = f"{self.BASE_URL}/orders"
+        
+        # Add phone to recipient for orders (highly recommended)
         payload = {
             "recipient": recipient,
             "items": items
         }
-        logger.info(f"Creating Printful Order with payload: {json.dumps(payload, indent=2)}")
         
         try:
-            response = requests.post(f"{self.BASE_URL}/orders", json=payload, headers=self.headers)
-            if response.status_code not in [200, 201]:
-                logger.error(f"Printful API Error: {response.status_code} - {response.text}")
-                return {'error': response.text, 'code': response.status_code}
-            
+            response = requests.post(url, json=payload, headers=self.headers)
+            response.raise_for_status()
             return response.json()
         except Exception as e:
-            logger.exception(f"Exception creating order: {e}")
+            logger.error(f"Failed to create Printful order: {e}")
+            if hasattr(e, 'response'):
+                return {'error': e.response.text, 'code': e.response.status_code}
             return {'error': str(e)}
