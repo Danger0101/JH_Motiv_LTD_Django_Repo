@@ -3,6 +3,7 @@ from decimal import Decimal  # <--- ADDED THIS IMPORT
 from django.db import models
 from django.db.models import JSONField
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from products.models import Variant
 from products.models import Product
 from coaching_booking.models import ClientOfferingEnrollment
@@ -169,7 +170,7 @@ class Coupon(models.Model):
 
     # Constraints
     min_cart_value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    valid_from = models.DateTimeField(default=models.functions.Now)
+    valid_from = models.DateTimeField(default=timezone.now)
     valid_to = models.DateTimeField()
     active = models.BooleanField(default=True)
     usage_limit = models.PositiveIntegerField(null=True, blank=True, help_text="Total times this code can be used.")
@@ -182,7 +183,6 @@ class Coupon(models.Model):
     affiliate_dreamer = models.ForeignKey(DreamerProfile, null=True, blank=True, on_delete=models.SET_NULL, related_name='coupons', help_text="Link this coupon to a Dreamer for affiliate tracking.")
 
     def is_valid(self, user=None, cart_value=Decimal('0.00')):
-        from django.utils import timezone
         now = timezone.now()
         if not self.active or not (self.valid_from <= now <= self.valid_to):
             return False, "This coupon is not active or has expired."
