@@ -69,16 +69,15 @@ class OfferingListView(StaffRequiredMixin, ListView):
 
         # --- SEASONAL HERO LOGIC ---
         current_month = timezone.now().month
-        if current_month in [3, 4, 5]:
-            season_file = 'spring_banner.webp'
-        elif current_month in [6, 7, 8]:
-            season_file = 'summer_banner.webp'
-        elif current_month in [9, 10, 11]:
-            season_file = 'Fall_banner.webp'
-        else:
-            season_file = 'winter_banner.webp'
+        season_map = {
+            12: 'winter', 1: 'winter', 2: 'winter',
+            3: 'spring', 4: 'spring', 5: 'spring',
+            6: 'summer', 7: 'summer', 8: 'summer',
+            9: 'Fall', 10: 'Fall', 11: 'Fall',
+        }
+        season_name = season_map.get(current_month, 'winter')
         
-        context['seasonal_hero_image'] = f"images/{season_file}"
+        context['seasonal_hero_image'] = f"images/{season_name}_banner.webp"
         return context
 
 class OfferingDetailView(StaffRequiredMixin, DetailView):
