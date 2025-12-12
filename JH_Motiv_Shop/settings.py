@@ -347,3 +347,13 @@ SOCIALACCOUNT_PROVIDERS = {
 TAILWIND_APP_NAME = 'theme'
 TAILWIND_CSS_PATH = 'css/styles.css'
 TAILWIND_CLI_ARGS = ['--minify']
+
+# =======================================================
+# CELERY CONFIGURATION
+# =======================================================
+# Use REDIS_URL if available (common on Heroku), otherwise fallback to local default
+CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+
+# Optional: Retry connection on startup if broker is not immediately available
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
