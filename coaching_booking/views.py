@@ -12,7 +12,7 @@ from django.db.models import Q
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 import stripe
 
 from core.email_utils import send_transactional_email
@@ -238,7 +238,18 @@ def cancel_session(request, booking_id):
 
 @login_required
 def reschedule_session_form(request, booking_id):
-    booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
+    """
+    Returns the HTMX partial for the reschedule form.
+    """
+    booking = get_object_or_404(SessionBooking, id=booking_id)
+    
+    # Security check: Ensure the user is the client or the coach for this booking
+    is_client = booking.client == request.user
+    is_coach = booking.coach.user == request.user
+    
+    if not (is_client or is_coach):
+        return HttpResponseForbidden("You are not authorized to reschedule this session.")
+        
     return render(request, 'account/partials/reschedule_form.html', {'booking': booking})
 
 @login_required

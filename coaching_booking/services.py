@@ -345,19 +345,13 @@ class BookingService:
         coach_id = booking_data.get('coach_id')
         enrollment_id = booking_data.get('enrollment_id')
         free_offer_id = booking_data.get('free_offer_id')
-
-        if not coach_id:
-            raise ValidationError("Coach ID is required for 1-on-1 bookings.")
-        
-        coach_profile = get_object_or_404(CoachProfile, id=coach_id)
         
         enrollment = None
         free_offer = None
         session_length = 60 # Default
         price_in_cents = 0
-        product_name = f"1-on-1 with {coach_profile.user.get_full_name()}"
 
-        # 3. Validate Entitlement (Enrollment or Free Offer)
+        # 3. Validate Entitlement (Enrollment or Free Offer) & Infer Coach
         if enrollment_id:
             enrollment = get_object_or_404(
                 ClientOfferingEnrollment.objects.select_for_update(), 
@@ -367,6 +361,10 @@ class BookingService:
             if enrollment.remaining_sessions <= 0:
                 raise ValidationError("No sessions remaining for this enrollment.")
             session_length = enrollment.offering.session_length_minutes
+            
+            # Infer coach if missing
+            if not coach_id and enrollment.coach:
+                coach_id = enrollment.coach.id
             
         elif free_offer_id:
             free_offer = get_object_or_404(
@@ -380,6 +378,10 @@ class BookingService:
                 raise ValidationError("This free offer has already been redeemed.")
             if free_offer.is_expired:
                 raise ValidationError("This free offer has expired.")
+            
+            if not coach_id:
+                coach_id = free_offer.coach.id
+                
             if int(coach_id) != free_offer.coach.id:
                 raise ValidationError("The selected coach does not match the approved free offer.")
         else:
@@ -387,6 +389,12 @@ class BookingService:
             # For now, sticking to existing logic which requires enrollment/offer
             # But if we wanted to support direct paid bookings, we'd set price here.
             raise ValidationError("Booking requires either an enrollment or a free offer.")
+
+        if not coach_id:
+            raise ValidationError("Coach ID is required for 1-on-1 bookings.")
+        
+        coach_profile = get_object_or_404(CoachProfile, id=coach_id)
+        product_name = f"1-on-1 with {coach_profile.user.get_full_name()}"
 
         # 4. Availability Check
         available_slots = BookingService.get_slots_for_coach(coach_profile, start_datetime_obj.date(), session_length)
