@@ -7,14 +7,16 @@ logger = logging.getLogger(__name__)
 
 def get_shipping_rates(address_data, cart):
     """
-    Returns a list of shipping rates and a tax estimate based on the address.
+    Returns shipping rates and tax. 
+    Prioritizes Printful, falls back to flat rates if API fails or IDs are invalid.
     """
     rates = []
     
     # 1. Filter for Physical Items
     physical_items = [item for item in cart.items.all() if getattr(item.variant.product, 'product_type', 'physical') == 'physical']
     
-    if not physical_items:
+    if not physical_items and cart.items.exists():
+         # Digital-only cart = No shipping
         return [], Decimal('0.00')
 
     # 2. Try Printful Calculation
@@ -34,14 +36,16 @@ def get_shipping_rates(address_data, cart):
             if printful_items:
                 # Map Stripe Element address format to Printful
                 recipient = {
-                    'address1': address_data.get('line1'),
-                    'address2': address_data.get('line2', ''),
+                    'address1': address_data.get('line1') or address_data.get('address1'),
+                    'address2': address_data.get('line2') or address_data.get('address2', ''),
                     'city': address_data.get('city'),
-                    'state_code': address_data.get('state'), 
-                    'country_code': address_data.get('country'),
-                    'zip': address_data.get('postal_code'),
-                    'phone': address_data.get('phone', '') # Capture phone if available
+                    'state_code': address_data.get('state') or address_data.get('state_code'), 
+                    'country_code': address_data.get('country') or address_data.get('country_code'),
+                    'zip': address_data.get('postal_code') or address_data.get('zip'),
+                    'phone': address_data.get('phone', '')
                 }
+                # Clean empty values
+                recipient = {k: v for k, v in recipient.items() if v}
                 
                 api_rates = printful.calculate_shipping_rates(recipient, printful_items, currency='GBP')
                 
@@ -54,45 +58,49 @@ def get_shipping_rates(address_data, cart):
                     })
                 
     except Exception as e:
-        logger.error(f"Printful Rate Error: {e}")
+        logger.error(f"Printful Rate Calc Failed: {e}")
 
-    # 3. Fallback: Flat Rates (Only if Printful returned nothing)
+    # 3. Fallback (If Printful failed or return no rates)
     if not rates:
+        logger.warning("Using Fallback Shipping Rates (Printful failed or skipped)")
         subtotal = cart.get_total_price()
-        country = address_data.get('country')
+        country = address_data.get('country') or address_data.get('country_code')
         
+        # Always add Paid Options so checkout never looks broken
+        std_cost = Decimal('4.99') if country == 'GB' else Decimal('9.99')
+        rates.append({
+            'id': 'standard',
+            'label': 'Standard Shipping',
+            'detail': 'Royal Mail / International',
+            'amount': std_cost
+        })
+        
+        rates.append({
+            'id': 'express',
+            'label': 'Express Shipping',
+            'detail': 'Priority Dispatch',
+            'amount': Decimal('14.99')
+        })
+
+        # Insert Free Shipping at top if eligible
         if subtotal >= 50:
-            rates.append({
+             rates.insert(0, {
                 'id': 'free_shipping',
                 'label': 'Free Shipping',
-                'detail': '3-5 Days',
+                'detail': 'Special Offer',
                 'amount': Decimal('0.00')
-            })
-        else:
-            cost = Decimal('4.99') if country == 'GB' else Decimal('9.99')
-            rates.append({
-                'id': 'standard',
-                'label': 'Standard Shipping',
-                'detail': 'Royal Mail / International',
-                'amount': cost
-            })
+             })
 
     # 4. Estimated Tax (Simple VAT Logic)
     tax_amount = Decimal('0.00')
-    if address_data.get('country') == 'GB':
-        # Example: 20% VAT
+    country = address_data.get('country') or address_data.get('country_code')
+    if country == 'GB':
         tax_amount = cart.get_total_price() * Decimal('0.0')
 
     return rates, tax_amount
 
 def calculate_cart_shipping(cart, address_data):
-    """
-    Wrapper for backward compatibility or simple totals.
-    Returns the cost of the first/cheapest available rate.
-    """
+    """Legacy wrapper for older views."""
     rates, _ = get_shipping_rates(address_data, cart)
-    if rates:
-        # Sort by amount to find cheapest
-        cheapest = sorted(rates, key=lambda x: x['amount'])[0]
-        return cheapest['amount']
-    return Decimal('0.00')
+    # Return the amount of the first available rate
+    return rates[0]['amount'] if rates else Decimal('0.00')
