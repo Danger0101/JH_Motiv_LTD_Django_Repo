@@ -58,4 +58,23 @@
          hx-swap="innerHTML">
         <p class="text-gray-500 italic py-4">Loading sessions...</p>
     </div>
+
+    <!-- Reschedule Modal -->
+    <div x-show="rescheduleModalOpen" class="fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-50 flex items-center justify-center p-4" style="display: none;" x-cloak>
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 relative" @click.away="rescheduleModalOpen = false">
+            <button @click="rescheduleModalOpen = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">✕</button>
+            <h2 class="text-xl font-bold mb-4">Reschedule Session</h2>
+            <div id="reschedule-content">
+                <div class="flex justify-center py-10"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openRescheduleModal(bookingId) {
+            document.querySelector('[x-data]').__x.$data.rescheduleModalOpen = true;
+            const url = "{% url 'coaching_booking:reschedule_session' 0 %}".replace('0', bookingId);
+            htmx.ajax('GET', url, {target: '#reschedule-content'});
+        }
+    </script>
 </div>
