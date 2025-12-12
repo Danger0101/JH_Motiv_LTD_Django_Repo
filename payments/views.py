@@ -215,6 +215,7 @@ def payment_success(request):
         'title': "Payment Successful!",
         'message': "Thank you for your payment.",
         'coach': None,
+        'hero_image': 'images/Success_banner.webp',
     }
 
     if not session_id:
