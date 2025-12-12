@@ -43,6 +43,7 @@ class Command(BaseCommand):
                     defaults={
                         'name': p_data['name'],
                         'product_type': 'physical',
+                        'fulfillment_method': 'printful',
                     }
                 )
                 

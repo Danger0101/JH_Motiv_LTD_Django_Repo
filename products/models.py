@@ -27,27 +27,27 @@ class StockPool(models.Model):
 # =========================================================================
 
 class Product(models.Model):
-    PRODUCT_TYPES = (
+    PRODUCT_TYPE_CHOICES = [
         ('physical', 'Physical'),
         ('digital', 'Digital'),
         ('service', 'Service/Coaching'),
-    )
+    ]
     
     # NEW FIELD: Explicitly define who ships this
-    FULFILLMENT_METHODS = (
-        ('digital', 'Digital / None'),
+    FULFILLMENT_METHOD_CHOICES = [
         ('printful', 'Printful (Drop Shipping)'),
-        ('local', 'Local Stock (Royal Mail)'),
-    )
+        ('local', 'Local / Royal Mail'),
+        ('digital', 'Digital / Instant'),
+    ]
 
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    product_type = models.CharField(max_length=20, choices=PRODUCT_TYPES, default='physical')
+    product_type = models.CharField(max_length=20, choices=PRODUCT_TYPE_CHOICES, default='physical')
     fulfillment_method = models.CharField(
         max_length=20, 
-        choices=FULFILLMENT_METHODS, 
+        choices=FULFILLMENT_METHOD_CHOICES, 
         default='local',
-        help_text="Who is responsible for shipping this item?"
+        help_text="Who ships this? Printful uses flat rates; Local uses weight."
     )
     is_active = models.BooleanField(default=True, help_text="Uncheck to hide this product from the shop.")
     printful_product_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID from Printful Sync Product")
