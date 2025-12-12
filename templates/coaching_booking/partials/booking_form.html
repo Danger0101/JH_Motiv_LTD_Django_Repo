@@ -21,3 +21,23 @@
         <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Confirm Session</button>
     </div>
 </form>
+
+<script>
+    (function() {
+        // Ensure this script only runs once and htmx is available
+        if (window.htmx && !document.body.hasAttribute('data-booking-error-listener')) {
+            document.body.setAttribute('data-booking-error-listener', 'true');
+
+            htmx.on('htmx:afterRequest', function(evt) {
+                // Check if the request was successful and was NOT the booking submission itself
+                const requestPath = evt.detail.requestConfig.path;
+                if (evt.detail.successful && requestPath.indexOf('book_session') === -1) {
+                    const errorDiv = document.getElementById('booking-errors');
+                    if (errorDiv) {
+                        errorDiv.innerHTML = '';
+                    }
+                }
+            });
+        }
+    })();
+</script>

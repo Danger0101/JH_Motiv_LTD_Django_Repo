@@ -91,9 +91,10 @@ def book_session(request):
     workshop_id = request.POST.get('workshop_id') # Support for new flow
 
     def htmx_error(msg):
-        messages.error(request, msg)
-        response = HttpResponse(status=200)
-        response['HX-Redirect'] = reverse('accounts:account_profile')
+        # Return inline HTML for the #booking-errors div instead of redirecting
+        response = HttpResponse(
+            f'<div class="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">{msg}</div>'
+        )
         return response
 
     try:
@@ -391,8 +392,9 @@ def profile_book_session_partial(request):
     user_offerings = ClientOfferingEnrollment.objects.filter(
         client=request.user,
         remaining_sessions__gt=0,
-        is_active=True,
-        expiration_date__gte=timezone.now()
+        is_active=True
+    ).filter(
+        Q(expiration_date__gte=timezone.now()) | Q(expiration_date__isnull=True)
     ).select_related('offering')
 
     free_offers = OneSessionFreeOffer.objects.filter(
