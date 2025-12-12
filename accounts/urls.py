@@ -17,6 +17,7 @@ urlpatterns = [
     path('profile/invoice/<int:order_id>/', views.generate_invoice_pdf, name='generate_invoice_pdf'),
     
     # Staff/Admin URLs for the profile dashboard
+    path('staff/dashboard/', views.StaffDashboardView.as_view(), name='staff_dashboard'),
     path('staff/customer-lookup/', views.staff_customer_lookup, name='staff_customer_lookup'),
     path('staff/update-order/<int:order_id>/', views.staff_update_order, name='staff_update_order'),
     path('staff/get-order-row/<int:order_id>/', views.staff_get_order_row, name='staff_get_order_row'),

@@ -14,33 +14,17 @@ ROYAL_MAIL_RATES_GB = [
     (10.00, Decimal('9.99')), # Heavy Parcel
 ]
 
-# --- 2. PRINTFUL RATES (Manual Hybrid Model) ---
-# Format: 'Keyword': (Base Price, Additional Price)
+# --- 2. PRINTFUL RATES (Keys match Product.shipping_category) ---
 PRINTFUL_RATES_GB = {
-    # Apparel
     't-shirt':  (Decimal('3.59'), Decimal('1.20')),
-    'shirt':    (Decimal('3.59'), Decimal('1.20')), 
-    'tank':     (Decimal('3.59'), Decimal('1.20')),
-    'crop':     (Decimal('3.59'), Decimal('1.20')),
     'hoodie':   (Decimal('6.09'), Decimal('2.00')),
-    'sweat':    (Decimal('6.09'), Decimal('2.00')),
     'jacket':   (Decimal('6.09'), Decimal('2.00')),
     'pant':     (Decimal('6.09'), Decimal('2.00')),
-    'jogger':   (Decimal('6.09'), Decimal('2.00')),
-    'legging':  (Decimal('3.59'), Decimal('1.20')),
-    
-    # Accessories
     'bag':      (Decimal('4.99'), Decimal('1.50')),
-    'tote':     (Decimal('3.59'), Decimal('1.20')),
     'hat':      (Decimal('3.29'), Decimal('1.25')),
-    'beanie':   (Decimal('3.29'), Decimal('1.25')),
     'mug':      (Decimal('4.29'), Decimal('1.80')),
-    'bottle':   (Decimal('4.99'), Decimal('1.90')),
-    'sticker':  (Decimal('1.49'), Decimal('0.10')),
     'poster':   (Decimal('4.59'), Decimal('0.60')),
-    'canvas':   (Decimal('8.99'), Decimal('4.00')),
-    
-    # Fallback
+    'sticker':  (Decimal('1.49'), Decimal('0.10')),
     'default':  (Decimal('4.99'), Decimal('1.50')),
 }
 
@@ -130,13 +114,12 @@ def calculate_printful_manual_cost(items):
 
     # Flatten the cart into individual units
     for item in items:
-        name = item.variant.product.name.lower()
-        category = 'default'
-        for key in PRINTFUL_RATES_GB:
-            if key in name:
-                category = key
-                break
+        # LOOKUP from Database Field
+        category = getattr(item.variant.product, 'shipping_category', 'default')
         
+        if category not in PRINTFUL_RATES_GB:
+            category = 'default'
+            
         base_price, add_price = PRINTFUL_RATES_GB[category]
         
         # Add 1 unit for every quantity

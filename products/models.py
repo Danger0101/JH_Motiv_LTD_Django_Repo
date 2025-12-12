@@ -40,6 +40,20 @@ class Product(models.Model):
         ('digital', 'Digital / Instant'),
     ]
 
+    # Matches keys in shipping_utils.py
+    SHIPPING_CATEGORY_CHOICES = [
+        ('default', 'Default / Standard'),
+        ('t-shirt', 'T-Shirt / Top'),
+        ('hoodie', 'Hoodie / Sweatshirt'),
+        ('jacket', 'Jacket'),
+        ('pant', 'Pants / Joggers'),
+        ('bag', 'Bag / Backpack'),
+        ('hat', 'Hat / Beanie'),
+        ('mug', 'Mug / Drinkware'),
+        ('poster', 'Poster / Canvas'),
+        ('sticker', 'Sticker'),
+    ]
+
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     product_type = models.CharField(max_length=20, choices=PRODUCT_TYPE_CHOICES, default='physical')
@@ -48,6 +62,12 @@ class Product(models.Model):
         choices=FULFILLMENT_METHOD_CHOICES, 
         default='local',
         help_text="Who ships this? Printful uses flat rates; Local uses weight."
+    )
+    shipping_category = models.CharField(
+        max_length=20, 
+        choices=SHIPPING_CATEGORY_CHOICES, 
+        default='default',
+        help_text="Used to calculate manual shipping rates."
     )
     is_active = models.BooleanField(default=True, help_text="Uncheck to hide this product from the shop.")
     printful_product_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID from Printful Sync Product")

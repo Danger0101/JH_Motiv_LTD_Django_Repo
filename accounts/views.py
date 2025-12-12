@@ -3,7 +3,7 @@ from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.urls import reverse
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic import TemplateView
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
@@ -330,6 +330,82 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         # For example: .exclude(usages__user=self.request.user)
         
         context['active_tab'] = 'account'
+        return context
+
+class StaffDashboardView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
+    template_name = 'account/staff_dashboard.html'
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        now = timezone.now()
+        last_30_days_start = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=29)
+        last_7_days = now - timedelta(days=7)
+
+        # 1. Financial Pulse (Last 30 Days Revenue)
+        retail_revenue = Decimal('0.00')
+        coaching_revenue = Decimal('0.00')
+
+        if Order:
+            retail_revenue = Order.objects.filter(
+                created_at__gte=last_30_days_start,
+                status__in=['paid', 'shipped', 'delivered']
+            ).aggregate(total=models.Sum('total_paid'))['total'] or Decimal('0.00')
+
+        if CoachingOrder:
+            coaching_revenue = CoachingOrder.objects.filter(
+                created_at__gte=last_30_days_start
+            ).exclude(payout_status='void').aggregate(total=models.Sum('amount_gross'))['total'] or Decimal('0.00')
+
+        context['staff_30d_revenue'] = retail_revenue + coaching_revenue
+
+        # 2. Chart Data
+        daily_revenue = { (last_30_days_start + timedelta(days=i)).date(): Decimal('0.00') for i in range(30) }
+
+        if Order:
+            retail_daily = Order.objects.filter(
+                created_at__gte=last_30_days_start,
+                status__in=['paid', 'shipped', 'delivered']
+            ).extra(select={'day': 'date(created_at)'}).values('day').annotate(daily_total=models.Sum('total_paid'))
+            for entry in retail_daily:
+                day = entry['day']
+                if isinstance(day, str): day = datetime.strptime(day, '%Y-%m-%d').date()
+                if day in daily_revenue: daily_revenue[day] += entry['daily_total']
+
+        if CoachingOrder:
+            coaching_daily = CoachingOrder.objects.filter(
+                created_at__gte=last_30_days_start
+            ).exclude(payout_status='void').extra(select={'day': 'date(created_at)'}).values('day').annotate(daily_total=models.Sum('amount_gross'))
+            for entry in coaching_daily:
+                day = entry['day']
+                if isinstance(day, str): day = datetime.strptime(day, '%Y-%m-%d').date()
+                if day in daily_revenue: daily_revenue[day] += entry['daily_total']
+
+        context['revenue_chart_labels'] = json.dumps([d.strftime('%b %d') for d in daily_revenue.keys()])
+        context['revenue_chart_data'] = json.dumps([float(v) for v in daily_revenue.values()])
+
+        # 3. Growth Pulse (New Users Last 7 Days)
+        context['staff_new_users_7d'] = get_user_model().objects.filter(date_joined__gte=last_7_days).count()
+
+        # 4. Operational Pulse (Active Coaching Clients)
+        if ClientOfferingEnrollment:
+            context['staff_active_clients'] = ClientOfferingEnrollment.objects.filter(is_active=True).count()
+
+        # 5. Inventory Risks (Low Stock Items)
+        if StockItem:
+            low_stock_qs = StockItem.objects.filter(quantity__lt=5).select_related('variant', 'variant__product')
+            context['staff_low_stock_count'] = low_stock_qs.count()
+            context['staff_low_stock_items'] = low_stock_qs[:5]
+
+        # 6. Unpaid Commissions
+        if CoachingOrder:
+            unpaid_totals = CoachingOrder.objects.filter(payout_status='unpaid').aggregate(
+                coach_total=models.Sum('amount_coach'), referrer_total=models.Sum('amount_referrer')
+            )
+            context['staff_unpaid_commissions'] = (unpaid_totals['coach_total'] or Decimal('0.00')) + (unpaid_totals['referrer_total'] or Decimal('0.00'))
+
         return context
 
 @login_required

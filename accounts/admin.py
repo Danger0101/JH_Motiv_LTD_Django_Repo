@@ -1,10 +1,13 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
+from django.shortcuts import render
+from django.http import HttpResponseRedirect
 from django.urls import reverse
 from .models import User, MarketingPreference, Address, CoachProfile
 from django.conf import settings
 from django.contrib import messages
+from django.core.mail import send_mail
 import stripe
 import logging
 # --- INLINES ---
@@ -42,7 +45,7 @@ class UserAdmin(BaseUserAdmin):
     search_fields = ('username', 'first_name', 'last_name', 'email', 'stripe_customer_id')
     ordering = ('-date_joined',)
     
-    actions = ['sync_with_stripe']
+    actions = ['sync_with_stripe', 'send_bulk_email']
     
     list_select_related = ('coach_profile',)
 
@@ -110,6 +113,31 @@ class UserAdmin(BaseUserAdmin):
             self.message_user(request, f"Skipped {skipped_count} user(s) who already had a Stripe ID.", level=messages.INFO)
         if failed_count > 0:
             self.message_user(request, f"Failed to sync {failed_count} user(s). Check logs for details.", level=messages.ERROR)
+
+    @admin.action(description='Send Bulk Email (Newsletter)')
+    def send_bulk_email(self, request, queryset):
+        if 'apply' in request.POST:
+            subject = request.POST.get('subject')
+            message_body = request.POST.get('message')
+            count = 0
+            for user in queryset:
+                if user.email:
+                    try:
+                        send_mail(
+                            subject,
+                            message_body,
+                            settings.DEFAULT_FROM_EMAIL,
+                            [user.email],
+                            fail_silently=False,
+                        )
+                        count += 1
+                    except Exception as e:
+                        logging.getLogger(__name__).error(f"Failed to send email to {user.email}: {e}")
+            
+            self.message_user(request, f"Sent {count} emails.")
+            return HttpResponseRedirect(request.get_full_path())
+            
+        return render(request, 'admin/accounts/user/send_bulk_email.html', context={'users': queryset})
 
 @admin.register(CoachProfile)
 class CoachProfileAdmin(admin.ModelAdmin):

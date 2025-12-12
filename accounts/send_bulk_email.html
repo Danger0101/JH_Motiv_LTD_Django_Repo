@@ -1,0 +1,38 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div id="content-main">
+    <h1>Send Bulk Email</h1>
+    
+    <form action="" method="post">
+        {% csrf_token %}
+        <!-- The 'action' hidden field is crucial for the admin to know which action to re-run -->
+        <input type="hidden" name="action" value="send_bulk_email">
+        
+        <!-- Preserve the selection of users -->
+        {% for user in users %}
+            <input type="hidden" name="_selected_action" value="{{ user.pk }}">
+        {% endfor %}
+
+        <fieldset class="module aligned">
+            <div class="form-row">
+                <label for="id_subject" class="required">Subject:</label>
+                <input type="text" name="subject" id="id_subject" required class="vTextField" style="width: 60%;">
+            </div>
+            <div class="form-row">
+                <label for="id_message" class="required">Message:</label>
+                <textarea name="message" id="id_message" rows="10" required class="vLargeTextField" style="width: 60%;"></textarea>
+            </div>
+        </fieldset>
+
+        <div class="submit-row">
+            <input type="submit" name="apply" value="Send Emails" class="default">
+            <a href="#" onclick="window.history.back(); return false;" class="button cancel-link" style="float: right; margin-top: 10px;">Cancel</a>
+        </div>
+    </form>
+
+    <h3>Recipients ({{ users|length }})</h3>
+    <p>{% for user in users %}{{ user.email }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+</div>
+{% endblock %}

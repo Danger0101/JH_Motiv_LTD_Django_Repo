@@ -37,6 +37,24 @@ class Command(BaseCommand):
             try:
                 self.stdout.write(f"Processing Product: {p_data['name']} (ID: {p_data['id']})")
                 
+                # Helper to guess category from name (Only used on creation)
+                name_lower = p_data['name'].lower()
+                shipping_cat = 'default'
+                if 'hoodie' in name_lower or 'sweatshirt' in name_lower:
+                    shipping_cat = 'hoodie'
+                elif 'shirt' in name_lower or 'tank' in name_lower:
+                    shipping_cat = 't-shirt'
+                elif 'mug' in name_lower:
+                    shipping_cat = 'mug'
+                elif 'hat' in name_lower or 'beanie' in name_lower:
+                    shipping_cat = 'hat'
+                elif 'bag' in name_lower or 'tote' in name_lower:
+                    shipping_cat = 'bag'
+                elif 'poster' in name_lower or 'canvas' in name_lower:
+                    shipping_cat = 'poster'
+                elif 'sticker' in name_lower:
+                    shipping_cat = 'sticker'
+
                 # Create or Update Product
                 product, created = Product.objects.update_or_create(
                     printful_product_id=str(p_data['id']),
@@ -46,6 +64,11 @@ class Command(BaseCommand):
                         'fulfillment_method': 'printful',
                     }
                 )
+                
+                # Only set shipping_category on creation to avoid overwriting admin edits
+                if created:
+                    product.shipping_category = shipping_cat
+                    product.save()
                 
                 # Fetch Thumbnail
                 if created and p_data.get('thumbnail_url'):
