@@ -124,10 +124,10 @@
                             <p class="text-gray-600">You have <strong class="text-green-700">£{{ my_total_unpaid_earnings|floatformat:2 }}</strong> in pending earnings.</p>
                             <p class="text-xs text-gray-500">Payouts are processed at the end of the month.</p>
                         </div>
-                        <a href="{% url 'payments:my_earnings' %}" 
+                        <button @click="activeTab = 'earnings'" 
                                 class="px-5 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition shadow-sm">
                             View Details
-                        </a>
+                        </button>
                     </div>
                 </div>
                 {% endif %}
