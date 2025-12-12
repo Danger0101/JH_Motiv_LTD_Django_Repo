@@ -70,11 +70,34 @@
         </div>
     </div>
 
+    <!-- Cancel Modal -->
+    <div x-show="cancelModalOpen" class="fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-50 flex items-center justify-center p-4" style="display: none;" x-cloak>
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative" @click.away="cancelModalOpen = false">
+            <h2 class="text-xl font-bold mb-4 text-red-600">Cancel Session?</h2>
+            <p class="text-gray-600 mb-6">Are you sure you want to cancel this session? This action cannot be undone.</p>
+            
+            <form id="cancel-session-form" method="post" action="" class="flex justify-end space-x-3">
+                {% csrf_token %}
+                <button type="button" @click="cancelModalOpen = false" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Keep Session</button>
+                <button type="submit" class="px-4 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">Yes, Cancel</button>
+            </form>
+        </div>
+    </div>
+
     <script>
         function openRescheduleModal(bookingId) {
             document.querySelector('[x-data]').__x.$data.rescheduleModalOpen = true;
             const url = "{% url 'coaching_booking:reschedule_session' 0 %}".replace('0', bookingId);
             htmx.ajax('GET', url, {target: '#reschedule-content'});
+        }
+
+        function openCancelModal(bookingId) {
+            const root = document.querySelector('[x-data]');
+            root.__x.$data.bookingToCancel = bookingId;
+            root.__x.$data.cancelModalOpen = true;
+            
+            const url = "{% url 'coaching_booking:cancel_session' 0 %}".replace('0', bookingId);
+            document.getElementById('cancel-session-form').action = url;
         }
     </script>
 </div>
