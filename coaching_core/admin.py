@@ -58,6 +58,7 @@ class OfferingAdmin(admin.ModelAdmin):
 @admin.register(Workshop)
 class WorkshopAdmin(admin.ModelAdmin):
     list_display = ('name', 'coach_link', 'date', 'time_range', 'booking_capacity_status', 'active_status')
+    list_editable = ('active_status',)
     list_filter = ('active_status', 'is_free', 'date', 'coach')
     search_fields = ('name', 'coach__user__email', 'coach__user__last_name')
     readonly_fields = ('slug', 'created_at', 'updated_at', 'created_by', 'updated_by')

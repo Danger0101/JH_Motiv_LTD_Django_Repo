@@ -13,10 +13,10 @@ class CartItemInline(admin.TabularInline):
 
 @admin.register(Cart)
 class CartAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'status', 'item_count', 'total_value', 'updated_at', 'abandoned_cart_sent')
+    list_display = ('id', 'user', 'status', 'item_count', 'total_value', 'coupon', 'updated_at', 'abandoned_cart_sent')
     list_filter = ('status', 'abandoned_cart_sent', 'updated_at')
     search_fields = ('user__email', 'user__username', 'session_key')
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at', 'coupon')
     inlines = [CartItemInline]
     actions = ['mark_abandoned_email_sent']
 

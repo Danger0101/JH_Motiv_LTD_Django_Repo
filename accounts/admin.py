@@ -115,6 +115,7 @@ class UserAdmin(BaseUserAdmin):
 class CoachProfileAdmin(admin.ModelAdmin):
     list_display = ('user_link', 'time_zone', 'is_available_for_new_clients', 'has_gcal_connected')
     list_filter = ('is_available_for_new_clients', 'time_zone')
+    list_editable = ('is_available_for_new_clients',)
     search_fields = ('user__email', 'user__first_name', 'user__last_name', 'bio')
     list_select_related = ('user', 'google_credentials') 
     

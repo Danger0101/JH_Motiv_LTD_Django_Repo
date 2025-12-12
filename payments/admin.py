@@ -100,6 +100,7 @@ class CoachingOrderItemInline(admin.TabularInline):
 class CoachingOrderAdmin(admin.ModelAdmin):
     inlines = [CoachingOrderItemInline]
     list_display = ('id', 'client_link', 'coach_link', 'amount_gross', 'amount_coach', 'amount_referrer', 'amount_company', 'payout_status', 'created_at')
+    list_editable = ('payout_status',)
     list_filter = ('payout_status', 'created_at', 'enrollment__offering')
     search_fields = ('enrollment__client__email', 'enrollment__client__first_name', 'stripe_checkout_id')
     date_hierarchy = 'created_at'

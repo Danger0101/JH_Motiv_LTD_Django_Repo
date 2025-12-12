@@ -10,12 +10,14 @@ class VariantInline(admin.TabularInline):
 class ProductAdmin(admin.ModelAdmin):
     list_display = ('name', 'product_type', 'fulfillment_method', 'is_active', 'created_at')
     list_filter = ('product_type', 'fulfillment_method', 'is_active')
+    list_editable = ('is_active', 'fulfillment_method')
     search_fields = ('name', 'description', 'printful_product_id')
     inlines = [VariantInline]
 
 @admin.register(StockPool)
 class StockPoolAdmin(admin.ModelAdmin):
     list_display = ('name', 'available_stock', 'low_stock_threshold')
+    list_editable = ('available_stock',)
     search_fields = ('name',)
 
 @admin.register(StockItem)
