@@ -1,6 +1,9 @@
+import logging
 from decimal import Decimal
 from django.conf import settings
 from products.printful_service import PrintfulService
+
+logger = logging.getLogger(__name__)
 
 def get_shipping_rates(address_data, cart):
     """
@@ -37,7 +40,12 @@ def get_shipping_rates(address_data, cart):
                 'zip': address_data.get('postal_code') or address_data.get('zip')
             }
             
-            api_rates = printful.calculate_shipping_rates(recipient, printful_items)
+            # Filter out empty values to comply with API optional fields
+            recipient = {k: v for k, v in recipient.items() if v}
+            
+            logger.info(f"Requesting Printful Rates. Recipient: {recipient}, Items: {printful_items}")
+            
+            api_rates = printful.calculate_shipping_rates(recipient, printful_items, currency='GBP')
             
             if api_rates:
                 for rate in api_rates:
@@ -49,30 +57,43 @@ def get_shipping_rates(address_data, cart):
                     })
                 
     except Exception as e:
-        # Log error if needed, but proceed to fallback table rates
-        pass
+        logger.error(f"Printful API Error: {e}", exc_info=True)
 
     # 3. Fallback: Flat Rates (Only if Printful returned nothing)
     if not rates:
         subtotal = cart.get_total_price()
+        
+        # Determine delivery estimates based on country
+        country_code = address_data.get('country') or address_data.get('country_code')
+        
+        if country_code in ['US', 'CA']:
+            std_detail = 'Standard (3-4 Business Days)'
+            exp_detail = 'Express (1-3 Business Days)'
+        elif country_code == 'GB':
+            std_detail = 'Standard (3-7 Business Days)'
+            exp_detail = 'Express (1-3 Business Days)'
+        else:
+            std_detail = 'Standard (5-20 Business Days)'
+            exp_detail = 'Express (1-3 Business Days)'
+
         if subtotal >= 50:
             rates.append({
                 'id': 'free_shipping',
                 'label': 'Free Shipping',
-                'detail': 'Special Offer (3-5 Days)',
+                'detail': std_detail,
                 'amount': Decimal('0.00')
             })
         else:
             rates.append({
                 'id': 'standard',
                 'label': 'Standard Shipping',
-                'detail': 'Royal Mail Tracked 48',
+                'detail': std_detail,
                 'amount': Decimal('4.99')
             })
             rates.append({
                 'id': 'express',
                 'label': 'Express Shipping',
-                'detail': 'DPD Next Day',
+                'detail': exp_detail,
                 'amount': Decimal('9.99')
             })
 
@@ -81,7 +102,10 @@ def get_shipping_rates(address_data, cart):
     country = address_data.get('country') or address_data.get('country_code')
     
     if country == 'GB':
-        tax_amount = cart.get_total_price() * Decimal('0.20')
+        # VAT Nor Needed for now
+        tax_amount = cart.get_total_price() * Decimal('0.0')
+        # VAT Once Needed
+        # tax_amount = cart.get_total_price() * Decimal('0.20')
 
     return rates, tax_amount
 

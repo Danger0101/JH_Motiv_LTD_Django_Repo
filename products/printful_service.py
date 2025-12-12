@@ -77,18 +77,22 @@ class PrintfulService:
             logger.exception(f"Exception fetching variants for {product_id}: {e}")
             return []
     
-    def calculate_shipping_rates(self, recipient, items):
+    def calculate_shipping_rates(self, recipient, items, currency='GBP', locale='en_US'):
         """
         Calculates shipping rates for a list of items to a specific recipient.
         
         Args:
             recipient (dict): { 'address1': ..., 'city': ..., 'country_code': ..., 'zip': ... }
             items (list): [{ 'variant_id': 123, 'quantity': 1 }, ...]
+            currency (str): Currency code (e.g., 'GBP', 'USD').
+            locale (str): Locale (e.g., 'en_US').
         """
         url = f"{self.BASE_URL}/shipping/rates"
         payload = {
             "recipient": recipient,
-            "items": items
+            "items": items,
+            "currency": currency,
+            "locale": locale
         }
         
         try:
