@@ -16,7 +16,8 @@ from products.printful_service import PrintfulService
 from core.email_utils import send_transactional_email
 
 from .models import Order, Coupon, CouponUsage, CoachingOrder
-from .finance_utils import calculate_coaching_split, calculate_cart_shipping
+from .finance_utils import calculate_coaching_split
+from .shipping_utils import calculate_cart_shipping
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
