@@ -1,0 +1,97 @@
+{% load humanize %}
+
+<div id="earnings-container">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white p-4 rounded-lg shadow border border-gray-100">
+            <h2 class="text-lg font-semibold text-gray-700">Total Unpaid Earnings</h2>
+            <p class="text-2xl font-bold text-indigo-600">£{{ total_unpaid_combined|floatformat:2|intcomma }}</p>
+            {% if is_coach_profile and is_dreamer_profile %}
+                <p class="text-xs text-gray-500 mt-1">Coach: £{{ total_unpaid_coach|floatformat:2|intcomma }} | Referrer: £{{ total_unpaid_referrer|floatformat:2|intcomma }}</p>
+            {% elif is_coach_profile %}
+                <p class="text-xs text-gray-500 mt-1">As Coach</p>
+            {% elif is_dreamer_profile %}
+                <p class="text-xs text-gray-500 mt-1">As Referrer</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <form hx-get="{% url 'payments:my_earnings' %}" hx-target="#earnings-container" hx-push-url="false" class="flex items-center space-x-4">
+            <label for="status" class="font-medium text-gray-700">Filter by Status:</label>
+            <select name="status" id="status" 
+                    class="block w-auto pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                    onchange="this.form.dispatchEvent(new Event('submit', { bubbles: true }))">
+                <option value="all" {% if selected_status == 'all' %}selected{% endif %}>All</option>
+                {% for value, label in payout_statuses %}
+                    <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    {% if earnings_records %}
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg border border-gray-200">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Offering</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Share</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for record in earnings_records %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ record.created_at|date:"d M Y" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{{ record.id }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ record.enrollment.client.first_name }} {{ record.enrollment.client.last_name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ record.enrollment.offering.name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ record.earning_type }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">£{{ record.user_share|floatformat:2 }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset 
+                                        {% if record.payout_status == 'paid' %} bg-green-50 text-green-700 ring-green-600/20 
+                                        {% elif record.payout_status == 'unpaid' %} bg-yellow-50 text-yellow-800 ring-yellow-600/20 
+                                        {% else %} bg-red-50 text-red-700 ring-red-600/10 {% endif %}">
+                                        {{ record.payout_status|title }}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {# Pagination using HTMX #}
+        {% if is_paginated %}
+            <nav class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-4">
+                <div class="flex-1 flex justify-between sm:justify-end">
+                    {% if page_obj.has_previous %}
+                        <button hx-get="?page={{ page_obj.previous_page_number }}&status={{ selected_status }}" 
+                                hx-target="#earnings-container"
+                                class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                            Previous
+                        </button>
+                    {% endif %}
+                    {% if page_obj.has_next %}
+                        <button hx-get="?page={{ page_obj.next_page_number }}&status={{ selected_status }}" 
+                                hx-target="#earnings-container"
+                                class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                            Next
+                        </button>
+                    {% endif %}
+                </div>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="text-center py-10 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+            <p class="text-gray-500">No earnings records found.</p>
+        </div>
+    {% endif %}
+</div>

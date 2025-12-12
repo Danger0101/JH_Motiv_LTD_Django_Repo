@@ -548,6 +548,12 @@ class MyEarningsView(ListView):
     context_object_name = 'earnings_records'
     paginate_by = 10
 
+    def get_template_names(self):
+        # Return partial template for HTMX requests (keeping user in dashboard)
+        if self.request.headers.get('HX-Request'):
+            return ['payments/partials/my_earnings_content.html']
+        return [self.template_name]
+
     def get_queryset(self):
         user = self.request.user
         queryset = CoachingOrder.objects.none()
