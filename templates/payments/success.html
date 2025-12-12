@@ -45,7 +45,7 @@
                         </div>
                         <div class="flex justify-between items-center">
                             <span class="text-gray-600">Total Paid:</span>
-                            <span class="font-bold text-green-600 text-lg">{{ order_summary.price }}</span>
+                            <span class="font-bold text-green-600 text-lg">£{{ order_summary.price|floatformat:2 }}</span>
                         </div>
                     </div>
                 {% endif %}
