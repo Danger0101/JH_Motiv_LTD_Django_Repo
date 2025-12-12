@@ -4,7 +4,7 @@
 {% block title %}My Account Dashboard{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 sm:px-6 py-6" x-data="{ activeTab: 'dashboard', mobileMenuOpen: false, rescheduleModalOpen: false }">
+<div class="container mx-auto px-4 sm:px-6 py-6" x-data="{ activeTab: 'dashboard', mobileMenuOpen: false, rescheduleModalOpen: false, cancelModalOpen: false, bookingToCancel: null }">
     
     <div class="flex justify-between items-center mb-6 lg:mb-8">
         <div class="flex items-center">
@@ -205,7 +205,12 @@
 
             <div x-show="activeTab === 'bookings'" x-cloak class="p-6">
                 <h2 class="text-2xl font-bold text-gray-800 border-b pb-4 mb-6">My Bookings</h2>
-                <div id="profile-bookings-full">
+                <div id="profile-bookings-full" 
+                     hx-boost="true" 
+                     hx-select="#profile-bookings-full" 
+                     hx-target="#profile-bookings-full" 
+                     hx-swap="outerHTML"
+                     hx-push-url="false">
                     {% include 'account/profile_bookings.html' %}
                 </div>
             </div>

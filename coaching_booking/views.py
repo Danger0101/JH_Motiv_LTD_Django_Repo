@@ -237,11 +237,14 @@ def cancel_session(request, booking_id):
     return render(request, 'account/profile_bookings.html', {'active_tab': 'canceled'})
 
 @login_required
+def reschedule_session_form(request, booking_id):
+    booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
+    return render(request, 'account/partials/reschedule_form.html', {'booking': booking})
+
+@login_required
+@require_POST
 def reschedule_session(request, booking_id):
     booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
-    
-    if request.method == 'GET':
-        return render(request, 'account/partials/reschedule_form.html', {'booking': booking})
     
     # --- 1. Prevent Rescheduling Canceled Sessions ---
     if booking.status == 'CANCELED':
