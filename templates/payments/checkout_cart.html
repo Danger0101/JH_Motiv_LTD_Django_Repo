@@ -1,82 +1,91 @@
 {% extends 'base.html' %}
-
-{% block title %}Cart Checkout{% endblock %}
+{% load static %}
 
 {% block content %}
-<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 min-h-screen bg-gray-50">
-    <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-800 mb-8 text-center">Secure Checkout</h1>
-    
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-        <div class="bg-white rounded-xl shadow-lg p-6 md:p-8 order-2 lg:order-1">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
-                Shipping Details
-            </h2>
-            
-            <form id="shipping-form" class="space-y-5">
-                <div>
-                    <label for="address1" class="block text-sm font-semibold text-gray-700 mb-1">Address Line 1</label>
-                    <input type="text" id="address1" name="address1" autocomplete="street-address" required 
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
-                           placeholder="123 Main St">
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label for="city" class="block text-sm font-semibold text-gray-700 mb-1">City</label>
-                        <input type="text" id="city" name="city" autocomplete="address-level2" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
-                    </div>
-                    <div>
-                        <label for="country_code" class="block text-sm font-semibold text-gray-700 mb-1">Country</label>
-                        <select id="country_code" name="country_code" autocomplete="country" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
-                            <option value="GB">United Kingdom</option>
-                            <option value="US">United States</option>
-                        </select>
-                    </div>
-                </div>
-                
-            </form>
-            <button type="button" id="calc-shipping-btn" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition duration-300">
-                Calculate Shipping
-            </button>
-        </div>
+<div class="bg-gray-50 min-h-screen py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="text-3xl font-extrabold text-gray-900 mb-8">Secure Checkout</h1>
 
-        <div class="order-1 lg:order-2">
-            <div class="bg-gray-50 rounded-xl shadow-lg p-6 md:p-8 lg:sticky lg:top-24 border border-gray-100">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">Order Summary</h2>
-                <div class="space-y-3 max-h-60 overflow-y-auto mb-6 custom-scrollbar">
-                    {% for item in cart.items.all %}
-                    <div class="flex gap-4 items-center">
-                        <img src="{{ item.variant.get_image_url }}" alt="{{ item.variant.product.name }}" class="w-16 h-16 object-cover rounded-md">
-                        <div class="flex-1">
-                            <p class="font-medium text-gray-900">{{ item.variant.product.name }}</p>
-                            <p class="text-sm text-gray-500">{{ item.variant.name }} x {{ item.quantity }}</p>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            
+            <div class="order-2 lg:order-1">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">Order Summary</h2>
+                    
+                    <div class="space-y-4 mb-6 max-h-96 overflow-y-auto pr-2">
+                        {% for item in cart.items.all %}
+                        <div class="flex gap-4">
+                            <div class="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md border border-gray-200">
+                                {% if item.variant.product.featured_image %}
+                                <img src="{{ item.variant.product.featured_image.url }}" class="h-full w-full object-cover">
+                                {% else %}
+                                <div class="h-full w-full bg-gray-200"></div>
+                                {% endif %}
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex justify-between text-base font-medium text-gray-900">
+                                    <h3>{{ item.variant.product.name }}</h3>
+                                    <p>£{{ item.get_total_price }}</p>
+                                </div>
+                                <p class="text-sm text-gray-500">{{ item.variant.name }} x {{ item.quantity }}</p>
+                            </div>
                         </div>
-                        <p class="font-semibold text-gray-900">£{{ item.get_total_price }}</p>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
+
+                    {% if summary.discount_amount > 0 %}
+                    <div class="flex justify-between py-2 text-green-600 border-t border-gray-100">
+                        <span>Discount ({{ summary.coupon.code }})</span>
+                        <span>-£{{ summary.discount_amount }}</span>
+                    </div>
+                    {% endif %}
+
+                    <div class="border-t border-gray-200 pt-4 space-y-2">
+                        <div class="flex justify-between text-sm text-gray-600">
+                            <span>Subtotal</span>
+                            <span>£{{ summary.total }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm text-gray-600">
+                            <span>Estimated Tax</span>
+                            <span id="display-tax">--</span>
+                        </div>
+                        <div class="flex justify-between text-sm text-gray-600">
+                            <span>Shipping</span>
+                            <span id="display-shipping">Calculated next</span>
+                        </div>
+                        <div class="flex justify-between text-xl font-bold text-gray-900 pt-4 border-t">
+                            <span>Total</span>
+                            <span id="display-total">£{{ summary.total }}</span>
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="border-t pt-4 space-y-2">
-                    <div class="flex justify-between text-gray-600">
-                        <span>Subtotal</span>
-                        <span>£{{ summary.subtotal }}</span>
+            </div>
+
+            <div class="order-1 lg:order-2">
+                <div class="bg-white p-6 rounded-2xl shadow-lg border border-indigo-50">
+                    
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Shipping Details</h3>
+                        <div id="address-element"></div>
                     </div>
-                    <div class="flex justify-between text-gray-600">
-                        <span>Shipping</span>
-                        <span id="shipping-cost-display" class="font-medium">Enter Address</span>
+
+                    <div id="shipping-section" class="hidden mb-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3">Shipping Method</h3>
+                        <div id="shipping-options" class="space-y-2"></div>
                     </div>
-                    <div class="flex justify-between text-2xl font-bold text-gray-900 pt-2 border-t mt-2">
-                        <span>Total</span>
-                        <span id="total-display">£{{ summary.subtotal }}</span>
+
+                    <div id="payment-section" class="hidden">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Payment</h3>
+                        <div id="payment-element" class="mb-6"></div>
+                        
+                        <button id="submit-button" class="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 transition shadow-lg disabled:opacity-50">
+                            <span id="button-text">Pay Now</span>
+                            <div id="spinner" class="hidden inline-block animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                        </button>
                     </div>
+
+                    <div id="error-message" class="hidden mt-4 text-red-600 text-sm"></div>
                 </div>
-                
-                <button id="checkout-button" disabled 
-                        class="mt-6 w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold py-4 rounded-xl shadow-lg transition transform active:scale-95 flex justify-center items-center">
-                    <span id="btn-text">Pay Now</span>
-                    <div id="spinner" class="hidden ml-2 animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                </button>
             </div>
         </div>
     </div>
@@ -84,120 +93,114 @@
 
 <script src="https://js.stripe.com/v3/"></script>
 <script>
-    const stripe = Stripe('{{ STRIPE_PUBLISHABLE_KEY }}'); // Ensure this is in context
-    const calcBtn = document.getElementById('calc-shipping-btn');
-    const checkoutBtn = document.getElementById('checkout-button');
-    const btnText = document.getElementById('btn-text');
-    const spinner = document.getElementById('spinner');
-    let currentShippingCost = 0;
-
-    // Custom Scrollbar styling (Tailwind doesn't have direct scrollbar styling)
-    const style = document.createElement('style');
-    style.innerHTML = `
-    .custom-scrollbar::-webkit-scrollbar {
-        width: 8px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 10px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #888;
-        border-radius: 10px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: #555;
-    }
-    `;
-    document.head.appendChild(style);
-
-
-    calcBtn.addEventListener('click', async () => {
-        const formData = new FormData(document.getElementById('shipping-form'));
-        const address = Object.fromEntries(formData);
-        
-        // Basic validation - ensure all required fields are filled
-        if(!address.address1 || !address.city || !address.country_code) { // Removed zip as it's not in the new HTML
-            alert("Please fill in all required address fields (Address Line 1, City, Country).");
-            return;
-        }
-
-        checkoutBtn.disabled = true;
-        calcBtn.innerText = "Calculating...";
-        spinner.classList.remove('hidden'); // Show spinner on calc button
-
-        try {
-            const response = await fetch("{% url 'payments:calculate_shipping' %}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": "{{ csrf_token }}"
-                },
-                body: JSON.stringify({ address: address })
-            });
-
-            const data = await response.json();
-            
-            if (response.ok) {
-                currentShippingCost = parseFloat(data.shipping_cost);
-                document.getElementById('shipping-cost-display').innerText = `£${currentShippingCost.toFixed(2)}`;
-                
-                // Update Total
-                const subtotal = parseFloat("{{ summary.subtotal }}"); // Parse subtotal from context
-                const total = subtotal + currentShippingCost;
-                document.getElementById('total-display').innerText = `£${total.toFixed(2)}`;
-                
-                checkoutBtn.disabled = false;
-                calcBtn.innerText = "Update Shipping";
-            } else {
-                alert("Error calculating shipping: " + data.error);
-                calcBtn.innerText = "Calculate Shipping";
-            }
-        } catch (error) {
-            console.error(error);
-            alert("Network error.");
-            calcBtn.innerText = "Calculate Shipping";
-        } finally {
-            spinner.classList.add('hidden'); // Hide spinner after calculation
-        }
+    const stripe = Stripe("{{ STRIPE_PUBLISHABLE_KEY }}");
+    const elements = stripe.elements({
+        clientSecret: "{{ client_secret }}",
+        appearance: { theme: 'stripe' },
+        loader: 'auto'
     });
 
-    checkoutBtn.addEventListener('click', async () => {
-        btnText.innerText = "Processing...";
-        spinner.classList.remove('hidden'); // Show spinner on checkout button
+    // Create Address Element - Enables Autofill
+    const addressElement = elements.create("address", { mode: "shipping", allowedCountries: ['GB', 'US'] });
+    const paymentElement = elements.create("payment");
+    
+    addressElement.mount("#address-element");
+    paymentElement.mount("#payment-element");
 
-        const formData = new FormData(document.getElementById('shipping-form'));
-        const address = Object.fromEntries(formData);
+    let currentTax = 0;
 
-        // Call the view to create Session, PASSING address
-        try {
-            const response = await fetch("{% url 'payments:create_checkout_session' %}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": "{{ csrf_token }}"
-                },
-                body: JSON.stringify({ address: address }) 
-            });
-
-            const session = await response.json();
+    // Listen for valid address to trigger backend calculation
+    addressElement.on('change', async (event) => {
+        if (event.complete) {
+            const address = event.value.address;
             
-            if (session.clientSecret) {
-                const checkout = await stripe.initEmbeddedCheckout({
-                    clientSecret: session.clientSecret,
+            document.getElementById('shipping-section').classList.remove('hidden');
+            document.getElementById('shipping-options').innerHTML = '<div class="text-sm text-gray-500 animate-pulse">Calculating rates...</div>';
+
+            try {
+                const response = await fetch("{% url 'payments:checkout_calculate_fees' %}", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
+                    body: JSON.stringify({ address: address })
                 });
-                checkout.mount('#checkout-button'); 
-            } else {
-                alert(session.error);
-                btnText.innerText = "Pay Now"; // Reset button text on error
+                
+                const data = await response.json();
+                currentTax = parseFloat(data.tax_amount);
+                document.getElementById('display-tax').innerText = `£${data.tax_amount}`;
+                
+                if (data.rates.length > 0) {
+                    let html = '';
+                    data.rates.forEach((rate, index) => {
+                        const isChecked = index === 0 ? 'checked' : '';
+                        html += `
+                        <label class="flex justify-between items-center p-3 border rounded-lg cursor-pointer hover:bg-indigo-50 has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50 transition-colors">
+                            <div class="flex items-center">
+                                <input type="radio" name="shipping_rate" value="${rate.amount}" 
+                                       data-total="${rate.new_total}" ${isChecked}
+                                       class="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                                       onchange="updateTotal(this.value, this.dataset.total)">
+                                <div class="ml-3">
+                                    <span class="block text-sm font-medium text-gray-900">${rate.label}</span>
+                                    <span class="block text-xs text-gray-500">${rate.detail}</span>
+                                </div>
+                            </div>
+                            <span class="text-sm font-medium text-gray-900">£${rate.amount}</span>
+                        </label>`;
+                    });
+                    document.getElementById('shipping-options').innerHTML = html;
+                    
+                    // Select first rate by default
+                    updateTotal(data.rates[0].amount, data.rates[0].new_total);
+                    document.getElementById('payment-section').classList.remove('hidden');
+                } else {
+                    document.getElementById('shipping-options').innerHTML = '<p class="text-red-500">No shipping available.</p>';
+                }
+
+            } catch (e) {
+                console.error(e);
             }
-        } catch (error) {
-            console.error(error);
-            alert("Network error during checkout session creation.");
-            btnText.innerText = "Pay Now"; // Reset button text on error
-        } finally {
-            spinner.classList.add('hidden'); // Hide spinner after processing
         }
     });
+
+    async function updateTotal(shippingCost, newTotal) {
+        document.getElementById('display-shipping').innerText = `£${shippingCost}`;
+        document.getElementById('display-total').innerText = `£${newTotal}`;
+        
+        // Notify backend to update the PaymentIntent amount
+        await fetch("{% url 'payments:checkout_update_total' %}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
+            body: JSON.stringify({ 
+                payment_intent_id: "{{ payment_intent_id }}",
+                shipping_cost: shippingCost,
+                tax_cost: currentTax
+            })
+        });
+    }
+
+    document.getElementById("submit-button").addEventListener("click", async (e) => {
+        e.preventDefault();
+        setLoading(true);
+
+        const { error } = await stripe.confirmPayment({
+            elements,
+            confirmParams: {
+                return_url: "{{ request.scheme }}://{{ request.get_host }}{% url 'payments:payment_success' %}?payment_intent={{ payment_intent_id }}",
+            },
+        });
+
+        if (error) {
+            const msg = document.getElementById("error-message");
+            msg.innerText = error.message;
+            msg.classList.remove('hidden');
+            setLoading(false);
+        }
+    });
+
+    function setLoading(isLoading) {
+        document.getElementById("submit-button").disabled = isLoading;
+        document.getElementById("spinner").classList.toggle("hidden", !isLoading);
+        document.getElementById("button-text").classList.toggle("hidden", isLoading);
+    }
 </script>
 {% endblock %}
