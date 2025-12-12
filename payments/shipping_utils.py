@@ -7,8 +7,8 @@ logger = logging.getLogger(__name__)
 
 def get_shipping_rates(address_data, cart):
     """
-    Returns shipping rates and tax. 
-    Prioritizes Printful, falls back to flat rates if API fails or IDs are invalid.
+    Returns shipping rates.
+    HYBRID LOGIC: Tries Printful. If Printful misses 'Express', we force a manual one.
     """
     rates = []
     
@@ -16,8 +16,7 @@ def get_shipping_rates(address_data, cart):
     physical_items = [item for item in cart.items.all() if getattr(item.variant.product, 'product_type', 'physical') == 'physical']
     
     if not physical_items and cart.items.exists():
-         # Digital-only cart = No shipping
-        return [], Decimal('0.00')
+         return [], Decimal('0.00') # Digital only
 
     # 2. Try Printful Calculation
     try:
@@ -60,13 +59,13 @@ def get_shipping_rates(address_data, cart):
     except Exception as e:
         logger.error(f"Printful Rate Calc Failed: {e}")
 
-    # 3. Fallback (If Printful failed or return no rates)
+    # 3. Fallback: If Printful failed completely
     if not rates:
-        logger.warning("Using Fallback Shipping Rates (Printful failed or skipped)")
+        logger.warning("Using Full Fallback Shipping Rates")
         subtotal = cart.get_total_price()
         country = address_data.get('country') or address_data.get('country_code')
         
-        # Always add Paid Options so checkout never looks broken
+        # Standard
         std_cost = Decimal('4.99') if country == 'GB' else Decimal('9.99')
         rates.append({
             'id': 'standard',
@@ -75,14 +74,7 @@ def get_shipping_rates(address_data, cart):
             'amount': std_cost
         })
         
-        rates.append({
-            'id': 'express',
-            'label': 'Express Shipping',
-            'detail': 'Priority Dispatch',
-            'amount': Decimal('14.99')
-        })
-
-        # Insert Free Shipping at top if eligible
+        # Free Shipping Threshold
         if subtotal >= 50:
              rates.insert(0, {
                 'id': 'free_shipping',
@@ -91,16 +83,29 @@ def get_shipping_rates(address_data, cart):
                 'amount': Decimal('0.00')
              })
 
-    # 4. Estimated Tax (Simple VAT Logic)
+    # --- 4. FORCE EXPRESS OPTION ---
+    # Check if we successfully got an Express/Priority rate from Printful
+    has_express = any('express' in r['id'].lower() or 'priority' in r['id'].lower() for r in rates)
+
+    if not has_express:
+        # Printful didn't offer Express, so we ADD OUR OWN.
+        # You collect the extra money, and can manually upgrade shipping if needed.
+        rates.append({
+            'id': 'express_manual',
+            'label': 'Express Shipping (Priority)',
+            'detail': 'Priority Dispatch (1-3 Business Days)',
+            'amount': Decimal('14.99') 
+        })
+
+    # 5. Tax Calculation
     tax_amount = Decimal('0.00')
     country = address_data.get('country') or address_data.get('country_code')
     if country == 'GB':
-        tax_amount = cart.get_total_price() * Decimal('0.0')
+        tax_amount = cart.get_total_price() * Decimal('0.20')
 
     return rates, tax_amount
 
 def calculate_cart_shipping(cart, address_data):
-    """Legacy wrapper for older views."""
+    """Legacy wrapper."""
     rates, _ = get_shipping_rates(address_data, cart)
-    # Return the amount of the first available rate
     return rates[0]['amount'] if rates else Decimal('0.00')
