@@ -692,7 +692,11 @@ def get_daily_slots(request):
         'reschedule_booking_id': reschedule_booking_id,
     }
 
-    if not all([date_str, coach_id, enrollment_id_param]):
+    if not date_str or not coach_id:
+        context['error_message'] = 'Please select a date and coach.'
+        return render(request, 'coaching_booking/partials/available_slots.html', context)
+
+    if not enrollment_id_param and not reschedule_booking_id:
         context['error_message'] = 'Please select an offering and a coach first.'
         return render(request, 'coaching_booking/partials/available_slots.html', context)
 
@@ -712,8 +716,19 @@ def get_daily_slots(request):
 
         coach_profile = CoachProfile.objects.get(id=coach_id)
         
-        # Handle "free_X" vs normal enrollment ID
-        if str(enrollment_id_param).startswith('free_'):
+        # FIX 2: Handle Rescheduling Context specifically
+        if reschedule_booking_id:
+            # If rescheduling, we derive session length from the existing booking
+            # We do NOT require enrollment_id_param here
+            booking = SessionBooking.objects.get(id=reschedule_booking_id, client=request.user)
+            session_length = booking.get_duration_minutes() or 60
+            
+            # If enrollment_id happens to be passed, we can preserve it, but it's optional
+            if enrollment_id_param and not str(enrollment_id_param).startswith('free_'):
+                context['enrollment_id'] = enrollment_id_param
+
+        # Handle "free_X" enrollment ID
+        elif str(enrollment_id_param).startswith('free_'):
             free_id = str(enrollment_id_param).split('_')[1]
             free_offer = OneSessionFreeOffer.objects.get(id=free_id, client=request.user)
             
@@ -722,9 +737,11 @@ def get_daily_slots(request):
                  context['error_message'] = "The selected coach does not match the approved free offer."
                  return render(request, 'coaching_booking/partials/available_slots.html', context)
 
-            session_length = 60 # Default for Taster Sessions
+            session_length = 60 
             context['free_offer_id'] = free_id
             context['enrollment_id'] = ''
+            
+        # Handle Standard Enrollment ID
         else:
             enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id_param, client=request.user)
             session_length = enrollment.offering.session_length_minutes
@@ -748,7 +765,7 @@ def get_daily_slots(request):
 
         context['available_slots'] = formatted_slots
 
-    except (ValueError, CoachProfile.DoesNotExist, ClientOfferingEnrollment.DoesNotExist, OneSessionFreeOffer.DoesNotExist):
+    except (ValueError, CoachProfile.DoesNotExist, ClientOfferingEnrollment.DoesNotExist, OneSessionFreeOffer.DoesNotExist, SessionBooking.DoesNotExist):
         context['error_message'] = 'Invalid request data or enrollment not found.'
     except Exception as e:
         context['error_message'] = f'Error fetching slots: {str(e)}'
