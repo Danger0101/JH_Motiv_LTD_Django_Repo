@@ -1,10 +1,20 @@
-<div class="min-h-[400px]">
-    <div hx-get="{% url 'coaching_booking:get_booking_calendar' %}?coach_id={{ booking.coach.id }}&reschedule_booking_id={{ booking.id }}" 
-         hx-trigger="load" 
-         hx-target="this"
-         class="h-full">
-        <div class="flex justify-center items-center h-full py-10">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[400px]">
+    <!-- Left Column: Calendar -->
+    <div>
+        <div hx-get="{% url 'coaching_booking:get_booking_calendar' %}?coach_id={{ booking.coach.id }}&reschedule_booking_id={{ booking.id }}" 
+             hx-trigger="load" 
+             hx-target="this"
+             class="h-full">
+            <div class="flex justify-center items-center h-full py-10">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
         </div>
     </div>
+    <!-- Right Column: Time Slots -->
+    <div id="time-slots-column" class="min-h-[300px] flex flex-col justify-center items-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+        <p class="text-gray-500 font-medium">Select a date to see available times.</p>
+    </div>
 </div>
+
+<!-- Container for the confirmation modal -->
+<div id="modal-container"></div>

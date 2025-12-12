@@ -1,5 +1,6 @@
 from googleapiclient.discovery import build
 from django.utils import timezone
+from google.oauth2.credentials import Credentials
 from ..models import CoachBusySlot
 import logging
 
@@ -16,11 +17,16 @@ class GoogleCalendarService:
             self.service = None
 
     def _get_credentials(self, coach):
-        # Placeholder for OAuth credential retrieval logic
-        # In a real app, this would fetch tokens from the User model or a related OAuth model
-        # For now, returning None or mocking if needed. 
-        # Assuming the project has a way to get this, e.g., coach.user.google_credentials
-        return None 
+        """
+        Retrieves credentials from the user model's encrypted JSON field.
+        """
+        if not coach or not coach.user:
+            return None
+            
+        creds_data = coach.user.google_calendar_credentials
+        if creds_data:
+            return Credentials.from_authorized_user_info(creds_data)
+        return None
 
     def push_booking(self, booking):
         """
@@ -40,6 +46,86 @@ class GoogleCalendarService:
         }
 
         event = self.service.events().insert(calendarId='primary', body=event_body).execute()
+        return event['id']
+
+    def update_booking(self, booking):
+        """
+        Updates an existing event in the Coach's primary calendar.
+        """
+        if not self.service or not booking.gcal_event_id:
+            return None
+
+        event_body = {
+            'summary': f"Client Session: {booking.guest_name or (booking.client.first_name if booking.client else 'Guest')}",
+            'description': f"Booking ID: {booking.id}",
+            'start': {'dateTime': booking.start_datetime.isoformat()},
+            'end': {'dateTime': booking.end_datetime.isoformat()},
+            'attendees': [{'email': booking.guest_email or (booking.client.email if booking.client else '')}],
+            'reminders': {'useDefault': True},
+        }
+
+        # Use update (PUT) to overwrite the event details
+        event = self.service.events().update(calendarId='primary', eventId=booking.gcal_event_id, body=event_body).execute()
+        return event['id']
+
+    def update_booking(self, booking):
+        """
+        Updates an existing event in the Coach's primary calendar.
+        """
+        if not self.service or not booking.gcal_event_id:
+            return None
+
+        event_body = {
+            'summary': f"Client Session: {booking.guest_name or (booking.client.first_name if booking.client else 'Guest')}",
+            'description': f"Booking ID: {booking.id}",
+            'start': {'dateTime': booking.start_datetime.isoformat()},
+            'end': {'dateTime': booking.end_datetime.isoformat()},
+            'attendees': [{'email': booking.guest_email or (booking.client.email if booking.client else '')}],
+            'reminders': {'useDefault': True},
+        }
+
+        # Use update (PUT) to overwrite the event details
+        event = self.service.events().update(calendarId='primary', eventId=booking.gcal_event_id, body=event_body).execute()
+        return event['id']
+
+    def update_booking(self, booking):
+        """
+        Updates an existing event in the Coach's primary calendar.
+        """
+        if not self.service or not booking.gcal_event_id:
+            return None
+
+        event_body = {
+            'summary': f"Client Session: {booking.guest_name or (booking.client.first_name if booking.client else 'Guest')}",
+            'description': f"Booking ID: {booking.id}",
+            'start': {'dateTime': booking.start_datetime.isoformat()},
+            'end': {'dateTime': booking.end_datetime.isoformat()},
+            'attendees': [{'email': booking.guest_email or (booking.client.email if booking.client else '')}],
+            'reminders': {'useDefault': True},
+        }
+
+        # Use update (PUT) to overwrite the event details
+        event = self.service.events().update(calendarId='primary', eventId=booking.gcal_event_id, body=event_body).execute()
+        return event['id']
+
+    def update_booking(self, booking):
+        """
+        Updates an existing event in the Coach's primary calendar.
+        """
+        if not self.service or not booking.gcal_event_id:
+            return None
+
+        event_body = {
+            'summary': f"Client Session: {booking.guest_name or (booking.client.first_name if booking.client else 'Guest')}",
+            'description': f"Booking ID: {booking.id}",
+            'start': {'dateTime': booking.start_datetime.isoformat()},
+            'end': {'dateTime': booking.end_datetime.isoformat()},
+            'attendees': [{'email': booking.guest_email or (booking.client.email if booking.client else '')}],
+            'reminders': {'useDefault': True},
+        }
+
+        # Use update (PUT) to overwrite the event details
+        event = self.service.events().update(calendarId='primary', eventId=booking.gcal_event_id, body=event_body).execute()
         return event['id']
 
     def sync_busy_slots(self, days=30):

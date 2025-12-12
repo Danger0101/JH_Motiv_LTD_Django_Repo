@@ -108,6 +108,46 @@ def sync_google_calendar_push(booking_id):
         pass
 
 @shared_task
+def sync_google_calendar_update(booking_id):
+    try:
+        booking = SessionBooking.objects.get(id=booking_id)
+        if booking.gcal_event_id:
+            service = GoogleCalendarService(booking.coach)
+            service.update_booking(booking)
+    except SessionBooking.DoesNotExist:
+        pass
+
+@shared_task
+def sync_google_calendar_update(booking_id):
+    try:
+        booking = SessionBooking.objects.get(id=booking_id)
+        if booking.gcal_event_id:
+            service = GoogleCalendarService(booking.coach)
+            service.update_booking(booking)
+    except SessionBooking.DoesNotExist:
+        pass
+
+@shared_task
+def sync_google_calendar_update(booking_id):
+    try:
+        booking = SessionBooking.objects.get(id=booking_id)
+        if booking.gcal_event_id:
+            service = GoogleCalendarService(booking.coach)
+            service.update_booking(booking)
+    except SessionBooking.DoesNotExist:
+        pass
+
+@shared_task
+def sync_google_calendar_update(booking_id):
+    try:
+        booking = SessionBooking.objects.get(id=booking_id)
+        if booking.gcal_event_id:
+            service = GoogleCalendarService(booking.coach)
+            service.update_booking(booking)
+    except SessionBooking.DoesNotExist:
+        pass
+
+@shared_task
 def sync_google_calendar_pull_all():
     """
     Scheduled task (Celery Beat): Runs every 15 mins.

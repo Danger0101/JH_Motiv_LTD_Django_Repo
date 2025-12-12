@@ -3,7 +3,7 @@ from django.dispatch import receiver
 from django.db import transaction
 from .models import SessionBooking 
 # Assuming gcal.utils is the correct import path
-from .tasks import send_booking_confirmation_email, sync_google_calendar_push
+from .tasks import send_booking_confirmation_email, sync_google_calendar_push, sync_google_calendar_update
 from django.core.cache import cache
 
 import logging
@@ -26,7 +26,8 @@ def handle_session_booking_gcal(sender, instance, created, **kwargs):
             cache.set(version_key, 1)
     
     # Only process confirmed bookings
-    if booking.status != 'CONFIRMED':
+    # FIX: Model uses 'BOOKED' and 'RESCHEDULED', not 'CONFIRMED'
+    if booking.status not in ['BOOKED', 'RESCHEDULED']:
         return
     
     # Use a thread or Celery task in production for non-blocking API calls
@@ -41,13 +42,8 @@ def handle_session_booking_gcal(sender, instance, created, **kwargs):
 
     elif not created and booking.gcal_event_id:
         # 2. Existing Booking Updated (e.g., Rescheduled, Time/Coach Change) - Update Event
-        # Implement an update function in gcal/utils.py later
-        logger.info(f"GCal: Booking {booking.id} updated. Requires UPDATE logic.")
-        # try:
-        #     update_calendar_event(booking)
-        # except Exception as e:
-        #     logger.error(f"GCal Error on Update for Booking {booking.id}: {e}", exc_info=True)
-        pass 
+        # Trigger Async Update Task
+        transaction.on_commit(lambda: sync_google_calendar_update.delay(booking.id))
 
 @receiver(post_delete, sender=SessionBooking)
 def handle_session_deletion_gcal(sender, instance, **kwargs):
