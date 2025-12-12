@@ -258,19 +258,22 @@ def reschedule_session_form(request, booking_id):
 def reschedule_session(request, booking_id):
     booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
     
+    def htmx_error(msg):
+        return HttpResponse(
+            f'<div class="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">{msg}</div>'
+        )
+
     # --- 1. Prevent Rescheduling Canceled Sessions ---
     if booking.status == 'CANCELED':
-        messages.error(request, "This session has been canceled and cannot be rescheduled. Please book a new session.")
-        return render(request, 'account/profile_bookings.html', {'active_tab': 'canceled'})
+        return htmx_error("This session has been canceled and cannot be rescheduled. Please book a new session.")
         
     if booking.status == 'COMPLETED':
-        messages.error(request, "Cannot reschedule a completed session.")
-        return render(request, 'account/profile_bookings.html', {'active_tab': 'past'})
+        return htmx_error("Cannot reschedule a completed session.")
 
     new_start_time_str = request.POST.get('new_start_time')
 
     if not new_start_time_str:
-        messages.error(request, "Please select a new time.")
+        return htmx_error("Please select a new time.")
     else:
         try:
             # Handle standard ISO format from code or browser
@@ -288,8 +291,9 @@ def reschedule_session(request, booking_id):
                 # Fallback for Free/Direct sessions: use existing duration
                 session_length = booking.get_duration_minutes() or 60
 
-            available_slots = get_coach_available_slots(
-                booking.coach, new_start_time.date(), new_start_time.date(), session_length, 'one_on_one'
+            # Use BookingService to respect Google Calendar busy slots
+            available_slots = BookingService.get_slots_for_coach(
+                booking.coach, new_start_time.date(), session_length
             )
             
             is_available = False
@@ -300,13 +304,13 @@ def reschedule_session(request, booking_id):
                      break
 
             if not is_available:
-                messages.error(request, "That time slot is no longer available. Please choose another.")
+                return htmx_error("That time slot is no longer available. Please choose another.")
             else:
                 original_start_time = booking.start_datetime
                 result = booking.reschedule(new_start_time)
 
                 if result == 'LATE':
-                    messages.error(request, "Sessions cannot be rescheduled within 24 hours of the start time.")
+                    return htmx_error("Sessions cannot be rescheduled within 24 hours of the start time.")
                 else:
                     messages.success(request, f"Session successfully rescheduled to {new_start_time.strftime('%B %d, %H:%M')}.")
                     
@@ -341,12 +345,14 @@ def reschedule_session(request, booking_id):
                         logger.error(f"CRITICAL: Reschedule for booking {booking.id} succeeded but failed to send emails. Error: {e}")
 
         except ValueError:
-            messages.error(request, "Invalid date format.")
+            return htmx_error("Invalid date format.")
         except Exception as e:
-            messages.error(request, f"An error occurred: {e}")
             logger.error(f"Reschedule Error: {e}", exc_info=True)
+            return htmx_error(f"An error occurred: {e}")
 
-    return render(request, 'account/profile_bookings.html', {'active_tab': 'upcoming'})
+    response = HttpResponse(status=204)
+    response['HX-Redirect'] = reverse('accounts:account_profile')
+    return response
 
 @login_required
 @require_POST
