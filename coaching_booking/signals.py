@@ -20,7 +20,10 @@ def handle_session_booking_gcal(sender, instance, created, **kwargs):
     # Invalidate Calendar Cache
     if booking.coach:
         version_key = f"coach_calendar_version_{booking.coach.id}"
-        cache.incr(version_key)
+        try:
+            cache.incr(version_key)
+        except ValueError:
+            cache.set(version_key, 1)
     
     # Only process confirmed bookings
     if booking.status != 'CONFIRMED':
@@ -56,7 +59,10 @@ def handle_session_deletion_gcal(sender, instance, **kwargs):
     # Invalidate Calendar Cache
     if booking.coach:
         version_key = f"coach_calendar_version_{booking.coach.id}"
-        cache.incr(version_key)
+        try:
+            cache.incr(version_key)
+        except ValueError:
+            cache.set(version_key, 1)
     
     if booking.gcal_event_id:
         # Implement delete logic in GoogleCalendarService if needed, or keep existing if it works
