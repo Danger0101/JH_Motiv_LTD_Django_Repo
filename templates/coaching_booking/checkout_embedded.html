@@ -48,6 +48,17 @@
     </div>
 </div>
 
+<!-- Toast Notification -->
+<div id="toast-notification" class="fixed bottom-5 right-5 z-50 transform transition-all duration-300 translate-y-24 opacity-0 pointer-events-none">
+    <div class="bg-green-600 text-white px-6 py-4 rounded-lg shadow-xl flex items-center space-x-3">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+        <div>
+            <h4 class="font-bold">Success!</h4>
+            <p id="toast-message" class="text-sm">Action completed.</p>
+        </div>
+    </div>
+</div>
+
 <script type="text/javascript">
     const offeringId = "{{ offering.id }}";
     const stripe = Stripe("{{ STRIPE_PUBLIC_KEY }}"); 
@@ -139,6 +150,7 @@
                  if (data.new_price) {
                     document.getElementById('display-price').innerText = '£' + data.new_price;
                  }
+                 showToast(`Coupon '${couponCode}' applied!`);
             }
 
             const { clientSecret } = data;
@@ -159,6 +171,18 @@
             errorDiv.innerText = error.message || "A network error occurred. Please try again.";
             errorDiv.classList.remove('hidden');
         }
+    }
+
+    function showToast(message) {
+        const toast = document.getElementById('toast-notification');
+        const msg = document.getElementById('toast-message');
+        
+        msg.innerText = message;
+        toast.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+        
+        setTimeout(() => {
+            toast.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+        }, 3000);
     }
 </script>
 {% endblock %}
