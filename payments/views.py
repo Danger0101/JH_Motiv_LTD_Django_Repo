@@ -249,7 +249,9 @@ def payment_success(request):
             
             if offering:
                 context['offering'] = offering
-                context['order_summary'] = {'name': offering.name, 'price': f"€{offering.price}"}
+                # Use the actual amount paid from the session (convert cents to main currency unit)
+                amount_paid = session.amount_total / 100
+                context['order_summary'] = {'name': offering.name, 'price': amount_paid}
 
             coach_id = metadata.get('coach_id')
             if coach_id:
