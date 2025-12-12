@@ -1,6 +1,7 @@
 import logging
 import json
 from decimal import Decimal
+import stripe
 
 from django.conf import settings
 from django.urls import reverse
@@ -15,7 +16,7 @@ from products.printful_service import PrintfulService
 from core.email_utils import send_transactional_email
 
 from .models import Order, Coupon, CouponUsage, CoachingOrder
-from .finance_utils import calculate_coaching_split
+from .finance_utils import calculate_coaching_split, calculate_cart_shipping
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -85,6 +86,102 @@ def handle_ecommerce_checkout(session, request):
             except order.coupon.DoesNotExist:
                 logger.error(f"Could not log usage for a coupon on Order {order.id} because it was deleted mid-transaction.")
 
+        _fulfill_ecommerce_order(order, request)
+
+    except Order.DoesNotExist:
+        logger.error(f"FATAL ERROR in E-commerce Webhook: Order matching ID {order_id} does not exist.")
+    except Exception as e:
+        logger.critical(f"Order {order_id} processing failed. Error: {e}", exc_info=True)
+
+
+def handle_payment_intent_checkout(payment_intent, request=None):
+    """
+    Handles the post-payment logic for the new 2-step checkout (PaymentIntent).
+    - Creates the Order from the Cart (since it wasn't created before).
+    - Calls fulfillment logic.
+    """
+    metadata = payment_intent.get('metadata', {})
+    cart_id = metadata.get('cart_id')
+    user_id = metadata.get('user_id')
+    
+    # Idempotency Check
+    if Order.objects.filter(stripe_checkout_id=payment_intent.id).exists():
+        return Order.objects.get(stripe_checkout_id=payment_intent.id)
+
+    try:
+        cart = Cart.objects.get(id=cart_id)
+    except Cart.DoesNotExist:
+        logger.error(f"Cart {cart_id} not found for PaymentIntent {payment_intent.id}")
+        return None
+
+    # Extract Shipping Data
+    shipping_data = {}
+    if payment_intent.get('shipping'):
+        shipping = payment_intent.get('shipping')
+        address = shipping.get('address', {})
+        shipping_data = {
+            'name': shipping.get('name'),
+            'address1': address.get('line1'),
+            'address2': address.get('line2'),
+            'city': address.get('city'),
+            'state_code': address.get('state'),
+            'country_code': address.get('country'),
+            'zip': address.get('postal_code'),
+        }
+
+    # Determine User and Email
+    user = None
+    if user_id:
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            pass
+    
+    email = payment_intent.get('receipt_email')
+    if not email and user:
+        email = user.email
+
+    # Create Order
+    with transaction.atomic():
+        order = Order.objects.create(
+            user=user,
+            email=email,
+            total_paid=Decimal(payment_intent.amount) / 100,
+            stripe_checkout_id=payment_intent.id,
+            status=Order.STATUS_PAID,
+            shipping_data=shipping_data,
+            coupon=cart.coupon,
+            coupon_code_snapshot=cart.coupon.code if cart.coupon else None,
+            # Note: discount_amount is not easily available on the cart object directly 
+            # without recalculating, but we can infer or leave as 0 for now if not critical.
+            # Ideally, we should store this in metadata or calculate it.
+        )
+
+        # Create Order Items
+        from .models import OrderItem
+        for item in cart.items.all():
+            OrderItem.objects.create(
+                order=order,
+                variant=item.variant,
+                price=item.variant.price,
+                quantity=item.quantity
+            )
+
+        # Record Coupon Usage
+        if order.coupon:
+            CouponUsage.objects.create(coupon=order.coupon, order=order, user=order.user, email=order.email)
+
+        # Run Fulfillment
+        _fulfill_ecommerce_order(order, request, original_cart_id=cart.id)
+        
+        return order
+
+
+def _fulfill_ecommerce_order(order, request=None, original_cart_id=None):
+    """
+    Shared logic for stock deduction, Printful sync, and emails.
+    """
+    try:
         printful_items = []
         # Process items, deduct stock, and prepare Printful order
         for item in order.items.all():
@@ -108,14 +205,14 @@ def handle_ecommerce_checkout(session, request):
                     logger.error(f"Error: StockPool not found for variant {item.variant.id}")
 
         # Clear the original cart
-        cart_id = metadata.get('cart_id')
+        cart_id = original_cart_id
         if cart_id:
             try:
                 original_cart = Cart.objects.get(id=cart_id)
                 original_cart.items.all().delete()
                 logger.info(f"Cart {cart_id} cleared after order {order_id} completion.")
             except Cart.DoesNotExist:
-                logger.warning(f"Original cart {cart_id} not found during webhook processing.")
+                pass
 
         # Handle Printful fulfillment
         if printful_items:
@@ -147,7 +244,7 @@ def handle_ecommerce_checkout(session, request):
         if not customer_email:
             raise ValueError("Customer email not found on order after webhook processing.")
 
-        dashboard_url = request.build_absolute_uri(
+        dashboard_url = "https://jhmotiv.com" + (
             reverse('accounts:account_profile') if order.user else reverse('payments:order_detail_guest', args=[order.guest_order_token])
         )
         email_context = {'order': order, 'user': order.user, 'dashboard_url': dashboard_url}
@@ -165,10 +262,8 @@ def handle_ecommerce_checkout(session, request):
             context=email_context
         )
 
-    except Order.DoesNotExist:
-        logger.error(f"FATAL ERROR in E-commerce Webhook: Order matching ID {order_id} does not exist.")
     except Exception as e:
-        logger.critical(f"Order {order_id} processing failed. Error: {e}", exc_info=True)
+        logger.critical(f"Order {order.id} fulfillment failed. Error: {e}", exc_info=True)
 
 
 def handle_coaching_enrollment(session):

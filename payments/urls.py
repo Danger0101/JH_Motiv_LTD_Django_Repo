@@ -14,8 +14,12 @@ urlpatterns = [
     path('order/<int:order_id>/', views.order_detail, name='order_detail'),
     path('api/calculate-shipping/', views.calculate_shipping_api, name='calculate_shipping'),
     
-    # The PAGE that shows the address form
+    # Main Checkout Page
     path('checkout/', views.checkout_cart_view, name='checkout_cart'),
+    
+    # APIs
+    path('api/checkout/calculate/', views.checkout_calculate_fees, name='checkout_calculate_fees'),
+    path('api/checkout/update/', views.checkout_update_total, name='checkout_update_total'),
     
     # Corrected URL for creating a coaching checkout session
     path('checkout/create-coaching-checkout-session/<int:offering_id>/', views.create_coaching_checkout_session_view, name='create_coaching_checkout_session'),

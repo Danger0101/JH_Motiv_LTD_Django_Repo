@@ -19,12 +19,12 @@ from accounts.models import CoachProfile
 from .models import Order, OrderItem, CoachingOrder, Coupon
 from products.models import Product, Variant, StockPool
 from products.printful_service import PrintfulService
-from .services import handle_ecommerce_checkout, handle_coaching_enrollment
+from .services import handle_ecommerce_checkout, handle_coaching_enrollment, handle_payment_intent_checkout
 from django.utils import timezone
 from django.views.generic import ListView, View
 from django.db.models import F, Value, CharField # Import F, Value, and CharField for annotations
 from .finance_utils import calculate_coaching_split
-from .shipping_utils import calculate_cart_shipping
+from .shipping_utils import calculate_cart_shipping, get_shipping_rates
 import logging
 import json
 import uuid
@@ -37,23 +37,118 @@ logger = logging.getLogger(__name__)
 User = get_user_model() # Get the user model
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
+@login_required
 def checkout_cart_view(request):
     """
-    Renders the dedicated Cart Checkout page (Physical products).
-    This is where the user enters their address for shipping calculation.
+    Renders the Single-Page Retail Checkout.
+    Creates a Stripe PaymentIntent to power the Address & Payment Elements.
     """
     cart = get_or_create_cart(request)
     if not cart or not cart.items.exists():
         return redirect('cart:cart_detail')
-        
-    # Get summary data. Re-validation happens inside this function.
-    summary = get_cart_summary_data(cart)
     
-    return render(request, 'payments/checkout_cart.html', {
-        'cart': cart,
-        'summary': summary,
-        'STRIPE_PUBLISHABLE_KEY': settings.STRIPE_PUBLISHABLE_KEY
-    })
+    # 1. Get Cart Totals (including coupons)
+    summary = get_cart_summary_data(cart)
+    # Start with Subtotal (Shipping/Tax added later via JS)
+    initial_amount = int(summary['total'] * 100)
+    if initial_amount < 50: initial_amount = 50
+
+    try:
+        # 2. Create PaymentIntent
+        intent = stripe.PaymentIntent.create(
+            amount=initial_amount,
+            currency='gbp',
+            metadata={
+                'cart_id': cart.id,
+                'user_id': request.user.id,
+                'product_type': 'ecommerce_cart'
+            },
+            automatic_payment_methods={'enabled': True},
+        )
+        
+        context = {
+            'cart': cart,
+            'summary': summary,
+            'client_secret': intent.client_secret,
+            'payment_intent_id': intent.id,
+            'STRIPE_PUBLISHABLE_KEY': settings.STRIPE_PUBLISHABLE_KEY
+        }
+        return render(request, 'payments/checkout_cart.html', context)
+        
+    except stripe.error.StripeError as e:
+        return render(request, 'payments/error.html', {'error': str(e)})
+
+@require_POST
+def checkout_calculate_fees(request):
+    """
+    API called when Address is entered. 
+    Returns Shipping Options, Tax, and New Total.
+    """
+    try:
+        data = json.loads(request.body)
+        address = data.get('address', {})
+        
+        cart = get_or_create_cart(request)
+        summary = get_cart_summary_data(cart)
+        
+        # 1. Calculate Shipping & Tax
+        rates, tax_amount = get_shipping_rates(address, cart)
+        
+        # 2. Format Response
+        response_data = {
+            'rates': [],
+            'tax_amount': f"{tax_amount:.2f}",
+            'subtotal': f"{summary['total']:.2f}"
+        }
+        
+        for rate in rates:
+            # Calculate what the total WOULD be if this rate is selected
+            # Total = Cart Total + Tax + Shipping
+            rate_total = summary['total'] + tax_amount + rate['amount']
+            
+            response_data['rates'].append({
+                'id': rate['id'],
+                'label': rate['label'],
+                'detail': rate['detail'],
+                'amount': f"{rate['amount']:.2f}",
+                'new_total': f"{rate_total:.2f}" 
+            })
+            
+        return JsonResponse(response_data)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+@require_POST
+def checkout_update_total(request):
+    """
+    API called when Shipping Method is selected.
+    Updates the Stripe PaymentIntent amount.
+    """
+    try:
+        data = json.loads(request.body)
+        payment_intent_id = data.get('payment_intent_id')
+        shipping_cost = Decimal(data.get('shipping_cost', '0'))
+        tax_cost = Decimal(data.get('tax_cost', '0'))
+        
+        cart = get_or_create_cart(request)
+        summary = get_cart_summary_data(cart)
+        
+        # Recalculate Final Total
+        new_total = summary['total'] + shipping_cost + tax_cost
+        new_total_cents = int(new_total * 100)
+        
+        # Update Stripe
+        stripe.PaymentIntent.modify(
+            payment_intent_id,
+            amount=new_total_cents
+        )
+        
+        return JsonResponse({'status': 'success'})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    
 
 def create_checkout_session(request):
     """
@@ -203,69 +298,69 @@ def calculate_shipping_api(request):
 def payment_success(request):
     """
     Handles the successful payment redirect from Stripe.
-    Displays a confirmation message and ensures all required template variables are present.
+    Supports both CHECKOUT SESSIONS (Coaching) and PAYMENT INTENTS (Retail).
     """
+    # Stripe automatically adds 'payment_intent' to the URL for Elements
+    payment_intent_id = request.GET.get('payment_intent')
+    # Your Coaching flow sends 'session_id'
     session_id = request.GET.get('session_id')
+    
     cart = get_or_create_cart(request)
-
-    # Base context for all paths to prevent KeyErrors in templates.
     context = {
-        'summary': get_cart_summary_data(cart), # Cart is now empty, but function is safe
-        'order_summary': {},
+        'summary': get_cart_summary_data(cart),
         'title': "Payment Successful!",
         'message': "Thank you for your payment.",
-        'coach': None,
         'hero_image': 'images/Success_banner.webp',
     }
 
-    if not session_id:
-        # If no session ID is provided, show a generic success page with dummy data as requested.
-        coach_profile = None
-        try:
-            # Attempt to find the specific coach 'John Hummel'.
-            user = User.objects.get(first_name="John", last_name="Hummel", is_coach=True)
-            coach_profile = CoachProfile.objects.get(user=user)
-        except (User.DoesNotExist, CoachProfile.DoesNotExist, User.MultipleObjectsReturned):
-            # Fallback to the first available coach if not found.
-            coach_profile = CoachProfile.objects.first()
-
-        context.update({
-            'title': 'Enrollment Confirmed',
-            'message': 'Thank you for your coaching enrollment! You will receive a confirmation email shortly.',
-            'order_summary': {'name': 'Executive Scale Mastermind', 'price': '€1999'},
-            'coach': coach_profile,
-        })
-        return render(request, 'payments/success.html', context)
-
     try:
-        session = stripe.checkout.Session.retrieve(session_id)
-        metadata = session.metadata
-        product_type = metadata.get('product_type')
-
-        if product_type == 'coaching_offering':
-            context['title'] = "Enrollment Successful!"
-            offering_id = metadata.get('offering_id')
-            offering = get_object_or_404(Offering, pk=offering_id) if offering_id else None
+        # --- SCENARIO A: Retail (Stripe Elements / PaymentIntent) ---
+        if payment_intent_id:
+            intent = stripe.PaymentIntent.retrieve(payment_intent_id)
             
-            if offering:
-                context['offering'] = offering
-                # Use the actual amount paid from the session (convert cents to main currency unit)
-                amount_paid = session.amount_total / 100
-                context['order_summary'] = {'name': offering.name, 'price': amount_paid}
-
-            coach_id = metadata.get('coach_id')
-            if coach_id:
-                coach = get_object_or_404(CoachProfile, pk=coach_id)
-                context['coach'] = coach
-                context['message'] = (
-                    f"You have been successfully enrolled and assigned to coach {coach.user.get_full_name()}. "
-                    f"You can now visit your dashboard to book your first session."
-                )
+            if intent.status == 'succeeded':
+                context['title'] = "Order Confirmed!"
+                context['message'] = "Thank you for your purchase. We have received your order and are processing it now."
+                
+                # OPTIONAL: Clear cart immediately for better UX (in case webhook is slow)
+                if intent.metadata.get('cart_id') == str(cart.id):
+                    cart.items.all().delete()
+                    cart.coupon = None
+                    cart.save()
+                    # Refresh summary since cart is empty
+                    context['summary'] = get_cart_summary_data(cart)
             else:
-                context['message'] = "Thank you for enrolling. You will receive a confirmation email with details on how to book your sessions."
+                context['title'] = "Payment Processing"
+                context['message'] = "Your payment is processing. We will update you via email once completed."
 
-        elif product_type == 'ecommerce_cart':
-            context['message'] = "Thank you for your purchase. Your order is being processed and you will receive a confirmation email shortly."
+        # --- SCENARIO B: Coaching (Checkout Session) ---
+        elif session_id:
+            session = stripe.checkout.Session.retrieve(session_id)
+            metadata = session.metadata
+            product_type = metadata.get('product_type')
+
+            if product_type == 'coaching_offering':
+                context['title'] = "Enrollment Successful!"
+                
+                # Fetch details for display
+                offering_id = metadata.get('offering_id')
+                if offering_id:
+                    offering = get_object_or_404(Offering, pk=offering_id)
+                    context['offering'] = offering
+                    # Use the actual amount paid from the session
+                    amount_paid = session.amount_total / 100
+                    context['order_summary'] = {'name': offering.name, 'price': amount_paid}
+
+                # Fetch Coach details
+                coach_id = metadata.get('coach_id')
+                if coach_id:
+                    coach = get_object_or_404(CoachProfile, pk=coach_id)
+                    context['coach'] = coach
+                    context['message'] = f"You have been assigned to {coach.user.get_full_name()}. Check your dashboard to book your first session."
+
+        else:
+            # Fallback for direct access without params
+            return redirect('accounts:account_profile')
         
         return render(request, 'payments/success.html', context)
 
@@ -320,6 +415,14 @@ def stripe_webhook(request):
             except Exception as e:
                 logger.error(f"FATAL ERROR in E-commerce Webhook processing: {e}", exc_info=True)
                 return HttpResponse("Webhook processing error", status=500)
+
+        # --- NEW E-COMMERCE FLOW (PaymentIntent) ---
+        elif event['type'] == 'payment_intent.succeeded':
+            intent = event['data']['object']
+            # Only process if it's an ecommerce cart intent (check metadata)
+            if intent.get('metadata', {}).get('product_type') == 'ecommerce_cart':
+                handle_payment_intent_checkout(intent, request)
+                return HttpResponse(status=200)
 
         # --- COACHING HANDLING (Keep existing) ---
         elif product_type == 'coaching_offering':

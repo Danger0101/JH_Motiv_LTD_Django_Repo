@@ -1,4 +1,5 @@
 from decimal import Decimal
+from django.conf import settings
 from products.printful_service import PrintfulService
 
 def calculate_cart_shipping(cart, address_data):
@@ -83,3 +84,75 @@ def get_weight_based_shipping_cost(weight_kg, country_code):
         elif weight <= 0.75: return Decimal('10.00')
         elif weight <= 2.0: return Decimal('18.00')
         else: return Decimal('30.00')
+
+def get_shipping_rates(address_data, cart):
+    """
+    Returns a list of available shipping rates based on address and cart.
+    Tries Printful first, falls back to Flat Rate.
+    """
+    rates = []
+    
+    # 1. Base Logic: Physical Items Check
+    physical_items = [item for item in cart.items.all() if item.variant.product.product_type == 'physical']
+    if not physical_items:
+        # Digital only = Free Shipping
+        return [], Decimal('0.00')
+
+    # 2. Try Printful Calculation
+    try:
+        printful = PrintfulService()
+        # Transform cart items for Printful API
+        printful_items = []
+        for item in physical_items:
+            # Only include if it has a linked variant ID
+            if item.variant.printful_variant_id:
+                printful_items.append({
+                    'variant_id': item.variant.printful_variant_id,
+                    'quantity': item.quantity
+                })
+        
+        # Call API if we have valid items
+        if printful_items:
+            # Map Stripe address fields to Printful expected format
+            recipient = {
+                'address1': address_data.get('line1'),
+                'address2': address_data.get('line2', ''),
+                'city': address_data.get('city'),
+                'state_code': address_data.get('state'), 
+                'country_code': address_data.get('country'),
+                'zip': address_data.get('postal_code')
+            }
+            
+            api_rates = printful.calculate_shipping_rates(recipient, printful_items)
+            
+            # Format for frontend
+            if api_rates:
+                for rate in api_rates:
+                    rates.append({
+                        'id': rate.get('id'), 
+                        'label': rate.get('name', rate.get('id')),
+                        'detail': f"{rate.get('minDeliveryDays','?')}-{rate.get('maxDeliveryDays','?')} Days",
+                        'amount': Decimal(str(rate.get('rate', '0.00')))
+                    })
+                
+    except Exception as e:
+        # Log error if needed, but proceed to fallback
+        pass
+
+    # 3. Fallback: Flat Rates (Only if Printful returned nothing)
+    if not rates:
+        subtotal = cart.get_total_price()
+        if subtotal >= 50:
+            rates.append({'id': 'free', 'label': 'Free Shipping', 'detail': '3-5 Days', 'amount': Decimal('0.00')})
+        else:
+            rates.append({'id': 'std', 'label': 'Standard', 'detail': '3-5 Days', 'amount': Decimal('4.99')})
+
+    # 4. Estimated Tax (Simple VAT Logic)
+    tax_amount = Decimal('0.00')
+    country = address_data.get('country', '')
+    
+    if country == 'GB':
+        # Simple VAT calculation (20% of subtotal)
+        tax_amount = subtotal * Decimal('0.20')
+
+    return rates, tax_amount
