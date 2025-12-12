@@ -6,87 +6,135 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-lg">
-                <div class="card-header bg-primary text-white text-center">
-                    <h1 class="mb-0">Complete Your Enrollment</h1>
-                </div>
-                <div class="card-body">
-                    <p class="lead text-center">You are enrolling in: <strong>{{ offering.name }}</strong></p>
-                    <p class="text-center">Price: <strong>£{{ offering.price }}</strong></p>
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 min-h-screen">
+    <div class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+        
+        <div class="bg-indigo-600 px-6 py-8 text-center">
+            <h1 class="text-2xl font-bold text-white mb-2">Complete Your Enrollment</h1>
+            <p class="text-indigo-100">You are enrolling in: <span class="font-semibold text-white">{{ offering.name }}</span></p>
+        </div>
 
-                    <div id="checkout" class="mt-4">
-                        <!-- Stripe Checkout will be mounted here -->
-                        <div class="d-flex justify-content-center">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                            <p class="ms-2">Loading checkout...</p>
-                        </div>
-                    </div>
+        <div class="p-8">
+            <div class="flex justify-between items-center border-b border-gray-100 pb-6 mb-6">
+                <span class="text-gray-600 font-medium">Total Price</span>
+                <span id="display-price" class="text-3xl font-extrabold text-gray-900">£{{ offering.price }}</span>
+            </div>
+
+            <div class="mb-8 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <label for="coupon-code" class="block text-sm font-medium text-gray-700 mb-2">Have a Discount Code?</label>
+                <div class="flex gap-2">
+                    <input type="text" id="coupon-code" 
+                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-4 py-2" 
+                           placeholder="Enter code">
+                    <button type="button" 
+                            onclick="applyCoachingCoupon()"
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors">
+                        Apply
+                    </button>
+                </div>
+                <div id="coupon-message" class="mt-2 text-sm min-h-[20px]"></div>
+            </div>
+
+            <div id="checkout">
+                <div class="flex flex-col items-center justify-center py-12 space-y-4">
+                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+                    <p class="text-gray-500 font-medium">Loading secure checkout...</p>
                 </div>
             </div>
+            
+            <div id="error-message" class="hidden mt-4 p-4 bg-red-50 text-red-700 rounded-lg text-sm border border-red-200"></div>
         </div>
     </div>
 </div>
 
 <script type="text/javascript">
     const offeringId = "{{ offering.id }}";
-    const stripe = Stripe("{{ STRIPE_PUBLIC_KEY }}");
+    // Pull the public key from context (ensure it's passed in View)
+    const stripe = Stripe("{{ STRIPE_PUBLIC_KEY }}"); 
+    const originalPrice = "{{ offering.price }}"; // Store original price for reset logic
 
+    // Initialize without coupon first
     initialize();
 
-    async function initialize() {
-        try {
-            const response = await fetch(`{% url 'payments:create_coaching_checkout_session' offering_id=offering.id %}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie('csrftoken') },
-            });
+    async function applyCoachingCoupon() {
+        const code = document.getElementById('coupon-code').value.trim();
+        if(!code) return;
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to create checkout session.');
+        const msgDiv = document.getElementById('coupon-message');
+        msgDiv.innerHTML = '<span class="text-gray-500 animate-pulse">Checking code...</span>';
+        
+        // Re-initialize Stripe Session with Coupon
+        await initialize(code); 
+    }
+
+    async function initialize(couponCode = null) {
+        // Prepare payload
+        const payload = { offering_id: offeringId };
+        if (couponCode) payload.coupon_code = couponCode;
+
+        try {
+            // Show loading state if re-initializing (visually clearer for user)
+            if (couponCode) {
+                document.getElementById('checkout').innerHTML = `
+                    <div class="flex justify-center py-12">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                    </div>`;
             }
 
-            const { clientSecret } = await response.json();
+            const response = await fetch(`{% url 'payments:create_coaching_checkout_session' offering_id=offering.id %}`, {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json", 
+                    "X-CSRFToken": "{{ csrf_token }}" 
+                },
+                body: JSON.stringify(payload)
+            });
 
+            const data = await response.json();
+
+            if (!response.ok) {
+                const msgDiv = document.getElementById('coupon-message');
+                const errorDiv = document.getElementById('error-message');
+
+                if(couponCode) {
+                    // Specific coupon error (display near input)
+                    msgDiv.innerHTML = `<span class="text-red-600 font-medium">❌ ${data.error}</span>`;
+                    // Reset price display to original
+                    document.getElementById('display-price').innerText = '£' + originalPrice;
+                    // Reload original checkout (without coupon) to reset Stripe state
+                    initialize(); 
+                } else {
+                    // General System Error (display at bottom)
+                    errorDiv.innerHTML = `<strong>Error:</strong> ${data.error}`;
+                    errorDiv.classList.remove('hidden');
+                    document.getElementById('checkout').innerHTML = '';
+                }
+                return;
+            }
+
+            // Success: Update UI
+            if(couponCode) {
+                 document.getElementById('coupon-message').innerHTML = `<span class="text-green-600 font-bold">✅ Coupon '${couponCode}' applied!</span>`;
+                 // Update the display price with value from server
+                 if (data.new_price) {
+                    document.getElementById('display-price').innerText = '£' + data.new_price;
+                 }
+            }
+
+            const { clientSecret } = data;
             const checkout = await stripe.initEmbeddedCheckout({
                 clientSecret,
             });
 
             // Clear the loading spinner from the checkout div before mounting
             document.getElementById('checkout').innerHTML = '';
-
             checkout.mount('#checkout');
+            
         } catch (error) {
-            console.error("Error initializing Stripe Checkout:", error);
-            document.getElementById('checkout').innerHTML = `
-                <div class="alert alert-danger" role="alert">
-                    <h4 class="alert-heading">Checkout Error!</h4>
-                    <p>There was an issue loading the payment form. Please try again later.</p>
-                    <hr>
-                    <p class="mb-0">Details: ${error.message || error}</p>
-                </div>
-            `;
+            console.error("Error:", error);
+            document.getElementById('error-message').innerText = "A network error occurred. Please try again.";
+            document.getElementById('error-message').classList.remove('hidden');
         }
-    }
-
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                // Does this cookie string begin with the name we want?
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
     }
 </script>
 {% endblock %}

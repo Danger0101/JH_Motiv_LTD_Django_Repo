@@ -5,6 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
+from django.views.decorators.http import require_POST
 from django.db import transaction, models # ADDED: models for coach query
 from django.contrib.auth import get_user_model # ADDED: Better way to get User model
 from datetime import timedelta # NEW IMPORT
@@ -328,69 +329,102 @@ def stripe_webhook(request):
     return HttpResponse(status=200)
 
 
+@login_required
+@require_POST
 def create_coaching_checkout_session_view(request, offering_id):
     """
     Handles the creation of a Stripe embedded checkout session for a coaching offering.
-    This is intended to be called via a POST request from the checkout page.
+    Supports COUPONS and DYNAMIC PRICING.
     """
-    if not request.user.is_authenticated:
-        return JsonResponse({"error": "User not authenticated"}, status=403)
-
     offering = get_object_or_404(Offering, pk=offering_id) 
 
-    if request.method == 'POST':
-        available_coaches = CoachProfile.objects.filter(
-            offerings=offering, 
-            user__is_active=True,
-            is_available_for_new_clients=True
-        )
+    # 1. Parse Request Data (Handle JSON body)
+    try:
+        data = json.loads(request.body)
+        coupon_code = data.get('coupon_code', '').strip()
+    except json.JSONDecodeError:
+        coupon_code = request.POST.get('coupon_code', '').strip()
 
-        if not available_coaches.exists():
-            return JsonResponse({"error": "No coach currently available for this offering."}, status=400)
-
-        coach = available_coaches.annotate(
-            active_enrollment_count=models.Count(
-                'client_enrollments', 
-                filter=models.Q(client_enrollments__offering=offering, client_enrollments__is_active=True)
-            )
-        ).order_by('active_enrollment_count').first()
-
-        if not coach:
-            return JsonResponse({"error": "Error: No assignable coach found."}, status=400)
-
+    # 2. Coupon Logic & Price Calculation
+    final_price = offering.price
+    discount_amount = Decimal('0.00')
+    
+    if coupon_code:
         try:
-            checkout_session = stripe.checkout.Session.create(
-                ui_mode='embedded',
-                payment_method_types=['card'],
-                line_items=[{
-                    'price_data': {
-                        'currency': 'gbp',
-                        'unit_amount': int(offering.price * 100),
-                        'product_data': {
-                            'name': f"Coaching: {offering.name}"
-                        },
-                    },
-                    'quantity': 1,
-                }],
-                mode='payment',
-                return_url=request.build_absolute_uri(reverse('payments:payment_success')) + '?session_id={CHECKOUT_SESSION_ID}',
-                metadata={
-                    'product_type': 'coaching_offering', 
-                    'offering_id': str(offering.id),
-                    'user_id': str(request.user.id),
-                    'coach_id': str(coach.id),
-                    'cart_id': get_or_create_cart(request).id, # Add cart_id for potential clearing
-                    'coupon_code': request.POST.get('coupon_code', ''), # Pass coupon from the form
-                },
-            )
+            coupon = Coupon.objects.get(code__iexact=coupon_code)
+            # Validate using your existing logic (passing user and cart_value)
+            is_valid, msg = coupon.is_valid(user=request.user, cart_value=offering.price)
             
-            return JsonResponse({'clientSecret': checkout_session.client_secret})
-        except stripe.error.StripeError as e:
-            logger.error(f"Stripe error creating coaching checkout session: {e}", exc_info=True)
-            return JsonResponse({'error': str(e)}, status=500)
+            if is_valid:
+                # Calculate discount specifically for this offering
+                discount_amount = calculate_discount(coupon, offering=offering)
+                final_price = max(offering.price - discount_amount, Decimal('0.00'))
+            else:
+                return JsonResponse({"error": f"Invalid Coupon: {msg}"}, status=400)
+        except Coupon.DoesNotExist:
+            return JsonResponse({"error": "Coupon code not found."}, status=400)
 
-    # This view should only handle POST requests for creating the session
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
+    # 3. Coach Assignment (Round Robin / Load Balancing)
+    # Only pick coaches who are active and accepting new clients
+    available_coaches = CoachProfile.objects.filter(
+        offerings=offering, 
+        user__is_active=True,
+        is_available_for_new_clients=True
+    )
+
+    if not available_coaches.exists():
+        return JsonResponse({"error": "No coach currently available for this offering."}, status=400)
+
+    # Assign coach with fewest active enrollments for this specific offering
+    coach = available_coaches.annotate(
+        active_enrollment_count=models.Count(
+            'client_enrollments', 
+            filter=models.Q(client_enrollments__offering=offering, client_enrollments__is_active=True)
+        )
+    ).order_by('active_enrollment_count').first()
+
+    if not coach:
+        return JsonResponse({"error": "Error: No assignable coach found."}, status=400)
+
+    # 4. Create Stripe Session
+    try:
+        # Calculate amount in cents/pence
+        unit_amount = int(final_price * 100)
+        if unit_amount < 50: unit_amount = 50 # Stripe minimum charge
+
+        checkout_session = stripe.checkout.Session.create(
+            ui_mode='embedded',
+            payment_method_types=['card'],
+            line_items=[{
+                'price_data': {
+                    'currency': 'gbp',
+                    'unit_amount': unit_amount, # <--- DYNAMIC PRICE
+                    'product_data': {
+                        'name': f"Coaching: {offering.name}"
+                    },
+                },
+                'quantity': 1,
+            }],
+            mode='payment',
+            return_url=request.build_absolute_uri(reverse('payments:payment_success')) + '?session_id={CHECKOUT_SESSION_ID}',
+            metadata={
+                'product_type': 'coaching_offering', 
+                'offering_id': str(offering.id),
+                'user_id': str(request.user.id),
+                'coach_id': str(coach.id),
+                'cart_id': str(get_or_create_cart(request).id),
+                'coupon_code': coupon_code, # Pass for webhook processing
+                'discount_amount': str(discount_amount)
+            },
+        )
+        
+        return JsonResponse({
+            'clientSecret': checkout_session.client_secret,
+            'new_price': f"{final_price:.2f}" # Send new price to frontend for UI update
+        })
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
 
 @login_required
 def order_detail(request, order_id):
