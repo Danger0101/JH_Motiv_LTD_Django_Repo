@@ -81,7 +81,7 @@ def get_shipping_rates(address_data, cart):
     tax_amount = Decimal('0.00')
     if address_data.get('country') == 'GB':
         # Example: 20% VAT
-        tax_amount = cart.get_total_price() * Decimal('0.20')
+        tax_amount = cart.get_total_price() * Decimal('0.0')
 
     return rates, tax_amount
 
