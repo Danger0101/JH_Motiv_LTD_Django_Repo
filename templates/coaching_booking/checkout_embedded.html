@@ -27,6 +27,7 @@
                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-4 py-2" 
                            placeholder="Enter code">
                     <button type="button" 
+                            id="apply-btn"
                             onclick="applyCoachingCoupon()"
                             class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors">
                         Apply
@@ -49,31 +50,36 @@
 
 <script type="text/javascript">
     const offeringId = "{{ offering.id }}";
-    // Pull the public key from context (ensure it's passed in View)
+    // Ensure STRIPE_PUBLIC_KEY is available in context from OfferEnrollmentStartView
     const stripe = Stripe("{{ STRIPE_PUBLIC_KEY }}"); 
-    const originalPrice = "{{ offering.price }}"; // Store original price for reset logic
+    const originalPrice = "{{ offering.price }}"; 
 
     // Initialize without coupon first
     initialize();
 
     async function applyCoachingCoupon() {
-        const code = document.getElementById('coupon-code').value.trim();
+        const codeInput = document.getElementById('coupon-code');
+        const code = codeInput.value.trim();
         if(!code) return;
 
         const msgDiv = document.getElementById('coupon-message');
-        msgDiv.innerHTML = '<span class="text-gray-500 animate-pulse">Checking code...</span>';
+        const btn = document.getElementById('apply-btn');
         
-        // Re-initialize Stripe Session with Coupon
-        await initialize(code); 
+        msgDiv.innerHTML = '<span class="text-gray-500 animate-pulse">Checking code...</span>';
+        btn.disabled = true;
+        
+        try {
+            await initialize(code);
+        } finally {
+            btn.disabled = false;
+        }
     }
 
     async function initialize(couponCode = null) {
-        // Prepare payload
         const payload = { offering_id: offeringId };
         if (couponCode) payload.coupon_code = couponCode;
 
         try {
-            // Show loading state if re-initializing (visually clearer for user)
             if (couponCode) {
                 document.getElementById('checkout').innerHTML = `
                     <div class="flex justify-center py-12">
@@ -90,22 +96,25 @@
                 body: JSON.stringify(payload)
             });
 
-            const data = await response.json();
+            // Parse JSON manually to catch parsing errors
+            let data;
+            try {
+                data = await response.json();
+            } catch (e) {
+                throw new Error("Server returned invalid response. Please try again.");
+            }
 
             if (!response.ok) {
                 const msgDiv = document.getElementById('coupon-message');
                 const errorDiv = document.getElementById('error-message');
 
                 if(couponCode) {
-                    // Specific coupon error (display near input)
-                    msgDiv.innerHTML = `<span class="text-red-600 font-medium">❌ ${data.error}</span>`;
-                    // Reset price display to original
+                    msgDiv.innerHTML = `<span class="text-red-600 font-medium">❌ ${data.error || 'Invalid Coupon'}</span>`;
                     document.getElementById('display-price').innerText = '£' + originalPrice;
                     // Reload original checkout (without coupon) to reset Stripe state
                     initialize(); 
                 } else {
-                    // General System Error (display at bottom)
-                    errorDiv.innerHTML = `<strong>Error:</strong> ${data.error}`;
+                    errorDiv.innerHTML = `<strong>Error:</strong> ${data.error || 'Unknown error occurred.'}`;
                     errorDiv.classList.remove('hidden');
                     document.getElementById('checkout').innerHTML = '';
                 }
@@ -115,25 +124,23 @@
             // Success: Update UI
             if(couponCode) {
                  document.getElementById('coupon-message').innerHTML = `<span class="text-green-600 font-bold">✅ Coupon '${couponCode}' applied!</span>`;
-                 // Update the display price with value from server
                  if (data.new_price) {
                     document.getElementById('display-price').innerText = '£' + data.new_price;
                  }
             }
 
             const { clientSecret } = data;
-            const checkout = await stripe.initEmbeddedCheckout({
-                clientSecret,
-            });
+            if (!clientSecret) throw new Error("Missing payment information from server.");
 
-            // Clear the loading spinner from the checkout div before mounting
+            const checkout = await stripe.initEmbeddedCheckout({ clientSecret });
             document.getElementById('checkout').innerHTML = '';
             checkout.mount('#checkout');
             
         } catch (error) {
-            console.error("Error:", error);
-            document.getElementById('error-message').innerText = "A network error occurred. Please try again.";
-            document.getElementById('error-message').classList.remove('hidden');
+            console.error("Checkout Error:", error);
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.innerText = error.message || "A network error occurred. Please try again.";
+            errorDiv.classList.remove('hidden');
         }
     }
 </script>

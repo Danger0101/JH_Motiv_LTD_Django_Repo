@@ -18,7 +18,7 @@ urlpatterns = [
     path('checkout/', views.checkout_cart_view, name='checkout_cart'),
     
     # Corrected URL for creating a coaching checkout session
-    path('create-coaching-checkout-session/<int:offering_id>/', views.create_coaching_checkout_session_view, name='create_coaching_checkout_session'),
+    path('checkout/create-coaching-checkout-session/<int:offering_id>/', views.create_coaching_checkout_session_view, name='create_coaching_checkout_session'),
 
     # NEW: My Earnings Dashboard
     path('my-earnings/', MyEarningsView.as_view(), name='my_earnings'),

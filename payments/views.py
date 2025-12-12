@@ -343,6 +343,7 @@ def create_coaching_checkout_session_view(request, offering_id):
         data = json.loads(request.body)
         coupon_code = data.get('coupon_code', '').strip()
     except json.JSONDecodeError:
+        # Fallback for standard form posts
         coupon_code = request.POST.get('coupon_code', '').strip()
 
     # 2. Coupon Logic & Price Calculation
@@ -423,7 +424,6 @@ def create_coaching_checkout_session_view(request, offering_id):
             'new_price': f"{final_price:.2f}" # Send new price to frontend for UI update
         })
     except stripe.error.StripeError as e:
-        logger.error(f"Stripe error: {e}")
         return JsonResponse({'error': str(e)}, status=500)
 
 @login_required
