@@ -107,6 +107,10 @@ class CoachingOrder(models.Model):
     amount_referrer = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Owed to Dreamer")
     amount_company = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Retained by JH Motiv")
     
+    # Coupon & Discount Snapshot
+    coupon_code = models.CharField(max_length=50, null=True, blank=True)
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
     # Status
     payout_status = models.CharField(
         max_length=20, 
@@ -230,6 +234,7 @@ class Coupon(models.Model):
 class CouponUsage(models.Model):
     coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE, related_name='usages')
     order = models.ForeignKey(Order, on_delete=models.CASCADE, null=True, blank=True)
+    coaching_order = models.ForeignKey(CoachingOrder, on_delete=models.CASCADE, null=True, blank=True, related_name='coupon_usages')
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     email = models.EmailField(blank=True, null=True) # For guest checkouts
     used_at = models.DateTimeField(auto_now_add=True)

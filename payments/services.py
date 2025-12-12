@@ -199,7 +199,7 @@ def handle_coaching_enrollment(session):
         coupon = None
         if coupon_code:
             try:
-                coupon = Coupon.objects.get(code=coupon_code)
+                coupon = Coupon.objects.get(code__iexact=coupon_code)
                 referrer = coupon.affiliate_dreamer
             except Coupon.DoesNotExist:
                 pass
