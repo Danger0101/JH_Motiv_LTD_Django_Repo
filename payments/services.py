@@ -204,9 +204,12 @@ def handle_coaching_enrollment(session):
             except Coupon.DoesNotExist:
                 pass
 
+        discount_amount = Decimal(metadata.get('discount_amount', '0.00'))
+
         coaching_order = CoachingOrder.objects.create(
             enrollment=enrollment, referrer=referrer,
-            amount_gross=total_paid_amount, stripe_checkout_id=session.id
+            amount_gross=total_paid_amount, stripe_checkout_id=session.id,
+            coupon_code=coupon_code, discount_amount=discount_amount
         )
 
         if coupon:

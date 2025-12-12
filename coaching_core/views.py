@@ -5,6 +5,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
+from django.utils import timezone
 
 from .models import Offering, Workshop
 from .forms import OfferingCreationForm, WorkshopForm
@@ -65,6 +66,19 @@ class OfferingListView(StaffRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['workshops'] = Workshop.objects.filter(active_status=True)
+
+        # --- SEASONAL HERO LOGIC ---
+        current_month = timezone.now().month
+        if current_month in [3, 4, 5]:
+            season_file = 'spring_banner.webp'
+        elif current_month in [6, 7, 8]:
+            season_file = 'summer_banner.webp'
+        elif current_month in [9, 10, 11]:
+            season_file = 'Fall_banner.webp'
+        else:
+            season_file = 'winter_banner.webp'
+        
+        context['seasonal_hero_image'] = f"images/{season_file}"
         return context
 
 class OfferingDetailView(StaffRequiredMixin, DetailView):
