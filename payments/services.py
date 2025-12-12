@@ -6,6 +6,7 @@ import stripe
 from django.conf import settings
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+from django.db import transaction
 
 from cart.models import Cart
 from coaching_booking.models import ClientOfferingEnrollment
@@ -211,7 +212,7 @@ def _fulfill_ecommerce_order(order, request=None, original_cart_id=None):
             try:
                 original_cart = Cart.objects.get(id=cart_id)
                 original_cart.items.all().delete()
-                logger.info(f"Cart {cart_id} cleared after order {order_id} completion.")
+                logger.info(f"Cart {cart_id} cleared after order {order.id} completion.")
             except Cart.DoesNotExist:
                 pass
 
