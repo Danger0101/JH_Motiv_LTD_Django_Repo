@@ -31,7 +31,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_display = ('id', 'user_link', 'email', 'status', 'total_paid', 'created_at', 'item_count', 'stripe_payment_link')
     list_filter = ('status', 'created_at', 'carrier')
     search_fields = ('id', 'user__email', 'email', 'guest_order_token', 'stripe_checkout_id')
-    readonly_fields = ('id', 'created_at', 'updated_at', 'stripe_checkout_id', 'guest_order_token', 'total_paid', 'discount_amount', 'coupon_code_snapshot', 'stripe_payment_link')
+    readonly_fields = ('id', 'created_at', 'updated_at', 'stripe_checkout_id', 'guest_order_token', 'total_paid', 'discount_amount', 'coupon_code_snapshot', 'coupon_data_snapshot', 'stripe_payment_link')
     inlines = [OrderItemInline]
     date_hierarchy = 'created_at'
     
@@ -62,7 +62,7 @@ class OrderAdmin(admin.ModelAdmin):
             'fields': ('id', 'user_link', 'email', 'status', 'guest_order_token')
         }),
         ('Financials', {
-            'fields': ('total_paid', 'discount_amount', 'coupon_code_snapshot', 'stripe_checkout_id', 'stripe_payment_link')
+            'fields': ('total_paid', 'discount_amount', 'coupon_code_snapshot', 'coupon_data_snapshot', 'stripe_checkout_id', 'stripe_payment_link')
         }),
         ('Shipping & Fulfillment', {
             'fields': ('shipping_data', 'carrier', 'tracking_number', 'tracking_url', 'printful_order_id', 'printful_order_status')
@@ -99,7 +99,7 @@ class CoachingOrderItemInline(admin.TabularInline):
 @admin.register(CoachingOrder)
 class CoachingOrderAdmin(admin.ModelAdmin):
     inlines = [CoachingOrderItemInline]
-    list_display = ('id', 'client_link', 'coach_link', 'amount_gross', 'payout_status', 'created_at')
+    list_display = ('id', 'client_link', 'coach_link', 'amount_gross', 'amount_coach', 'amount_referrer', 'amount_company', 'payout_status', 'created_at')
     list_filter = ('payout_status', 'created_at', 'enrollment__offering')
     search_fields = ('enrollment__client__email', 'enrollment__client__first_name', 'stripe_checkout_id')
     date_hierarchy = 'created_at'
