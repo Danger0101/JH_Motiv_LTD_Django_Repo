@@ -205,13 +205,8 @@
 
             <div x-show="activeTab === 'bookings'" x-cloak class="p-6">
                 <h2 class="text-2xl font-bold text-gray-800 border-b pb-4 mb-6">My Bookings</h2>
-                <div hx-get="{% url 'accounts:profile_bookings' %}" 
-                     hx-trigger="intersect once" 
-                     hx-target="this"
-                     hx-indicator="#bookings-loader">
-                    <div id="bookings-loader" class="flex justify-center py-10">
-                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    </div>
+                <div id="profile-bookings-full">
+                    {% include 'account/profile_bookings.html' %}
                 </div>
             </div>
 
