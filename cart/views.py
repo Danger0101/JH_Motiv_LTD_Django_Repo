@@ -7,6 +7,7 @@ from .utils import get_or_create_cart, get_cart_summary_data
 from django.http import HttpResponse
 from products.models import Variant
 from .models import CartItem
+import json
 
 def cart_detail(request):
     """Renders the main cart page."""
@@ -22,12 +23,18 @@ def apply_coupon(request):
     """
     code = request.POST.get('code', '').strip()
     cart = get_or_create_cart(request)
+    error_msg = None
 
     if not code:
-        messages.error(request, "Please enter a coupon code.")
+        error_msg = "Please enter a coupon code."
+        messages.error(request, error_msg)
         if request.htmx:
             # For HTMX, return the message partial
-            return render(request, 'cart/partials/coupon_message.html')
+            response = render(request, 'cart/partials/coupon_message.html')
+            response['HX-Trigger'] = json.dumps({
+                'showToast': {'message': error_msg, 'type': 'error'}
+            })
+            return response
         else:
             return redirect('cart:cart_detail')
 
@@ -45,17 +52,27 @@ def apply_coupon(request):
             # For HTMX, trigger a cart update event
             if request.htmx:
                 response = HttpResponse(status=204)
-                response['HX-Trigger'] = 'cartUpdated'
+                response['HX-Trigger'] = json.dumps({
+                    'cartUpdated': None,
+                    'showToast': {'message': f"Coupon '{coupon.code}' applied.", 'type': 'success'}
+                })
                 return response
         else:
-            messages.error(request, message) # Use the specific error message
+            error_msg = message
+            messages.error(request, error_msg) # Use the specific error message
     except Coupon.DoesNotExist:
-        messages.error(request, "Invalid coupon code.")
+        error_msg = "Invalid coupon code."
+        messages.error(request, error_msg)
 
     if request.htmx:
         # On failure, just return the error message partial
         summary = get_cart_summary_data(cart) # Get fresh summary data
-        return render(request, 'cart/partials/coupon_message.html', {'summary': summary})
+        response = render(request, 'cart/partials/coupon_message.html', {'summary': summary})
+        if error_msg:
+            response['HX-Trigger'] = json.dumps({
+                'showToast': {'message': error_msg, 'type': 'error'}
+            })
+        return response
     else:
         return redirect('cart:cart_detail')
 
@@ -107,7 +124,10 @@ def remove_coupon(request):
         
         if request.htmx:
              response = HttpResponse(status=204)
-             response['HX-Trigger'] = 'cartUpdated'
+             response['HX-Trigger'] = json.dumps({
+                 'cartUpdated': None,
+                 'showToast': {'message': f"Coupon '{code}' removed."}
+             })
              return response
              
     return redirect('cart:cart_detail')
