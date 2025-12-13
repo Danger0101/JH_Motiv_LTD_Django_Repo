@@ -116,6 +116,39 @@
             <div x-show="activeTab === 'dashboard'" x-cloak class="p-6 space-y-8">
                 <h2 class="text-2xl font-bold text-gray-800 border-b pb-4">Dashboard</h2>
 
+                <div class="mb-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-3">Upcoming Sessions</h3>
+                    {% if client_upcoming_sessions %}
+                        <div class="space-y-4">
+                            {% for session in client_upcoming_sessions|slice:":3" %}
+                                <div class="bg-white border rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center shadow-sm">
+                                    <div class="flex items-center space-x-4 mb-3 md:mb-0">
+                                        <div class="bg-blue-100 p-3 rounded-full text-blue-600">
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-gray-900">{{ session.start_datetime|date:"l, F jS" }} at {{ session.start_datetime|date:"g:i A" }}</p>
+                                            <p class="text-sm text-gray-500">Coach: {{ session.coach.user.get_full_name|default:session.coach.user.username }}</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <a href="{{ session.meeting_link|default:'#' }}" target="_blank" class="text-blue-600 hover:underline text-sm font-medium">Join Meeting &rarr;</a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            {% if client_upcoming_sessions.count > 3 %}
+                                <div class="text-center">
+                                    <button @click="activeTab = 'bookings'" class="text-sm text-gray-500 hover:text-gray-700">View all upcoming sessions</button>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="bg-gray-50 rounded-xl p-6 text-center border border-dashed border-gray-300">
+                            <p class="text-gray-500 mb-2">You have no upcoming sessions scheduled.</p>
+                            <button @click="activeTab = 'bookings'" class="text-blue-600 font-medium hover:underline">Book a Session</button>
+                        </div>
+                    {% endif %}
+                </div>
                 {% if has_earnings_profile and my_total_unpaid_earnings > 0 %}
                 <div class="bg-gradient-to-r from-green-50 to-white border border-green-100 p-6 rounded-xl">
                     <h3 class="text-lg font-bold text-gray-800 mb-2">My Payouts</h3>
@@ -165,7 +198,7 @@
                                         <p class="text-green-700 font-medium">✅ Approved! Ready to book.</p>
                                         <p class="text-sm text-gray-500">Expires: {{ my_taster.redemption_deadline|date:"M d, Y" }}</p>
                                     </div>
-                                    <button onclick="document.querySelector('[x-data]').__x.$data.openBooking = true" 
+                                    <button @click="activeTab = 'bookings'; setTimeout(() => { document.dispatchEvent(new CustomEvent('open-booking-modal')); }, 300)"
                                             class="px-5 py-2 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 transition shadow-sm">
                                         Book Now
                                     </button>
@@ -180,16 +213,17 @@
                     {% endif %}
                 {% endwith %}
 
-                <div class="bg-blue-50 border border-blue-100 p-6 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div>
-                        <h3 class="text-lg font-bold text-blue-900">Book a Session</h3>
-                        <p class="text-blue-700 text-sm">You have valid credits available.</p>
-                    </div>
-                    <div x-data="{ openBooking: false }">
-                        <button @click="openBooking = !openBooking" class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 shadow-sm transition">
-                            Book New Session
+                </div>
+
+            <div x-show="activeTab === 'bookings'" x-cloak class="p-6">
+                <div class="flex justify-between items-center border-b pb-4 mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">My Bookings</h2>
+                    
+                    <div x-data="{ openBooking: false }" @open-booking-modal.window="openBooking = true">
+                        <button @click="openBooking = !openBooking" class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 shadow-sm transition text-sm">
+                            + Book Session
                         </button>
-                        <div x-show="openBooking" class="fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-50 flex items-center justify-center p-4" style="display: none;">
+                        <div x-show="openBooking" class="fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-50 flex items-center justify-center p-4" style="display: none;" x-cloak>
                             <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl p-6 relative" @click.away="openBooking = false">
                                 <button @click="openBooking = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">✕</button>
                                 <h2 class="text-xl font-bold mb-4">Book a Session</h2>
@@ -199,12 +233,8 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                    </div>
 
-            </div>
-
-            <div x-show="activeTab === 'bookings'" x-cloak class="p-6">
-                <h2 class="text-2xl font-bold text-gray-800 border-b pb-4 mb-6">My Bookings</h2>
                 <div id="profile-bookings-full">
                     {% include 'account/profile_bookings.html' %}
                 </div>
@@ -331,7 +361,7 @@
                 <h2 class="text-2xl font-bold text-gray-800 border-b pb-4 mb-6">Profile Settings</h2>
                 
                 <div class="space-y-4 max-w-3xl" x-data="{ openSetting: null }">
-                    
+                    {% include 'account/profile_tabs_section.html' %} 
                     <div class="border rounded-xl shadow-sm overflow-hidden">
                         <button @click="openSetting = (openSetting === 'password' ? null : 'password')" 
                                 class="w-full flex justify-between items-center p-4 bg-white hover:bg-gray-50 transition focus:outline-none">
@@ -478,7 +508,7 @@
                             </p>
                         </div>
                     </div>
-                     {% if user.coach_profile.google_credentials %}
+                      {% if user.coach_profile.google_credentials %}
                         <a href="{% url 'gcal:google_calendar_disconnect' %}" class="text-sm text-red-600 hover:underline">Disconnect</a>
                     {% else %}
                         <a href="{% url 'gcal:google_calendar_init' %}" class="px-4 py-2 bg-white text-blue-600 text-sm font-bold rounded shadow-sm hover:shadow">Connect</a>
@@ -514,8 +544,6 @@
 
             {% if is_staff %}
             <div x-show="activeTab === 'staff'" x-cloak class="p-6 space-y-8 animate-fade-in-up">
-    
-                <!-- Chart.js CDN -->
                 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
                 <div class="flex justify-between items-center border-b pb-4">
@@ -527,7 +555,6 @@
                 </div>
             
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    
                     <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center">
                         <div class="p-3 bg-green-100 text-green-600 rounded-lg mr-4">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -581,7 +608,6 @@
                     </div>
                 </div>
             
-                <!-- Revenue Chart -->
                 <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                     <h3 class="font-bold text-gray-800 mb-4">Revenue Trend (Last 30 Days)</h3>
                     <div>
