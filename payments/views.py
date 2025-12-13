@@ -322,12 +322,10 @@ def payment_success(request):
                 context['title'] = "Order Confirmed!"
                 context['message'] = "Thank you for your purchase. We have received your order and are processing it now."
                 
-                # OPTIONAL: Clear cart immediately for better UX (in case webhook is slow)
-                if intent.metadata.get('cart_id') == str(cart.id):
-                    cart.items.all().delete()
-                    cart.coupon = None
-                    cart.save()
-                    # Refresh summary since cart is empty
+                # FIX: Ensure order is created immediately (handling race condition with webhook)
+                if intent.metadata.get('product_type') == 'ecommerce_cart':
+                    handle_payment_intent_checkout(intent, request)
+                    # Refresh summary (cart is cleared by the handler)
                     context['summary'] = get_cart_summary_data(cart)
             else:
                 context['title'] = "Payment Processing"

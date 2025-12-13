@@ -1,10 +1,12 @@
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from decimal import Decimal
 from payments.models import Coupon
 from .utils import get_or_create_cart, get_cart_summary_data
 from django.http import HttpResponse
+from products.models import Variant
+from .models import CartItem
 
 def cart_detail(request):
     """Renders the main cart page."""
@@ -56,3 +58,37 @@ def apply_coupon(request):
         return render(request, 'cart/partials/coupon_message.html', {'summary': summary})
     else:
         return redirect('cart:cart_detail')
+
+@require_POST
+def add_to_cart(request, variant_id):
+    """
+    Adds an item to the cart. Handles double-submission by checking existence first.
+    """
+    cart = get_or_create_cart(request)
+    variant = get_object_or_404(Variant, id=variant_id)
+    
+    try:
+        quantity = int(request.POST.get('quantity', 1))
+    except ValueError:
+        quantity = 1
+
+    # Prevent duplicate rows: Get existing item or create new one
+    cart_item, created = CartItem.objects.get_or_create(
+        cart=cart,
+        variant=variant,
+        defaults={'quantity': quantity}
+    )
+
+    if not created:
+        # If item exists, increment quantity
+        cart_item.quantity += quantity
+        cart_item.save()
+
+    messages.success(request, f"Added {variant.product.name} to cart.")
+    
+    if request.htmx:
+        response = HttpResponse(status=204)
+        response['HX-Trigger'] = 'cartUpdated'
+        return response
+        
+    return redirect('cart:cart_detail')

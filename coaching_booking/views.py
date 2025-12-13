@@ -98,6 +98,26 @@ def book_session(request):
         return response
 
     try:
+        # Check for double booking (race condition or missing service check)
+        if start_time_str and coach_id:
+            try:
+                # Normalize start_time_str to datetime
+                # Frontend usually sends ISO format (e.g. 2023-10-25T14:00:00Z)
+                clean_time = start_time_str.replace('Z', '+00:00')
+                check_start_time = datetime.fromisoformat(clean_time)
+                
+                if timezone.is_naive(check_start_time):
+                    check_start_time = timezone.make_aware(check_start_time)
+                
+                if SessionBooking.objects.filter(
+                    coach_id=coach_id,
+                    start_datetime=check_start_time,
+                    status__in=['BOOKED', 'PENDING_PAYMENT', 'RESCHEDULED']
+                ).exists():
+                    return htmx_error("This time slot has already been booked. Please select another time.")
+            except ValueError:
+                pass # Let BookingService handle invalid formats
+
         booking_data = {
             'enrollment_id': enrollment_id,
             'free_offer_id': free_offer_id,
@@ -317,6 +337,14 @@ def reschedule_session(request, booking_id):
             if not is_available:
                 return htmx_error("That time slot is no longer available. Please choose another.")
             else:
+                # Double check against local DB to prevent double booking
+                if SessionBooking.objects.filter(
+                    coach=booking.coach,
+                    start_datetime=new_start_time,
+                    status__in=['BOOKED', 'PENDING_PAYMENT', 'RESCHEDULED']
+                ).exclude(id=booking.id).exists():
+                    return htmx_error("This time slot has already been booked. Please select another time.")
+
                 original_start_time = booking.start_datetime
                 result = booking.reschedule(new_start_time)
 
