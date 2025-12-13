@@ -92,7 +92,7 @@
                                                    text-gray-700 hover:bg-gray-100
                                                {% endif %}"
                                         hx-get="{% url 'coaching_booking:get_daily_slots' %}?date={{ day.date|date:'Y-m-d' }}&coach_id={{ coach_id }}&enrollment_id={{ enrollment_id }}&reschedule_booking_id={{ reschedule_booking_id|default_if_none:'' }}"
-                                        hx-target="#time-slots-column"
+                                        hx-target="{{ slot_target_id|default:'#time-slots-column' }}"
                                         hx-swap="innerHTML">
                                         {{ day.number }}
                                         

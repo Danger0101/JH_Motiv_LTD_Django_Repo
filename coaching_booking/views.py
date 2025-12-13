@@ -621,6 +621,7 @@ def get_booking_calendar(request):
     
     session_length = 60 # Default
     coach = None
+    slot_target_id = '#time-slots-column' # Default target
 
     # --- 1. Reschedule Context Logic (Fixes Free Sessions) ---
     if reschedule_booking_id:
@@ -634,6 +635,7 @@ def get_booking_calendar(request):
             
             # Use the existing session duration
             session_length = booking.get_duration_minutes() or 60
+            slot_target_id = '#reschedule-slots-container' # Use the modal's container
         except SessionBooking.DoesNotExist:
             pass
 
@@ -713,6 +715,7 @@ def get_booking_calendar(request):
         'disable_prev': disable_prev,
         'is_current_month_view': is_current_month_view,
         'reschedule_booking_id': reschedule_booking_id,
+        'slot_target_id': slot_target_id,
     }
     return render(request, 'coaching_booking/partials/_calendar_widget.html', context)
 
