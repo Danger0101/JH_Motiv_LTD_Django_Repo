@@ -1,4 +1,4 @@
-<div id="profile-bookings" class="bg-white p-6 rounded-lg shadow-lg">
+<div id="profile-bookings" class="bg-white p-6 rounded-lg shadow-lg" x-data="{ rescheduleModalOpen: false, cancelModalOpen: false, bookingToCancel: null }">
     {% if messages %}
         <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
             {% for message in messages %}
@@ -86,7 +86,13 @@
 
     <script>
         function openRescheduleModal(bookingId) {
-            document.querySelector('[x-data]').__x.$data.rescheduleModalOpen = true;
+            const component = document.getElementById('profile-bookings');
+            if (component && component.__x) {
+                component.__x.getUnwrappedData().rescheduleModalOpen = true;
+            } else {
+                console.error("Could not find Alpine component for reschedule modal.");
+                return;
+            }
             const url = "{% url 'coaching_booking:reschedule_session_form' 0 %}".replace('0', bookingId);
             htmx.ajax('GET', url, {target: '#reschedule-content'});
         }

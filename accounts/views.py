@@ -12,6 +12,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 from django.template.loader import render_to_string
 import logging
+from .forms import CustomSignupForm, CustomChangePasswordForm, CustomSetPasswordForm, CustomResetPasswordForm, CustomResetPasswordKeyForm, CustomAddEmailForm
 from .models import MarketingPreference
 from allauth.account.views import LoginView, SignupView, PasswordResetView, PasswordChangeView, PasswordSetView, LogoutView, PasswordResetDoneView, EmailView, ConfirmEmailView, EmailVerificationSentView, PasswordResetFromKeyView, PasswordResetFromKeyDoneView
 from allauth.socialaccount.views import ConnectionsView
@@ -80,12 +81,15 @@ class CustomLoginView(LoginView):
 
 class CustomSignupView(SignupView):
     template_name = 'account/signup.html'
+    form_class = CustomSignupForm
 
 class CustomPasswordResetView(PasswordResetView):
     template_name = 'account/password_reset.html'
+    form_class = CustomResetPasswordForm
 
 class CustomPasswordChangeView(PasswordChangeView):
     template_name = 'account/password_change.html'
+    form_class = CustomChangePasswordForm
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -94,12 +98,14 @@ class CustomPasswordChangeView(PasswordChangeView):
 
 class CustomPasswordSetView(PasswordSetView):
     template_name = 'account/password_set.html'
+    form_class = CustomSetPasswordForm
 
 class CustomLogoutView(LogoutView):
     template_name = 'account/logout.html'
 
 class CustomEmailView(EmailView):
     template_name = 'account/email.html'
+    form_class = CustomAddEmailForm
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -117,6 +123,7 @@ class CustomEmailVerificationSentView(EmailVerificationSentView):
 
 class CustomPasswordResetFromKeyView(PasswordResetFromKeyView):
     template_name = 'account/password_reset_from_key.html'
+    form_class = CustomResetPasswordKeyForm
 
 class CustomPasswordResetFromKeyDoneView(PasswordResetFromKeyDoneView):
     template_name = 'account/password_reset_from_key_done.html'
