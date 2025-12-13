@@ -119,6 +119,16 @@ def sync_google_calendar_update(booking_id):
         pass
 
 @shared_task
+def sync_google_calendar_delete(coach_id, gcal_event_id):
+    # We pass IDs separately because the Booking object might be deleted already
+    try:
+        coach = CoachProfile.objects.get(id=coach_id)
+        service = GoogleCalendarService(coach)
+        service.delete_booking(gcal_event_id)
+    except CoachProfile.DoesNotExist:
+        pass
+
+@shared_task
 def sync_google_calendar_pull_all():
     """
     Scheduled task (Celery Beat): Runs every 15 mins.

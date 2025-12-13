@@ -110,6 +110,28 @@ class GoogleCalendarService:
             logger.error(f"Failed to push booking {booking.id} to GCal: {e}")
             return None
 
+    def delete_booking(self, gcal_event_id):
+        """
+        Deletes an event from the Coach's primary calendar.
+        """
+        if not self.service or not gcal_event_id:
+            return False
+
+        try:
+            self.service.events().delete(
+                calendarId='primary',
+                eventId=gcal_event_id,
+                sendUpdates='all' # Notify attendees of cancellation
+            ).execute()
+            logger.info(f"GCal Event deleted: {gcal_event_id}")
+            return True
+        except Exception as e:
+            # 410 Gone means it's already deleted, which is fine
+            if hasattr(e, 'resp') and e.resp.status == 410:
+                return True
+            logger.error(f"Failed to delete GCal event {gcal_event_id}: {e}")
+            return False
+
     def update_booking(self, booking):
         """
         Updates an existing event in the Coach's primary calendar.
@@ -148,8 +170,8 @@ class GoogleCalendarService:
             event_body['attendees'].append({'email': client_email})
 
         try:
-            # Use update (PUT) to overwrite the event details
-            event = self.service.events().update(
+            # CHANGE: Use patch() instead of update() to preserve conferenceData (Meet links)
+            event = self.service.events().patch(
                 calendarId='primary', 
                 eventId=booking.gcal_event_id, 
                 body=event_body,
