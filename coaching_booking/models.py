@@ -143,6 +143,14 @@ class SessionBooking(models.Model):
             return int(duration.total_seconds() / 60)
         return 0
 
+    @property
+    def meeting_link(self):
+        """
+        Returns the meeting link.
+        Placeholder to prevent AttributeError until the real field is connected.
+        """
+        return getattr(self, 'google_meet_link', None)
+
     def save(self, *args, **kwargs):
         if self.enrollment and not self.client_id and not self.guest_email:
             self.client = self.enrollment.client

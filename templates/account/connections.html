@@ -1,0 +1,53 @@
+{% extends base_template %}
+{% load i18n %}
+
+{% block title %}{% trans "Connected Accounts" %}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto {% if not request.htmx %}py-12 px-4 sm:px-6 lg:px-8{% endif %}">
+    <div class="bg-white {% if not request.htmx %}p-8 rounded-2xl shadow-sm border border-gray-200{% endif %}">
+        {% if not request.htmx %}
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">{% trans "Connected Accounts" %}</h1>
+        {% endif %}
+
+        {% if form.accounts %}
+        <p class="text-gray-600 mb-4">{% trans 'You can sign in to your account using any of the following third party accounts:' %}</p>
+
+        <form method="post" action="{% url 'socialaccount_connections' %}" class="space-y-4 mb-8">
+            {% csrf_token %}
+            <div class="space-y-3">
+                {% for base_account in form.accounts %}
+                {% with base_account.get_provider_account as account %}
+                <div class="flex items-center justify-between p-4 border rounded-xl bg-gray-50 hover:bg-gray-100 transition">
+                    <div class="flex items-center">
+                        <input id="id_account_{{ base_account.id }}" type="radio" name="account" value="{{ base_account.id }}" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                        <label for="id_account_{{ base_account.id }}" class="ml-3 block">
+                            <span class="block text-sm font-bold text-gray-900">{{ account.get_brand.name }}</span>
+                            <span class="block text-xs text-gray-500">{{ account }}</span>
+                        </label>
+                    </div>
+                    <div class="text-gray-400">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                    </div>
+                </div>
+                {% endwith %}
+                {% endfor %}
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="px-4 py-2 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none">{% trans 'Remove Selected' %}</button>
+            </div>
+        </form>
+        {% else %}
+        <p class="text-gray-500 italic mb-6">{% trans 'You currently have no social network accounts connected to this account.' %}</p>
+        {% endif %}
+
+        <div class="border-t pt-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-4">{% trans 'Add a 3rd Party Account' %}</h2>
+            <div class="flex flex-wrap gap-3">
+                {% include "socialaccount/snippets/provider_list.html" with process="connect" %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

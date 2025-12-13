@@ -122,6 +122,7 @@ class CustomPasswordResetFromKeyDoneView(PasswordResetFromKeyDoneView):
     template_name = 'account/password_reset_from_key_done.html'
 
 class CustomSocialAccountListView(ConnectionsView):
+    template_name = 'account/connections.html'
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         if self.request.htmx:
@@ -129,6 +130,50 @@ class CustomSocialAccountListView(ConnectionsView):
         else:
             context['base_template'] = 'base.html'
         return context
+
+def get_recent_activity(user):
+    """Helper to fetch recent activity for a user."""
+    activities = []
+    if user.last_login:
+        activities.append({
+            'type': 'login',
+            'timestamp': user.last_login,
+            'description': 'Logged in',
+        })
+        
+    # Recent Bookings
+    recent_bookings = SessionBooking.objects.filter(client=user).order_by('-created_at')[:3]
+    for b in recent_bookings:
+        coach_name = b.coach.user.first_name or b.coach.user.username
+        activities.append({
+            'type': 'booking',
+            'timestamp': b.created_at,
+            'description': f"Booked session with {coach_name}",
+        })
+
+    # Recent Retail Orders
+    if Order:
+        recent_orders = Order.objects.filter(user=user).order_by('-created_at')[:3]
+        for o in recent_orders:
+            activities.append({
+                'type': 'order',
+                'timestamp': o.created_at,
+                'description': f"Placed Order #{o.id}",
+            })
+
+    # Recent Coaching Orders
+    if CoachingOrder:
+        recent_coaching = CoachingOrder.objects.filter(enrollment__client=user).order_by('-created_at')[:3]
+        for o in recent_coaching:
+            activities.append({
+                'type': 'order',
+                'timestamp': o.created_at,
+                'description': f"Purchased {o.enrollment.offering.name}",
+            })
+
+    # Sort by timestamp descending and take top 5
+    activities.sort(key=lambda x: x['timestamp'], reverse=True)
+    return activities[:5]
 
 class ProfileView(LoginRequiredMixin, TemplateView):
     template_name = 'account/profile.html'
@@ -357,47 +402,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         # For example: .exclude(usages__user=self.request.user)
         
         # --- RECENT ACTIVITY ---
-        activities = []
-        if self.request.user.last_login:
-            activities.append({
-                'type': 'login',
-                'timestamp': self.request.user.last_login,
-                'description': 'Logged in',
-            })
-            
-        # Recent Bookings (When they were created)
-        recent_bookings = SessionBooking.objects.filter(client=self.request.user).order_by('-created_at')[:3]
-        for b in recent_bookings:
-            coach_name = b.coach.user.first_name or b.coach.user.username
-            activities.append({
-                'type': 'booking',
-                'timestamp': b.created_at,
-                'description': f"Booked session with {coach_name}",
-            })
-
-        # Recent Retail Orders
-        if Order:
-            recent_orders = Order.objects.filter(user=self.request.user).order_by('-created_at')[:3]
-            for o in recent_orders:
-                activities.append({
-                    'type': 'order',
-                    'timestamp': o.created_at,
-                    'description': f"Placed Order #{o.id}",
-                })
-
-        # Recent Coaching Orders
-        if CoachingOrder:
-            recent_coaching = CoachingOrder.objects.filter(enrollment__client=self.request.user).order_by('-created_at')[:3]
-            for o in recent_coaching:
-                activities.append({
-                    'type': 'order',
-                    'timestamp': o.created_at,
-                    'description': f"Purchased {o.enrollment.offering.name}",
-                })
-
-        # Sort by timestamp descending and take top 3
-        activities.sort(key=lambda x: x['timestamp'], reverse=True)
-        context['recent_activities'] = activities[:3]
+        context['recent_activities'] = get_recent_activity(self.request.user)
 
         context['active_tab'] = 'account'
         return context
@@ -517,6 +522,12 @@ def profile_offerings_partial(request):
         'available_credits': available_credits,
         'active_tab': 'offerings'
     })
+
+@login_required
+def recent_activity_partial(request):
+    """HTMX partial to refresh recent activity."""
+    activities = get_recent_activity(request.user)
+    return render(request, 'account/partials/recent_activity.html', {'recent_activities': activities})
 
 @login_required
 def profile_bookings_partial(request):
