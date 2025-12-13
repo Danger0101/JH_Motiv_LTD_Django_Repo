@@ -1,4 +1,7 @@
-<div id="profile-bookings" class="bg-white p-6 rounded-lg shadow-lg" x-data="{ rescheduleModalOpen: false, cancelModalOpen: false, bookingToCancel: null }">
+<div id="profile-bookings" class="bg-white p-6 rounded-lg shadow-lg" 
+     x-data="{ rescheduleModalOpen: false, cancelModalOpen: false, bookingToCancel: null }"
+     @open-reschedule-modal.window="rescheduleModalOpen = true"
+     @open-cancel-modal.window="cancelModalOpen = true; bookingToCancel = $event.detail.bookingId">
     {% if messages %}
         <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
             {% for message in messages %}
@@ -86,21 +89,16 @@
 
     <script>
         function openRescheduleModal(bookingId) {
-            const component = document.getElementById('profile-bookings');
-            if (component && component.__x) {
-                component.__x.getUnwrappedData().rescheduleModalOpen = true;
-            } else {
-                console.error("Could not find Alpine component for reschedule modal.");
-                return;
-            }
+            // Updated to dispatch event (works with all Alpine versions)
+            window.dispatchEvent(new CustomEvent('open-reschedule-modal'));
+            
             const url = "{% url 'coaching_booking:reschedule_session_form' 0 %}".replace('0', bookingId);
             htmx.ajax('GET', url, {target: '#reschedule-content'});
         }
 
         function openCancelModal(bookingId) {
-            const root = document.querySelector('[x-data]');
-            root.__x.$data.bookingToCancel = bookingId;
-            root.__x.$data.cancelModalOpen = true;
+            // Updated to dispatch event
+            window.dispatchEvent(new CustomEvent('open-cancel-modal', { detail: { bookingId: bookingId } }));
             
             const url = "{% url 'coaching_booking:cancel_session' 0 %}".replace('0', bookingId);
             document.getElementById('cancel-session-form').action = url;
