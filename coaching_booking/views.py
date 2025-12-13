@@ -208,6 +208,11 @@ def cancel_session(request, booking_id):
         messages.warning(request, "Session canceled. The credit was forfeited due to late cancellation.")
 
     try:
+        # Format dates for email context
+        original_date_str = booking.start_datetime.strftime("%A, %B %d, %Y")
+        original_time_start_str = booking.start_datetime.strftime("%I:%M %p UTC")
+        original_time_end_str = booking.end_datetime.strftime("%I:%M %p UTC")
+
         dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
         send_transactional_email(
             recipient_email=client.email,
@@ -218,6 +223,9 @@ def cancel_session(request, booking_id):
                 'booking_id': booking.pk,
                 'cancellation_message': client_msg,
                 'dashboard_url': dashboard_url,
+                'original_date': original_date_str,
+                'original_time_start': original_time_start_str,
+                'original_time_end': original_time_end_str,
             }
         )
 
@@ -230,6 +238,9 @@ def cancel_session(request, booking_id):
                 'client_id': client.pk,
                 'booking_id': booking.pk,
                 'dashboard_url': dashboard_url,
+                'original_date': original_date_str,
+                'original_time_start': original_time_start_str,
+                'original_time_end': original_time_end_str,
             }
         )
     except Exception as e:
@@ -467,9 +478,9 @@ def coach_approve_free_session(request):
         free_offer.save()
 
         client_context = {
-            'client': free_offer.client,
-            'coach': coach_profile,
-            'offer': free_offer,
+            'client_id': free_offer.client.pk,
+            'coach_id': coach_profile.pk,
+            'offer_id': free_offer.pk,
             'dashboard_url': request.build_absolute_uri(reverse('accounts:account_profile'))
         }
         send_transactional_email(
