@@ -21,7 +21,6 @@ def generate_ics(booking):
     def to_ics_format(dt):
         # Ensure dt is in UTC
         if timezone.is_aware(dt):
-            dt = dt.astimezone(timezone.utc)
             dt = dt.astimezone(pytz.utc)
         return dt.strftime('%Y%m%dTH%H%M%SZ')
 
