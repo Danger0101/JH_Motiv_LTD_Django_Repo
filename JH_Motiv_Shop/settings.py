@@ -351,9 +351,13 @@ TAILWIND_CLI_ARGS = ['--minify']
 # =======================================================
 # CELERY CONFIGURATION
 # =======================================================
-# Use REDIS_URL if available (common on Heroku), otherwise fallback to local default
 CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
-# Optional: Retry connection on startup if broker is not immediately available
+# Handle Heroku Redis SSL (Rediss://)
+if CELERY_BROKER_URL.startswith("rediss://"):
+    CELERY_REDIS_BACKEND_USE_SSL = {"ssl_cert_reqs": "none"}
+    CELERY_BROKER_USE_SSL = {"ssl_cert_reqs": "none"}
+
+# Optional: Retry connection on startup
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
