@@ -505,6 +505,12 @@ def update_marketing_preference(request):
 
         preference.is_subscribed = is_subscribed
         preference.save()
+
+        if is_subscribed:
+            messages.success(request, "You have subscribed to marketing emails.")
+        else:
+            messages.success(request, "You have unsubscribed from marketing emails.")
+
         return render(request, 'account/partials/marketing_status_fragment.html', 
                       {'marketing_preference': preference})
     return HttpResponse("Invalid request", status=400)

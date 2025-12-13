@@ -1,3 +1,11 @@
-<p id="marketing-preference-status">
-    Current status: <strong>{% if marketing_preference.is_subscribed %}Subscribed{% else %}Unsubscribed{% endif %}</strong>
-</p>
+{% if messages %}
+    {% for message in messages %}
+        <div x-data x-init="$dispatch('showToast', { message: '{{ message }}' })"></div>
+    {% endfor %}
+{% endif %}
+
+{% if marketing_preference.is_subscribed %}
+    <span class="text-green-600">Subscribed</span>
+{% else %}
+    <span class="text-gray-500">Unsubscribed</span>
+{% endif %}
