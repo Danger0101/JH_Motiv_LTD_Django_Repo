@@ -8,7 +8,7 @@
             <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
                 <p class="text-xs text-blue-600 font-bold uppercase tracking-wide mb-1">New Time</p>
                 <p class="text-lg font-bold text-gray-900">{{ new_start_time|date:"l, F jS" }}</p>
-                <p class="text-md text-gray-700">{{ new_start_time|date:"g:i A" }}</p>
+                <p class="text-md text-gray-700">{{ new_start_time|date:"g:i A" }} - {{ new_end_time|date:"g:i A" }}</p>
             </div>
             
             {% if new_coach != booking.coach %}

@@ -12,7 +12,7 @@
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                 </div>
                 <div>
-                    <p class="font-bold text-gray-900">{{ booking.start_datetime|date:"l, F jS" }} at {{ booking.start_datetime|date:"g:i A" }}</p>
+                    <p class="font-bold text-gray-900">{{ booking.start_datetime|date:"l, F jS" }} • {{ booking.start_datetime|date:"g:i A" }} - {{ booking.end_datetime|date:"g:i A" }}</p>
                     <p class="text-sm text-gray-500">Coach: {{ booking.coach.user.get_full_name }}</p>
                     {% if booking.enrollment %}
                         <p class="text-xs text-gray-400">{{ booking.enrollment.offering.name }}</p>

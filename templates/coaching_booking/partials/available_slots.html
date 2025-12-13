@@ -23,7 +23,7 @@
                             
                             <div class="flex justify-between items-center">
                                 <div class="font-medium text-gray-800">
-                                    {{ slot.start_time|date:"h:i A" }}
+                                    {{ slot.start_time|date:"h:i A" }} - {{ slot.end_time|date:"h:i A" }}
                                 </div>
                                 <button type="submit"
                                         class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition-all"

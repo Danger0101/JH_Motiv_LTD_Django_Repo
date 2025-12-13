@@ -764,9 +764,17 @@ def confirm_reschedule_modal(request, booking_id):
     if coach_id and int(coach_id) != booking.coach.id:
         new_coach = get_object_or_404(CoachProfile, id=coach_id)
 
+    # Calculate end time for display
+    if booking.enrollment:
+        session_length = booking.enrollment.offering.session_length_minutes
+    else:
+        session_length = booking.get_duration_minutes() or 60
+    new_end_time = new_start_time + timedelta(minutes=session_length)
+
     context = {
         'booking': booking,
         'new_start_time': new_start_time,
+        'new_end_time': new_end_time,
         'new_start_time_iso': new_start_time_str,
         'new_coach': new_coach,
     }
