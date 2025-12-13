@@ -161,76 +161,70 @@
 
                 <div class="pt-8 border-t">
                     <h3 class="text-xl font-bold text-gray-800 mb-6">Account Settings</h3>
-                    <div class="space-y-4 max-w-3xl" x-data="{ openSetting: null }">
-                        {% include 'account/profile_tabs_section.html' %} 
-                        <div class="border rounded-xl shadow-sm overflow-hidden">
-                            <button @click="openSetting = (openSetting === 'password' ? null : 'password')" 
-                                    class="w-full flex justify-between items-center p-4 bg-white hover:bg-gray-50 transition focus:outline-none">
-                                <span class="font-semibold text-gray-800">Change Password</span>
-                                <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" 
-                                     :class="{'rotate-180': openSetting === 'password'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </button>
-                            <div x-show="openSetting === 'password'" x-collapse>
-                                <div class="p-6 border-t bg-gray-50" 
+                    <div x-data="{ settingsTab: 'password' }">
+                        <!-- Tab Navigation -->
+                        <div class="border-b border-gray-200 mb-6 overflow-x-auto">
+                            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                                <button @click="settingsTab = 'password'" 
+                                        :class="settingsTab === 'password' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+                                    Change Password
+                                </button>
+                                <button @click="settingsTab = 'email'" 
+                                        :class="settingsTab === 'email' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+                                    Email Addresses
+                                </button>
+                                <button @click="settingsTab = 'social'" 
+                                        :class="settingsTab === 'social' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+                                    Connected Accounts
+                                </button>
+                                <button @click="settingsTab = 'address'" 
+                                        :class="settingsTab === 'address' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+                                    Saved Addresses
+                                </button>
+                                <button @click="settingsTab = 'prefs'" 
+                                        :class="settingsTab === 'prefs' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+                                    Email Preferences
+                                </button>
+                            </nav>
+                        </div>
+
+                        <!-- Tab Panels -->
+                        <div class="mt-4">
+                            <!-- Password Panel -->
+                            <div x-show="settingsTab === 'password'" x-cloak>
+                                <div class="bg-gray-50 rounded-xl p-6 border" 
                                      hx-get="{% url 'accounts:password_change' %}" 
                                      hx-trigger="intersect once">
                                     <div class="flex justify-center"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div></div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="border rounded-xl shadow-sm overflow-hidden">
-                            <button @click="openSetting = (openSetting === 'email' ? null : 'email')" 
-                                    class="w-full flex justify-between items-center p-4 bg-white hover:bg-gray-50 transition focus:outline-none">
-                                <div class="flex flex-col items-start">
-                                    <span class="font-semibold text-gray-800">Email Addresses</span>
-                                    <span class="text-xs text-gray-500">{{ user.email }}</span>
-                                </div>
-                                <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" 
-                                     :class="{'rotate-180': openSetting === 'email'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </button>
-                            <div x-show="openSetting === 'email'" x-collapse>
-                                <div class="p-6 border-t bg-gray-50" 
+                            <!-- Email Panel -->
+                            <div x-show="settingsTab === 'email'" x-cloak>
+                                <div class="bg-gray-50 rounded-xl p-6 border" 
                                      hx-get="{% url 'accounts:account_email' %}" 
                                      hx-trigger="intersect once">
                                      <div class="flex justify-center"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div></div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="border rounded-xl shadow-sm overflow-hidden">
-                            <button @click="openSetting = (openSetting === 'social' ? null : 'social')" 
-                                    class="w-full flex justify-between items-center p-4 bg-white hover:bg-gray-50 transition focus:outline-none">
-                                <span class="font-semibold text-gray-800">Connected Accounts</span>
-                                <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" 
-                                     :class="{'rotate-180': openSetting === 'social'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </button>
-                            <div x-show="openSetting === 'social'" x-collapse>
-                                <div class="p-6 border-t bg-gray-50" 
+                            <!-- Social Panel -->
+                            <div x-show="settingsTab === 'social'" x-cloak>
+                                <div class="bg-gray-50 rounded-xl p-6 border" 
                                      hx-get="{% url 'accounts:socialaccount_connections' %}" 
                                      hx-trigger="intersect once">
                                      <div class="flex justify-center"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div></div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="border rounded-xl shadow-sm overflow-hidden">
-                            <button @click="openSetting = (openSetting === 'address' ? null : 'address')" 
-                                    class="w-full flex justify-between items-center p-4 bg-white hover:bg-gray-50 transition focus:outline-none">
-                                <span class="font-semibold text-gray-800">Saved Addresses</span>
-                                <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" 
-                                     :class="{'rotate-180': openSetting === 'address'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </button>
-                            <div x-show="openSetting === 'address'" x-collapse>
-                                <div class="p-6 border-t bg-gray-50">
+                            <!-- Address Panel -->
+                            <div x-show="settingsTab === 'address'" x-cloak>
+                                <div class="bg-gray-50 rounded-xl p-6 border">
                                     {% if user.addresses.exists %}
                                         <ul class="divide-y divide-gray-200">
                                         {% for address in user.addresses.all %}
@@ -252,19 +246,10 @@
                                     {% endif %}
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="border rounded-xl shadow-sm overflow-hidden">
-                            <button @click="openSetting = (openSetting === 'prefs' ? null : 'prefs')" 
-                                    class="w-full flex justify-between items-center p-4 bg-white hover:bg-gray-50 transition focus:outline-none">
-                                <span class="font-semibold text-gray-800">Email Preferences</span>
-                                <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" 
-                                     :class="{'rotate-180': openSetting === 'prefs'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </button>
-                            <div x-show="openSetting === 'prefs'" x-collapse>
-                                <div class="p-6 border-t bg-gray-50">
+                            <!-- Prefs Panel -->
+                            <div x-show="settingsTab === 'prefs'" x-cloak>
+                                <div class="bg-gray-50 rounded-xl p-6 border">
                                     {% with marketing_preference=user.marketing_preference %}
                                     <form hx-post="{% url 'accounts:update_marketing_preference' %}" hx-target="#marketing-status">
                                         {% csrf_token %}
@@ -280,7 +265,6 @@
                                 </div>
                             </div>
                         </div>
-
                     </div>
                 </div>
 
