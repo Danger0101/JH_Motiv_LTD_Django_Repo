@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 from django.conf import settings
 from django.utils import timezone
+import pytz
 
 def generate_ics(booking):
     """
@@ -21,6 +22,7 @@ def generate_ics(booking):
         # Ensure dt is in UTC
         if timezone.is_aware(dt):
             dt = dt.astimezone(timezone.utc)
+            dt = dt.astimezone(pytz.utc)
         return dt.strftime('%Y%m%dTH%H%M%SZ')
 
     dt_start = to_ics_format(booking.start_datetime)
