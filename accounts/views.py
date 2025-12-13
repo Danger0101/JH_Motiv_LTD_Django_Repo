@@ -356,6 +356,49 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         # You might want to add logic here to exclude coupons the user has already used.
         # For example: .exclude(usages__user=self.request.user)
         
+        # --- RECENT ACTIVITY ---
+        activities = []
+        if self.request.user.last_login:
+            activities.append({
+                'type': 'login',
+                'timestamp': self.request.user.last_login,
+                'description': 'Logged in',
+            })
+            
+        # Recent Bookings (When they were created)
+        recent_bookings = SessionBooking.objects.filter(client=self.request.user).order_by('-created_at')[:3]
+        for b in recent_bookings:
+            coach_name = b.coach.user.first_name or b.coach.user.username
+            activities.append({
+                'type': 'booking',
+                'timestamp': b.created_at,
+                'description': f"Booked session with {coach_name}",
+            })
+
+        # Recent Retail Orders
+        if Order:
+            recent_orders = Order.objects.filter(user=self.request.user).order_by('-created_at')[:3]
+            for o in recent_orders:
+                activities.append({
+                    'type': 'order',
+                    'timestamp': o.created_at,
+                    'description': f"Placed Order #{o.id}",
+                })
+
+        # Recent Coaching Orders
+        if CoachingOrder:
+            recent_coaching = CoachingOrder.objects.filter(enrollment__client=self.request.user).order_by('-created_at')[:3]
+            for o in recent_coaching:
+                activities.append({
+                    'type': 'order',
+                    'timestamp': o.created_at,
+                    'description': f"Purchased {o.enrollment.offering.name}",
+                })
+
+        # Sort by timestamp descending and take top 3
+        activities.sort(key=lambda x: x['timestamp'], reverse=True)
+        context['recent_activities'] = activities[:3]
+
         context['active_tab'] = 'account'
         return context
 
