@@ -11,9 +11,9 @@ class GoogleCalendarService:
     
     def __init__(self, coach):
         self.coach = coach
+        self.creds = self._get_credentials(coach)
         # Default to 'primary' unless DB says otherwise
         self.calendar_id = 'primary'
-        self.creds = self._get_credentials(coach) 
         if self.creds:
             self.service = build('calendar', 'v3', credentials=self.creds)
         else:
@@ -24,19 +24,16 @@ class GoogleCalendarService:
         Retrieves OAuth credentials from the Coach's GoogleCredentials model.
         """
         try:
-            # Access the related GoogleCredentials object
-            # This relies on related_name='google_credentials' in gcal.models
             db_creds = getattr(coach, 'google_credentials', None)
             
             if not db_creds:
                 logger.info(f"No Google credentials linked for coach {coach.user.email}")
                 return None
             
-            # CAPTURE THE CORRECT CALENDAR ID
+            # Capture the correct calendar ID if set
             if db_creds.calendar_id:
                 self.calendar_id = db_creds.calendar_id
 
-            # Construct the google.oauth2.credentials.Credentials object
             return Credentials(
                 token=db_creds.access_token,
                 refresh_token=db_creds.refresh_token,
@@ -51,7 +48,7 @@ class GoogleCalendarService:
 
     def push_booking(self, booking):
         """
-        Creates an event in the Coach's primary calendar with a Google Meet link.
+        Creates an event in the Coach's calendar.
         """
         if not self.service:
             logger.warning(f"No Google Calendar service available for coach {self.coach}")
@@ -72,8 +69,9 @@ class GoogleCalendarService:
         if booking.workshop:
             summary = f"Workshop: {booking.workshop.title}"
             description += f"\nWorkshop: {booking.workshop.title}"
-        elif booking.offering:
-            description += f"\nOffering: {booking.offering.name}"
+        elif booking.enrollment:
+            # FIX: Access offering via enrollment
+            description += f"\nOffering: {booking.enrollment.offering.name}"
 
         # 3. Construct Event Body
         event_body = {
@@ -92,16 +90,13 @@ class GoogleCalendarService:
             'reminders': {'useDefault': True},
         }
 
-        # Add Client as Attendee (This puts the event on their calendar & sends invite)
         if client_email:
             event_body['attendees'].append({'email': client_email})
 
         try:
             # 4. API Call
-            # conferenceDataVersion=1 is REQUIRED to generate the Meet link
-            # sendUpdates='all' sends email notifications to the client
             event = self.service.events().insert(
-                calendarId=self.calendar_id, # USE DYNAMIC ID
+                calendarId=self.calendar_id,
                 body=event_body, 
                 conferenceDataVersion=1,
                 sendUpdates='all' 
@@ -117,17 +112,14 @@ class GoogleCalendarService:
             return None
 
     def delete_booking(self, gcal_event_id):
-        """
-        Deletes an event from the Coach's primary calendar.
-        """
         if not self.service or not gcal_event_id:
             return False
 
         try:
             self.service.events().delete(
-                calendarId=self.calendar_id, # USE DYNAMIC ID
+                calendarId=self.calendar_id,
                 eventId=gcal_event_id,
-                sendUpdates='all' # Notify attendees of cancellation
+                sendUpdates='all' 
             ).execute()
             logger.info(f"GCal Event deleted: {gcal_event_id}")
             return True
@@ -140,7 +132,7 @@ class GoogleCalendarService:
 
     def update_booking(self, booking):
         """
-        Updates an existing event in the Coach's primary calendar.
+        Updates an existing event using PATCH to preserve Meet links.
         """
         if not self.service or not booking.gcal_event_id:
             return None
@@ -160,23 +152,22 @@ class GoogleCalendarService:
         if booking.workshop:
             summary = f"Workshop: {booking.workshop.title}"
             description += f"\nWorkshop: {booking.workshop.title}"
-        elif booking.offering:
-            description += f"\nOffering: {booking.offering.name}"
+        elif booking.enrollment:
+            # FIX: Access offering via enrollment
+            description += f"\nOffering: {booking.enrollment.offering.name}"
 
         event_body = {
             'summary': summary,
             'description': description,
             'start': {'dateTime': booking.start_datetime.isoformat()},
             'end': {'dateTime': booking.end_datetime.isoformat()},
-            # Note: We don't overwrite attendees blindly in a patch unless we want to, 
-            # but usually good to ensure client is there.
             'attendees': [{'email': client_email}] if client_email else [],
         }
 
         try:
             # CHANGE: Use patch() instead of update() to preserve conferenceData (Meet links)
             event = self.service.events().patch(
-                calendarId=self.calendar_id, # USE DYNAMIC ID
+                calendarId=self.calendar_id,
                 eventId=booking.gcal_event_id, 
                 body=event_body,
                 sendUpdates='all'
@@ -187,9 +178,6 @@ class GoogleCalendarService:
             return None
 
     def sync_busy_slots(self, days=30):
-        """
-        Fetches 'busy' times from Google and updates the local cache.
-        """
         if not self.service:
             return
 
@@ -199,14 +187,13 @@ class GoogleCalendarService:
         body = {
             "timeMin": now.isoformat(),
             "timeMax": end.isoformat(),
-            "items": [{"id": self.calendar_id}] # USE DYNAMIC ID
+            "items": [{"id": self.calendar_id}]
         }
         
         try:
             events_result = self.service.freebusy().query(body=body).execute()
             busy_periods = events_result['calendars'][self.calendar_id]['busy']
 
-            # Sync to DB: Wipe & Replace for the window
             CoachBusySlot.objects.filter(
                 coach=self.coach, 
                 start_time__gte=now, 

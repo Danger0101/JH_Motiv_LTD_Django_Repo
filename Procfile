@@ -1,2 +1,2 @@
 web: gunicorn JH_Motiv_Shop.wsgi
-worker: celery -A JH_Motiv_Shop worker --loglevel=info
+worker: celery -A JH_Motiv_Shop worker --loglevel=info --concurrency=2
