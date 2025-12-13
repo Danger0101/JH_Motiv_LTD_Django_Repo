@@ -13,7 +13,7 @@ from django.db.models import Q
 from django.template.loader import render_to_string
 import logging
 from .models import MarketingPreference
-from allauth.account.views import LoginView, SignupView, PasswordResetView, PasswordChangeView, PasswordSetView, LogoutView, PasswordResetDoneView, PasswordResetDoneView, EmailView
+from allauth.account.views import LoginView, SignupView, PasswordResetView, PasswordChangeView, PasswordSetView, LogoutView, PasswordResetDoneView, EmailView, ConfirmEmailView, EmailVerificationSentView, PasswordResetFromKeyView, PasswordResetFromKeyDoneView
 from allauth.socialaccount.views import ConnectionsView
 from cart.utils import get_or_create_cart, get_cart_summary_data
 from coaching_booking.models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer
@@ -108,6 +108,18 @@ class CustomEmailView(EmailView):
 
 class CustomPasswordResetDoneView(PasswordResetDoneView):
     template_name = 'account/password_reset_done.html'
+
+class CustomConfirmEmailView(ConfirmEmailView):
+    template_name = 'account/email_confirm.html'
+
+class CustomEmailVerificationSentView(EmailVerificationSentView):
+    template_name = 'account/verification_sent.html'
+
+class CustomPasswordResetFromKeyView(PasswordResetFromKeyView):
+    template_name = 'account/password_reset_from_key.html'
+
+class CustomPasswordResetFromKeyDoneView(PasswordResetFromKeyDoneView):
+    template_name = 'account/password_reset_from_key_done.html'
 
 class CustomSocialAccountListView(ConnectionsView):
     def get_context_data(self, **kwargs):
@@ -268,6 +280,18 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             context['coaching_orders'] = CoachingOrder.objects.filter(
                 enrollment__client=self.request.user
             ).select_related('enrollment', 'enrollment__offering').order_by('-created_at')
+
+        # --- CLIENT BOOKINGS & ENROLLMENTS ---
+        context['bookings'] = SessionBooking.objects.filter(
+            client=self.request.user,
+            start_datetime__gte=timezone.now(),
+            status__in=['BOOKED', 'RESCHEDULED']
+        ).order_by('start_datetime')
+
+        context['enrollments'] = ClientOfferingEnrollment.objects.filter(
+            client=self.request.user,
+            is_active=True
+        ).order_by('-enrolled_on')
 
         # --- EXISTING CONTEXT ---
         cart = get_or_create_cart(self.request)
