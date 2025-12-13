@@ -87,7 +87,7 @@
     <script>
         function openRescheduleModal(bookingId) {
             document.querySelector('[x-data]').__x.$data.rescheduleModalOpen = true;
-            const url = "{% url 'coaching_booking:reschedule_session' 0 %}".replace('0', bookingId);
+            const url = "{% url 'coaching_booking:reschedule_session_form' 0 %}".replace('0', bookingId);
             htmx.ajax('GET', url, {target: '#reschedule-content'});
         }
 
