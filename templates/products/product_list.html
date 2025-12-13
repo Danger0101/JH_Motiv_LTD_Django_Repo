@@ -25,41 +25,41 @@
     <div class="relative max-w-7xl mx-auto h-full flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 pb-12">
         <h1 class="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl text-center" style="text-shadow: -8px -8px 0 #000, 8px -8px 0 #000, -8px 8px 0 #000, 8px 8px 0 #000, -8px 0 0 #000, 8px 0 0 #000, 0 -8px 0 #000, 0 8px 0 #000;">Shop Our Collection</h1>
         <p class="mt-6 text-xl text-white max-w-3xl text-center font-bold" style="text-shadow: -8px -8px 0 #000, 8px -8px 0 #000, -8px 8px 0 #000, 8px 8px 0 #000, -8px 0 0 #000, 8px 0 0 #000, 0 -8px 0 #000, 0 8px 0 #000;">Find the perfect products to inspire and motivate you.</p>
+        
+        <div class="mt-8 w-full max-w-4xl p-4 bg-white/20 backdrop-blur-md rounded-lg border border-white/30 shadow-xl">
+            <form 
+                method="get" 
+                action="{% url 'products:product_list' %}" 
+                class="grid sm:grid-cols-3 gap-4 items-center"
+                hx-get="{% url 'products:product_list' %}"
+                hx-target="#product-list-container"
+                hx-swap="outerHTML show:top"
+                hx-push-url="true"
+                hx-indicator="#product-loading-indicator"
+                hx-trigger="submit, change from:#per-page-select"
+            >
+                <div class="sm:col-span-2">
+                    <label for="search-input" class="sr-only">Search products</label>
+                    <input type="search" name="q" id="search-input" placeholder="Search by product name..." value="{{ search_query }}" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 shadow-sm">
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex-grow">
+                        <label for="per-page-select" class="sr-only">Items per page</label>
+                        <select name="per_page" id="per-page-select" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 shadow-sm">
+                            <option value="10"{% if per_page == '10' %} selected{% endif %}>10 per page</option>
+                            <option value="20"{% if per_page == '20' %} selected{% endif %}>20 per page</option>
+                            <option value="50"{% if per_page == '50' %} selected{% endif %}>50 per page</option>
+                            <option value="100"{% if per_page == '100' %} selected{% endif %}>100 per page</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full sm:w-auto bg-blue-600 text-white font-bold py-2 px-6 rounded-md hover:bg-blue-700 transition duration-300 shadow-md border-2 border-black">Search</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="mb-8 p-4 bg-gray-100 rounded-lg">
-        <form 
-            method="get" 
-            action="{% url 'products:product_list' %}" 
-            class="grid sm:grid-cols-3 gap-4 items-center"
-            hx-get="{% url 'products:product_list' %}"
-            hx-target="#product-list-container"
-            hx-swap="outerHTML show:top"
-            hx-push-url="true"
-            hx-indicator="#product-loading-indicator"
-            hx-trigger="submit, change from:#per-page-select"
-        >
-            <div class="sm:col-span-2">
-                <label for="search-input" class="sr-only">Search products</label>
-                <input type="search" name="q" id="search-input" placeholder="Search by product name..." value="{{ search_query }}" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-            </div>
-            <div class="flex items-center gap-4">
-                <div>
-                    <label for="per-page-select" class="sr-only">Items per page</label>
-                    <select name="per_page" id="per-page-select" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                        <option value="10"{% if per_page == '10' %} selected{% endif %}>10 per page</option>
-                        <option value="20"{% if per_page == '20' %} selected{% endif %}>20 per page</option>
-                        <option value="50"{% if per_page == '50' %} selected{% endif %}>50 per page</option>
-                        <option value="100"{% if per_page == '100' %} selected{% endif %}>100 per page</option>
-                    </select>
-                </div>
-                <button type="submit" class="w-full sm:w-auto bg-blue-600 text-white font-bold py-2 px-6 rounded-md hover:bg-blue-700 transition duration-300">Search</button>
-            </div>
-        </form>
-    </div>
-
     <div id="product-loading-indicator" class="htmx-indicator w-full flex justify-center items-center py-16">
         <svg class="animate-spin -ml-1 mr-3 h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
