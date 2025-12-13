@@ -1,15 +1,34 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Shop - JH Motiv LTD{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <header class="mb-8 text-center">
-        <h1 class="text-4xl font-bold text-gray-800">Shop Our Collection</h1>
-        <p class="mt-2 text-lg text-gray-600">Find the perfect products to inspire and motivate you.</p>
-    </header>
+{# --- Seasonal Banner Logic (Same as Coaching Page) --- #}
+{% now "n" as current_month %}
+{% if current_month == "3" or current_month == "4" or current_month == "5" %}
+    {% static 'images/spring_banner.webp' as hero_image %}
+{% elif current_month == "6" or current_month == "7" or current_month == "8" %}
+    {% static 'images/summer_banner.webp' as hero_image %}
+{% elif current_month == "9" or current_month == "10" or current_month == "11" %}
+    {% static 'images/Fall_banner.webp' as hero_image %}
+{% else %}
+    {% static 'images/winter_banner.webp' as hero_image %}
+{% endif %}
 
-    <!-- Search and Filter Controls -->
+{# --- Full Width Hero Banner --- #}
+<div class="relative bg-gray-900 h-96 md:h-[32rem] overflow-hidden mb-8">
+    <div class="absolute inset-0">
+        <img class="w-full h-full object-cover" src="{{ hero_image }}" alt="Shop our collection">
+        <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40"></div>
+    </div>
+    <div class="relative max-w-7xl mx-auto h-full flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 pb-12">
+        <h1 class="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl text-center" style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 4px 4px 0 #000;">Shop Our Collection</h1>
+        <p class="mt-6 text-xl text-white max-w-3xl text-center font-bold" style="text-shadow: 2px 2px 0 #000;">Find the perfect products to inspire and motivate you.</p>
+    </div>
+</div>
+
+<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="mb-8 p-4 bg-gray-100 rounded-lg">
         <form 
             method="get" 
@@ -41,7 +60,6 @@
         </form>
     </div>
 
-    <!-- Loading Indicator -->
     <div id="product-loading-indicator" class="htmx-indicator w-full flex justify-center items-center py-16">
         <svg class="animate-spin -ml-1 mr-3 h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -50,8 +68,6 @@
         <span class="text-lg text-gray-600">Loading Products...</span>
     </div>
 
-    <!-- This container will be replaced by HTMX -->
-    <!-- We add hx-indicator here so that when this block is re-rendered, the indicator is still linked -->
     <div id="product-list-container"
          hx-indicator="#product-loading-indicator">
         {% include "products/partials/product_list_partial.html" %}
