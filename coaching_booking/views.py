@@ -244,6 +244,7 @@ def cancel_session(request, booking_id):
                 'cancellation_message': client_msg,
                 'dashboard_url': dashboard_url,
                 'original_date': original_date_str,
+                'original_time': original_time_start_str,
                 'original_time_start': original_time_start_str,
                 'original_time_end': original_time_end_str,
             }
@@ -259,6 +260,7 @@ def cancel_session(request, booking_id):
                 'booking_id': booking.pk,
                 'dashboard_url': dashboard_url,
                 'original_date': original_date_str,
+                'original_time': original_time_start_str,
                 'original_time_start': original_time_start_str,
                 'original_time_end': original_time_end_str,
             }
