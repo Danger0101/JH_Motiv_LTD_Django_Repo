@@ -293,7 +293,23 @@ def reschedule_session_form(request, booking_id):
     if not (is_client or is_coach):
         return HttpResponseForbidden("You are not authorized to reschedule this session.")
         
-    return render(request, 'account/partials/reschedule_form.html', {'booking': booking})
+    # Determine allowed coaches for this reschedule
+    coaches = [booking.coach]
+    if booking.enrollment and not booking.enrollment.coach:
+         coaches = booking.enrollment.offering.coaches.filter(
+            user__is_active=True,
+            is_available_for_new_clients=True
+        )
+    
+    today = timezone.now().date()
+    
+    return render(request, 'account/partials/reschedule_form.html', {
+        'booking': booking,
+        'coaches': coaches,
+        'initial_year': today.year,
+        'initial_month': today.month,
+        'selected_coach_id': booking.coach.id
+    })
 
 @login_required
 @require_POST
@@ -313,6 +329,7 @@ def reschedule_session(request, booking_id):
         return htmx_error("Cannot reschedule a completed session.")
 
     new_start_time_str = request.POST.get('new_start_time')
+    new_coach_id = request.POST.get('coach_id')
 
     if not new_start_time_str:
         return htmx_error("Please select a new time.")
@@ -326,6 +343,18 @@ def reschedule_session(request, booking_id):
                 
             new_start_time = timezone.make_aware(new_start_time)
 
+            # Handle Coach Change
+            target_coach = booking.coach
+            if new_coach_id and int(new_coach_id) != booking.coach.id:
+                # Validate if user is allowed to switch to this coach
+                if booking.enrollment and not booking.enrollment.coach:
+                     if booking.enrollment.offering.coaches.filter(id=new_coach_id).exists():
+                         target_coach = get_object_or_404(CoachProfile, id=new_coach_id)
+                     else:
+                         return htmx_error("Invalid coach selection.")
+                else:
+                     return htmx_error("Cannot change coach for this booking.")
+
             # --- 2. Safe Session Length Lookup (Fixes Free Session Crash) ---
             if booking.enrollment:
                 session_length = booking.enrollment.offering.session_length_minutes
@@ -335,7 +364,7 @@ def reschedule_session(request, booking_id):
 
             # Use BookingService to respect Google Calendar busy slots
             available_slots = BookingService.get_slots_for_coach(
-                booking.coach, new_start_time.date(), session_length
+                target_coach, new_start_time.date(), session_length
             )
             
             is_available = False
@@ -350,13 +379,17 @@ def reschedule_session(request, booking_id):
             else:
                 # Double check against local DB to prevent double booking
                 if SessionBooking.objects.filter(
-                    coach=booking.coach,
+                    coach=target_coach,
                     start_datetime=new_start_time,
                     status__in=['BOOKED', 'PENDING_PAYMENT', 'RESCHEDULED']
                 ).exclude(id=booking.id).exists():
                     return htmx_error("This time slot has already been booked. Please select another time.")
 
                 original_start_time = booking.start_datetime
+                
+                if target_coach != booking.coach:
+                    booking.coach = target_coach
+                
                 result = booking.reschedule(new_start_time)
 
                 if result == 'LATE':
@@ -594,8 +627,11 @@ def get_booking_calendar(request):
         try:
             # If rescheduling, derive context from the booking
             booking = SessionBooking.objects.get(id=reschedule_booking_id, client=request.user)
-            coach = booking.coach
-            coach_id = coach.id
+            
+            if not coach_id:
+                coach = booking.coach
+                coach_id = coach.id
+            
             # Use the existing session duration
             session_length = booking.get_duration_minutes() or 60
         except SessionBooking.DoesNotExist:
@@ -712,6 +748,7 @@ def confirm_booking_modal(request):
 def confirm_reschedule_modal(request, booking_id):
     booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
     new_start_time_str = request.GET.get('new_start_time')
+    coach_id = request.GET.get('coach_id')
     
     try:
         new_start_time = datetime.strptime(new_start_time_str, '%Y-%m-%dT%H:%M')
@@ -720,10 +757,15 @@ def confirm_reschedule_modal(request, booking_id):
     except (ValueError, TypeError):
         return HttpResponse("Invalid time format", status=400)
 
+    new_coach = booking.coach
+    if coach_id and int(coach_id) != booking.coach.id:
+        new_coach = get_object_or_404(CoachProfile, id=coach_id)
+
     context = {
         'booking': booking,
         'new_start_time': new_start_time,
         'new_start_time_iso': new_start_time_str,
+        'new_coach': new_coach,
     }
     return render(request, 'coaching_booking/partials/reschedule_confirmation_modal.html', context)
 

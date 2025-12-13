@@ -1,13 +1,3 @@
-<form hx-post="{% url 'coaching_booking:reschedule_session' booking.id %}" hx-target="#reschedule-errors" hx-swap="innerHTML" class="space-y-4">
-    {% csrf_token %}
-    <input type="hidden" name="new_start_time" value="{{ new_start_time_iso }}">
-    
-    <div>
-        <h3 class="text-lg font-bold text-gray-900">Confirm Reschedule</h3>
-        <p class="text-sm text-gray-500">
-            Reschedule session to: <strong>{{ new_start_time|date:"F d, Y at g:i A" }}</strong>?
-        </p>
-    </div>
 <div class="fixed inset-0 z-[60] overflow-y-auto bg-gray-900 bg-opacity-50 flex items-center justify-center p-4" x-data>
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative" @click.away="$el.remove()">
         <button @click="$el.closest('.fixed').remove()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">✕</button>
@@ -29,11 +19,6 @@
             {% endif %}
         </div>
 
-    <div id="reschedule-errors"></div>
-
-    <div class="flex justify-end gap-3 pt-4">
-        <button type="button" @click="rescheduleModalOpen = false" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
-        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Confirm Change</button>
         <form hx-post="{% url 'coaching_booking:reschedule_session' booking.id %}" hx-target="#reschedule-content">
             {% csrf_token %}
             <input type="hidden" name="new_start_time" value="{{ new_start_time_iso }}">
@@ -42,9 +27,4 @@
             <button type="submit" class="w-full py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-md">Confirm Change</button>
         </form>
     </div>
-</form>
-
-<script>
-    // No specific script needed here as the main profile page handles the modal state via Alpine.js
-</script>
 </div>

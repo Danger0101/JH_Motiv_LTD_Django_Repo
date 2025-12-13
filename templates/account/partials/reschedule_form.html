@@ -1,20 +1,30 @@
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[400px]">
-    <!-- Left Column: Calendar -->
+<div class="space-y-4">
+    {% if coaches|length > 1 %}
     <div>
-        <div hx-get="{% url 'coaching_booking:get_booking_calendar' %}?coach_id={{ booking.coach.id }}&reschedule_booking_id={{ booking.id }}" 
-             hx-trigger="load" 
-             hx-target="this"
-             class="h-full">
-            <div class="flex justify-center items-center h-full py-10">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Select Coach</label>
+        <select name="coach_id" 
+                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                hx-get="{% url 'coaching_booking:get_booking_calendar' %}"
+                hx-vals='{"reschedule_booking_id": "{{ booking.id }}"}'
+                hx-target="#reschedule-calendar-container">
+            {% for coach in coaches %}
+                <option value="{{ coach.id }}" {% if coach.id == selected_coach_id %}selected{% endif %}>{{ coach.user.get_full_name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% else %}
+        <input type="hidden" name="coach_id" value="{{ selected_coach_id }}">
+        <p class="text-sm text-gray-600">Coach: <strong>{{ booking.coach.user.get_full_name }}</strong></p>
+    {% endif %}
+
+    <div id="reschedule-calendar-container"
+         hx-get="{% url 'coaching_booking:get_booking_calendar' %}"
+         hx-vals='{"reschedule_booking_id": "{{ booking.id }}", "coach_id": "{{ selected_coach_id }}"}'
+         hx-trigger="load">
+        <div class="flex justify-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
         </div>
     </div>
-    <!-- Right Column: Time Slots -->
-    <div id="time-slots-column" class="min-h-[300px] flex flex-col justify-center items-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-        <p class="text-gray-500 font-medium">Select a date to see available times.</p>
-    </div>
+    
+    <div id="reschedule-slots-container"></div>
 </div>
-
-<!-- Container for the confirmation modal -->
-<div id="modal-container"></div>
