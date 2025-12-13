@@ -133,6 +133,15 @@ def book_session(request):
         
         if result['type'] == 'confirmed':
             booking = result['booking']
+            
+            # --- GCAL SYNC HOOK ---
+            # If you have a GCal service, trigger the sync here to ensure the meeting link is generated immediately.
+            # try:
+            #     from gcal.utils import sync_booking_to_gcal
+            #     sync_booking_to_gcal(booking)
+            # except ImportError:
+            #     pass
+            
             # Email is now handled by signals.py -> tasks.py asynchronously
             messages.success(request, f"Session confirmed for {booking.start_datetime.strftime('%B %d, %Y at %I:%M %p')}. A confirmation email has been sent.")
             response = HttpResponse(status=204)

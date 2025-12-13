@@ -104,75 +104,102 @@
 
         <main class="w-full lg:w-3/4 bg-white rounded-2xl shadow-sm border border-gray-200 min-h-[500px]">
             
-            <div x-show="activeTab === 'dashboard'" x-cloak class="p-6 space-y-8">
-                <h2 class="text-2xl font-bold text-gray-800 border-b pb-4">Dashboard</h2>
+            <div x-show="activeTab === 'dashboard'" x-cloak class="p-6 lg:p-8">
+                <div class="mb-8 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">Dashboard</h2>
+                        <p class="text-sm text-gray-500 mt-1">Overview of your account activity and rewards.</p>
+                    </div>
+                </div>
 
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
                 {% if has_earnings_profile and my_total_unpaid_earnings > 0 %}
-                <div class="bg-gradient-to-r from-green-50 to-white border border-green-100 p-6 rounded-xl">
-                    <h3 class="text-lg font-bold text-gray-800 mb-2">My Payouts</h3>
-                    <div class="flex items-center justify-between flex-wrap gap-4">
+                <div class="bg-gradient-to-br from-green-50 to-white border border-green-100 p-6 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <svg class="w-24 h-24 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.699c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"></path><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"></path></svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-green-900 mb-1">Pending Payouts</h3>
+                    <div class="flex flex-col gap-4 relative z-10">
                         <div>
-                            <p class="text-gray-600">You have <strong class="text-green-700">£{{ my_total_unpaid_earnings|floatformat:2 }}</strong> in pending earnings.</p>
-                            <p class="text-xs text-gray-500">Payouts are processed at the end of the month.</p>
+                            <span class="text-3xl font-extrabold text-green-700">£{{ my_total_unpaid_earnings|floatformat:2 }}</span>
+                            <p class="text-xs text-green-600 font-medium mt-1">Processed monthly</p>
                         </div>
                         <button @click="activeTab = 'earnings'" 
-                                class="px-5 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition shadow-sm">
+                                class="self-start px-4 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition shadow-sm">
                             View Details
                         </button>
                     </div>
                 </div>
                 {% endif %}
 
+                {% with my_taster=user.free_offers.all|first %}
+                    {% if my_taster and not my_taster.is_redeemed and not my_taster.is_expired %}
+                        <div class="bg-gradient-to-br from-purple-50 to-white border border-purple-100 p-6 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+                            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                <svg class="w-24 h-24 text-purple-600" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"></path></svg>
+                            </div>
+                            <h3 class="text-lg font-bold text-purple-900 mb-2">Free Taster Session</h3>
+                            {% if my_taster.is_approved %}
+                                <div class="flex flex-col gap-4 relative z-10">
+                                    <div>
+                                        <div class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mb-2">
+                                            Approved
+                                        </div>
+                                        <p class="text-sm text-gray-600">Ready to book with your coach.</p>
+                                        <p class="text-xs text-gray-400 mt-1">Expires: {{ my_taster.redemption_deadline|date:"M d, Y" }}</p>
+                                    </div>
+                                    <button @click="activeTab = 'bookings'; setTimeout(() => { document.dispatchEvent(new CustomEvent('open-booking-modal')); }, 300)"
+                                            class="self-start px-4 py-2 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 transition shadow-sm">
+                                        Book Now
+                                    </button>
+                                </div>
+                            {% else %}
+                                <div class="relative z-10">
+                                    <div class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 mb-2">
+                                        Pending
+                                    </div>
+                                    <p class="text-sm text-gray-600 flex items-center">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    Request pending approval.
+                                    </p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+                </div>
+
                 {% if my_coupons %}
-                <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-xl mb-6">
-                    <h3 class="font-bold text-yellow-800 mb-3">Your Active Rewards</h3>
-                    <div class="flex flex-wrap gap-4">
+                <div class="mb-10">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">Your Active Rewards</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {% for coupon in my_coupons %}
-                        <div class="bg-white p-3 rounded-lg border border-yellow-300 shadow-sm flex justify-between items-center cursor-pointer"
+                        <div class="bg-white border border-yellow-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all relative overflow-hidden cursor-pointer group"
                              x-data="{ copied: false }"
                              @click="navigator.clipboard.writeText('{{ coupon.code }}'); copied = true; setTimeout(() => copied = false, 2000)">
-                            <div>
-                                <p class="font-bold text-gray-800">{{ coupon.code }}</p>
-                                <p class="text-xs text-gray-500">{{ coupon.description }}</p>
+                            <div class="absolute top-0 left-0 w-1 h-full bg-yellow-400"></div>
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="font-mono font-bold text-lg text-gray-800 tracking-wide">{{ coupon.code }}</p>
+                                    <p class="text-sm text-gray-500 mt-1">{{ coupon.description }}</p>
+                                </div>
+                                <div class="bg-yellow-50 p-2 rounded-lg text-yellow-600 group-hover:bg-yellow-100 transition-colors">
+                                    <svg x-show="!copied" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    <svg x-show="copied" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                </div>
                             </div>
-                            <button class="text-xs bg-yellow-400 text-yellow-900 px-2 py-1 rounded ml-4 focus:outline-none"
-                                    aria-label="Copy code {{ coupon.code }}">
-                                <span x-show="!copied">Copy</span>
-                                <span x-show="copied" style="display: none;">Copied!</span>
-                            </button>
+                            <div class="mt-3 flex justify-end">
+                                <span x-show="copied" x-cloak class="text-xs font-bold text-green-600">Copied to clipboard!</span>
+                                <span x-show="!copied" class="text-xs font-medium text-yellow-600 group-hover:underline">Click to copy</span>
+                            </div>
                         </div>
                         {% endfor %}
                     </div>
                 </div>
                 {% endif %}
 
-                {% with my_taster=user.free_offers.all|first %}
-                    {% if my_taster and not my_taster.is_redeemed and not my_taster.is_expired %}
-                        <div class="bg-gradient-to-r from-purple-50 to-white border border-purple-100 p-6 rounded-xl">
-                            <h3 class="text-lg font-bold text-gray-800 mb-2">Free Taster Session</h3>
-                            {% if my_taster.is_approved %}
-                                <div class="flex items-center justify-between flex-wrap gap-4">
-                                    <div>
-                                        <p class="text-green-700 font-medium">✅ Approved! Ready to book.</p>
-                                        <p class="text-sm text-gray-500">Expires: {{ my_taster.redemption_deadline|date:"M d, Y" }}</p>
-                                    </div>
-                                    <button @click="activeTab = 'bookings'; setTimeout(() => { document.dispatchEvent(new CustomEvent('open-booking-modal')); }, 300)"
-                                            class="px-5 py-2 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 transition shadow-sm">
-                                        Book Now
-                                    </button>
-                                </div>
-                            {% else %}
-                                <p class="text-yellow-700 flex items-center">
-                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                    Request pending approval.
-                                </p>
-                            {% endif %}
-                        </div>
-                    {% endif %}
-                {% endwith %}
-
                 <div class="pt-8 border-t">
-                    <h3 class="text-xl font-bold text-gray-800 mb-6">Account Settings</h3>
+                    <h3 class="text-xl font-bold text-gray-900 mb-6">Account Settings</h3>
                     <div x-data="{ settingsTab: 'password' }">
                         <!-- Tab Navigation -->
                         <div class="border-b border-gray-200 mb-6 overflow-x-auto">

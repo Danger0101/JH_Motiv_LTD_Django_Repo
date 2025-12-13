@@ -484,7 +484,7 @@ def profile_bookings_partial(request):
     if active_tab == 'upcoming':
         bookings_list = bookings_qs.filter(
             status__in=['BOOKED', 'RESCHEDULED'],
-            start_datetime__gte=now
+            start_datetime__gte=now - timedelta(minutes=60)
         ).order_by('start_datetime')
     elif active_tab == 'past':
         bookings_list = bookings_qs.filter(
@@ -508,6 +508,13 @@ def profile_bookings_partial(request):
     cutoff = now + timedelta(hours=24)
     for booking in user_bookings_page:
         booking.is_late_cancellation = booking.start_datetime <= cutoff
+        
+        # Join Button Logic
+        booking.join_disabled_reason = None
+        if not booking.meeting_link:
+            booking.join_disabled_reason = "Meeting link pending"
+        elif booking.start_datetime > (now + timedelta(minutes=15)):
+            booking.join_disabled_reason = "Join available 15 min before start"
 
     context = {
         'user_bookings_page': user_bookings_page,
@@ -742,3 +749,52 @@ def staff_customer_lookup(request):
         return render(request, 'account/partials/staff_customer_search_results.html', {'results': results})
 
     return HttpResponse("") # Return nothing if no query
+
+@login_required
+def download_booking_ics(request, booking_id):
+    """
+    Generates an ICS file for a specific booking to allow users to add it to their calendar.
+    """
+    booking = get_object_or_404(SessionBooking, id=booking_id)
+    
+    # Security check: User must be the client or the coach
+    is_client = booking.client == request.user
+    is_coach = hasattr(request.user, 'coach_profile') and booking.coach == request.user.coach_profile
+    
+    if not (is_client or is_coach):
+        return HttpResponse("Unauthorized", status=403)
+
+    # Format dates for ICS (Must be UTC, format YYYYMMDDTHHMMSSZ)
+    dt_format = '%Y%m%dT%H%M%SZ'
+    start_utc = booking.start_datetime.astimezone(timezone.utc).strftime(dt_format)
+    end_utc = booking.end_datetime.astimezone(timezone.utc).strftime(dt_format)
+    now_utc = timezone.now().astimezone(timezone.utc).strftime(dt_format)
+    
+    summary = f"Coaching: {booking.enrollment.offering.name}" if booking.enrollment else "Coaching Session"
+    description = f"Coach: {booking.coach.user.get_full_name()}\\nLink: {booking.meeting_link or 'Pending'}"
+    
+    ics_lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//JH Motiv//Coaching Platform//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "BEGIN:VEVENT",
+        f"UID:booking-{booking.id}@jhmotiv.com",
+        f"DTSTAMP:{now_utc}",
+        f"DTSTART:{start_utc}",
+        f"DTEND:{end_utc}",
+        f"SUMMARY:{summary}",
+        f"DESCRIPTION:{description}",
+        f"URL:{booking.meeting_link or ''}",
+    ]
+    
+    if booking.meeting_link:
+        ics_lines.append(f"LOCATION:{booking.meeting_link}")
+        
+    ics_lines.append("END:VEVENT")
+    ics_lines.append("END:VCALENDAR")
+    
+    response = HttpResponse("\r\n".join(ics_lines), content_type='text/calendar')
+    response['Content-Disposition'] = f'attachment; filename="session_{booking.id}.ics"'
+    return response
