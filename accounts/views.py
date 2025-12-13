@@ -282,11 +282,14 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             ).select_related('enrollment', 'enrollment__offering').order_by('-created_at')
 
         # --- CLIENT BOOKINGS & ENROLLMENTS ---
-        context['bookings'] = SessionBooking.objects.filter(
+        upcoming_bookings = SessionBooking.objects.filter(
             client=self.request.user,
             start_datetime__gte=timezone.now(),
             status__in=['BOOKED', 'RESCHEDULED']
         ).order_by('start_datetime')
+        context['bookings'] = upcoming_bookings
+        
+        context['has_urgent_booking'] = upcoming_bookings.filter(start_datetime__lte=timezone.now() + timedelta(hours=24)).exists()
 
         context['enrollments'] = ClientOfferingEnrollment.objects.filter(
             client=self.request.user,
@@ -500,6 +503,11 @@ def profile_bookings_partial(request):
     paginator = Paginator(bookings_list, 10)
     page_number = request.GET.get('page')
     user_bookings_page = paginator.get_page(page_number)
+
+    # Annotate bookings for UI logic (reschedule restriction)
+    cutoff = now + timedelta(hours=24)
+    for booking in user_bookings_page:
+        booking.is_late_cancellation = booking.start_datetime <= cutoff
 
     context = {
         'user_bookings_page': user_bookings_page,
