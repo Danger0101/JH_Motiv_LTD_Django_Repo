@@ -5,7 +5,10 @@
 {% endif %}
 
 {% if marketing_preference.is_subscribed %}
-    <span class="text-green-600">Subscribed</span>
+    <span class="text-green-600 font-bold">Subscribed</span>
 {% else %}
-    <span class="text-gray-500">Unsubscribed</span>
+    <span class="text-gray-500 font-medium">Unsubscribed</span>
+{% endif %}
+{% if marketing_preference.subscribed_at %}
+    <span class="text-xs text-gray-400 ml-2">({{ marketing_preference.subscribed_at|date:"M d, Y H:i" }})</span>
 {% endif %}
