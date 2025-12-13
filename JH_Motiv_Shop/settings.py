@@ -4,6 +4,7 @@ Django settings for JH_Motiv_Shop project.
 
 from pathlib import Path
 import os
+import ssl
 import dj_database_url
 from dotenv import load_dotenv
 from django.core.exceptions import ImproperlyConfigured
@@ -351,13 +352,17 @@ TAILWIND_CLI_ARGS = ['--minify']
 # =======================================================
 # CELERY CONFIGURATION
 # =======================================================
-CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_BROKER_URL = os.environ.get('REDIS_URL') or os.environ.get('REDIS_TLS_URL') or 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 
 # Handle Heroku Redis SSL (Rediss://)
 if CELERY_BROKER_URL.startswith("rediss://"):
-    CELERY_REDIS_BACKEND_USE_SSL = {"ssl_cert_reqs": "none"}
-    CELERY_BROKER_USE_SSL = {"ssl_cert_reqs": "none"}
+    CELERY_BROKER_USE_SSL = {
+        'ssl_cert_reqs': ssl.CERT_NONE
+    }
+    CELERY_REDIS_BACKEND_USE_SSL = {
+        'ssl_cert_reqs': ssl.CERT_NONE
+    }
 
 # Optional: Retry connection on startup
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
