@@ -214,8 +214,8 @@ def cancel_session(request, booking_id):
             subject="Your Coaching Session Has Been Canceled",
             template_name='emails/cancellation_confirmation.html',
             context={
-                'user': client,
-                'session': booking,
+                'user_id': client.pk,
+                'booking_id': booking.pk,
                 'cancellation_message': client_msg,
                 'dashboard_url': dashboard_url,
             }
@@ -226,9 +226,9 @@ def cancel_session(request, booking_id):
             subject=f"Session Canceled by {client.get_full_name()}",
             template_name='emails/coach_cancellation_notification.html',
             context={
-                'coach': coach,
-                'client': client,
-                'session': booking,
+                'coach_id': coach.pk,
+                'client_id': client.pk,
+                'booking_id': booking.pk,
                 'dashboard_url': dashboard_url,
             }
         )
@@ -316,15 +316,17 @@ def reschedule_session(request, booking_id):
                     
                     try:
                         dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
+                        # Format original start time for template since we can't pass datetime object
+                        formatted_original_time = original_start_time.strftime('%A, %B %d, %Y, %I:%M %p %Z')
                         
                         send_transactional_email(
                             recipient_email=booking.client.email,
                             subject="Your Coaching Session Has Been Rescheduled",
                             template_name='emails/reschedule_confirmation.html',
                             context={
-                                'user': booking.client,
-                                'session': booking,
-                                'original_start_time': original_start_time,
+                                'user_id': booking.client.pk,
+                                'booking_id': booking.pk,
+                                'original_start_time': formatted_original_time,
                                 'dashboard_url': dashboard_url,
                             }
                         )
@@ -334,10 +336,10 @@ def reschedule_session(request, booking_id):
                             subject=f"Session Rescheduled by {booking.client.get_full_name()}",
                             template_name='emails/coach_reschedule_notification.html',
                             context={
-                                'coach': booking.coach,
-                                'client': booking.client,
-                                'session': booking,
-                                'original_start_time': original_start_time,
+                                'coach_id': booking.coach.pk,
+                                'client_id': booking.client.pk,
+                                'booking_id': booking.pk,
+                                'original_start_time': formatted_original_time,
                                 'dashboard_url': dashboard_url,
                             }
                         )

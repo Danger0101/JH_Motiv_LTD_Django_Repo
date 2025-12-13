@@ -23,6 +23,8 @@ def send_transactional_email_task(self, recipient_email, subject, template_name,
         booking_id = context.get('booking_id')
         user_id = context.get('user_id')
         coupon_id = context.get('coupon_id')
+        coach_id = context.get('coach_id')
+        client_id = context.get('client_id')
         
         # Fetch the actual Django objects for template rendering
         if booking_id:
@@ -49,6 +51,20 @@ def send_transactional_email_task(self, recipient_email, subject, template_name,
                 context['coupon'] = Coupon.objects.get(pk=coupon_id)
             except Exception as e:
                 logger.warning(f"Coupon ID {coupon_id} not found for email task: {e}")
+
+        if coach_id:
+            try:
+                CoachProfile = apps.get_model('accounts', 'CoachProfile')
+                context['coach'] = CoachProfile.objects.get(pk=coach_id)
+            except Exception as e:
+                logger.warning(f"Coach ID {coach_id} not found for email task: {e}")
+
+        if client_id:
+            try:
+                User = apps.get_model('accounts', 'User')
+                context['client'] = User.objects.get(pk=client_id)
+            except Exception as e:
+                logger.warning(f"Client ID {client_id} not found for email task: {e}")
         # --- END FIX ---
 
         # Add the site name to the context for branding
