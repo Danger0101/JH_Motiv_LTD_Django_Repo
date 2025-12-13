@@ -53,7 +53,7 @@ class BookingService:
         # FIX: Also fetch existing internal bookings to prevent double-booking
         existing_bookings = SessionBooking.objects.filter(
             coach=coach,
-            status__in=['BOOKED', 'PENDING_PAYMENT'],
+            status__in=['BOOKED', 'PENDING_PAYMENT', 'RESCHEDULED', 'COMPLETED'],
             start_datetime__lt=day_end,
             end_datetime__gt=day_start
         )
@@ -139,7 +139,7 @@ class BookingService:
         # FIX: Also fetch existing internal bookings to prevent double-booking
         existing_bookings = SessionBooking.objects.filter(
             coach=coach,
-            status__in=['BOOKED', 'PENDING_PAYMENT'],
+            status__in=['BOOKED', 'PENDING_PAYMENT', 'RESCHEDULED', 'COMPLETED'],
             start_datetime__lt=end_dt,
             end_datetime__gt=start_dt
         )

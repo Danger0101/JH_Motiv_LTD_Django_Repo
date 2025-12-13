@@ -111,7 +111,7 @@ class SessionBooking(models.Model):
         constraints = [
             UniqueConstraint(
                 fields=['coach', 'start_datetime'],
-                condition=Q(status__in=['BOOKED', 'PENDING_PAYMENT', 'COMPLETED']),
+                condition=Q(status__in=['BOOKED', 'PENDING_PAYMENT', 'COMPLETED', 'RESCHEDULED']),
                 name='unique_active_coach_slot'
             )
         ]
@@ -126,7 +126,7 @@ class SessionBooking(models.Model):
                 start_datetime__lt=self.end_datetime,
                 end_datetime__gt=self.start_datetime,
             ).exclude(
-                status__in=['CANCELED', 'RESCHEDULED']
+                status='CANCELED'
             )
             if self.pk:
                 query = query.exclude(pk=self.pk)
