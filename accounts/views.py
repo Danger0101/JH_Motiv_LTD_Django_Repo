@@ -431,6 +431,10 @@ def update_marketing_preference(request):
 @login_required
 def profile_offerings_partial(request):
     user_offerings = ClientOfferingEnrollment.objects.filter(client=request.user).order_by('-enrolled_on')
+    
+    # FIX: Fetch OneSessionFreeOffers (Taster Sessions) so they can be displayed
+    free_offers = OneSessionFreeOffer.objects.filter(client=request.user).order_by('-date_offered')
+    
     available_credits = ClientOfferingEnrollment.objects.filter(
         client=request.user,
         remaining_sessions__gt=0,
@@ -439,6 +443,7 @@ def profile_offerings_partial(request):
     ).order_by('-enrolled_on')
     return render(request, 'account/partials/profile_offerings_list.html', {
         'user_offerings': user_offerings,
+        'free_offers': free_offers,
         'available_credits': available_credits,
         'active_tab': 'offerings'
     })

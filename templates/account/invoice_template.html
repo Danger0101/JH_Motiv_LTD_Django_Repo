@@ -225,16 +225,12 @@
                             </tr>
                             {% endif %}
                             <tr>
-                                <td class="text-right" style="padding: 5px;">Delivery:</td>
-                                <td class="text-right" style="padding: 5px;">£{{ order.delivery_cost|floatformat:2 }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-right" style="padding: 5px;">Total before VAT:</td>
-                                <td class="text-right" style="padding: 5px;">£{{ order.total_before_vat|floatformat:2 }}</td>
-                            </tr>
-                            <tr>
                                 <td class="text-right" style="padding: 5px;">VAT (0%):</td>
                                 <td class="text-right" style="padding: 5px;">£{{ order.vat_amount|floatformat:2 }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-right" style="padding: 5px;">Delivery:</td>
+                                <td class="text-right" style="padding: 5px;">£{{ order.delivery_cost|floatformat:2 }}</td>
                             </tr>
                             <tr style="font-size: 16px; font-weight: bold; border-top: 2px solid #333;">
                                 <td class="text-right" style="padding: 10px 5px;">Grand Total:</td>

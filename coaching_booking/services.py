@@ -50,6 +50,14 @@ class BookingService:
             end_time__gt=day_start
         )
         
+        # FIX: Also fetch existing internal bookings to prevent double-booking
+        existing_bookings = SessionBooking.objects.filter(
+            coach=coach,
+            status__in=['BOOKED', 'PENDING_PAYMENT'],
+            start_datetime__lt=day_end,
+            end_datetime__gt=day_start
+        )
+        
         valid_slots = []
         session_delta = timedelta(minutes=session_length)
         
@@ -63,6 +71,13 @@ class BookingService:
                 if slot_aware < busy.end_time and slot_end > busy.start_time:
                     is_blocked = True
                     break
+            
+            # FIX: Check Internal Bookings
+            if not is_blocked:
+                for booking in existing_bookings:
+                    if slot_aware < booking.end_datetime and slot_end > booking.start_datetime:
+                        is_blocked = True
+                        break
             
             if not is_blocked:
                 valid_slots.append(slot)
