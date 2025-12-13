@@ -92,3 +92,22 @@ def add_to_cart(request, variant_id):
         return response
         
     return redirect('cart:cart_detail')
+
+@require_POST
+def remove_coupon(request):
+    """
+    Removes the coupon from the active cart.
+    """
+    cart = get_or_create_cart(request)
+    if cart.coupon:
+        code = cart.coupon.code
+        cart.coupon = None
+        cart.save()
+        messages.success(request, f"Coupon '{code}' removed.")
+        
+        if request.htmx:
+             response = HttpResponse(status=204)
+             response['HX-Trigger'] = 'cartUpdated'
+             return response
+             
+    return redirect('cart:cart_detail')

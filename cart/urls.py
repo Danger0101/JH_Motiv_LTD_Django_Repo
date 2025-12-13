@@ -8,6 +8,7 @@ urlpatterns = [
     # Main Page
     path('', views.cart_detail, name='cart_detail'),
     path('apply-coupon/', views.apply_coupon, name='apply_coupon'),
+    path('remove-coupon/', views.remove_coupon, name='remove_coupon'),
     
     # HTMX / Partial Actions
     path('htmx/items/', htmx_views.cart_item_list, name='cart_item_list'),

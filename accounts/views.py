@@ -395,18 +395,27 @@ class ProfileView(LoginRequiredMixin, TemplateView):
 
         # --- NEW: "My Rewards" Wallet ---
         now = timezone.now()
-        # 1. Public, active coupons that are not user-specific
-        public_coupons = Coupon.objects.filter(
-            active=True, valid_from__lte=now, valid_to__gte=now, user_specific=None
-        )
-        # 2. Coupons specifically assigned to this user
-        user_specific_coupons = Coupon.objects.filter(
-            active=True, valid_from__lte=now, valid_to__gte=now, user_specific=self.request.user
-        )
-        # Combine and remove duplicates
-        context['my_coupons'] = list(set(list(public_coupons) + list(user_specific_coupons)))
-        # You might want to add logic here to exclude coupons the user has already used.
-        # For example: .exclude(usages__user=self.request.user)
+        
+        # 1. Currently Applied Coupon (Active in Cart)
+        context['applied_coupon'] = None
+        if cart.coupon and cart.coupon.active:
+             context['applied_coupon'] = cart.coupon
+
+        # 2. Coupons specifically assigned to this user (Exclusive)
+        # We exclude the one currently applied to avoid duplication if it is also user-specific
+        context['exclusive_coupons'] = []
+        if Coupon:
+            exclusive_qs = Coupon.objects.filter(
+                active=True, 
+                valid_from__lte=now, 
+                valid_to__gte=now, 
+                user_specific=self.request.user
+            )
+            
+            if context['applied_coupon']:
+                exclusive_qs = exclusive_qs.exclude(id=context['applied_coupon'].id)
+                
+            context['exclusive_coupons'] = list(exclusive_qs)
         
         # --- RECENT ACTIVITY ---
         context['recent_activities'] = get_recent_activity(self.request.user)
