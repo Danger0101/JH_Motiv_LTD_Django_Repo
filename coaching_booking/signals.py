@@ -47,10 +47,15 @@ def handle_session_booking_gcal(sender, instance, created, **kwargs):
         # Use on_commit to ensure DB row exists for the worker
         transaction.on_commit(lambda: send_booking_confirmation_email.delay(booking.id))
 
-    elif not created and booking.gcal_event_id:
-        # 2. Existing Booking Updated (e.g., Rescheduled, Time/Coach Change) - Update Event
-        # Trigger Async Update Task
-        transaction.on_commit(lambda: sync_google_calendar_update.delay(booking.id))
+    elif not created:
+        # Existing Booking Updated
+        if booking.gcal_event_id:
+            # Has ID -> Update existing event
+            transaction.on_commit(lambda: sync_google_calendar_update.delay(booking.id))
+        else:
+            # FIX: No ID exists (sync failed previously?) -> Try Pushing as New
+            logger.info(f"Booking {booking.id} updated but has no GCal ID. Attempting push.")
+            transaction.on_commit(lambda: sync_google_calendar_push.delay(booking.id))
 
 @receiver(post_delete, sender=SessionBooking)
 def handle_session_deletion_gcal(sender, instance, **kwargs):

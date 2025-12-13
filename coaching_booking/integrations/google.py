@@ -11,6 +11,8 @@ class GoogleCalendarService:
     
     def __init__(self, coach):
         self.coach = coach
+        # Default to 'primary' unless DB says otherwise
+        self.calendar_id = 'primary'
         self.creds = self._get_credentials(coach) 
         if self.creds:
             self.service = build('calendar', 'v3', credentials=self.creds)
@@ -30,6 +32,10 @@ class GoogleCalendarService:
                 logger.info(f"No Google credentials linked for coach {coach.user.email}")
                 return None
             
+            # CAPTURE THE CORRECT CALENDAR ID
+            if db_creds.calendar_id:
+                self.calendar_id = db_creds.calendar_id
+
             # Construct the google.oauth2.credentials.Credentials object
             return Credentials(
                 token=db_creds.access_token,
@@ -95,7 +101,7 @@ class GoogleCalendarService:
             # conferenceDataVersion=1 is REQUIRED to generate the Meet link
             # sendUpdates='all' sends email notifications to the client
             event = self.service.events().insert(
-                calendarId='primary', 
+                calendarId=self.calendar_id, # USE DYNAMIC ID
                 body=event_body, 
                 conferenceDataVersion=1,
                 sendUpdates='all' 
@@ -119,7 +125,7 @@ class GoogleCalendarService:
 
         try:
             self.service.events().delete(
-                calendarId='primary',
+                calendarId=self.calendar_id, # USE DYNAMIC ID
                 eventId=gcal_event_id,
                 sendUpdates='all' # Notify attendees of cancellation
             ).execute()
@@ -162,17 +168,15 @@ class GoogleCalendarService:
             'description': description,
             'start': {'dateTime': booking.start_datetime.isoformat()},
             'end': {'dateTime': booking.end_datetime.isoformat()},
-            'attendees': [],
-            'reminders': {'useDefault': True},
+            # Note: We don't overwrite attendees blindly in a patch unless we want to, 
+            # but usually good to ensure client is there.
+            'attendees': [{'email': client_email}] if client_email else [],
         }
-
-        if client_email:
-            event_body['attendees'].append({'email': client_email})
 
         try:
             # CHANGE: Use patch() instead of update() to preserve conferenceData (Meet links)
             event = self.service.events().patch(
-                calendarId='primary', 
+                calendarId=self.calendar_id, # USE DYNAMIC ID
                 eventId=booking.gcal_event_id, 
                 body=event_body,
                 sendUpdates='all'
@@ -195,12 +199,12 @@ class GoogleCalendarService:
         body = {
             "timeMin": now.isoformat(),
             "timeMax": end.isoformat(),
-            "items": [{"id": "primary"}]
+            "items": [{"id": self.calendar_id}] # USE DYNAMIC ID
         }
         
         try:
             events_result = self.service.freebusy().query(body=body).execute()
-            busy_periods = events_result['calendars']['primary']['busy']
+            busy_periods = events_result['calendars'][self.calendar_id]['busy']
 
             # Sync to DB: Wipe & Replace for the window
             CoachBusySlot.objects.filter(
