@@ -165,8 +165,8 @@ def send_upcoming_session_reminders():
             # --- Send reminder to Client ---
             client_dashboard_url = f"{settings.SITE_URL}{reverse('accounts:account_profile')}"
             client_context = {
-                'user': session.client,
-                'session': session,
+                'user_id': session.client.pk,
+                'booking_id': session.pk,
                 'dashboard_url': client_dashboard_url,
             }
             send_transactional_email(
@@ -179,8 +179,8 @@ def send_upcoming_session_reminders():
             # --- Send reminder to Coach ---
             coach_dashboard_url = f"{settings.SITE_URL}{reverse('accounts:account_profile')}"
             coach_context = {
-                'user': session.coach.user,
-                'session': session,
+                'user_id': session.coach.user.pk,
+                'booking_id': session.pk,
                 'dashboard_url': coach_dashboard_url,
             }
             send_transactional_email(

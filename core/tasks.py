@@ -16,6 +16,41 @@ def send_transactional_email_task(self, recipient_email, subject, template_name,
     This function contains the actual blocking call to the SMTP server.
     """
     try:
+        # --- FIX STARTS HERE: REHYDRATE DJANGO OBJECTS ---
+        from django.apps import apps
+        
+        # Pull required IDs from the context
+        booking_id = context.get('booking_id')
+        user_id = context.get('user_id')
+        coupon_id = context.get('coupon_id')
+        
+        # Fetch the actual Django objects for template rendering
+        if booking_id:
+            try:
+                SessionBooking = apps.get_model('coaching_booking', 'SessionBooking')
+                # Replaces the SessionBooking object in context
+                booking_obj = SessionBooking.objects.get(pk=booking_id)
+                context['session'] = booking_obj
+                context['booking'] = booking_obj
+            except Exception as e:
+                logger.warning(f"Booking ID {booking_id} not found for email task: {e}")
+        
+        if user_id:
+            try:
+                User = apps.get_model('accounts', 'User')
+                # Replaces the User object in context
+                context['user'] = User.objects.get(pk=user_id) 
+            except Exception as e:
+                 logger.warning(f"User ID {user_id} not found for email task: {e}")
+
+        if coupon_id:
+            try:
+                Coupon = apps.get_model('payments', 'Coupon')
+                context['coupon'] = Coupon.objects.get(pk=coupon_id)
+            except Exception as e:
+                logger.warning(f"Coupon ID {coupon_id} not found for email task: {e}")
+        # --- END FIX ---
+
         # Add the site name to the context for branding
         context['site_name'] = 'JH Motiv LTD'
         

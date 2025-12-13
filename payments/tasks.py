@@ -62,8 +62,8 @@ def send_abandoned_cart_reminders_task(hours_ago=24):
                 subject="Did you forget something?",
                 template_name='emails/abandoned_cart_reminder.html',
                 context={
-                    'user': user,
-                    'coupon': win_back_coupon,
+                    'user_id': user.pk,
+                    'coupon_id': win_back_coupon.pk,
                     'cart_url': cart_url,
                 }
             )

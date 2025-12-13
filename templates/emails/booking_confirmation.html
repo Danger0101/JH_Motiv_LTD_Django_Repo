@@ -2,7 +2,6 @@
 {% load humanize %}
 
 {% block content %}
-<p>Hi {{ user.first_name|default:user.username }},</p>
 <p>Hi {{ name }},</p>
 
 <p>This email confirms your upcoming coaching session has been successfully booked. Please find the details below:</p>
@@ -11,8 +10,6 @@
 <ul>
     <li><strong>Program:</strong> {{ session.enrollment.offering.name }}</li>
     <li><strong>Coach:</strong> {{ session.coach.user.get_full_name }}</li>
-    <li><strong>Date:</strong> {{ session.start_time|date:"l, F j, Y" }}</li>
-    <li><strong>Time:</strong> {{ session.start_time|date:"g:i A T" }} - {{ session.end_time|date:"g:i A T" }}</li>
     <li><strong>Date:</strong> {{ session.start_datetime|date:"l, F j, Y" }}</li>
     <li><strong>Time:</strong> {{ session.start_datetime|date:"g:i A T" }} - {{ session.end_datetime|date:"g:i A T" }}</li>
 </ul>
