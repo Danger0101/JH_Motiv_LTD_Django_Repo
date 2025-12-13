@@ -45,6 +45,13 @@
                     Dashboard
                 </button>
 
+                <button @click="activeTab = 'bookings'; mobileMenuOpen = false" 
+                        :class="activeTab === 'bookings' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-transparent'"
+                        class="w-full flex items-center px-4 py-3 text-sm font-medium border rounded-lg transition-colors">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    My Bookings
+                </button>
+
                 <button @click="activeTab = 'order_history'; mobileMenuOpen = false"
                         :class="activeTab === 'order_history' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-transparent'"
                         class="w-full flex items-center px-4 py-3 text-sm font-medium border rounded-lg transition-colors">
@@ -268,6 +275,35 @@
                     </div>
                 </div>
 
+            </div>
+
+            <div x-show="activeTab === 'bookings'" x-cloak class="p-6">
+                <h2 class="text-2xl font-bold text-gray-800 border-b pb-4 mb-6">My Bookings</h2>
+                
+                <div class="bg-blue-50 border border-blue-100 p-6 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h3 class="text-lg font-bold text-blue-900">Book a Session</h3>
+                        <p class="text-blue-700 text-sm">You have valid credits available.</p>
+                    </div>
+                    <div x-data="{ openBooking: false }" @open-booking-modal.window="openBooking = true">
+                        <button @click="openBooking = !openBooking" class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 shadow-sm transition">
+                            Book New Session
+                        </button>
+                        <div x-show="openBooking" class="fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-50 flex items-center justify-center p-4" style="display: none;" x-cloak>
+                            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl p-6 relative" @click.away="openBooking = false">
+                                <button @click="openBooking = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">✕</button>
+                                <h2 class="text-xl font-bold mb-4">Book a Session</h2>
+                                <div hx-get="{% url 'coaching_booking:profile_book_session' %}" hx-trigger="intersect" hx-swap="innerHTML">
+                                    <div class="flex justify-center py-10"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="profile-bookings-full">
+                    {% include 'account/profile_bookings.html' %}
+                </div>
             </div>
 
             <div x-show="activeTab === 'order_history'" x-cloak class="p-6">
