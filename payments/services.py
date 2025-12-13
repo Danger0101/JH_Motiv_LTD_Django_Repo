@@ -249,7 +249,12 @@ def _fulfill_ecommerce_order(order, request=None, original_cart_id=None):
         dashboard_url = "https://jhmotiv.com" + (
             reverse('accounts:account_profile') if order.user else reverse('payments:order_detail_guest', args=[order.guest_order_token])
         )
-        email_context = {'order': order, 'user': order.user, 'dashboard_url': dashboard_url}
+        # Fix: Pass IDs instead of objects to avoid JSON serialization errors in Celery
+        email_context = {
+            'order_id': order.id, 
+            'user_id': order.user.id if order.user else None, 
+            'dashboard_url': dashboard_url
+        }
 
         send_transactional_email(
             recipient_email=customer_email,

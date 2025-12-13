@@ -21,6 +21,7 @@ def send_transactional_email_task(self, recipient_email, subject, template_name,
         
         # Pull required IDs from the context
         booking_id = context.get('booking_id')
+        order_id = context.get('order_id')
         user_id = context.get('user_id')
         coupon_id = context.get('coupon_id')
         coach_id = context.get('coach_id')
@@ -28,6 +29,13 @@ def send_transactional_email_task(self, recipient_email, subject, template_name,
         offer_id = context.get('offer_id')
         
         # Fetch the actual Django objects for template rendering
+        if order_id:
+            try:
+                Order = apps.get_model('payments', 'Order')
+                context['order'] = Order.objects.get(pk=order_id)
+            except Exception as e:
+                logger.warning(f"Order ID {order_id} not found for email task: {e}")
+
         if booking_id:
             try:
                 SessionBooking = apps.get_model('coaching_booking', 'SessionBooking')

@@ -73,16 +73,16 @@ def add_to_cart(request, variant_id):
         quantity = 1
 
     # Prevent duplicate rows: Get existing item or create new one
-    cart_item, created = CartItem.objects.get_or_create(
-        cart=cart,
-        variant=variant,
-        defaults={'quantity': quantity}
-    )
-
-    if not created:
-        # If item exists, increment quantity
+    try:
+        cart_item = CartItem.objects.get(cart=cart, variant=variant)
         cart_item.quantity += quantity
         cart_item.save()
+    except CartItem.DoesNotExist:
+        CartItem.objects.create(
+            cart=cart,
+            variant=variant,
+            quantity=quantity
+        )
 
     messages.success(request, f"Added {variant.product.name} to cart.")
     
