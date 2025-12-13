@@ -235,7 +235,10 @@
                                 <form hx-post="{% url 'cart:apply_coupon' %}" hx-swap="none">
                                     {% csrf_token %}
                                     <input type="hidden" name="code" value="{{ coupon.code }}">
-
+                                    <button type="submit" class="px-4 py-2 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 transition shadow-sm hover:shadow">
+                                        Apply
+                                    </button>
+                                </form>
                             </div>
                         </div>
                         {% endfor %}
@@ -246,7 +249,19 @@
                 <div class="mb-10">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-bold text-gray-900">Recent Activity</h3>
-                        <span class="text-xs text-gray-400 flex items-center"><span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulsew
+                        <span class="text-xs text-gray-400 flex items-center">
+                            <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                            Live Updates
+                        </span>
+                    </div>
+                    <div hx-get="{% url 'accounts:recent_activity_partial' %}" hx-trigger="load, activityUpdated from:body" hx-swap="innerHTML">
+                        <div class="animate-pulse space-y-4">
+                            <div class="h-16 bg-gray-50 rounded-xl border border-gray-100"></div>
+                            <div class="h-16 bg-gray-50 rounded-xl border border-gray-100"></div>
+                            <div class="h-16 bg-gray-50 rounded-xl border border-gray-100"></div>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="pt-8 border-t">
                     <h3 class="text-xl font-bold text-gray-900 mb-6">Account Settings</h3>
