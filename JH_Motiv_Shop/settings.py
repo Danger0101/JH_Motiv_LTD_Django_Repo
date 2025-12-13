@@ -114,7 +114,6 @@ DATABASES = {
     'default': dj_database_url.config(
         conn_max_age=0, 
         ssl_require=True,
-        conn_scheme='postgresql',
         conn_health_check=True
     )
 }
