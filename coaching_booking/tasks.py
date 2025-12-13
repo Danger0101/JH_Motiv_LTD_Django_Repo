@@ -47,7 +47,6 @@ def send_booking_confirmation_email(self, booking_id):
             'date': booking.start_datetime, 
             'details': event_details,
             'dashboard_url': f"{settings.SITE_URL}/accounts/profile/", 
-            'meeting_link': getattr(booking, 'meeting_link', None),
         }
         
         html_content = render_to_string(template_name, context)
@@ -100,29 +99,11 @@ def sync_google_calendar_push(booking_id):
     try:
         booking = SessionBooking.objects.get(id=booking_id)
         service = GoogleCalendarService(booking.coach)
-        result = service.push_booking(booking)
+        gcal_id = service.push_booking(booking)
         
-        if result and isinstance(result, dict):
-            gcal_id = result.get('id')
-            meet_link = result.get('meet_link')
-            
-            if gcal_id:
-                booking.gcal_event_id = gcal_id
-                if meet_link and meet_link != 'No Link' and hasattr(booking, 'meeting_link'):
-                    booking.meeting_link = meet_link
-                    booking.save(update_fields=['gcal_event_id', 'meeting_link'])
-                else:
-                    booking.save(update_fields=['gcal_event_id'])
-    except SessionBooking.DoesNotExist:
-        pass
-
-@shared_task
-def sync_google_calendar_update(booking_id):
-    try:
-        booking = SessionBooking.objects.get(id=booking_id)
-        if booking.gcal_event_id:
-            service = GoogleCalendarService(booking.coach)
-            service.update_booking(booking)
+        if gcal_id:
+            booking.gcal_event_id = gcal_id
+            booking.save(update_fields=['gcal_event_id'])
     except SessionBooking.DoesNotExist:
         pass
 
