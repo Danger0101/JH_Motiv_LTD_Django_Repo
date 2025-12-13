@@ -471,9 +471,9 @@ def profile_book_session_partial(request):
         'coaches': coaches,
         'initial_year': today.year,
         'initial_month': today.month,
-        'selected_enrollment_id': '', 
-        'selected_coach_id': '',      
-        'selected_free_offer_id': '',
+        'selected_enrollment_id': request.GET.get('enrollment_id', ''), 
+        'selected_coach_id': request.GET.get('coach_id', ''),      
+        'selected_free_offer_id': request.GET.get('free_offer_id', ''),
     }
     return render(request, 'coaching_booking/profile_book_session.html', context)
 
