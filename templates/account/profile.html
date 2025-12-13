@@ -191,11 +191,11 @@
 
                 {% if applied_coupon or exclusive_coupons %}
                 <div class="mb-10">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">Your Rewards</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">Your Active Rewards</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         
                         {% if applied_coupon %}
-                        <div class="bg-green-50 border border-green-200 rounded-xl p-5 shadow-sm relative overflow-hidden group">
+                        <div class="bg-gradient-to-br from-green-50 to-white border border-green-200 rounded-xl p-5 shadow-sm relative overflow-hidden group">
                             <div class="absolute top-0 right-0 p-3 opacity-10">
                                 <svg class="w-24 h-24 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"></path></svg>
                             </div>
@@ -217,8 +217,8 @@
                         {% endif %}
 
                         {% for coupon in exclusive_coupons %}
-                        <div class="bg-white border border-purple-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-all relative group flex flex-col justify-between">
-                            <div class="absolute top-0 left-0 w-1 h-full bg-purple-500 rounded-l-xl"></div>
+                        <div class="bg-white border border-purple-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-all relative group flex flex-col justify-between overflow-hidden">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-purple-400 to-purple-600"></div>
                             
                             <div>
                                 <div class="flex justify-between items-start mb-2">
@@ -249,26 +249,19 @@
                 <div class="mb-10">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-bold text-gray-900">Recent Activity</h3>
-                        <span class="text-xs text-gray-400 flex items-center">
-                            <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
-                            Live Updates
-                        </span>
+                        <span class="text-xs text-gray-400 flex items-center"><span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span> Live Updates</span>
                     </div>
-                    <div hx-get="{% url 'accounts:recent_activity_partial' %}" hx-trigger="load, activityUpdated from:body" hx-swap="innerHTML">
-                        <div class="animate-pulse space-y-4">
-                            <div class="h-16 bg-gray-50 rounded-xl border border-gray-100"></div>
-                            <div class="h-16 bg-gray-50 rounded-xl border border-gray-100"></div>
-                            <div class="h-16 bg-gray-50 rounded-xl border border-gray-100"></div>
-                        </div>
+                    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden"
+                         hx-get="{% url 'accounts:recent_activity_partial' %}"
+                         hx-trigger="every 30s">
+                        {% include 'account/partials/recent_activity.html' %}
                     </div>
                 </div>
 
                 <div class="pt-8 border-t">
                     <h3 class="text-xl font-bold text-gray-900 mb-6">Account Settings</h3>
                     <div x-data="{ settingsTab: 'password' }">
-                        <!-- Tab Navigation -->
                         <div class="mb-8">
-                            <!-- Mobile Dropdown -->
                             <div class="sm:hidden">
                                 <label for="settings-tab-select" class="sr-only">Select a setting</label>
                                 <select id="settings-tab-select" 
@@ -277,8 +270,11 @@
                                     <option value="password">Change Password</option>
                                     <option value="email">Email Addresses</option>
                                     <option value="social">Connected Accounts</option>
-                                  
-                            <!-- Desktop Tabs -->
+                                    <option value="address">Saved Addresses</option>
+                                    <option value="prefs">Email Preferences</option>
+                                </select>
+                            </div>
+
                             <div class="hidden sm:block overflow-x-auto">
                                 <nav class="flex space-x-2 p-1 bg-gray-100 rounded-xl" aria-label="Tabs">
                                 <button @click="settingsTab = 'password'" 
@@ -310,9 +306,7 @@
                             </div>
                         </div>
 
-                        <!-- Tab Panels -->
                         <div class="mt-4">
-                            <!-- Password Panel -->
                             <div x-show="settingsTab === 'password'" x-cloak>
                                 <div class="bg-gray-50 rounded-2xl p-6 border border-gray-200" 
                                      hx-get="{% url 'accounts:password_change' %}" 
@@ -321,7 +315,6 @@
                                 </div>
                             </div>
 
-                            <!-- Email Panel -->
                             <div x-show="settingsTab === 'email'" x-cloak>
                                 <div class="bg-gray-50 rounded-2xl p-6 border border-gray-200" 
                                      hx-get="{% url 'accounts:account_email' %}" 
@@ -330,7 +323,6 @@
                                 </div>
                             </div>
 
-                            <!-- Social Panel -->
                             <div x-show="settingsTab === 'social'" x-cloak>
                                 <div class="bg-gray-50 rounded-2xl p-6 border border-gray-200" 
                                      hx-get="{% url 'accounts:socialaccount_connections' %}" 
@@ -339,7 +331,6 @@
                                 </div>
                             </div>
 
-                            <!-- Address Panel -->
                             <div x-show="settingsTab === 'address'" x-cloak>
                                 <div class="bg-gray-50 rounded-2xl p-6 border border-gray-200">
                                     {% if user.addresses.exists %}
@@ -374,7 +365,6 @@
                                 </div>
                             </div>
 
-                            <!-- Prefs Panel -->
                             <div x-show="settingsTab === 'prefs'" x-cloak>
                                 <div class="bg-gray-50 rounded-2xl p-6 border border-gray-200">
                                     {% with marketing_preference=user.marketing_preference %}                                    
