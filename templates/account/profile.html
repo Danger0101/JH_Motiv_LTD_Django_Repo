@@ -234,8 +234,24 @@
                     <h3 class="text-xl font-bold text-gray-900 mb-6">Account Settings</h3>
                     <div x-data="{ settingsTab: 'password' }">
                         <!-- Tab Navigation -->
-                        <div class="mb-8 overflow-x-auto">
-                            <nav class="flex space-x-2 p-1 bg-gray-100 rounded-xl" aria-label="Tabs">
+                        <div class="mb-8">
+                            <!-- Mobile Dropdown -->
+                            <div class="sm:hidden">
+                                <label for="settings-tab-select" class="sr-only">Select a setting</label>
+                                <select id="settings-tab-select" 
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-3 px-4 bg-gray-50 text-gray-900 font-medium"
+                                        x-model="settingsTab">
+                                    <option value="password">Change Password</option>
+                                    <option value="email">Email Addresses</option>
+                                    <option value="social">Connected Accounts</option>
+                                    <option value="address">Saved Addresses</option>
+                                    <option value="prefs">Email Preferences</option>
+                                </select>
+                            </div>
+
+                            <!-- Desktop Tabs -->
+                            <div class="hidden sm:block overflow-x-auto">
+                                <nav class="flex space-x-2 p-1 bg-gray-100 rounded-xl" aria-label="Tabs">
                                 <button @click="settingsTab = 'password'" 
                                         :class="settingsTab === 'password' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
                                         class="flex-1 whitespace-nowrap py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 focus:outline-none">
@@ -261,7 +277,8 @@
                                         class="flex-1 whitespace-nowrap py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 focus:outline-none">
                                     Email Preferences
                                 </button>
-                            </nav>
+                                </nav>
+                            </div>
                         </div>
 
                         <!-- Tab Panels -->
