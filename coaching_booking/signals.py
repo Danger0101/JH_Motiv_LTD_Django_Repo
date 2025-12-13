@@ -64,6 +64,12 @@ def handle_session_deletion_gcal(sender, instance, **kwargs):
     """
     booking = instance
     
+    # Prevent infinite loops: If we are only saving the GCal ID (done by the task itself),
+    # do not trigger another sync.
+    update_fields = kwargs.get('update_fields')
+    if update_fields and 'gcal_event_id' in update_fields and len(update_fields) == 1:
+        return
+    
     # Invalidate Calendar Cache
     if booking.coach:
         version_key = f"coach_calendar_version_{booking.coach.id}"

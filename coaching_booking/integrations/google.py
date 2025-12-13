@@ -132,7 +132,8 @@ class GoogleCalendarService:
 
     def update_booking(self, booking):
         """
-        Updates an existing event using PATCH to preserve Meet links.
+        Updates an existing event in the Coach's calendar.
+        Uses PATCH to preserve existing data like Google Meet links.
         """
         if not self.service or not booking.gcal_event_id:
             return None
@@ -153,7 +154,6 @@ class GoogleCalendarService:
             summary = f"Workshop: {booking.workshop.title}"
             description += f"\nWorkshop: {booking.workshop.title}"
         elif booking.enrollment:
-            # FIX: Access offering via enrollment
             description += f"\nOffering: {booking.enrollment.offering.name}"
 
         event_body = {
@@ -161,11 +161,15 @@ class GoogleCalendarService:
             'description': description,
             'start': {'dateTime': booking.start_datetime.isoformat()},
             'end': {'dateTime': booking.end_datetime.isoformat()},
+            # We construct attendees list but only send it if needed. 
+            # Ideally with PATCH we might check if we want to overwrite attendees.
             'attendees': [{'email': client_email}] if client_email else [],
+            'reminders': {'useDefault': True},
         }
 
         try:
-            # CHANGE: Use patch() instead of update() to preserve conferenceData (Meet links)
+            # CHANGED: Use patch() instead of update()
+            # This updates only the fields provided in event_body, preserving conferenceData
             event = self.service.events().patch(
                 calendarId=self.calendar_id,
                 eventId=booking.gcal_event_id, 
