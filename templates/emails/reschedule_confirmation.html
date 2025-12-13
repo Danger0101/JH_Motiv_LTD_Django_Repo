@@ -10,8 +10,8 @@
 <ul>
     <li><strong>Program:</strong> {{ session.enrollment.offering.name }}</li>
     <li><strong>Coach:</strong> {{ session.coach.user.get_full_name }}</li>
-    <li><strong>New Date:</strong> {{ session.start_time|date:"l, F j, Y" }}</li>
-    <li><strong>New Time:</strong> {{ session.start_time|date:"g:i A T" }} - {{ session.end_time|date:"g:i A T" }}</li>
+    <li><strong>New Date:</strong> {{ session.start_datetime|date:"l, F j, Y" }}</li>
+    <li><strong>New Time:</strong> {{ session.start_datetime|date:"g:i A T" }} - {{ session.end_datetime|date:"g:i A T" }}</li>
 </ul>
 
 <p><strong>Original Time:</strong> {{ original_start_time|date:"l, F j, Y, g:i A T" }}</p>
