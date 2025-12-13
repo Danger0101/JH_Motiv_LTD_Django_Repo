@@ -23,6 +23,10 @@ HEROKU_APP_NAME = os.environ.get('HEROKU_APP_NAME')
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com']
 CSRF_TRUSTED_ORIGINS = ['https://jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com', 'https://*.127.0.0.1', 'https://*.localhost', 'https://jhmotiv.shop']
 
+# --- CUSTOM URL CONFIGURATION ---
+# This is required by the coaching_booking email templates for generating absolute links
+SITE_URL = 'https://jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com'
+
 # Application definition
 INSTALLED_APPS = [    
     'django.contrib.admin',
