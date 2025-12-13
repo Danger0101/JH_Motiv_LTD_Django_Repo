@@ -71,21 +71,51 @@
                 </div>
 
                 <!-- Coupon Code Input -->
-                <div class="mt-6">
-                    <h3 class="text-lg font-medium text-gray-900">Have a coupon?</h3>
-                    <form hx-post="{% url 'cart:apply_coupon' %}" 
-                          hx-target="#coupon-message-area" 
-                          hx-swap="innerHTML"
-                          class="mt-2">
-                        {% csrf_token %}
-                        <div class="flex space-x-2">
-                            <input type="text" name="code" id="coupon-code" placeholder="Enter coupon code" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
-                            <button type="submit" class="rounded-md bg-gray-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                                    aria-label="Apply Coupon">
-                                Apply
-                            </button>
+                <div id="cart-coupon-section" 
+                     class="mt-6"
+                     hx-get="{% url 'cart:cart_detail' %}" 
+                     hx-select="#cart-coupon-section" 
+                     hx-trigger="cartUpdated from:body"
+                     hx-target="this"
+                     hx-swap="outerHTML">
+                    
+                    {% if cart.coupon %}
+                        <h3 class="text-lg font-medium text-gray-900">Applied Coupon</h3>
+                        <div class="mt-2 p-3 bg-green-50 border border-green-200 rounded-md flex justify-between items-center shadow-sm">
+                            <div class="flex items-center overflow-hidden">
+                                <svg class="h-5 w-5 text-green-500 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                </svg>
+                                <div>
+                                    <span class="block font-mono font-bold text-green-700 text-sm leading-tight">{{ cart.coupon.code }}</span>
+                                    <span class="block text-xs text-green-600 truncate max-w-[150px]">{{ cart.coupon.description }}</span>
+                                </div>
+                            </div>
+                            <form hx-post="{% url 'cart:remove_coupon' %}" hx-swap="none">
+                                {% csrf_token %}
+                                <button type="submit" class="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50" title="Remove Coupon">
+                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </form>
                         </div>
-                    </form>
+                    {% else %}
+                        <h3 class="text-lg font-medium text-gray-900">Have a coupon?</h3>
+                        <form hx-post="{% url 'cart:apply_coupon' %}" 
+                              hx-target="#coupon-message-area" 
+                              hx-swap="innerHTML"
+                              class="mt-2 relative">
+                            {% csrf_token %}
+                            <div class="flex space-x-2">
+                                <input type="text" name="code" id="coupon-code" placeholder="Enter coupon code" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                <button type="submit" class="rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">
+                                    Apply
+                                </button>
+                            </div>
+                        </form>
+                    {% endif %}
+                    
                     <div id="coupon-message-area">
                         {% include 'cart/partials/coupon_message.html' %}
                     </div>
