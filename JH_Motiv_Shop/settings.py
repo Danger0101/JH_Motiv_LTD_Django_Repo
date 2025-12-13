@@ -7,6 +7,7 @@ import os
 import ssl
 import dj_database_url
 from dotenv import load_dotenv
+from celery.schedules import crontab
 from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -366,3 +367,30 @@ if CELERY_BROKER_URL.startswith("rediss://"):
 
 # Optional: Retry connection on startup
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+# =======================================================
+# CELERY BEAT SCHEDULER CONFIGURATION
+# =======================================================
+
+CELERY_TIMEZONE = TIME_ZONE # 'UTC'
+
+CELERY_BEAT_SCHEDULE = {
+    # 1. Coaching Session Reminders
+    'send-session-reminders-daily': {
+        # This points to the task in coaching_booking/tasks.py
+        'task': 'coaching_booking.tasks.send_upcoming_session_reminders',
+        # Run every day at 10:00 UTC
+        'schedule': crontab(hour=10, minute=0), 
+        'args': (), 
+        'options': {'queue': 'low_priority'},
+    },
+    
+    # 2. Abandoned Cart Reminders (Run every 6 hours)
+    'send-abandoned-cart-reminders-quarterly': {
+        # This points to the task in payments/tasks.py
+        'task': 'payments.tasks.send_abandoned_cart_reminders_task',
+        'schedule': crontab(minute='0', hour='*/6'), # Every 6 hours on the hour
+        'args': (24,), # Find carts abandoned for 24+ hours
+        'options': {'queue': 'low_priority'},
+    },
+}
