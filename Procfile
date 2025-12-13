@@ -1,3 +1,3 @@
-web: gunicorn JH_Motiv_Shop.wsgi
+web: gunicorn JH_Motiv_Shop.wsgi --workers 1
 worker: celery -A JH_Motiv_Shop worker --loglevel=info --concurrency=1
 beat: celery -A JH_Motiv_Shop beat -l info --scheduler django_celery_beat.schedulers.DatabaseScheduler
