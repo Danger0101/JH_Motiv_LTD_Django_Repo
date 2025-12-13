@@ -1,5 +1,6 @@
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 from django.conf import settings
 from django.utils import timezone
 from ..models import CoachBusySlot
@@ -34,7 +35,7 @@ class GoogleCalendarService:
             if db_creds.calendar_id:
                 self.calendar_id = db_creds.calendar_id
 
-            return Credentials(
+            creds = Credentials(
                 token=db_creds.access_token,
                 refresh_token=db_creds.refresh_token,
                 token_uri="https://oauth2.googleapis.com/token",
@@ -42,6 +43,19 @@ class GoogleCalendarService:
                 client_secret=settings.GOOGLE_OAUTH2_CLIENT_SECRET,
                 scopes=db_creds.scopes.split(' ') if db_creds.scopes else []
             )
+
+            # Auto-Refresh Logic: Ensure token is valid before use and save updates to DB
+            if creds.expired and creds.refresh_token:
+                try:
+                    creds.refresh(Request())
+                    # Update the DB with the new access token
+                    db_creds.access_token = creds.token
+                    db_creds.save(update_fields=['access_token'])
+                    logger.info(f"Refreshed and saved Google Access Token for coach {coach.user.email}")
+                except Exception as e:
+                    logger.error(f"Failed to refresh token for coach {coach.user.email}: {e}")
+            
+            return creds
         except Exception as e:
             logger.error(f"Error retrieving credentials for coach {coach.id}: {e}")
             return None
