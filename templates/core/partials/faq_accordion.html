@@ -14,7 +14,7 @@
                     type="button" 
                 >
                     {# Ensure this matches your data source keys (q or question) #}
-                    {{ item.q|default:item.question }}
+                    {% if item.q %}{{ item.q }}{% else %}{{ item.question }}{% endif %}
                     
                     <svg class="w-5 h-5 transition-transform duration-300" 
                          :class="{ 'rotate-180': openItem === '{{ item_id }}' }" 
@@ -34,7 +34,7 @@
                 id="answer-{{ item_id }}"
             >
                 {# Ensure this matches your data source keys (a or answer) #}
-                {{ item.a|default:item.answer|safe }} 
+                {% if item.a %}{{ item.a|safe }}{% else %}{{ item.answer|safe }}{% endif %} 
             </div>
         </div>
         {% endwith %}
