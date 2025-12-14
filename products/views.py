@@ -71,8 +71,6 @@ class ProductDetailView(DetailView):
             'Pink': '#E91E63',
             'Grey': '#9E9E9E',
             'Gray': '#9E9E9E',
-            
-            # Printful Specifics
             'Dark Heather': '#424242',
             'Sport Grey': '#BDBDBD',
             'Heather Grey': '#9E9E9E',
