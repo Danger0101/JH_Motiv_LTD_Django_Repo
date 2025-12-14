@@ -4,10 +4,11 @@ from .models import TeamMember
 
 @admin.register(TeamMember)
 class TeamMemberAdmin(admin.ModelAdmin):
-    list_display = ('avatar_preview', 'name', 'role', 'is_active', 'order')
+    # Added 'character_class' to display and editable list
+    list_display = ('avatar_preview', 'name', 'character_class', 'role', 'is_active', 'order')
     list_display_links = ('name',)
-    list_editable = ('is_active', 'order') # Quick reordering
-    list_filter = ('is_active',)
+    list_editable = ('is_active', 'order', 'character_class') 
+    list_filter = ('is_active', 'character_class')
     search_fields = ('name', 'role', 'bio')
     ordering = ('order',)
 

@@ -63,13 +63,24 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
                         {% for member in team_members %}
                         <div class="text-center p-6 bg-gray-50 rounded-xl border-2 border-gray-200 hover:border-blue-500 transition-colors duration-300">
-                            <div class="relative inline-block">
+                            <div class="relative inline-block group mb-4">
+                                
+                                {# 1. The "Energy" Outer Ring (Dashed, spins on hover) #}
+                                <div class="absolute inset-0 rounded-full border-2 border-dashed border-{{ member.css_color_class }} opacity-50 transform scale-110 group-hover:rotate-180 transition-transform duration-[10s] ease-linear"></div>
+
+                                {# 2. The Main Avatar #}
                                 <img 
                                     src="{{ member.profile_image.url }}" 
                                     alt="Profile photo of {{ member.name }}"
-                                    class="w-32 h-32 object-cover rounded-full mx-auto mb-4 border-4 border-gray-900"
+                                    class="relative w-32 h-32 object-cover rounded-full mx-auto border-4 border-{{ member.css_color_class }} shadow-lg bg-gray-100"
                                 >
-                                <div class="absolute bottom-4 right-0 bg-green-500 w-4 h-4 rounded-full border-2 border-white" title="Online"></div>
+
+                                {# 3. The Class Icon Badge (Bottom Right) #}
+                                <div class="absolute bottom-0 right-0 bg-gray-900 border-2 border-{{ member.css_color_class }} text-white w-10 h-10 flex items-center justify-center rounded-full text-lg shadow-md z-10" 
+                                     title="Class: {{ member.get_character_class_display }}">
+                                    {{ member.class_icon }}
+                                </div>
+
                             </div>
                             <h3 class="text-xl font-bold text-gray-900 font-mono">{{ member.name }}</h3>
                             <div class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded font-mono mb-3 uppercase tracking-wide">{{ member.role }}</div>
