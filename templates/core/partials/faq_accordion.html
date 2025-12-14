@@ -1,6 +1,6 @@
 <div class="space-y-4" x-data="{ openItem: null }">
     {% for item in items %}
-        {% with item_id=forloop.counter %}
+        {% with item_id=category|add:"-"|add:forloop.counter %}
         <div class="border rounded-lg shadow-sm">
             <h3 class="text-lg m-0 p-0">
                 <button 

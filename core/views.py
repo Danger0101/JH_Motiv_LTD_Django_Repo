@@ -72,8 +72,12 @@ def faq_tab(request, category):
         'faq_items': faq_items,
         'category': category
     }
-    # Render only the partial containing the list of questions and answers.
-    return render(request, 'core/partials/faq_tab_content.html', context)
+    
+    if request.htmx:
+        # Render only the partial containing the list of questions and answers.
+        return render(request, 'core/partials/faq_tab_content.html', context)
+
+    return render(request, 'core/faqs.html', context)
 
 def privacy_policy_page(request):
     """Renders the Privacy Policy page with data and Alpine.js tabs."""
