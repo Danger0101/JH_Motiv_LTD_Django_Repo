@@ -30,8 +30,8 @@
             <h1 class="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl text-center" style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 4px 4px 0 #000;">Find Your Path to Success</h1>
             <p class="mt-6 text-xl text-white max-w-3xl text-center font-bold" style="text-shadow: 2px 2px 0 #000;">Unlock your potential with our expert coaches.</p>
             <div class="mt-10 text-center">
-                <a href="#expert-coaches" class="inline-flex items-center px-6 py-3 border-2 border-black text-base font-bold rounded-md shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-gray-900 bg-white hover:bg-gray-50 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
-                    Find a Coach
+                <a href="#expert-coaches" class="inline-flex items-center px-6 py-3 border-2 border-black text-base font-bold rounded-md shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-gray-900 bg-white hover:bg-gray-50 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all" title="Find a Coach">
+                    Select Player
                 </a>
             </div>
         </div>
@@ -96,7 +96,7 @@
                                         <li><i class="fas fa-calendar-check text-green-500 mr-2"></i> Sessions: {{ offering.total_number_of_sessions }}</li>
                                         <li><i class="fas fa-users text-green-500 mr-2"></i> Coaches: {{ offering.coaches.count }}</li>
                                     </ul>
-                                    <a href="{% url 'coaching_booking:offer-enroll' slug=offering.slug %}" class="mt-auto inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 text-center">View Details & Enroll</a>
+                                    <a href="{% url 'coaching_booking:offer-enroll' slug=offering.slug %}" class="mt-auto inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 text-center" title="View Details & Enroll">View Stats & Start Quest</a>
                                 </div>
                             </div>
                         </div>

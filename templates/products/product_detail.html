@@ -68,7 +68,7 @@
                         {% csrf_token %}
                         
                         <div class="space-y-3">
-                            <h3 class="text-lg font-semibold text-gray-800">Color: 
+                            <h3 class="text-lg font-semibold text-gray-800">Skin <span class="text-sm text-gray-500 font-normal">(Color)</span>: 
                                 <span class="font-bold" x-text="selectedColor"></span>
                             </h3>
                             <div class="flex flex-wrap gap-3">
@@ -118,13 +118,14 @@
                                     :disabled="!isInStock || selectedVariantId === '0'" 
                                     :class="{ 'bg-blue-600 hover:bg-blue-700': isInStock && selectedVariantId !== '0', 'bg-gray-400 cursor-not-allowed': !isInStock || selectedVariantId === '0' }"
                                     class="w-full text-white font-bold py-3 px-6 rounded-md transition duration-300 ease-in-out transform hover:-translate-y-0.5 flex items-center justify-center" 
-                                    aria-label="Add selected product to cart">
+                                    aria-label="Add selected product to cart"
+                                    title="Add to Shopping Cart">
                                 <span id="add-to-cart-spinner" class="htmx-indicator animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></span>
-                                <span x-show="isInStock && selectedVariantId !== '0'">Add to Cart</span>
-                                <span x-show="!isInStock || selectedVariantId === '0'">Out of Stock / Invalid Selection</span>
+                                <span x-show="isInStock && selectedVariantId !== '0'">Add to Inventory</span>
+                                <span x-show="!isInStock || selectedVariantId === '0'">Loot Depleted / Invalid Selection</span>
                             </button>
                             <div x-show="showSuccess" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 transform translate-y-0" x-transition:leave-end="opacity-0 transform translate-y-2" class="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-green-500 text-white text-sm px-3 py-1 rounded-full shadow-lg" style="display: none;">
-                                Added to cart!
+                                Loot acquired!
                             </div>
                         </div>
                     </form>
