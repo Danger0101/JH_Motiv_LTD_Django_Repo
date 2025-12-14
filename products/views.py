@@ -38,7 +38,7 @@ class ProductListView(ListView):
         return context
 
     def render_to_response(self, context, **response_kwargs):
-        if self.request.htmx:
+        if self.request.headers.get('HX-Request'):
             if settings.DEBUG:
                 time.sleep(0.5)
             

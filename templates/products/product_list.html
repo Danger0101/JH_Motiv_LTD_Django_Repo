@@ -51,7 +51,7 @@
                 class="grid sm:grid-cols-3 gap-4 items-center"
                 hx-get="{% url 'products:product_list' %}"
                 hx-target="#product-list-container"
-                hx-swap="outerHTML show:top"
+                hx-swap="innerHTML show:top"
                 hx-push-url="true"
                 hx-indicator="#product-loading-indicator"
                 hx-trigger="submit, change from:#per-page-select"
