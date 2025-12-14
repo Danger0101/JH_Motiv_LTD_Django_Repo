@@ -51,7 +51,10 @@ def about_page(request):
 
 def faqs_page(request): 
     """Renders the FAQ page with structured data for Alpine.js tabs/accordions."""
-    context = {'faq_items': FAQ_DATA.get('retail', [])} # Default to retail
+    context = {
+        'faq_items': FAQ_DATA.get('retail', []),
+        'category': 'retail'
+    } # Default to retail
     
     # For an HTMX request, render only the content partial.
     if request.htmx:
@@ -65,7 +68,10 @@ def faq_tab(request, category):
     """
     # Get the list of FAQs for the requested category, default to an empty list if not found.
     faq_items = FAQ_DATA.get(category, [])
-    context = {'faq_items': faq_items}
+    context = {
+        'faq_items': faq_items,
+        'category': category
+    }
     # Render only the partial containing the list of questions and answers.
     return render(request, 'core/partials/faq_tab_content.html', context)
 
