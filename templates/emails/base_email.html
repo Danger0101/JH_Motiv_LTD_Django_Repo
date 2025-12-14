@@ -41,6 +41,17 @@
     </style>
 </head>
 <body>
-    {% block content %}{% endblock %}
+    <div class="container">
+        <div class="header">
+            &gt; JH_MOTIV_SYSTEM
+        </div>
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+        <div class="footer">
+            <p>SYSTEM MESSAGE // END OF TRANSMISSION</p>
+            <p>&copy; {% now "Y" %} JH Motiv. Game on.</p>
+        </div>
+    </div>
 </body>
 </html>

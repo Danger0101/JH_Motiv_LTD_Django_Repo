@@ -2,12 +2,23 @@
 {% load static %}
 {% load i18n allauth %}
 
-{% block title %}Log In{% endblock %}
+{% block title %}Connect to Server{% endblock %}
 
 {% block content %}
-<div class="max-w-md mx-auto py-8 px-4 sm:px-6 lg:px-8">
-    <div class="p-6 bg-white shadow-lg rounded-lg border" id="login-form-container">
-        <h2 class="text-2xl font-bold mb-6 text-gray-900">{% translate "Log In" %}</h2>
+<div class="max-w-md mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <div class="p-8 bg-gray-900 shadow-2xl rounded-xl border border-gray-700 relative overflow-hidden" id="login-form-container">
+        
+        {# Decorative "Online" Indicator #}
+        <div class="absolute top-4 right-4 flex items-center space-x-2">
+            <span class="relative flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+            </span>
+            <span class="text-xs font-mono text-green-400">SYSTEM ONLINE</span>
+        </div>
+
+        <h2 class="text-3xl font-black mb-2 text-white tracking-tight">PLAYER LOGIN</h2>
+        <p class="text-gray-400 text-sm font-mono mb-8">> Enter credentials to resume session...</p>
 
         {% url 'account:login' as login_url %}
         
@@ -15,64 +26,66 @@
             {% csrf_token %}
             
             {% if form.non_field_errors %}
-                <div class="p-3 mb-4 text-sm text-red-700 bg-red-100 rounded" role="alert">
+                <div class="p-3 mb-6 text-sm text-red-400 bg-red-900/30 border border-red-800 rounded font-mono" role="alert">
                     {% for error in form.non_field_errors %}
-                        <p>{{ error }}</p>
+                        <p>> ERROR: {{ error }}</p>
                     {% endfor %}
                 </div>
             {% endif %}
 
             {% for field in form %}
                 {% if field.name != 'remember' %}
-                <div class="mb-4">
-                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                <div class="mb-5">
+                    <label for="{{ field.id_for_label }}" class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
                         {{ field.label }}
                     </label>
-                    {{ field }}
+                    {# Add dark mode classes to inputs via widget tweaks or wrapper classes if possible, otherwise standard styling works but looks cleaner #}
+                    <div class="relative">
+                        {{ field }}
+                    </div>
                     {% if field.errors %}
-                        <p class="mt-1 text-xs text-red-500">{{ field.errors|striptags }}</p>
+                        <p class="mt-1 text-xs text-red-500 font-mono">{{ field.errors|striptags }}</p>
                     {% endif %}
                 </div>
                 {% endif %}
             {% endfor %}
             
-            {# RENDER FORGOT PASSWORD LINK HERE #}
-            <div class="text-right mb-4">
-                <a class="text-sm font-medium text-blue-600 hover:text-blue-500" href="{% url 'account:password_reset' %}">
-                    {% translate "Forgot Password?" %}
+            <div class="flex items-center justify-between mb-6">
+                {% if form.remember %}
+                <div class="flex items-center">
+                    {{ form.remember }}
+                    <label for="{{ form.remember.id_for_label }}" class="ml-2 block text-sm text-gray-400">
+                        {% translate "Keep me connected" %}
+                    </label>
+                </div>
+                {% endif %}
+                
+                <a class="text-sm font-medium text-blue-400 hover:text-blue-300" href="{% url 'account:password_reset' %}">
+                    {% translate "Lost Credentials?" %}
                 </a>
             </div>
-            
-            {% if form.remember %}
-            <div class="mb-4 flex items-center">
-                {{ form.remember }}
-                <label for="{{ form.remember.id_for_label }}" class="ml-2 block text-sm text-gray-900">
-                    {% translate "Remember Me" %}
-                </label>
-            </div>
-            {% endif %}
 
             {% if redirect_field_value %}
             <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
             {% endif %}
             
-            <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                {% translate "Log In" %}
+            <button type="submit" class="w-full py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 uppercase tracking-widest transition-all hover:shadow-[0_0_15px_rgba(37,99,235,0.5)]">
+                {% translate "Initialize Session" %}
             </button>
         </form>
         
         {% if ACCOUNT_ALLOW_REGISTRATION %}
-        <p class="mt-4 text-center text-sm text-gray-600">
-            {% translate "Don't have an account?" %}
-            <a href="{% url 'account:signup' %}" class="font-medium text-blue-600 hover:text-blue-500">
-                {% translate "Sign up here" %}
+        <p class="mt-8 text-center text-sm text-gray-500">
+            {% translate "New Player?" %}
+            <a href="{% url 'account:signup' %}" class="font-bold text-blue-400 hover:text-blue-300 ml-1">
+                {% translate "Create Character" %}
             </a>
-        <p class="mt-4 text-center text-sm text-gray-600">
-            By logging in, you agree to our
-            <a href="{% url 'core:terms_of_service' %}" class="font-medium text-blue-600 hover:text-blue-500">Terms of Service</a> and
-            <a href="{% url 'core:privacy_policy' %}" class="font-medium text-blue-600 hover:text-blue-500">Privacy Policy</a>.
         </p>
         {% endif %}
     </div>
+    
+    <p class="mt-8 text-center text-xs text-gray-500">
+        By connecting, you agree to the <a href="{% url 'core:terms_of_service' %}" class="underline hover:text-gray-400">Server Rules</a>.
+    </p>
 </div>
 {% endblock %}

@@ -42,8 +42,8 @@
     <div class="max-w-7xl mx-auto">
         
         <header class="mb-8 text-center md:text-left">
-            <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-800">Your Shopping Cart</h1>
-            <p class="mt-2 text-lg text-gray-600">{{ summary.item_count }} items currently in cart.</p>
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-800">Your Loot Stash</h1>
+            <p class="mt-2 text-lg text-gray-600">{{ summary.item_count }} items in inventory.</p>
         </header>
 
         <div class="lg:grid lg:grid-cols-3 lg:gap-10">
@@ -51,7 +51,7 @@
             <div class="lg:col-span-2 bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-8 lg:mb-0" role="main" aria-label="Cart Items">
                 
                 <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-4">
-                    Items ({{ summary.item_count }})
+                    Current Loadout ({{ summary.item_count }})
                 </h2>
 
                 <div id="cart-item-list" 
@@ -79,7 +79,7 @@
                      hx-target="this"
                      hx-swap="outerHTML">
                     
-                    <h2 class="text-lg font-medium text-gray-900">Order summary</h2>
+                    <h2 class="text-lg font-medium text-gray-900">Trade Value</h2>
                     <dl class="mt-6 space-y-4">
                         <div class="flex items-center justify-between">
                             <dt class="text-sm text-gray-600">Subtotal</dt>
@@ -99,8 +99,8 @@
                     <p class="mt-1 text-xs text-gray-500">Shipping and taxes calculated at checkout.</p>
 
                     <div class="mt-6">
-                        <a href="{% url 'payments:checkout_cart' %}" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" title="Proceed to Checkout">
-                            Complete Transaction
+                        <a href="{% url 'payments:checkout_cart' %}" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 uppercase tracking-wide" title="Proceed to Checkout">
+                            Confirm Acquisition
                         </a>
                     </div>
                 </div>
@@ -115,7 +115,7 @@
                      hx-swap="outerHTML">
                     
                     {% if cart.coupon %}
-                        <h3 class="text-lg font-medium text-gray-900">Applied Coupon</h3>
+                        <h3 class="text-lg font-medium text-gray-900">Active Cheat Code</h3>
                         <div class="mt-2 p-3 bg-green-50 border border-green-200 rounded-md flex justify-between items-center shadow-sm">
                             <div class="flex items-center overflow-hidden">
                                 <svg class="h-5 w-5 text-green-500 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -136,16 +136,16 @@
                             </form>
                         </div>
                     {% else %}
-                        <h3 class="text-lg font-medium text-gray-900">Have a coupon?</h3>
+                        <h3 class="text-lg font-medium text-gray-900">Have a Cheat Code?</h3>
                         <form hx-post="{% url 'cart:apply_coupon' %}" 
                               hx-target="#coupon-message-area" 
                               hx-swap="innerHTML"
                               class="mt-2 relative">
                             {% csrf_token %}
                             <div class="flex space-x-2">
-                                <input type="text" name="code" id="coupon-code" placeholder="Enter coupon code" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                <input type="text" name="code" id="coupon-code" placeholder="Enter code (e.g. GODMODE)" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                                 <button type="submit" class="rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">
-                                    Apply
+                                    Activate
                                 </button>
                             </div>
                         </form>
