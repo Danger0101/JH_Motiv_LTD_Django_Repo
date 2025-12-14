@@ -39,8 +39,8 @@
             <div class="absolute inset-0 loot-rays"></div>
             <div class="relative z-10">
                 <div class="text-6xl mb-4 animate-loot-shake inline-block">🎁</div>
-                <h2 class="text-3xl font-black text-white uppercase tracking-widest mb-2" style="text-shadow: 2px 2px 0 #000;">Loot Acquired!</h2>
-                <p class="text-yellow-400 font-mono text-sm">Item added to inventory.</p>
+                <h2 class="text-3xl font-black text-white uppercase tracking-widest mb-2" style="text-shadow: 2px 2px 0 #000;">Loot Stashed!</h2>
+                <p class="text-yellow-400 font-mono text-sm">Item added to loadout.</p>
             </div>
         </div>
     </div>
@@ -160,7 +160,7 @@
                                     aria-label="Add selected product to cart"
                                     title="Add to Shopping Cart">
                                 <span id="add-to-cart-spinner" class="htmx-indicator animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></span>
-                                <span x-show="isInStock && selectedVariantId !== '0'">Add to Inventory</span>
+                                <span x-show="isInStock && selectedVariantId !== '0'">Add to Stash</span>
                                 <span x-show="!isInStock || selectedVariantId === '0'">Loot Depleted / Invalid Selection</span>
                             </button>
                         </div>
