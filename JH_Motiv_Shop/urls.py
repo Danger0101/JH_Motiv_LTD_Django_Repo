@@ -18,7 +18,12 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.sitemaps.views import sitemap
+from sitemaps import ProductSitemap
 
+sitemaps = {
+    'products': ProductSitemap,
+}
 
 urlpatterns = [
     # Core Django Admin
