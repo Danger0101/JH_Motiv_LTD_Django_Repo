@@ -1,20 +1,29 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}{% trans "Permission Denied" %}{% endblock %}
+{% block title %}Access Denied{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 sm:px-6 py-12 max-w-2xl">
-    <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 text-center">
-        <div class="mb-6 text-orange-500">
-            <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+<div class="container mx-auto px-4 sm:px-6 py-24 max-w-2xl text-center">
+    <div class="bg-gray-900 p-10 rounded-2xl shadow-2xl border-2 border-orange-600 relative overflow-hidden">
+        
+        {# Hazard Stripes #}
+        <div class="absolute top-0 left-0 w-full h-2 bg-[repeating-linear-gradient(45deg,yellow,yellow_10px,black_10px,black_20px)]"></div>
+
+        <div class="mb-6 text-orange-500 animate-pulse">
+            <svg class="w-24 h-24 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
         </div>
-        <h1 class="text-3xl font-bold text-gray-800 mb-4">{% trans "Permission Denied" %}</h1>
-        <p class="text-gray-600 mb-8">
-            {% trans "You do not have permission to access this page." %}
+        
+        <h1 class="text-4xl font-black text-white mb-2 tracking-tighter uppercase">RESTRICTED ZONE</h1>
+        <p class="text-orange-400 font-mono text-lg mb-8">Error 403: Insufficient Clearance Level</p>
+        
+        <p class="text-gray-400 mb-8 text-lg">
+            This area is locked to your current character class. You need a higher clearance level or a specific key item to enter.
         </p>
-        <a href="/" class="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-sm">
-            {% trans "Return Home" %}
+        
+        <a href="/" class="inline-flex items-center px-8 py-4 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 transition shadow-lg border border-orange-500 uppercase tracking-widest">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"></path></svg>
+            Retreat to Safety
         </a>
     </div>
 </div>
