@@ -9,7 +9,7 @@ STORE_ID = os.environ.get('PRINTFUL_STORE_ID')
 
 # MATCH THIS TO YOUR DJANGO URLS.PY
 # Your code uses 'webhooks' (plural), so we use that here.
-WEBHOOK_URL = "https://jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com/products/webhooks/printful/"
+WEBHOOK_URL = "https://jhmotiv.shop/products/webhooks/printful/"
 
 def try_setup(version="v2", use_header=True):
     print(f"\n--- Attempting Setup: API {version.upper()} | Header: {use_header} ---")
