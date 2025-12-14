@@ -41,6 +41,7 @@ urlpatterns = [
     path('checkout/', include('payments.urls', namespace='payments')),
     path('cart/', include('cart.urls', namespace='cart')),
     path('shop/', include('products.urls')),
+    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
 ]
 
 if settings.DEBUG:
