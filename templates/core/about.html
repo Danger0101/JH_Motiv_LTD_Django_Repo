@@ -1,115 +1,146 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}About JH Motiv LTD{% endblock %}
+{% block title %}The Source Code - JH Motiv{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-    <div class="text-center mb-10">
-        <h1 class="text-4xl font-extrabold text-gray-900 sm:text-5xl">
-            The JH Motiv Movement
+<div class="max-w-6xl mx-auto py-12 px-4 sm:px-6 lg:px-8 font-sans">
+    
+    {# --- HEADER: The Terminal Header --- #}
+    <div class="text-center mb-12">
+        <h1 class="text-4xl md:text-6xl font-black text-gray-900 tracking-tighter uppercase font-mono" 
+            style="text-shadow: 2px 2px 0px #e5e7eb;">
+            SYSTEM_LORE<span class="text-blue-600 animate-pulse">_</span>
         </h1>
+        <p class="mt-4 text-xl text-gray-500 font-mono">
+            > Accessing Developer Logs...
+        </p>
     </div>
 
-    <div x-data="{ activeTab: 'about_us' }" class="mt-12">
-        <div class="flex flex-wrap justify-center border-b border-gray-200" role="tablist" aria-label="About Sections">
+    <div x-data="{ activeTab: 'about_us' }" class="mt-12 bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200">
+        
+        {# --- NAVIGATION: The HUD --- #}
+        <div class="flex flex-wrap justify-center bg-gray-900 p-2 gap-2" role="tablist" aria-label="About Sections">
             
-            {# 1. STATIC TABS (Our Story, Mission, How We Do It) #}
+            {# 1. STATIC TABS #}
             {% for key, tab in about_data.tabs.items %}
             <button 
                 @click="activeTab = '{{ key }}'"
-                :class="{ 'border-blue-500 text-blue-600': activeTab === '{{ key }}', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== '{{ key }}' }"
-                class="py-3 px-4 text-center border-b-2 font-medium text-base focus:outline-none transition duration-150 ease-in-out"
+                :class="{ 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)]': activeTab === '{{ key }}', 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white': activeTab !== '{{ key }}' }"
+                class="py-3 px-6 rounded-lg font-mono text-sm md:text-base font-bold transition-all duration-200 uppercase tracking-widest border border-gray-700"
                 role="tab"
                 aria-controls="{{ key }}-panel"
                 :aria-selected="activeTab === '{{ key }}'"
             >
-                {{ tab.title }}
+                <span x-show="activeTab === '{{ key }}'" class="mr-2">></span>{{ tab.title }}
             </button>
             {% endfor %}
 
-            {# 2. DYNAMIC WALL OF DREAMERS TAB BUTTON #}
+            {# 2. LEADERBOARD TAB #}
             <button 
                 @click="activeTab = 'dreamers'"
-                :class="{ 'border-blue-500 text-blue-600': activeTab === 'dreamers', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'dreamers' }"
-                class="py-3 px-4 text-center border-b-2 font-medium text-base focus:outline-none transition duration-150 ease-in-out"
+                :class="{ 'bg-pink-600 text-white shadow-[0_0_15px_rgba(219,39,119,0.5)]': activeTab === 'dreamers', 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white': activeTab !== 'dreamers' }"
+                class="py-3 px-6 rounded-lg font-mono text-sm md:text-base font-bold transition-all duration-200 uppercase tracking-widest border border-gray-700"
                 role="tab"
                 aria-controls="dreamers-panel"
                 :aria-selected="activeTab === 'dreamers'"
             >
-                Wall of Dreamers 💫
+                <span x-show="activeTab === 'dreamers'" class="mr-2">></span>Leaderboard 🏆
             </button>
         </div>
 
-        <div class="mt-8">
+        <div class="p-8 md:p-12">
 
-            {# 1. STATIC CONTENT PANELS (Our Story, Mission, How We Do It, Meet the Team Placeholder) #}
+            {# 1. CONTENT PANELS #}
             {% for key, tab in about_data.tabs.items %}
             <div x-show="activeTab === '{{ key }}'" role="tabpanel" id="{{ key }}-panel" aria-labelledby="{{ key }}-tab" class="prose max-w-none lg:prose-lg mx-auto">
-                <h2 class="text-3xl font-bold mb-6">{{ tab.heading }}</h2>
+                <h2 class="text-3xl md:text-4xl font-black mb-8 text-gray-900 border-b-4 border-blue-500 inline-block pb-2">
+                    {{ tab.heading }}
+                </h2>
                 
-                {# Check if this is the dynamic Meet the Team panel #}
                 {% if key == 'meet_the_team' %}
-                    
-                    {# --- DYNAMIC MEET THE TEAM GRID CONTENT --- #}
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {# --- TEAM GRID --- #}
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
                         {% for member in team_members %}
-                        <div class="text-center p-6 border rounded-lg shadow-sm">
-                            <img 
-                                src="{{ member.profile_image.url }}" 
-                                alt="Profile photo of {{ member.name }}"
-                                class="w-32 h-32 object-cover rounded-full mx-auto mb-4 border-4 border-blue-500"
-                            >
-                            <h3 class="text-xl font-bold text-gray-900">{{ member.name }}</h3>
-                            <p class="text-blue-600 font-medium mb-3">{{ member.role }}</p>
+                        <div class="text-center p-6 bg-gray-50 rounded-xl border-2 border-gray-200 hover:border-blue-500 transition-colors duration-300">
+                            <div class="relative inline-block">
+                                <img 
+                                    src="{{ member.profile_image.url }}" 
+                                    alt="Profile photo of {{ member.name }}"
+                                    class="w-32 h-32 object-cover rounded-full mx-auto mb-4 border-4 border-gray-900"
+                                >
+                                <div class="absolute bottom-4 right-0 bg-green-500 w-4 h-4 rounded-full border-2 border-white" title="Online"></div>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-900 font-mono">{{ member.name }}</h3>
+                            <div class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded font-mono mb-3 uppercase tracking-wide">{{ member.role }}</div>
                             <p class="text-gray-700 text-sm leading-relaxed">{{ member.bio }}</p>
                         </div>
                         {% empty %}
-                        <p class="col-span-full text-center text-gray-500">The team is expanding! Check back soon to meet everyone.</p>
+                        <div class="col-span-full text-center p-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+                            <p class="text-gray-500 font-mono">Scanning for new players...</p>
+                        </div>
                         {% endfor %}
                     </div>
                 
                 {% else %}
-                    {# --- STANDARD STATIC CONTENT LOOP --- #}
+                    {# --- TEXT CONTENT --- #}
+                    <div class="space-y-6">
                     {% for item in tab.content %}
                         {% if item.type == 'p' %}
-                            <p class="text-lg leading-relaxed">{{ item.body|safe }}</p>
+                            <p class="text-lg text-gray-700 leading-relaxed">{{ item.body|safe }}</p>
                         {% elif item.type == 'list' %}
-                            <ul class="list-disc list-inside space-y-2">
+                            <ul class="space-y-4 my-6 bg-gray-50 p-6 rounded-lg border-l-4 border-blue-500">
                                 {% for li in item.items %}
-                                    <li>{{ li|safe }}</li>
+                                    <li class="flex items-start">
+                                        <span class="text-blue-500 mr-2 mt-1">►</span>
+                                        <span>{{ li|safe }}</span>
+                                    </li>
                                 {% endfor %}
                             </ul>
                         {% elif item.type == 'tag' %}
-                            <p class="text-xl font-semibold mt-8">{{ item.body|safe }}</p>
+                            <p class="text-2xl font-black mt-8 text-gray-900 tracking-tight">{{ item.body|safe }}</p>
                         {% endif %}
                     {% endfor %}
+                    </div>
                 {% endif %}
             </div>
             {% endfor %}
 
-            {# 2. WALL OF DREAMERS DYNAMIC PANEL #}
+            {# 2. LEADERBOARD PANEL #}
             <div x-show="activeTab === 'dreamers'" role="tabpanel" id="dreamers-panel" aria-labelledby="dreamers-tab" x-cloak>
                 <div class="prose max-w-none lg:prose-lg mx-auto">
-                    <h2 class="text-3xl font-bold mb-6">{{ about_data.dreamers.title }}</h2>
-                    <p class="text-lg leading-relaxed mb-8">{{ about_data.dreamers.intro }}</p>
+                    <h2 class="text-3xl md:text-4xl font-black mb-6 text-gray-900 border-b-4 border-pink-500 inline-block pb-2">
+                        {{ about_data.dreamers.title }}
+                    </h2>
+                    <p class="text-lg text-gray-700 leading-relaxed mb-8 font-medium">
+                        {{ about_data.dreamers.intro }}
+                    </p>
 
-                    <ul role="list" class="space-y-6">
+                    <div class="grid gap-6">
                         {% for dreamer in dreamer_profiles %}
-                        <li class="p-4 border rounded-lg flex items-center justify-between">
-                            <div>
-                                <span class="text-xl font-medium text-gray-900">{{ dreamer.name }}</span>
+                        <div class="p-6 bg-white border-2 border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:border-pink-500 transition-all duration-300 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left">
+                            {# Avatar Placeholder / If you have images for dreamers, add here #}
+                            <div class="flex-shrink-0 mb-4 sm:mb-0 sm:mr-6">
+                                <div class="w-16 h-16 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                                    {{ dreamer.name|slice:":1" }}
+                                </div>
+                            </div>
+                            
+                            <div class="flex-grow">
+                                <h3 class="text-xl font-bold text-gray-900 font-mono flex items-center justify-center sm:justify-start gap-2">
+                                    {{ dreamer.name }}
+                                    <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full border border-yellow-200">MVP</span>
+                                </h3>
                                 {% if dreamer.story_excerpt %}
-                                    <p class="text-sm text-gray-600 mt-1">{{ dreamer.story_excerpt }}</p>
+                                    <p class="text-gray-600 mt-2">{{ dreamer.story_excerpt }}</p>
                                 {% endif %}
                             </div>
-                            <div class="flex space-x-3 ml-4 flex-shrink-0">
+                            
+                            <div class="flex space-x-3 mt-4 sm:mt-0 sm:ml-6">
                                 {% for channel in dreamer.channels.all %}
-                                    {# Full SVG logic should be in place here #}
-                                    <a href="{{ channel.url }}" target="_blank" aria-label="{{ channel.get_channel_type_display }} for {{ dreamer.name }}" class="text-gray-500 hover:text-blue-600 transition duration-150">
+                                    <a href="{{ channel.url }}" target="_blank" class="text-gray-400 hover:text-pink-600 transform hover:scale-110 transition duration-150">
                                         {% with type=channel.channel_type %}
                                         <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
-                                            {# SVG Path Logic here (omitted for brevity) #}
                                             <title>{{ type|capfirst }}</title>
                                             <path d="M12 0c6.627 0 12 5.373 12 12s-5.373 12-12 12S0 18.627 0 12 5.373 0 12 0zm5.176 8.008a3.176 3.176 0 0 1-5.12 3.864v.016a5.056 5.056 0 0 0 3.056 4.752c-.672.064-1.376.112-2.096.112-2.736 0-5.184-1.28-6.496-3.232a8.624 8.624 0 0 0 .176 6.336c1.136 1.488 2.896 2.592 4.96 3.04V15.04a2.96 2.96 0 0 1-2.944-2.96c0-.016.016-.032.016-.048a1.008 1.008 0 0 0-1.008-.96 1.008 1.008 0 0 0-1.008.96c0 .016.016.032.016.048a4.96 4.96 0 0 0 4.928 4.96c.016 0 .032 0 .048 0a5.056 5.056 0 0 0 5.056-5.056V8.008z"/>
                                         </svg>
@@ -117,11 +148,13 @@
                                     </a>
                                 {% endfor %}
                             </div>
-                        </li>
+                        </div>
                         {% empty %}
-                        <p class="text-center text-gray-500">The Wall of Dreamers is currently being updated! Check back soon to see who we're supporting.</p>
+                        <div class="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                            <p class="text-gray-500 font-mono">Leaderboard loading... New players joining soon.</p>
+                        </div>
                         {% endfor %}
-                    </ul>
+                    </div>
                 </div>
             </div>
         </div>
