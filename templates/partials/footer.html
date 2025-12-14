@@ -12,10 +12,10 @@
     {% static 'images/winter_footer.webp' as footer_bg %}
 {% endif %}
 
-<footer class="relative bg-gray-900 text-gray-300 mt-auto border-t-4 border-blue-600 font-mono text-sm">
+<footer class="relative bg-gray-900 text-gray-200 mt-auto border-t-4 border-blue-600 font-mono text-sm">
     <div class="absolute inset-0 opacity-10">
         <img src="{{ footer_bg }}" alt="" class="w-full h-full object-cover object-bottom" loading="lazy">
-        <div class="absolute inset-0 bg-gray-900/90"></div>
+        <div class="absolute inset-0 bg-black/90"></div>
     </div>
 
     <div class="relative container mx-auto px-6 py-12">
@@ -78,7 +78,7 @@
             </div>
         </div>
         
-        <div class="mt-12 border-t border-gray-800 pt-6 text-center text-xs text-gray-400 font-mono">
+        <div class="mt-12 border-t border-gray-800 pt-6 text-center text-xs text-gray-300 font-mono">
             <p>&copy; {% now "Y" %} JH Motiv LTD. All Rights Reserved. <span class="text-green-500">|</span> Game Verified.</p>
         </div>
     </div>
