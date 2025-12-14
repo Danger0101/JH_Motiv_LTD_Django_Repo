@@ -1,4 +1,4 @@
-<div class="space-y-4">
+<div class="space-y-4" x-data="{ openItem: null }">
     {% for item in items %}
         {% with item_id=category|add:"-"|add:forloop.counter %}
         <div class="border rounded-lg shadow-sm">
@@ -17,7 +17,7 @@
 
             <div 
                 x-show="openItem === '{{ item_id }}'"
-                x-collapse
+                x-collapse.duration.300ms
                 class="p-4 pt-0 text-base text-gray-600"
                 role="region"
                 aria-labelledby="question-{{ item_id }}"
