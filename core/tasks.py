@@ -4,7 +4,11 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
 import logging
-import weasyprint
+try:
+    import weasyprint
+except (OSError, ImportError):
+    weasyprint = None
+
 from django.core import signing
 from django.urls import reverse
 
@@ -123,6 +127,10 @@ def send_welcome_email_with_pdf_task(recipient_email, base_url):
     """
     Generates the Blueprint PDF and sends it as an attachment in a welcome email.
     """
+    if weasyprint is None:
+        logger.warning("PDF Generation skipped: WeasyPrint libraries not found on this machine.")
+        return
+
     try:
         # 1. Generate PDF
         html_string = render_to_string('pdfs/game_master_blueprint.html')

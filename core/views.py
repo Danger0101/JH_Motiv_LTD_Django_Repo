@@ -10,7 +10,11 @@ import datetime
 import functools
 from django.template.loader import render_to_string
 from django.contrib.admin.views.decorators import staff_member_required
-import weasyprint
+try:
+    import weasyprint
+except (OSError, ImportError):
+    weasyprint = None
+
 from django.core import signing
 from django.core.cache import cache
 
@@ -281,6 +285,9 @@ def download_blueprint_pdf(request):
     """
     Generates the Game Master's Blueprint PDF.
     """
+    if weasyprint is None:
+        return HttpResponse("PDF generation is not available on this server.", status=503)
+
     # 1. Render HTML with context data if needed (static for now)
     html_string = render_to_string('pdfs/game_master_blueprint.html', request=request)
 
