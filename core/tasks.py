@@ -138,17 +138,28 @@ def send_welcome_email_with_pdf_task(recipient_email, base_url):
 
         # 2. Prepare Email
         subject = "Welcome to the Guild - Your Blueprint is Inside"
-        body_text = "Welcome to the JH Motiv Guild! We are glad to have you. Please find your Game Master's Blueprint attached."
+        
+        # Generate unsubscribe link
+        token = signing.dumps(recipient_email, salt='newsletter-unsubscribe')
+        unsubscribe_path = reverse('core:unsubscribe_newsletter', args=[token])
+        unsubscribe_url = f"{base_url.rstrip('/')}{unsubscribe_path}"
+
+        body_html = "<p>Welcome to the JH Motiv Guild! We are glad to have you.</p><p>Please find your Game Master's Blueprint attached.</p>"
+        
+        context = {'body': body_html, 'unsubscribe_url': unsubscribe_url}
+        html_content = render_to_string('core/generic_newsletter.html', context)
+        text_content = strip_tags(html_content)
         
         email = EmailMultiAlternatives(
             subject=subject,
-            body=body_text,
+            body=text_content,
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=[recipient_email]
         )
         
         # 3. Attach PDF
         email.attach('Game_Masters_Blueprint.pdf', pdf_bytes, 'application/pdf')
+        email.attach_alternative(html_content, "text/html")
         
         # 4. Send
         email.send(fail_silently=False)

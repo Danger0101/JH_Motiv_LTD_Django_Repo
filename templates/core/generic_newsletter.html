@@ -4,16 +4,28 @@
     <style>
         body { font-family: sans-serif; line-height: 1.6; color: #333; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .footer { margin-top: 30px; font-size: 12px; color: #777; border-top: 1px solid #eee; padding-top: 10px; }
+        .footer { margin-top: 30px; font-size: 12px; color: #777; border-top: 1px solid #eee; padding-top: 10px; text-align: center; }
+        .footer a { color: #777; text-decoration: underline; margin: 0 5px; }
     </style>
 </head>
 <body>
     <div class="container">
         {{ body|safe }}
         <div class="footer">
-            You are receiving this because you joined the JH Motiv Guild.
-            <br>
-            <a href="{{ unsubscribe_url }}" style="color: #777; text-decoration: underline;">Unsubscribe</a>
+            <p>You are receiving this because you joined the JH Motiv Guild.</p>
+            <p>
+                <a href="https://jhmotiv.shop">Visit Website</a> |
+                <a href="{{ unsubscribe_url }}">Unsubscribe</a> |
+                <a href="{{ unsubscribe_url }}">Manage Subscription</a>
+            </p>
+            <p style="margin-top: 15px;">
+                <a href="https://www.facebook.com/profile.php?id=61575091190909" style="text-decoration: none; margin: 0 5px; font-size: 18px;" title="Facebook">📘</a>
+                <a href="https://x.com/JHMotiv" style="text-decoration: none; margin: 0 5px; font-size: 18px;" title="X (Twitter)">✖️</a>
+                <a href="https://www.instagram.com/JHMotiv/" style="text-decoration: none; margin: 0 5px; font-size: 18px;" title="Instagram">📸</a>
+                <a href="https://www.youtube.com/@JHMotiv/shorts" style="text-decoration: none; margin: 0 5px; font-size: 18px;" title="YouTube">📺</a>
+                <a href="https://www.tiktok.com/@jhmotiv" style="text-decoration: none; margin: 0 5px; font-size: 18px;" title="TikTok">🎵</a>
+            </p>
+            <p>JH Motiv LTD, 71-75 Shelton Street, London, WC2H 9JQ</p>
         </div>
     </div>
 </body>
