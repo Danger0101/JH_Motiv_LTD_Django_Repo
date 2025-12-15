@@ -57,7 +57,7 @@
     {% block extra_scripts %}
       <script src="{% static 'js/carousel.js' %}"></script> 
       <script src="{% static 'js/alpine_components.js' %}"></script>
-      <script src="{% static 'js/konami_cheat.js' %}"></script>
+      <script type="module" src="{% static 'js/cheats/engine.js' %}"></script>
     {% endblock %}
 
     {% include 'partials/toast_messages.html' %}
