@@ -1,7 +1,10 @@
 from django.shortcuts import render
 from django.views.generic import TemplateView
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
+from django.utils import timezone
+from payments.models import Coupon
+import datetime
 
 # Import data files
 from .faq_data import FAQ_DATA
@@ -106,6 +109,52 @@ def refund_policy_page(request):
 def shipping_policy_page(request):
     """Renders the Shipping Policy page with data."""
     return render(request, 'core/shipping_policy.html', {'shipping_data': SHIPPING_POLICY_DATA})
+
+@require_POST
+def claim_konami_coupon(request):
+    """
+    Easter Egg: Generates a 10% Off + Free Shipping coupon for the authenticated user.
+    Limit: Once per month per user.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({
+            'status': 'error', 
+            'message': '🔒 ACCESS DENIED: Login required to save game progress and claim loot!'
+        }, status=403)
+
+    now = timezone.now()
+    # Unique code format: CHEATCODE-[USER_ID]-[YYYY-MM]
+    # e.g., CHEATCODE-42-2023-10
+    code_name = f"CHEATCODE-{request.user.id}-{now.strftime('%Y-%m')}"
+
+    # Check if this specific monthly code already exists
+    if Coupon.objects.filter(code=code_name).exists():
+        return JsonResponse({
+            'status': 'info', 
+            'message': '⚠️ Loot box already opened this month! Cooldown active.'
+        })
+
+    # Create the coupon
+    expiry = now + datetime.timedelta(days=30)
+    coupon = Coupon.objects.create(
+        code=code_name,
+        discount_type=Coupon.DISCOUNT_TYPE_PERCENT,
+        discount_value=10,
+        coupon_type=Coupon.COUPON_TYPE_DISCOUNT,
+        free_shipping=True,
+        active=True,
+        usage_limit=1,
+        user_specific=request.user,
+        valid_from=now,
+        valid_to=expiry,
+        limit_to_product_type=Coupon.LIMIT_TYPE_ALL
+    )
+
+    return JsonResponse({
+        'status': 'success', 
+        'message': f'🎉 CHEAT ACTIVATED! Code: {code_name} (10% Off + Free Shipping)',
+        'code': code_name
+    })
 
 @require_POST
 def set_cookie_consent(request):
