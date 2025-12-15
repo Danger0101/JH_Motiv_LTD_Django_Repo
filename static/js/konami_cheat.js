@@ -36,12 +36,16 @@ document.addEventListener("alpine:init", () => {
   }
 
   // --- HELPER: State Management ---
-  function saveState(cheatName, isActive) {
-    if (isActive) {
-      localStorage.setItem(STORAGE_KEY_PREFIX + cheatName, "true");
+  function saveState(cheatName, value) {
+    if (value) {
+      localStorage.setItem(STORAGE_KEY_PREFIX + cheatName, value);
     } else {
       localStorage.removeItem(STORAGE_KEY_PREFIX + cheatName);
     }
+  }
+
+  function getState(cheatName) {
+    return localStorage.getItem(STORAGE_KEY_PREFIX + cheatName);
   }
 
   function isStateActive(cheatName) {
@@ -162,17 +166,59 @@ document.addEventListener("alpine:init", () => {
         if (window.matrixInterval) clearInterval(window.matrixInterval);
       }
     },
+    // --- NEW: SEASON SELECTOR ---
+    season: (seasonName) => {
+      if (!seasonName) return; // Do nothing if reset/empty
+
+      // Map inputs to filenames (handling the capitalization quirk in your files)
+      const assetMap = {
+        spring: {
+          banner: "spring_banner.webp",
+          footer: "spring_footer.webp",
+          emoji: "🌸",
+        },
+        summer: {
+          banner: "summer_banner.webp",
+          footer: "summer_footer.webp",
+          emoji: "☀️",
+        },
+        fall: {
+          banner: "Fall_banner.webp",
+          footer: "fall_footer.webp",
+          emoji: "🍂",
+        }, // Note 'Fall' vs 'fall'
+        winter: {
+          banner: "winter_banner.webp",
+          footer: "winter_footer.webp",
+          emoji: "❄️",
+        },
+      };
+
+      const config = assetMap[seasonName];
+      if (!config) return;
+
+      // Target the elements by the IDs we just added
+      const heroBg = document.getElementById("seasonal-hero-bg");
+      const footerBg = document.getElementById("seasonal-footer-bg");
+
+      if (heroBg) heroBg.src = `/static/images/${config.banner}`;
+      if (footerBg) footerBg.src = `/static/images/${config.footer}`;
+    },
   };
 
   // ==========================================
   //  3. INIT: RESTORE STATE ON LOAD
   // ==========================================
   // This runs on every page load to check if cheats should be active
-  Object.keys(effects).forEach((key) => {
-    if (isStateActive(key)) {
-      effects[key](true); // Re-apply the effect
-    }
+  ["devmode", "doom", "bighead", "fps", "matrix"].forEach((key) => {
+    if (isStateActive(key)) effectskey;
   });
+
+  // Restore Season
+  const savedSeason = getState("season");
+  if (savedSeason) {
+    effects.season(savedSeason);
+  }
 
   // ==========================================
   //  4. INPUT LISTENER
@@ -192,18 +238,13 @@ document.addEventListener("alpine:init", () => {
   ];
 
   document.addEventListener("keydown", async function (e) {
-    // A. Reset timer on every keypress
     clearTimeout(inputTimer);
     inputTimer = setTimeout(() => {
-      keySequence.length = 0; // Clear buffer
-      // console.log("Cheat Buffer Cleared");
+      keySequence.length = 0;
     }, INPUT_TIMEOUT_MS);
 
-    // B. Track keys
     keySequence.push(e.key.toLowerCase());
-    if (keySequence.length > 20) {
-      keySequence.shift();
-    }
+    if (keySequence.length > 20) keySequence.shift();
     const currentSequence = keySequence.join("");
 
     // --- CHEAT 1: KONAMI (Coupon) ---
@@ -289,6 +330,35 @@ document.addEventListener("alpine:init", () => {
       keySequence.length = 0;
     }
 
+    // --- CHEAT 9: SEASON PASS (Persistent) ---
+    const seasons = ["spring", "summer", "fall", "winter"];
+    seasons.forEach((season) => {
+      if (currentSequence.endsWith(season)) {
+        saveState("season", season);
+        effects.season(season);
+
+        const emojis = {
+          spring: "🌸",
+          summer: "☀️",
+          fall: "🍂",
+          winter: "❄️",
+        };
+        notify(
+          `${emojis[season]} Season Pass: ${season.toUpperCase()} Activated`,
+          "info"
+        );
+        keySequence.length = 0;
+      }
+    });
+
+    // Reset Season
+    if (currentSequence.endsWith("seasonpass")) {
+      saveState("season", null);
+      notify("🔄 Time Sync: Returning to Server Time", "warning");
+      setTimeout(() => location.reload(), 1000); // Reload to let Django fetch real date
+      keySequence.length = 0;
+    }
+
     // --- CHEAT 6: INVENTORY (Redirect - No persistence needed) ---
     if (currentSequence.endsWith("loot")) {
       notify("💰 Opening Inventory...", "success");
@@ -313,50 +383,51 @@ document.addEventListener("alpine:init", () => {
     // 8. SIMULATE 403 (Access Denied) - Type: "ban"
     // ---------------------------------------------------------
     if (currentSequence.endsWith("ban")) {
-        notify("⛔ ACCESS DENIED. TERMINATING SESSION...", "error");
-        setTimeout(() => {
-            window.location.href = "/system/glitch/403/";
-        }, 1000);
-        keySequence.length = 0;
+      notify("⛔ ACCESS DENIED. TERMINATING SESSION...", "error");
+      setTimeout(() => {
+        window.location.href = "/system/glitch/403/";
+      }, 1000);
+      keySequence.length = 0;
     }
 
     // ---------------------------------------------------------
     // 9. SIMULATE 404 (Not Found) - Type: "lost"
     // ---------------------------------------------------------
     if (currentSequence.endsWith("lost")) {
-        notify("🗺️ Signal Lost. Recalibrating...", "warning");
-        setTimeout(() => {
-            window.location.href = "/system/glitch/404/";
-        }, 1000);
-        keySequence.length = 0;
+      notify("🗺️ Signal Lost. Recalibrating...", "warning");
+      setTimeout(() => {
+        window.location.href = "/system/glitch/404/";
+      }, 1000);
+      keySequence.length = 0;
     }
 
     // ---------------------------------------------------------
     // 10. SIMULATE 500 (Server Crash) - Type: "crash"
     // ---------------------------------------------------------
     if (currentSequence.endsWith("crash")) {
-        notify("🔥 CRITICAL SYSTEM FAILURE DETECTED", "error");
-        // Add a slight shake effect before redirecting for drama
-        document.body.style.animation = "shake 0.5s cubic-bezier(.36,.07,.19,.97) both";
-        
-        // Inject shake keyframes if not present
-        if (!document.getElementById('shake-style')) {
-            const style = document.createElement('style');
-            style.id = 'shake-style';
-            style.innerHTML = `
+      notify("🔥 CRITICAL SYSTEM FAILURE DETECTED", "error");
+      // Add a slight shake effect before redirecting for drama
+      document.body.style.animation =
+        "shake 0.5s cubic-bezier(.36,.07,.19,.97) both";
+
+      // Inject shake keyframes if not present
+      if (!document.getElementById("shake-style")) {
+        const style = document.createElement("style");
+        style.id = "shake-style";
+        style.innerHTML = `
                 @keyframes shake { 
                     10%, 90% { transform: translate3d(-1px, 0, 0); }
                     20%, 80% { transform: translate3d(2px, 0, 0); }
                     30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
                     40%, 60% { transform: translate3d(4px, 0, 0); }
                 }`;
-            document.head.appendChild(style);
-        }
+        document.head.appendChild(style);
+      }
 
-        setTimeout(() => {
-            window.location.href = "/system/glitch/500/";
-        }, 1500);
-        keySequence.length = 0;
+      setTimeout(() => {
+        window.location.href = "/system/glitch/500/";
+      }, 1500);
+      keySequence.length = 0;
     }
   });
 });
