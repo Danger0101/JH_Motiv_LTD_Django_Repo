@@ -211,7 +211,7 @@ document.addEventListener("alpine:init", () => {
   // ==========================================
   // This runs on every page load to check if cheats should be active
   ["devmode", "doom", "bighead", "fps", "matrix"].forEach((key) => {
-    if (isStateActive(key)) effectskey;
+    if (isStateActive(key)) effects[key](true);
   });
 
   // Restore Season
