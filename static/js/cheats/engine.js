@@ -8,6 +8,7 @@ import {
   isStateActive,
 } from "./state.js";
 import { effects } from "./effects.js";
+// We keep redirects client-side for speed, but you can move them to python if you prefer
 import { checkRedirects } from "./redirects.js";
 
 (function initCheatEngine() {
@@ -30,14 +31,63 @@ import { checkRedirects } from "./redirects.js";
   if (savedSeason && effects.season) effects.season(savedSeason);
 
   // --- 2. CONFIG ---
-  const INPUT_TIMEOUT_MS = 5000;
-  let inputTimer = null;
+  const INPUT_TIMEOUT_MS = 5000; // Reset buffer after 5s of inactivity
+  const SERVER_CHECK_DELAY = 800; // Wait 0.8s after typing stops to check server
+  let inputTimer = null; // Timer for clearing buffer
+  let serverCheckTimer = null; // Timer for debouncing API call
   const keySequence = [];
-  const konamiCode =
-    "arrowuparrowuparrowdownarrowdownarrowleftarrowrightarrowleftarrowrightarrowba";
 
-  // --- 3. LISTENER ---
+  // --- 3. HELPER: VERIFY WITH PYTHON ---
+  async function verifyWithServer(sequence) {
+    try {
+      const response = await fetch("/api/verify-cheat/", {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": getCookie("csrftoken"),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ sequence: sequence }),
+      });
+
+      const data = await response.json();
+
+      if (data.status === "success") {
+        const effect = data.effect;
+
+        // 1. Show Notification
+        if (effect.message) {
+          notify(effect.message, effect.type || "success");
+        }
+
+        // 2. Handle Actions
+        if (effect.action === "coupon") {
+          if (effect.payload) {
+            navigator.clipboard.writeText(effect.payload);
+            notify("📋 Code copied to clipboard!", "info");
+          }
+        } else if (effect.action === "godmode") {
+          document.body.style.transition = "transform 1s";
+          document.body.style.transform = "rotate(180deg)";
+          setTimeout(() => {
+            document.body.style.transform = "none";
+          }, 2000);
+        } else if (effect.action === "redirect") {
+          setTimeout(() => {
+            window.location.href = effect.url;
+          }, 1000);
+        }
+
+        // Clear buffer on success so we don't re-trigger
+        keySequence.length = 0;
+      }
+    } catch (error) {
+      console.error("Cheat verification failed:", error);
+    }
+  }
+
+  // --- 4. LISTENER ---
   document.addEventListener("keydown", async function (e) {
+    // A. Manage Buffer
     clearTimeout(inputTimer);
     inputTimer = setTimeout(() => {
       keySequence.length = 0;
@@ -47,13 +97,8 @@ import { checkRedirects } from "./redirects.js";
     if (keySequence.length > 50) keySequence.shift();
     const currentSequence = keySequence.join("");
 
-    // A. CHECK REDIRECTS (Navigation)
-    if (checkRedirects(currentSequence)) {
-      keySequence.length = 0;
-      return;
-    }
-
-    // B. THEME TOGGLES (Visuals)
+    // B. CLIENT-SIDE CHEATS (Themes/UI - Kept here for instant feedback)
+    // You can move these to Python too if you want, but they are purely visual.
     const themes = {
       darkmode: "🌙 Dark Mode",
       cyber: "🤖 Cyberpunk Mode",
@@ -69,7 +114,7 @@ import { checkRedirects } from "./redirects.js";
       if (currentSequence.endsWith(code)) {
         const newState = !isStateActive(code);
         saveState(code, newState);
-        if (effects[code]) effects[code](newState);
+        if (effects[code]) effectscode;
 
         let msg = `${label}: ${newState ? "ON" : "OFF"}`;
         if (code === "doom" && newState)
@@ -81,59 +126,28 @@ import { checkRedirects } from "./redirects.js";
       }
     }
 
-    // C. SEASONS
-    ["spring", "summer", "fall", "winter"].forEach((season) => {
-      if (currentSequence.endsWith(season)) {
-        saveState("season", season);
-        effects.season(season);
-        const emojis = { spring: "🌸", summer: "☀️", fall: "🍂", winter: "❄️" };
-        notify(
-          `${emojis[season]} Season Pass: ${season.toUpperCase()} Activated`,
-          "info"
-        );
+    // C. SEASONS (Client-side)
+    ["spring", "summer", "fall", "winter", "seasonpass"].forEach((code) => {
+      if (currentSequence.endsWith(code)) {
+        if (code === "seasonpass") {
+          saveState("season", null);
+          notify("🔄 Time Sync: Returning to Server Time", "warning");
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          saveState("season", code);
+          effects.season(code);
+          notify(`Season Pass: ${code.toUpperCase()} Activated`, "info");
+        }
         keySequence.length = 0;
+        return;
       }
     });
 
-    // D. GOD MODE (Restored!)
-    if (currentSequence.endsWith("idkfa")) {
-      notify("⚡ GOD MODE: ACTIVATED", "warning");
-      document.body.style.transition = "transform 1s";
-      document.body.style.transform = "rotate(180deg)";
-      setTimeout(() => {
-        document.body.style.transform = "none";
-      }, 2000);
-      keySequence.length = 0;
-    }
-
-    // E. SEASON RESET
-    if (currentSequence.endsWith("seasonpass")) {
-      saveState("season", null);
-      notify("🔄 Time Sync: Returning to Server Time", "warning");
-      setTimeout(() => location.reload(), 1000);
-      keySequence.length = 0;
-    }
-
-    // F. KONAMI CODE (Coupon)
-    if (currentSequence.endsWith(konamiCode)) {
-      notify("👾 Input Accepted. Processing Cheat...", "info");
-      try {
-        const response = await fetch("/api/cheat-code/", {
-          method: "POST",
-          headers: {
-            "X-CSRFToken": getCookie("csrftoken"),
-            "Content-Type": "application/json",
-          },
-        });
-        const data = await response.json();
-        notify(data.message, data.status === "error" ? "error" : "success");
-        if (data.status === "success" && data.code) {
-          navigator.clipboard.writeText(data.code);
-        }
-      } catch (error) {
-        notify("🚫 System Error: Cheat Failed.", "error");
-      }
-      keySequence.length = 0;
-    }
+    // D. SERVER-SIDE CHECK (Hidden Codes)
+    // Wait for the user to pause typing, then ask Python
+    clearTimeout(serverCheckTimer);
+    serverCheckTimer = setTimeout(() => {
+      verifyWithServer(currentSequence);
+    }, SERVER_CHECK_DELAY);
   });
 })();

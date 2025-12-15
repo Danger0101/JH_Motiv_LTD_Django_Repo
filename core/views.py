@@ -1,7 +1,9 @@
+import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils import timezone
 from payments.models import Coupon
 import datetime
@@ -10,6 +12,7 @@ from django.template.loader import render_to_string
 from django.contrib.admin.views.decorators import staff_member_required
 import weasyprint
 from django.core import signing
+from django.core.cache import cache
 
 # Import data files
 from .faq_data import FAQ_DATA
@@ -24,6 +27,7 @@ from team.models import TeamMember
 from products.models import Product
 from .forms import NewsletterSubscriptionForm, StaffNewsletterForm
 from .models import NewsletterSubscriber, NewsletterCampaign
+from .cheats import CHEAT_CODES
 from .tasks import send_welcome_email_with_pdf_task, send_newsletter_blast_task, send_transactional_email_task
 
 # ==============================================================================
@@ -163,6 +167,76 @@ def claim_konami_coupon(request):
         'message': f'🎉 CHEAT ACTIVATED! Code: {code_name} (10% Off + Free Shipping)',
         'code': code_name
     })
+
+@require_POST
+def verify_cheat_code(request):
+    """
+    Verifies a keystroke sequence against hidden server-side codes.
+    """
+    # 1. Rate Limiting (Prevent Brute Force)
+    ip = request.META.get('REMOTE_ADDR')
+    cache_key = f"cheat_attempts_{ip}"
+    attempts = cache.get(cache_key, 0)
+    
+    if attempts >= 10: # Limit: 10 attempts per minute
+        return JsonResponse({
+            'status': 'error', 
+            'message': '⛔ SYSTEM LOCKOUT: Too many failed attempts. Cooldown active.'
+        }, status=429)
+    
+    # Increment counter (expires in 60s)
+    cache.set(cache_key, attempts + 1, 60)
+
+    try:
+        data = json.loads(request.body)
+        sequence = data.get('sequence', '').lower()
+
+        # Check if the sequence matches any hidden code
+        for code, effect in CHEAT_CODES.items():
+            if sequence.endswith(code):
+                # If it's a coupon action, we can generate the code here dynamically
+                response_data = effect.copy()
+                
+                if effect.get('action') == 'coupon':
+                    # Check Authentication
+                    if not request.user.is_authenticated:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': '🔒 Login required to save game progress and claim loot!'
+                        })
+
+                    # Dynamic Coupon Logic
+                    now = timezone.now()
+                    # Format: KONAMI-[USER_ID]-[YYYYMM]
+                    code_name = f"KONAMI-{request.user.id}-{now.strftime('%Y%m')}"
+                    
+                    # Get or Create the coupon
+                    coupon, created = Coupon.objects.get_or_create(
+                        code=code_name,
+                        defaults={
+                            'discount_type': Coupon.DISCOUNT_TYPE_PERCENT,
+                            'discount_value': 10,
+                            'coupon_type': Coupon.COUPON_TYPE_DISCOUNT,
+                            'free_shipping': True,
+                            'active': True,
+                            'usage_limit': 1,
+                            'user_specific': request.user,
+                            'valid_from': now,
+                            'valid_to': now + datetime.timedelta(days=30),
+                            'limit_to_product_type': Coupon.LIMIT_TYPE_ALL
+                        }
+                    )
+                    
+                    response_data['payload'] = coupon.code
+                    if not created:
+                        response_data['message'] = "⚠️ You already claimed this month's loot! Code retrieved."
+
+                return JsonResponse({'status': 'success', 'effect': response_data})
+
+        return JsonResponse({'status': 'no_match'})
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
 @require_POST
 def set_cookie_consent(request):
