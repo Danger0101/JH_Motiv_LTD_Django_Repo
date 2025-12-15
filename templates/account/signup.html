@@ -7,10 +7,29 @@
 {% block content %}
 <div class="max-w-md mx-auto py-8 px-4 sm:px-6 lg:px-8">
     <div 
-        class="p-6 bg-white shadow-lg rounded-lg border" 
+        class="p-6 bg-gray-900 shadow-lg rounded-lg border border-gray-700" 
         id="signup-form-container"
     >
-        <h2 class="text-2xl font-bold mb-6 text-gray-900">{% translate "Create Account" %}</h2>
+        <style>
+            #signup-form-container input:not([type='checkbox']):not([type='hidden']),
+            #signup-form-container select,
+            #signup-form-container textarea {
+                background-color: #1f2937;
+                color: #ffffff;
+                border: 1px solid #374151;
+                width: 100%;
+                padding: 0.5rem 0.75rem;
+                border-radius: 0.375rem;
+            }
+            #signup-form-container input:not([type='checkbox']):not([type='hidden']):focus,
+            #signup-form-container select:focus,
+            #signup-form-container textarea:focus {
+                outline: none;
+                border-color: #3b82f6;
+                box-shadow: 0 0 0 1px #3b82f6;
+            }
+        </style>
+        <h2 class="text-2xl font-bold mb-6 text-white">{% translate "Create Account" %}</h2>
 
         <form id="signup_form" method="post" action="{% url 'account:signup' %}">
             {% csrf_token %} 
@@ -26,7 +45,7 @@
             {% for field in form %}
                 {% if field.name not in 'policy_agreement,marketing_opt_in' %}
                 <div class="mb-4">
-                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-300">
                         {{ field.label }}
                         {% if field.field.required %}
                             <span class="text-red-500">*</span>
@@ -40,7 +59,7 @@
                 {% endif %}
             {% endfor %}
             
-            <div class="space-y-4 pt-4 border-t mt-6">
+            <div class="space-y-4 pt-4 border-t border-gray-700 mt-6">
                 
                 {# 1. POLICY AGREEMENT (REQUIRED) - NOW USING STANDARD LINKS #}
                 <div class="flex items-start">
@@ -48,19 +67,19 @@
                         {{ form.policy_agreement }}
                     </div>
                     <div class="ml-3 text-sm">
-                        <label for="{{ form.policy_agreement.id_for_label }}" class="font-medium text-gray-700">
+                        <label for="{{ form.policy_agreement.id_for_label }}" class="font-medium text-gray-300">
                             I have read and agree to the 
                             <a href="{% url 'core:terms_of_service' %}" 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                class="text-blue-600 hover:text-blue-500 underline font-semibold focus:outline-none"
+                                class="text-blue-400 hover:text-blue-300 underline font-semibold focus:outline-none"
                             >Terms of Service</a> 
                             and 
                             
                             <a href="{% url 'core:privacy_policy' %}" 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                class="text-blue-600 hover:text-blue-500 underline font-semibold focus:outline-none"
+                                class="text-blue-400 hover:text-blue-300 underline font-semibold focus:outline-none"
                             >Privacy Policy</a>.
                             <span class="text-red-500">*</span>
                         </label>
@@ -76,7 +95,7 @@
                         {{ form.marketing_opt_in }}
                     </div>
                     <div class="ml-3 text-sm">
-                        <label for="{{ form.marketing_opt_in.id_for_label }}" class="font-medium text-gray-700">
+                        <label for="{{ form.marketing_opt_in.id_for_label }}" class="font-medium text-gray-300">
                             I would like to receive motivational content and updates (optional).
                         </label>
                     </div>
@@ -92,9 +111,9 @@
             </button>
         </form> 
 
-        <p class="mt-4 text-center text-sm text-gray-600">
+        <p class="mt-4 text-center text-sm text-gray-400">
             {% translate "Already have an account?" %}
-            <a href="{% url 'account:login' %}" class="font-medium text-blue-600 hover:text-blue-500">
+            <a href="{% url 'account:login' %}" class="font-medium text-blue-400 hover:text-blue-300">
                 {% translate "Log in here" %}
             </a>
         </p>
