@@ -14,4 +14,5 @@ urlpatterns = [
     path('shipping-policy/', views.shipping_policy_page, name='shipping_policy'),
     path('refund-policy/', views.refund_policy_page, name='refund_policy'),
     path('api/cheat-code/', views.claim_konami_coupon, name='claim_konami'),
+    path('system/glitch/<int:error_code>/', views.error_simulation_view, name='error_sim'),
 ]

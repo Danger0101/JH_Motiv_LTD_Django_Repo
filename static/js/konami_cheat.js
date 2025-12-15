@@ -120,6 +120,48 @@ document.addEventListener("alpine:init", () => {
         if (window.fpsInterval) clearInterval(window.fpsInterval);
       }
     },
+    matrix: (enable) => {
+      let canvas = document.getElementById("matrix-canvas");
+      if (enable) {
+        if (!canvas) {
+          canvas = document.createElement("canvas");
+          canvas.id = "matrix-canvas";
+          canvas.style.position = "fixed";
+          canvas.style.top = "0";
+          canvas.style.left = "0";
+          canvas.style.width = "100vw";
+          canvas.style.height = "100vh";
+          canvas.style.zIndex = "9990";
+          canvas.style.pointerEvents = "none";
+          document.body.appendChild(canvas);
+
+          const ctx = canvas.getContext("2d");
+          const w = (canvas.width = window.innerWidth);
+          const h = (canvas.height = window.innerHeight);
+          const cols = Math.floor(w / 20) + 1;
+          const ypos = Array(cols).fill(0);
+
+          window.matrixInterval = setInterval(() => {
+            ctx.fillStyle = "#0001";
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.fillStyle = "#0f0";
+            ctx.font = "15pt monospace";
+
+            ypos.forEach((y, ind) => {
+              const text = String.fromCharCode(Math.random() * 128);
+              const x = ind * 20;
+              ctx.fillText(text, x, y);
+              if (y > 100 + Math.random() * 10000) ypos[ind] = 0;
+              else ypos[ind] = y + 20;
+            });
+          }, 50);
+        }
+      } else {
+        if (canvas) canvas.remove();
+        if (window.matrixInterval) clearInterval(window.matrixInterval);
+      }
+    },
   };
 
   // ==========================================
@@ -235,6 +277,18 @@ document.addEventListener("alpine:init", () => {
       keySequence.length = 0;
     }
 
+    // --- CHEAT 8: MATRIX MODE (Persistent) ---
+    if (currentSequence.endsWith("matrix")) {
+      const newState = !isStateActive("matrix");
+      saveState("matrix", newState);
+      effects.matrix(newState);
+      notify(
+        newState ? "💊 Matrix Mode: ON" : "💊 Matrix Mode: OFF",
+        "success"
+      );
+      keySequence.length = 0;
+    }
+
     // --- CHEAT 6: INVENTORY (Redirect - No persistence needed) ---
     if (currentSequence.endsWith("loot")) {
       notify("💰 Opening Inventory...", "success");
@@ -253,6 +307,56 @@ document.addEventListener("alpine:init", () => {
         document.body.style.transform = "none";
       }, 2000);
       keySequence.length = 0;
+    }
+
+    // ---------------------------------------------------------
+    // 8. SIMULATE 403 (Access Denied) - Type: "ban"
+    // ---------------------------------------------------------
+    if (currentSequence.endsWith("ban")) {
+        notify("⛔ ACCESS DENIED. TERMINATING SESSION...", "error");
+        setTimeout(() => {
+            window.location.href = "/system/glitch/403/";
+        }, 1000);
+        keySequence.length = 0;
+    }
+
+    // ---------------------------------------------------------
+    // 9. SIMULATE 404 (Not Found) - Type: "lost"
+    // ---------------------------------------------------------
+    if (currentSequence.endsWith("lost")) {
+        notify("🗺️ Signal Lost. Recalibrating...", "warning");
+        setTimeout(() => {
+            window.location.href = "/system/glitch/404/";
+        }, 1000);
+        keySequence.length = 0;
+    }
+
+    // ---------------------------------------------------------
+    // 10. SIMULATE 500 (Server Crash) - Type: "crash"
+    // ---------------------------------------------------------
+    if (currentSequence.endsWith("crash")) {
+        notify("🔥 CRITICAL SYSTEM FAILURE DETECTED", "error");
+        // Add a slight shake effect before redirecting for drama
+        document.body.style.animation = "shake 0.5s cubic-bezier(.36,.07,.19,.97) both";
+        
+        // Inject shake keyframes if not present
+        if (!document.getElementById('shake-style')) {
+            const style = document.createElement('style');
+            style.id = 'shake-style';
+            style.innerHTML = `
+                @keyframes shake { 
+                    10%, 90% { transform: translate3d(-1px, 0, 0); }
+                    20%, 80% { transform: translate3d(2px, 0, 0); }
+                    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+                    40%, 60% { transform: translate3d(4px, 0, 0); }
+                }`;
+            document.head.appendChild(style);
+        }
+
+        setTimeout(() => {
+            window.location.href = "/system/glitch/500/";
+        }, 1500);
+        keySequence.length = 0;
     }
   });
 });

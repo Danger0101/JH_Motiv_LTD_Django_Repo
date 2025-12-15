@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views.generic import TemplateView
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
@@ -167,3 +167,16 @@ def set_cookie_consent(request):
         response.set_cookie('user_consent', consent_value, max_age=31536000, samesite='Lax', secure=True)
         return response
     return HttpResponse('Invalid consent value.', status=400)
+
+def error_simulation_view(request, error_code):
+    """
+    Easter Egg View: Manually renders error templates so users can see the designs.
+    """
+    valid_codes = [403, 404, 500]
+    
+    if error_code not in valid_codes:
+        # If they try a code we don't have a template for, send them home
+        return redirect('home')
+        
+    # Render the specific template (e.g., '403.html', '404.html')
+    return render(request, f'{error_code}.html', status=200)
