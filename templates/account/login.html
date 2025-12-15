@@ -7,6 +7,25 @@
 {% block content %}
 <div class="max-w-md mx-auto py-12 px-4 sm:px-6 lg:px-8">
     <div class="p-8 bg-gray-900 shadow-2xl rounded-xl border border-gray-700 relative overflow-hidden" id="login-form-container">
+        <style>
+            #login-form-container input:not([type='checkbox']):not([type='hidden']),
+            #login-form-container select,
+            #login-form-container textarea {
+                background-color: #1f2937;
+                color: #ffffff;
+                border: 1px solid #374151;
+                width: 100%;
+                padding: 0.5rem 0.75rem;
+                border-radius: 0.375rem;
+            }
+            #login-form-container input:not([type='checkbox']):not([type='hidden']):focus,
+            #login-form-container select:focus,
+            #login-form-container textarea:focus {
+                outline: none;
+                border-color: #3b82f6;
+                box-shadow: 0 0 0 1px #3b82f6;
+            }
+        </style>
         
         {# Decorative "Online" Indicator #}
         <div class="absolute top-4 right-4 flex items-center space-x-2">
