@@ -44,7 +44,7 @@ document.addEventListener("alpine:init", () => {
     if (currentSequence.endsWith(konamiString)) {
       // Trigger generic success sound/visual immediately
       window.dispatchEvent(
-        new CustomEvent("showToast", {
+        new CustomEvent("show-toast", {
           detail: {
             message: "👾 Input Accepted. Processing Cheat...",
             type: "info",
@@ -65,7 +65,7 @@ document.addEventListener("alpine:init", () => {
 
         // Dispatch result notification
         window.dispatchEvent(
-          new CustomEvent("showToast", {
+          new CustomEvent("show-toast", {
             detail: {
               message: data.message,
               type:
@@ -84,7 +84,7 @@ document.addEventListener("alpine:init", () => {
         }
       } catch (error) {
         window.dispatchEvent(
-          new CustomEvent("showToast", {
+          new CustomEvent("show-toast", {
             detail: {
               message: "🚫 System Error: Cheat Failed.",
               type: "error",
@@ -104,7 +104,7 @@ document.addEventListener("alpine:init", () => {
       document.body.classList.toggle("text-green-500");
       document.body.classList.toggle("bg-black");
       window.dispatchEvent(
-        new CustomEvent("showToast", {
+        new CustomEvent("show-toast", {
           detail: { message: "👨‍💻 Developer Mode Toggled", type: "success" },
         })
       );
@@ -117,8 +117,8 @@ document.addEventListener("alpine:init", () => {
       document.body.style.transition = "transform 1s";
       document.body.style.transform = "rotate(180deg)";
       window.dispatchEvent(
-        new CustomEvent("showToast", {
-          detail: { message: "😈 GOD MODE: ACTIVATED", type: "warning" },
+        new CustomEvent("show-toast", {
+          detail: { message: "⚡ GOD MODE: ACTIVATED", type: "warning" },
         })
       );
       setTimeout(() => {
@@ -130,8 +130,8 @@ document.addEventListener("alpine:init", () => {
     // 4. INVENTORY CHECK (loot)
     if (currentSequence.endsWith("loot")) {
       window.dispatchEvent(
-        new CustomEvent("showToast", {
-          detail: { message: "🎒 Opening Inventory...", type: "success" },
+        new CustomEvent("show-toast", {
+          detail: { message: "💰 Opening Inventory...", type: "success" },
         })
       );
       setTimeout(() => {
