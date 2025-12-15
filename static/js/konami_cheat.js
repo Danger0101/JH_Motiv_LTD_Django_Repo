@@ -80,17 +80,21 @@ document.addEventListener("alpine:init", () => {
       }
     },
     bighead: (enable) => {
-      const images = document.querySelectorAll("img");
+      // FIX 1: Only target images inside <main> to protect Navbar/Footer
+      const images = document.querySelectorAll("main img");
       images.forEach((img) => {
         if (enable) {
           img.style.transition = "transform 0.3s ease";
           img.style.transform = "scale(1.5)";
           img.style.zIndex = "50";
           img.style.position = "relative";
+          // FIX 2: Allow clicks to pass through image to buttons underneath
+          img.style.pointerEvents = "none";
         } else {
           img.style.transform = "none";
           img.style.zIndex = "auto";
           img.style.position = "static";
+          img.style.pointerEvents = "auto";
         }
       });
     },
@@ -183,7 +187,7 @@ document.addEventListener("alpine:init", () => {
           emoji: "☀️",
         },
         fall: {
-          banner: "Fall_banner.webp",
+          banner: "fall_banner.webp",
           footer: "fall_footer.webp",
           emoji: "🍂",
         }, // Note 'Fall' vs 'fall'
