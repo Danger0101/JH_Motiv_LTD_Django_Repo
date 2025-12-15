@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 
 # Create your models here.
 
@@ -25,3 +26,13 @@ class NewsletterCampaign(models.Model):
     def __str__(self):
         date_str = self.sent_at.strftime('%Y-%m-%d') if self.sent_at else "Draft"
         return f"{self.subject} ({date_str})"
+
+class CheatUsage(models.Model):
+    code_used = models.CharField(max_length=100)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    action_triggered = models.CharField(max_length=50)
+
+    def __str__(self):
+        return f"{self.code_used} used by {self.user or 'Anonymous'} at {self.timestamp}"

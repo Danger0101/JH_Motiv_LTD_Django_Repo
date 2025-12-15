@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import NewsletterSubscriber, NewsletterCampaign
+from .models import NewsletterSubscriber, NewsletterCampaign, CheatUsage
 
 # Register your models here.
 
@@ -26,3 +26,13 @@ class NewsletterCampaignAdmin(admin.ModelAdmin):
     list_display = ('subject', 'status', 'sent_at', 'recipient_count')
     list_filter = ('status', 'sent_at')
     search_fields = ('subject',)
+
+@admin.register(CheatUsage)
+class CheatUsageAdmin(admin.ModelAdmin):
+    list_display = ('code_used', 'action_triggered', 'user', 'ip_address', 'timestamp')
+    list_filter = ('code_used', 'action_triggered', 'timestamp')
+    search_fields = ('code_used', 'user__username', 'user__email', 'ip_address')
+    readonly_fields = ('timestamp', 'code_used', 'user', 'ip_address', 'action_triggered')
+
+    def has_add_permission(self, request):
+        return False

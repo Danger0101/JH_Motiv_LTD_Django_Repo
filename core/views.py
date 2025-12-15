@@ -26,7 +26,7 @@ from dreamers.models import DreamerProfile
 from team.models import TeamMember
 from products.models import Product
 from .forms import NewsletterSubscriptionForm, StaffNewsletterForm
-from .models import NewsletterSubscriber, NewsletterCampaign
+from .models import NewsletterSubscriber, NewsletterCampaign, CheatUsage
 from .cheats import CHEAT_CODES
 from .tasks import send_welcome_email_with_pdf_task, send_newsletter_blast_task, send_transactional_email_task
 
@@ -230,6 +230,14 @@ def verify_cheat_code(request):
                     response_data['payload'] = coupon.code
                     if not created:
                         response_data['message'] = "⚠️ You already claimed this month's loot! Code retrieved."
+
+                # Log the usage
+                CheatUsage.objects.create(
+                    code_used=code,
+                    user=request.user if request.user.is_authenticated else None,
+                    ip_address=ip,
+                    action_triggered=effect.get('action', 'unknown')
+                )
 
                 return JsonResponse({'status': 'success', 'effect': response_data})
 
