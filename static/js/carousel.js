@@ -45,4 +45,20 @@ document.addEventListener('DOMContentLoaded', function () {
     currentIndex++;
     updateCarousel();
   }, 3000);
+
+  // Konami Code Easter Egg
+  const konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+  let konamiIndex = 0;
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === konamiCode[konamiIndex] || e.key.toLowerCase() === konamiCode[konamiIndex]) {
+      konamiIndex++;
+      if (konamiIndex === konamiCode.length) {
+        konamiIndex = 0;
+        alert('Konami Code Activated!');
+      }
+    } else {
+      konamiIndex = 0;
+    }
+  });
 });
