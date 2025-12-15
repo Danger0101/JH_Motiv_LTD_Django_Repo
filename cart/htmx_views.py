@@ -66,5 +66,8 @@ def remove_from_cart(request, item_id):
     CartItem.objects.filter(id=item_id, cart=cart).delete()
     
     response = render(request, 'cart/partials/cart_item_list.html', {'cart': cart})
-    response['HX-Trigger'] = 'cartUpdated'
+    response['HX-Trigger'] = json.dumps({
+        'cartUpdated': None,
+        'showToast': {'message': "Item Dropped from Inventory", 'type': 'warning'}
+    })
     return response

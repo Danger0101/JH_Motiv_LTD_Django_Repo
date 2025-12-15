@@ -52,13 +52,13 @@ def apply_coupon(request):
         if is_valid:
             cart.coupon = coupon
             cart.save()
-            messages.success(request, f"Coupon '{coupon.code}' applied.")
+            messages.success(request, f"Cheat Code '{coupon.code}' Activated!")
             # For HTMX, trigger a cart update event
             if request.htmx:
                 response = HttpResponse(status=204)
                 response['HX-Trigger'] = json.dumps({
                     'cartUpdated': None,
-                    'showToast': {'message': f"Coupon '{coupon.code}' applied.", 'type': 'success'}
+                    'showToast': {'message': f"Cheat Code '{coupon.code}' Activated!", 'type': 'success'}
                 })
                 return response
         else:
@@ -124,13 +124,13 @@ def remove_coupon(request):
         code = cart.coupon.code
         cart.coupon = None
         cart.save()
-        messages.success(request, f"Coupon '{code}' removed.")
+        messages.success(request, "Cheat Code Deactivated.")
         
         if request.htmx:
              response = HttpResponse(status=204)
              response['HX-Trigger'] = json.dumps({
                  'cartUpdated': None,
-                 'showToast': {'message': f"Coupon '{code}' removed."}
+                 'showToast': {'message': "Cheat Code Deactivated."}
              })
              return response
              
