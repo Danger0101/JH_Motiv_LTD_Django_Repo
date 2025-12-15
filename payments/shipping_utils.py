@@ -56,18 +56,28 @@ def get_shipping_rates(address_data, cart):
 
     total_shipping = Decimal('0.00')
 
+    # 1. Calculate Local Shipping (Weight Based)
     if local_items:
         total_weight = sum(item.variant.weight * item.quantity for item in local_items)
         total_shipping += calculate_royal_mail_cost(total_weight)
 
+    # 2. Calculate Printful Shipping (Flat Rate + Item)
     if printful_items:
         total_shipping += calculate_printful_manual_cost(printful_items)
 
+    # 3. Fallback / Safety Net
     if total_shipping == 0 and has_physical:
         logger.warning("Shipping calculated to 0 for physical items. Applying fallback.")
         total_shipping = Decimal('4.99')
 
+    # --- COUPON OVERRIDE: FREE SHIPPING ---
+    # If the applied coupon allows free shipping, we force the base rate to 0.00
+    if cart.coupon and cart.coupon.free_shipping:
+        total_shipping = Decimal('0.00')
+
     rates = []
+    # Option 1: Standard (Lowest)
+    # This will be £0.00 if the coupon is active
     rates.append({
         'id': 'standard',
         'label': 'Standard Shipping',
@@ -75,6 +85,8 @@ def get_shipping_rates(address_data, cart):
         'amount': total_shipping
     })
     
+    # Option 2: Express
+    # If coupon is active, this becomes just the upgrade fee (£6.00)
     rates.append({
         'id': 'express',
         'label': 'Express / Priority',
