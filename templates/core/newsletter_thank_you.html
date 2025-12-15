@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-16 max-w-lg text-center">
+    <div class="bg-white p-8 rounded-lg shadow-lg border border-gray-200">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mb-4 p-3 rounded text-sm
+                    {% if message.tags == 'success' %}bg-green-100 text-green-700 border border-green-400
+                    {% elif message.tags == 'error' %}bg-red-100 text-red-700 border border-red-400
+                    {% else %}bg-blue-100 text-blue-700 border border-blue-400{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        <div class="mb-6">
+            <span class="text-6xl">🎉</span>
+        </div>
+        <h1 class="text-3xl font-bold text-gray-800 mb-4">Welcome to the Guild!</h1>
+        <p class="text-gray-600 mb-6">
+            Your <strong>Game Master's Blueprint</strong> is on its way to your inbox. 
+            Check your spam folder if you don't see it within a few minutes.
+        </p>
+        <a href="{% url 'core:home' %}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded transition duration-300">
+            Return to Base
+        </a>
+
+        {% if request.session.newsletter_email %}
+        <div class="mt-6 pt-6 border-t border-gray-100">
+            <p class="text-sm text-gray-500 mb-2">Didn't receive the loot drop?</p>
+            <form action="{% url 'core:resend_welcome_email' %}" method="post" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="text-sm text-blue-600 hover:text-blue-800 font-semibold hover:underline transition-colors">
+                    🔄 Resend Confirmation Spell
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

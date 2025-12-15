@@ -15,4 +15,11 @@ urlpatterns = [
     path('refund-policy/', views.refund_policy_page, name='refund_policy'),
     path('api/cheat-code/', views.claim_konami_coupon, name='claim_konami'),
     path('system/glitch/<int:error_code>/', views.error_simulation_view, name='error_sim'),
+    path('resources/blueprint-pdf/', views.download_blueprint_pdf, name='download_blueprint'),
+    path('newsletter/join/', views.subscribe_newsletter, name='subscribe_newsletter'),
+    path('newsletter/thank-you/', views.newsletter_thank_you, name='newsletter_thank_you'),
+    path('newsletter/resend/', views.resend_welcome_email, name='resend_welcome_email'),
+    path('newsletter/unsubscribe/<str:token>/', views.unsubscribe_newsletter, name='unsubscribe_newsletter'),
+    path('staff/newsletter/', views.staff_newsletter_dashboard, name='staff_newsletter_dashboard'),
+    path('staff/newsletter/history/', views.staff_newsletter_history, name='staff_newsletter_history'),
 ]

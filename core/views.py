@@ -1,10 +1,15 @@
-from django.shortcuts import render, redirect
-from django.views.generic import TemplateView
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from payments.models import Coupon
 import datetime
+import functools
+from django.template.loader import render_to_string
+from django.contrib.admin.views.decorators import staff_member_required
+import weasyprint
+from django.core import signing
 
 # Import data files
 from .faq_data import FAQ_DATA
@@ -17,6 +22,9 @@ from cart.utils import get_or_create_cart, get_cart_summary_data
 from dreamers.models import DreamerProfile
 from team.models import TeamMember
 from products.models import Product
+from .forms import NewsletterSubscriptionForm, StaffNewsletterForm
+from .models import NewsletterSubscriber, NewsletterCampaign
+from .tasks import send_welcome_email_with_pdf_task, send_newsletter_blast_task, send_transactional_email_task
 
 # ==============================================================================
 # 1. FUNCTION-BASED VIEWS (Data-Driven Pages)
@@ -180,3 +188,155 @@ def error_simulation_view(request, error_code):
         
     # Render the specific template (e.g., '403.html', '404.html')
     return render(request, f'{error_code}.html', status=200)
+
+# Use this decorator if you only want Admin/Staff to generate it
+# @staff_member_required 
+def download_blueprint_pdf(request):
+    """
+    Generates the Game Master's Blueprint PDF.
+    """
+    # 1. Render HTML with context data if needed (static for now)
+    html_string = render_to_string('pdfs/game_master_blueprint.html', request=request)
+
+    # 2. Convert to PDF using WeasyPrint
+    pdf_file = weasyprint.HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf()
+
+    # 3. Create HTTP Response
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    
+    # 'attachment' forces download; 'inline' opens in browser
+    response['Content-Disposition'] = 'inline; filename="Game_Masters_Blueprint.pdf"'
+    
+    return response
+
+def subscribe_newsletter(request):
+    """
+    Handles newsletter subscription and sends the welcome PDF.
+    """
+    if request.method == 'POST':
+        form = NewsletterSubscriptionForm(request.POST)
+        if form.is_valid():
+            subscriber = form.save()
+            
+            # Store email in session for resend functionality
+            request.session['newsletter_email'] = subscriber.email
+            
+            # Send Welcome Email with PDF
+            base_url = request.build_absolute_uri('/')
+            send_welcome_email_with_pdf_task.delay(subscriber.email, base_url)
+            
+            # messages.success(request, "Welcome to the Guild! Check your inbox for the Blueprint.")
+            return redirect('core:newsletter_thank_you')
+    else:
+        form = NewsletterSubscriptionForm()
+    
+    return render(request, 'core/newsletter_signup.html', {'form': form})
+
+def newsletter_thank_you(request):
+    """Renders the newsletter thank you page."""
+    return render(request, 'core/newsletter_thank_you.html')
+
+def resend_welcome_email(request):
+    """Resends the welcome email if the user just subscribed."""
+    if request.method == 'POST':
+        email = request.session.get('newsletter_email')
+        if email:
+            base_url = request.build_absolute_uri('/')
+            send_welcome_email_with_pdf_task.delay(email, base_url)
+            messages.success(request, f"Blueprint resent to {email}!")
+        else:
+            messages.error(request, "Session expired. Please subscribe again.")
+    return redirect('core:newsletter_thank_you')
+
+def unsubscribe_newsletter(request, token):
+    """Handles the unsubscribe action via signed token."""
+    try:
+        email = signing.loads(token, salt='newsletter-unsubscribe')
+        subscriber = NewsletterSubscriber.objects.get(email=email)
+        subscriber.is_active = False
+        subscriber.save()
+        return render(request, 'core/newsletter_unsubscribe.html')
+    except (signing.BadSignature, NewsletterSubscriber.DoesNotExist):
+        return render(request, 'core/newsletter_unsubscribe.html', {'error': 'Invalid or expired link.'})
+
+@staff_member_required
+def staff_newsletter_dashboard(request):
+    """
+    Staff dashboard to send newsletters to all subscribers.
+    """
+    # Check if we are loading a draft
+    draft_id = request.GET.get('draft_id')
+    initial_data = {}
+    if draft_id:
+        campaign = get_object_or_404(NewsletterCampaign, id=draft_id, status='DRAFT')
+        initial_data = {'subject': campaign.subject, 'content': campaign.content}
+
+    if request.method == 'POST':
+        form = StaffNewsletterForm(request.POST)
+        if form.is_valid():
+            subject = form.cleaned_data['subject']
+            content = form.cleaned_data['content']
+            
+            if 'preview' in request.POST:
+                # Render preview
+                base_url = request.build_absolute_uri('/')
+                unsubscribe_url = f"{base_url.rstrip('/')}/newsletter/unsubscribe/preview-token/"
+                context = {'body': content, 'subject': subject, 'unsubscribe_url': unsubscribe_url}
+                preview_html = render_to_string('core/generic_newsletter.html', context)
+                return render(request, 'core/staff_newsletter.html', {'form': form, 'preview_html': preview_html})
+            
+            elif 'test_send' in request.POST:
+                base_url = request.build_absolute_uri('/')
+                unsubscribe_url = f"{base_url.rstrip('/')}/newsletter/unsubscribe/test-token/"
+                context = {'body': content, 'subject': f"[TEST] {subject}", 'unsubscribe_url': unsubscribe_url}
+                
+                if request.user.email:
+                    send_transactional_email_task.delay(
+                        request.user.email, 
+                        f"[TEST] {subject}", 
+                        'core/generic_newsletter.html', 
+                        context
+                    )
+                    messages.success(request, f"Test email sent to {request.user.email}")
+                else:
+                    messages.error(request, "No email address associated with your account.")
+                return render(request, 'core/staff_newsletter.html', {'form': form})
+            
+            elif 'save_draft' in request.POST:
+                if draft_id:
+                    NewsletterCampaign.objects.filter(id=draft_id).update(subject=subject, content=content)
+                else:
+                    NewsletterCampaign.objects.create(subject=subject, content=content, status='DRAFT')
+                messages.success(request, "Campaign saved as draft.")
+                return redirect('core:staff_newsletter_history')
+            
+            elif 'send' in request.POST:
+                base_url = request.build_absolute_uri('/')
+                
+                if draft_id:
+                    campaign = NewsletterCampaign.objects.get(id=draft_id)
+                    campaign.subject = subject
+                    campaign.content = content
+                    campaign.status = 'SENT'
+                    campaign.sent_at = timezone.now()
+                    campaign.save()
+                else:
+                    campaign = NewsletterCampaign.objects.create(
+                        subject=subject, content=content, status='SENT', sent_at=timezone.now()
+                    )
+                
+                send_newsletter_blast_task.delay(subject, content, base_url, campaign.id)
+                messages.success(request, "Newsletter queued for sending!")
+                return redirect('core:staff_newsletter_dashboard')
+    else:
+        form = StaffNewsletterForm(initial=initial_data)
+    
+    return render(request, 'core/staff_newsletter.html', {'form': form})
+
+@staff_member_required
+def staff_newsletter_history(request):
+    """
+    Displays a log of past newsletter campaigns.
+    """
+    campaigns = NewsletterCampaign.objects.order_by('-created_at')
+    return render(request, 'core/staff_newsletter_history.html', {'campaigns': campaigns})

@@ -1,4 +1,5 @@
 from django.contrib import admin
+from .models import NewsletterSubscriber, NewsletterCampaign
 
 # Register your models here.
 
@@ -13,3 +14,15 @@ admin.site.empty_value_display = "-empty-"           # Replaces "(None)" in list
 # Optional: Disable the default "Groups" model if you don't use complex permissions
 # from django.contrib.auth.models import Group
 # admin.site.unregister(Group)
+
+@admin.register(NewsletterSubscriber)
+class NewsletterSubscriberAdmin(admin.ModelAdmin):
+    list_display = ('email', 'is_active', 'subscribed_at')
+    list_filter = ('is_active', 'subscribed_at')
+    search_fields = ('email',)
+
+@admin.register(NewsletterCampaign)
+class NewsletterCampaignAdmin(admin.ModelAdmin):
+    list_display = ('subject', 'status', 'sent_at', 'recipient_count')
+    list_filter = ('status', 'sent_at')
+    search_fields = ('subject',)

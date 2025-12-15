@@ -4,6 +4,9 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
 import logging
+import weasyprint
+from django.core import signing
+from django.urls import reverse
 
 logger = logging.getLogger(__name__)
 
@@ -114,3 +117,68 @@ def send_transactional_email_task(self, recipient_email, subject, template_name,
         logger.error(f"Attempt {self.request.retries + 1} failed for email to {recipient_email}. Error: {exc}", exc_info=True)
         # Instruct Celery to retry the task (up to max_retries)
         raise self.retry(exc=exc)
+
+@shared_task
+def send_welcome_email_with_pdf_task(recipient_email, base_url):
+    """
+    Generates the Blueprint PDF and sends it as an attachment in a welcome email.
+    """
+    try:
+        # 1. Generate PDF
+        html_string = render_to_string('pdfs/game_master_blueprint.html')
+        pdf_bytes = weasyprint.HTML(string=html_string, base_url=base_url).write_pdf()
+
+        # 2. Prepare Email
+        subject = "Welcome to the Guild - Your Blueprint is Inside"
+        body_text = "Welcome to the JH Motiv Guild! We are glad to have you. Please find your Game Master's Blueprint attached."
+        
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=body_text,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[recipient_email]
+        )
+        
+        # 3. Attach PDF
+        email.attach('Game_Masters_Blueprint.pdf', pdf_bytes, 'application/pdf')
+        
+        # 4. Send
+        email.send(fail_silently=False)
+        logger.info(f"Sent welcome email with PDF to {recipient_email}")
+        
+    except Exception as e:
+        logger.error(f"Failed to send welcome email to {recipient_email}: {e}", exc_info=True)
+
+@shared_task
+def send_newsletter_blast_task(subject, content, base_url='https://jhmotiv.shop/', campaign_id=None):
+    """
+    Sends a newsletter to all active subscribers.
+    """
+    from django.apps import apps
+    NewsletterSubscriber = apps.get_model('core', 'NewsletterSubscriber')
+    NewsletterCampaign = apps.get_model('core', 'NewsletterCampaign')
+    
+    subscribers = NewsletterSubscriber.objects.filter(is_active=True).values_list('email', flat=True)
+    
+    # Update campaign recipient count if ID is provided
+    if campaign_id:
+        try:
+            campaign = NewsletterCampaign.objects.get(id=campaign_id)
+            campaign.recipient_count = len(subscribers)
+            campaign.save()
+        except NewsletterCampaign.DoesNotExist:
+            logger.warning(f"Campaign ID {campaign_id} not found during blast task.")
+    
+    for email in subscribers:
+        # We reuse the transactional task for individual sending to ensure reliability
+        # Or we could send mass mail here. For simplicity and tracking, we queue individual tasks.
+        # We need a simple template for this.
+        
+        # Generate signed unsubscribe token
+        token = signing.dumps(email, salt='newsletter-unsubscribe')
+        unsubscribe_path = reverse('core:unsubscribe_newsletter', args=[token])
+        unsubscribe_url = f"{base_url.rstrip('/')}{unsubscribe_path}"
+        
+        context = {'body': content, 'subject': subject, 'unsubscribe_url': unsubscribe_url}
+        # Note: Updated template path to match file location in context
+        send_transactional_email_task.delay(email, subject, 'core/generic_newsletter.html', context)
