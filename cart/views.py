@@ -39,7 +39,11 @@ def apply_coupon(request):
             return redirect('cart:cart_detail')
 
     try:
-        coupon = Coupon.objects.get(code__iexact=code)
+        coupon = Coupon.objects.filter(code__iexact=code, active=True).first()
+        
+        if not coupon:
+            raise Coupon.DoesNotExist
+
         # Pre-calculate subtotal to check min_spend requirement
         subtotal = sum(item.get_total_price() for item in cart.items.all())
         
@@ -61,7 +65,7 @@ def apply_coupon(request):
             error_msg = message
             messages.error(request, error_msg) # Use the specific error message
     except Coupon.DoesNotExist:
-        error_msg = "Invalid coupon code."
+        error_msg = "Invalid or expired coupon code."
         messages.error(request, error_msg)
 
     if request.htmx:

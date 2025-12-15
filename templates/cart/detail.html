@@ -143,7 +143,7 @@
                               class="mt-2 relative">
                             {% csrf_token %}
                             <div class="flex space-x-2">
-                                <input type="text" name="code" id="coupon-code" placeholder="Enter code (e.g. GODMODE)" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                <input type="text" name="code" id="coupon-code" placeholder="Enter code (e.g. GODMODE)" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm uppercase" style="text-transform: uppercase;">
                                 <button type="submit" class="rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">
                                     Activate
                                 </button>

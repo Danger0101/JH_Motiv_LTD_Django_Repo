@@ -1,6 +1,8 @@
 import uuid
 from decimal import Decimal  # <--- ADDED THIS IMPORT
 from django.db import models
+from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.db.models import JSONField
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -229,6 +231,28 @@ class Coupon(models.Model):
         # Note: Ensure your frontend can handle the '?coupon=CODE' query parameter.
         target_url = f"https://jhmotiv.shop/?coupon={self.code}"
         return f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={target_url}"
+
+    def clean(self):
+        # normalize code to uppercase to prevent "save10" vs "SAVE10"
+        self.code = self.code.upper() 
+
+        # Check for other ACTIVE coupons with the same code
+        # We allow duplicates only if the existing one is fully expired/inactive
+        duplicates = Coupon.objects.filter(code=self.code, active=True)
+        
+        # If editing an existing coupon, exclude self from check
+        if self.pk:
+            duplicates = duplicates.exclude(pk=self.pk)
+
+        # Check if any duplicate is still valid (future expiry or no expiry)
+        now = timezone.now()
+        for coupon in duplicates:
+            if coupon.valid_to is None or coupon.valid_to > now:
+                raise ValidationError(f"An active coupon with code '{self.code}' already exists.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean() # Force validation before saving
+        super().save(*args, **kwargs)
 
 
 class CouponUsage(models.Model):
