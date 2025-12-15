@@ -59,6 +59,7 @@ document.addEventListener("alpine:init", () => {
   const effects = {
     devmode: (enable) => {
       if (enable) {
+        document.body.classList.remove("bg-gray-100", "text-gray-800");
         document.body.classList.add("font-mono", "text-green-500", "bg-black");
       } else {
         document.body.classList.remove(
@@ -66,6 +67,7 @@ document.addEventListener("alpine:init", () => {
           "text-green-500",
           "bg-black"
         );
+        document.body.classList.add("bg-gray-100", "text-gray-800");
       }
     },
     doom: (enable) => {
@@ -187,7 +189,7 @@ document.addEventListener("alpine:init", () => {
           emoji: "☀️",
         },
         fall: {
-          banner: "fall_banner.webp",
+          banner: "Fall_banner.webp",
           footer: "fall_footer.webp",
           emoji: "🍂",
         }, // Note 'Fall' vs 'fall'
