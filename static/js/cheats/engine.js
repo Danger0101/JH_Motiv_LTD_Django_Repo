@@ -4,8 +4,11 @@ import { effects } from './effects.js';
 
 document.addEventListener("alpine:init", () => {
     
-    // --- RESTORE STATE ---
-    ["devmode", "doom", "bighead", "fps", "matrix", "darkmode", "cyber"].forEach((key) => {
+    // --- INIT: Restore Active Cheats on Page Load ---
+    // We check every saved state and re-apply effects
+    const allToggles = ["devmode", "doom", "bighead", "fps", "darkmode", "cyber", "retro"];
+    
+    allToggles.forEach((key) => {
         if (isStateActive(key)) effects[key](true);
     });
 
@@ -14,46 +17,47 @@ document.addEventListener("alpine:init", () => {
         effects.season(savedSeason);
     }
 
-    // --- INPUT CONFIG ---
+    // --- CONFIG ---
     const INPUT_TIMEOUT_MS = 5000;
     let inputTimer = null;
     const keySequence = [];
     const konamiCode = "arrowuparrowuparrowdownarrowdownarrowleftarrowrightarrowleftarrowrightarrowba";
 
-    // --- MAIN LISTENER ---
+    // --- KEY LISTENER ---
     document.addEventListener("keydown", async function (e) {
-        // Reset timer
         clearTimeout(inputTimer);
         inputTimer = setTimeout(() => { keySequence.length = 0; }, INPUT_TIMEOUT_MS);
 
-        // Track key
         keySequence.push(e.key.toLowerCase());
         if (keySequence.length > 20) keySequence.shift();
         const currentSequence = keySequence.join("");
 
-        // 1. GLOBAL CHEATS (State Toggles)
-        const toggleCheats = {
+        // 1. THEME TOGGLES
+        const themes = {
+            darkmode: "🌙 Dark Mode",
+            cyber: "🤖 Cyberpunk Mode",
+            retro: "📜 Retro Mode",
             devmode: "👨‍💻 Developer Mode",
             doom: "😈 Nightmare Difficulty",
             bighead: "🏀 Big Head Mode",
-            fps: "⚡ FPS Counter",
-            matrix: "💊 Matrix Rain",
-            darkmode: "🌙 Dark Mode",  // NEW
-            cyber: "🤖 Cyberpunk Mode" // NEW
+            fps: "⚡ FPS Counter"
         };
 
-        for (const [code, label] of Object.entries(toggleCheats)) {
+        for (const [code, label] of Object.entries(themes)) {
             if (currentSequence.endsWith(code)) {
+                // Toggle state
                 const newState = !isStateActive(code);
                 saveState(code, newState);
+                
+                // Apply effect
                 effects[code](newState);
                 
-                // Special message logic
+                // Notify
                 let msg = `${label}: ${newState ? 'ON' : 'OFF'}`;
                 if (code === 'doom' && newState) msg = "😈 NIGHTMARE DIFFICULTY STARTED";
-                
                 notify(msg, newState && code === 'doom' ? "error" : "success");
-                keySequence.length = 0;
+                
+                keySequence.length = 0; 
                 return;
             }
         }
@@ -69,7 +73,7 @@ document.addEventListener("alpine:init", () => {
             }
         });
 
-        // 3. RESET SEASONS
+        // 3. RESET
         if (currentSequence.endsWith("seasonpass")) {
             saveState("season", null);
             notify("🔄 Time Sync: Returning to Server Time", "warning");
@@ -77,7 +81,7 @@ document.addEventListener("alpine:init", () => {
             keySequence.length = 0;
         }
 
-        // 4. KONAMI CODE (Coupon)
+        // 4. KONAMI COUPON
         if (currentSequence.endsWith(konamiCode)) {
             notify("👾 Input Accepted. Processing Cheat...", "info");
             try {
@@ -99,26 +103,23 @@ document.addEventListener("alpine:init", () => {
             keySequence.length = 0;
         }
 
-        // 5. ONE-OFF ACTIONS
-        const oneOffs = {
-            loot: { msg: "💰 Opening Inventory...", action: () => setTimeout(() => window.location.href = "/cart/", 500) },
-            idkfa: { msg: "⚡ GOD MODE: ACTIVATED", type: "warning", action: () => {
-                document.body.style.transition = "transform 1s";
-                document.body.style.transform = "rotate(180deg)";
-                setTimeout(() => { document.body.style.transform = "none"; }, 2000);
-            }},
-            ban: { msg: "⛔ ACCESS DENIED.", type: "error", action: () => setTimeout(() => window.location.href = "/system/glitch/403/", 1000) },
-            lost: { msg: "🗺️ Signal Lost.", type: "warning", action: () => setTimeout(() => window.location.href = "/system/glitch/404/", 1000) },
-            crash: { msg: "🔥 SYSTEM FAILURE", type: "error", action: () => setTimeout(() => window.location.href = "/system/glitch/500/", 1000) }
-        };
-
-        for (const [code, config] of Object.entries(oneOffs)) {
-            if (currentSequence.endsWith(code)) {
-                notify(config.msg, config.type || "success");
-                if (config.action) config.action();
-                keySequence.length = 0;
-                return;
-            }
+        // 5. ONE-OFFS (Redirects/Actions)
+        if (currentSequence.endsWith("loot")) {
+            notify("💰 Opening Inventory...", "success");
+            setTimeout(() => window.location.href = "/cart/", 500);
+            keySequence.length = 0;
+        }
+        
+        if (currentSequence.endsWith("ban")) {
+             notify("⛔ ACCESS DENIED.", "error");
+             setTimeout(() => window.location.href = "/system/glitch/403/", 1000);
+             keySequence.length = 0;
+        }
+        
+        if (currentSequence.endsWith("crash")) {
+             notify("🔥 SYSTEM FAILURE", "error");
+             setTimeout(() => window.location.href = "/system/glitch/500/", 1000);
+             keySequence.length = 0;
         }
     });
 });

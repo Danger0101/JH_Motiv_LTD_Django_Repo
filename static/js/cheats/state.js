@@ -2,6 +2,7 @@
 
 const STORAGE_KEY_PREFIX = "cheat_state_";
 
+// --- HELPER: Get CSRF Token for Coupons ---
 export function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== "") {
@@ -17,6 +18,7 @@ export function getCookie(name) {
     return cookieValue;
 }
 
+// --- HELPER: Trigger Toast Notification ---
 export function notify(msg, type = "info") {
     window.dispatchEvent(
         new CustomEvent("show-toast", {
@@ -25,6 +27,7 @@ export function notify(msg, type = "info") {
     );
 }
 
+// --- HELPER: Save/Load State ---
 export function saveState(cheatName, value) {
     if (value) {
         localStorage.setItem(STORAGE_KEY_PREFIX + cheatName, value);
