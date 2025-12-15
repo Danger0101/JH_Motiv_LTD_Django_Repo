@@ -6,6 +6,7 @@ module.exports = {
     './templates/**/*.html',
     './**/templates/**/*.html', 
     './accounts/forms.py', // Scan Python files that may contain classes
+    './static/js/**/*.js', // <--- ADD THIS LINE to fix the visual bugs
     // Add any other directories/files that use Tailwind classes
   ],
   theme: {
