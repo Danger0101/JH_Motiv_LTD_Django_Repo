@@ -1,0 +1,32 @@
+{% load static %}
+
+{# Check if the user_consent cookie is 'accepted' #}
+{% if request.COOKIES.user_consent == 'accepted' %}
+    <!-- Google Analytics (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-XXXXXXXXXX');
+    </script>
+{% else %}
+    <!-- Google Analytics is disabled until consent is given -->
+    <script>
+        document.body.addEventListener('cookieConsentAccepted', function() {
+            // Dynamically load GA if consent is granted without page reload
+            var script = document.createElement('script');
+            script.src = "https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX";
+            script.async = true;
+            document.head.appendChild(script);
+
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-XXXXXXXXXX');
+            
+            console.log("Google Analytics loaded after consent.");
+        });
+    </script>
+{% endif %}

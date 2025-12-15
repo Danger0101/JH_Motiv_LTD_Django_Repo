@@ -255,6 +255,10 @@ def set_cookie_consent(request):
     if consent_value in ['accepted', 'rejected']:
         response = HttpResponse(status=204)
         response.set_cookie('user_consent', consent_value, max_age=31536000, samesite='Lax', secure=True)
+        
+        if consent_value == 'accepted':
+            response['HX-Trigger'] = 'cookieConsentAccepted'
+            
         return response
     return HttpResponse('Invalid consent value.', status=400)
 

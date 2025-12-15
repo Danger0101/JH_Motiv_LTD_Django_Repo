@@ -145,14 +145,24 @@ PRIVACY_POLICY_DATA = {
             {
                 'heading': '5. Cookies and Tracking Technologies',
                 'content': """
-                    <p>We use cookies to enhance your experience. These may include:</p>
+                    <p>We use cookies and local storage to enhance your experience and ensure the site functions correctly.</p>
+                    <p><strong>1. Essential Django Cookies (Strictly Necessary)</strong></p>
                     <ul>
-                        <li><strong>Comment cookies:</strong> Save your name, email, and website if you leave a comment (for your convenience).</li>
-                        <li><strong>Login cookies:</strong> Set when you log in, and last for two days (or two weeks with “Remember Me”).</li>
-                        <li><strong>Screen options cookies:</strong> Save display preferences for logged-in users.</li>
-                        <li><strong>Editor cookies:</strong> Used when editing or publishing content, and expire after 1 day.</li>
+                        <li><code>sessionid</code>: Manages your active session (e.g., keeping you logged in).</li>
+                        <li><code>csrftoken</code>: A security cookie to prevent Cross-Site Request Forgery attacks.</li>
+                        <li><code>messages</code>: Used to display temporary notifications (e.g., "Item added to cart").</li>
                     </ul>
-                    <p>We also use cookies for site functionality, analytics, spam prevention, and security. You can manage cookie settings through your browser.</p>
+                    <p><strong>2. Preferences & Consent</strong></p>
+                    <ul>
+                        <li><code>user_consent</code> (Cookie & Local Storage): Remembers your choice to accept or reject non-essential cookies.</li>
+                    </ul>
+                    <p><strong>3. Third-Party Services</strong></p>
+                    <ul>
+                        <li><strong>Stripe:</strong> Sets cookies for fraud detection and secure payment processing.</li>
+                        <li><strong>Cloudinary:</strong> May set technical cookies for media load balancing.</li>
+                        <li><strong>Google Analytics:</strong> If accepted, uses cookies to track site usage statistics.</li>
+                    </ul>
+                    <p>You can manage your cookie preferences through your browser settings.</p>
                 """,
             },
             {
