@@ -1,4 +1,5 @@
 import json
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
@@ -33,6 +34,8 @@ from .forms import NewsletterSubscriptionForm, StaffNewsletterForm
 from .models import NewsletterSubscriber, NewsletterCampaign, CheatUsage, EmailResendLog
 from .cheats import CHEAT_CODES
 from .tasks import send_welcome_email_with_pdf_task, send_newsletter_blast_task, send_transactional_email_task
+
+logger = logging.getLogger(__name__)
 
 # ==============================================================================
 # 1. FUNCTION-BASED VIEWS (Data-Driven Pages)
@@ -175,79 +178,69 @@ def claim_konami_coupon(request):
 @require_POST
 def verify_cheat_code(request):
     """
-    Verifies a keystroke sequence against hidden server-side codes.
+    Verifies a Cheat ID sent by the client.
+    The client handles the key matching and hashing; the server handles the reward.
     """
-    # 1. Rate Limiting (Prevent Brute Force)
-    ip = request.META.get('REMOTE_ADDR')
-    cache_key = f"cheat_attempts_{ip}"
-    attempts = cache.get(cache_key, 0)
-    
-    if attempts >= 10: # Limit: 10 attempts per minute
-        return JsonResponse({
-            'status': 'error', 
-            'message': '⛔ SYSTEM LOCKOUT: Too many failed attempts. Cooldown active.'
-        }, status=429)
-    
-    # Increment counter (expires in 60s)
-    cache.set(cache_key, attempts + 1, 60)
-
     try:
         data = json.loads(request.body)
-        sequence = data.get('sequence', '').lower()
+        
+        # FIX: Explicitly cast to integer. 
+        # Even if JS sends 101, sometimes it arrives as "101" string.
+        try:
+            cheat_id = int(data.get('cheat_id'))
+        except (TypeError, ValueError):
+            return JsonResponse({'status': 'invalid_format'}, status=400)
 
-        # Check if the sequence matches any hidden code
-        for code, effect in CHEAT_CODES.items():
-            if code in sequence:
-                # If it's a coupon action, we can generate the code here dynamically
-                response_data = effect.copy()
-                
-                if effect.get('action') == 'coupon':
-                    # Check Authentication
-                    if not request.user.is_authenticated:
-                        return JsonResponse({
-                            'status': 'error',
-                            'message': '🔒 Login required to save game progress and claim loot!'
-                        })
+        if not cheat_id or cheat_id not in CHEAT_CODES:
+            return JsonResponse({'status': 'invalid_id'}, status=400)
 
-                    # Dynamic Coupon Logic
-                    now = timezone.now()
-                    # Format: KONAMI-[USER_ID]-[YYYYMM]
-                    code_name = f"KONAMI-{request.user.id}-{now.strftime('%Y%m')}"
-                    
-                    # Get or Create the coupon
-                    coupon, created = Coupon.objects.get_or_create(
-                        code=code_name,
-                        defaults={
-                            'discount_type': Coupon.DISCOUNT_TYPE_PERCENT,
-                            'discount_value': 10,
-                            'coupon_type': Coupon.COUPON_TYPE_DISCOUNT,
-                            'free_shipping': True,
-                            'active': True,
-                            'usage_limit': 1,
-                            'user_specific': request.user,
-                            'valid_from': now,
-                            'valid_to': now + datetime.timedelta(days=30),
-                            'limit_to_product_type': Coupon.LIMIT_TYPE_ALL
-                        }
-                    )
-                    
-                    response_data['payload'] = coupon.code
-                    if not created:
-                        response_data['message'] = "⚠️ You already claimed this month's loot! Code retrieved."
+        # Retrieve config for this ID (e.g. "konami")
+        effect_config = CHEAT_CODES[cheat_id]
+        response_data = effect_config.copy()
 
-                # Log the usage
-                CheatUsage.objects.create(
-                    code_used=code,
-                    user=request.user if request.user.is_authenticated else None,
-                    ip_address=ip,
-                    action_triggered=effect.get('action', 'unknown')
-                )
+        # --- LOGIC: COUPON GENERATION ---
+        if effect_config.get('action') == 'coupon':
+            if not request.user.is_authenticated:
+                return JsonResponse({
+                    'status': 'success', # Technically a success in matching, but logic fails
+                    'effect': {
+                        'message': '🔒 Log in to save your progress and claim this reward!'
+                    }
+                })
 
-                return JsonResponse({'status': 'success', 'effect': response_data})
+            # Create Unique Coupon
+            code = f"KONAMI-{request.user.id}-{timezone.now().strftime('%Y')}"
+            coupon, created = Coupon.objects.get_or_create(
+                code=code,
+                defaults={
+                    'discount_type': Coupon.DISCOUNT_TYPE_PERCENT,
+                    'discount_value': 10,
+                    'active': True,
+                    'usage_limit': 1,
+                    'user_specific': request.user,
+                    'valid_from': timezone.now(),
+                    'valid_to': timezone.now() + datetime.timedelta(days=30),
+                }
+            )
+            
+            response_data['payload'] = coupon.code
+            response_data['message'] = "Cheat Activated! Coupon generated."
+            if not created:
+                response_data['message'] = "You already discovered this secret! Code retrieved."
 
-        return JsonResponse({'status': 'no_match'})
+        # Log usage
+        if request.user.is_authenticated:
+            CheatUsage.objects.create(
+                user=request.user,
+                code_used=str(cheat_id),
+                ip_address=request.META.get('REMOTE_ADDR'),
+                action_triggered=effect_config.get('action', 'unknown')
+            )
+
+        return JsonResponse({'status': 'success', 'effect': response_data})
 
     except Exception as e:
+        logger.error(f"Cheat Error: {e}")
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
 @require_POST
