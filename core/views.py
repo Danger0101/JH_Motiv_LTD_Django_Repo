@@ -30,7 +30,7 @@ from dreamers.models import DreamerProfile
 from team.models import TeamMember
 from products.models import Product
 from .forms import NewsletterSubscriptionForm, StaffNewsletterForm
-from .models import NewsletterSubscriber, NewsletterCampaign, CheatUsage
+from .models import NewsletterSubscriber, NewsletterCampaign, CheatUsage, EmailResendLog
 from .cheats import CHEAT_CODES
 from .tasks import send_welcome_email_with_pdf_task, send_newsletter_blast_task, send_transactional_email_task
 
@@ -307,6 +307,14 @@ def subscribe_newsletter(request):
     Handles newsletter subscription and sends the welcome PDF.
     """
     if request.method == 'POST':
+        # Check if user is already subscribed
+        email = request.POST.get('email')
+        if email:
+            subscriber = NewsletterSubscriber.objects.filter(email=email).first()
+            if subscriber and subscriber.is_active:
+                request.session['manage_newsletter_email'] = email
+                return redirect('core:newsletter_manage')
+
         form = NewsletterSubscriptionForm(request.POST)
         if form.is_valid():
             subscriber = form.save()
@@ -329,14 +337,68 @@ def newsletter_thank_you(request):
     """Renders the newsletter thank you page."""
     return render(request, 'core/newsletter_thank_you.html')
 
-def resend_welcome_email(request):
-    """Resends the welcome email if the user just subscribed."""
+def newsletter_manage(request):
+    """
+    Renders a menu for existing subscribers to manage their subscription (unsubscribe).
+    """
+    email = request.session.get('manage_newsletter_email')
+    if not email:
+        return redirect('home')
+    
+    # Calculate cooldown remaining for the UI
+    last_sent = request.session.get('last_resend_timestamp', 0)
+    now = timezone.now().timestamp()
+    cooldown_remaining = max(0, int(60 - (now - last_sent)))
+
+    return render(request, 'core/newsletter_manage.html', {'email': email, 'cooldown_remaining': cooldown_remaining})
+
+def newsletter_unsubscribe_manual(request):
+    """
+    Process manual unsubscribe request from the manage menu.
+    """
     if request.method == 'POST':
+        email = request.session.get('manage_newsletter_email')
+        if email:
+            NewsletterSubscriber.objects.filter(email=email).update(is_active=False)
+            if 'manage_newsletter_email' in request.session:
+                del request.session['manage_newsletter_email']
+            return render(request, 'core/newsletter_unsubscribe.html')
+    return redirect('home')
+
+def resend_welcome_email(request):
+    """Resends the welcome email with a cooldown."""
+    if request.method == 'POST':
+        # 1. Determine Redirect Target
+        target = 'core:newsletter_thank_you'
+        if request.session.get('manage_newsletter_email'):
+            target = 'core:newsletter_manage'
+
+        # 2. Cooldown Check (60 seconds)
+        last_sent = request.session.get('last_resend_timestamp', 0)
+        current_time = timezone.now().timestamp()
+        if current_time - last_sent < 60:
+            messages.warning(request, "Please wait a minute before resending.")
+            return redirect(target)
+
+        # 3. Send Email
         email = request.session.get('newsletter_email')
+        if not email:
+            email = request.session.get('manage_newsletter_email')
+
         if email:
             base_url = request.build_absolute_uri('/')
             send_welcome_email_with_pdf_task.delay(email, base_url)
+            request.session['last_resend_timestamp'] = current_time
+            
+            # Log the attempt for security auditing
+            ip = request.META.get('REMOTE_ADDR')
+            user_agent = request.META.get('HTTP_USER_AGENT', '')
+            EmailResendLog.objects.create(
+                email=email, ip_address=ip, user_agent=user_agent
+            )
+            
             messages.success(request, f"Blueprint resent to {email}!")
+            return redirect(target)
         else:
             messages.error(request, "Session expired. Please subscribe again.")
     return redirect('core:newsletter_thank_you')

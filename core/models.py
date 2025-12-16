@@ -36,3 +36,12 @@ class CheatUsage(models.Model):
 
     def __str__(self):
         return f"{self.code_used} used by {self.user or 'Anonymous'} at {self.timestamp}"
+
+class EmailResendLog(models.Model):
+    email = models.EmailField()
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Resend to {self.email} at {self.timestamp}"

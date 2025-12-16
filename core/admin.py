@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import NewsletterSubscriber, NewsletterCampaign, CheatUsage
+from .models import NewsletterSubscriber, NewsletterCampaign, CheatUsage, EmailResendLog
 
 # Register your models here.
 
@@ -33,6 +33,16 @@ class CheatUsageAdmin(admin.ModelAdmin):
     list_filter = ('code_used', 'action_triggered', 'timestamp')
     search_fields = ('code_used', 'user__username', 'user__email', 'ip_address')
     readonly_fields = ('timestamp', 'code_used', 'user', 'ip_address', 'action_triggered')
+
+    def has_add_permission(self, request):
+        return False
+
+@admin.register(EmailResendLog)
+class EmailResendLogAdmin(admin.ModelAdmin):
+    list_display = ('email', 'ip_address', 'timestamp')
+    list_filter = ('timestamp',)
+    search_fields = ('email', 'ip_address')
+    readonly_fields = ('email', 'ip_address', 'user_agent', 'timestamp')
 
     def has_add_permission(self, request):
         return False
