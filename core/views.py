@@ -197,7 +197,7 @@ def verify_cheat_code(request):
 
         # Check if the sequence matches any hidden code
         for code, effect in CHEAT_CODES.items():
-            if sequence.endswith(code):
+            if code in sequence:
                 # If it's a coupon action, we can generate the code here dynamically
                 response_data = effect.copy()
                 

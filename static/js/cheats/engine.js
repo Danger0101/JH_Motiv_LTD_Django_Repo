@@ -114,7 +114,7 @@ import { checkRedirects } from "./redirects.js";
       if (currentSequence.endsWith(code)) {
         const newState = !isStateActive(code);
         saveState(code, newState);
-        if (effects[code]) effectscode;
+        if (effects[code]) effects[code](newState);
 
         let msg = `${label}: ${newState ? "ON" : "OFF"}`;
         if (code === "doom" && newState)
