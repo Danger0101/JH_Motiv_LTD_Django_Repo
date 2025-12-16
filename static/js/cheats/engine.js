@@ -61,6 +61,7 @@ import { checkRedirects } from "./redirects.js";
 
         // 2. Handle Actions
         if (effect.action === "coupon") {
+          if (effects.confetti) effects.confetti();
           if (effect.payload) {
             navigator.clipboard.writeText(effect.payload);
             notify("📋 Code copied to clipboard!", "info");
