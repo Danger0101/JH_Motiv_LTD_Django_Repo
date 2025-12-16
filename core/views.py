@@ -347,6 +347,12 @@ def newsletter_manage(request):
     
     # Calculate cooldown remaining for the UI
     last_sent = request.session.get('last_resend_timestamp', 0)
+    # Ensure last_sent is a float (handle potential string/None from session)
+    try:
+        last_sent = float(last_sent) if last_sent is not None else 0.0
+    except (ValueError, TypeError):
+        last_sent = 0.0
+
     now = timezone.now().timestamp()
     cooldown_remaining = max(0, int(60 - (now - last_sent)))
 
@@ -375,6 +381,12 @@ def resend_welcome_email(request):
 
         # 2. Cooldown Check (60 seconds)
         last_sent = request.session.get('last_resend_timestamp', 0)
+        # Ensure last_sent is a float
+        try:
+            last_sent = float(last_sent) if last_sent is not None else 0.0
+        except (ValueError, TypeError):
+            last_sent = 0.0
+            
         current_time = timezone.now().timestamp()
         if current_time - last_sent < 60:
             messages.warning(request, "Please wait a minute before resending.")
