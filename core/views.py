@@ -184,6 +184,11 @@ def verify_cheat_code(request):
     try:
         data = json.loads(request.body)
 
+        try:
+            cheat_id = int(data.get('cheat_id'))
+        except (TypeError, ValueError):
+            return JsonResponse({'status': 'invalid_format'}, status=400)
+
         if cheat_id not in CHEAT_CODES:
             return JsonResponse({'status': 'invalid_id'}, status=400)
 
