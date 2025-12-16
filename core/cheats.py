@@ -25,7 +25,7 @@ CHEAT_CODES = {
     },
     202: { # shop
         "action": "redirect",
-        "url": "/products/",
+        "url": "/shop/",
         "message": "🛡️ Visiting Armory...",
         "type": "info"
     },
