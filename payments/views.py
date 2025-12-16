@@ -10,6 +10,12 @@ from django.db import transaction, models # ADDED: models for coach query
 from django.contrib.auth import get_user_model # ADDED: Better way to get User model
 from datetime import timedelta # NEW IMPORT
 from decimal import Decimal
+from django.template.loader import render_to_string # Required for PDF
+# Try importing WeasyPrint for PDF generation
+try:
+    import weasyprint
+except (OSError, ImportError):
+    weasyprint = None
 from cart.utils import get_or_create_cart, get_cart_summary_data, calculate_discount # Import calculate_discount
 from cart.models import Cart
 # NEW/UPDATED IMPORTS
@@ -306,8 +312,8 @@ def payment_success(request):
     session_id = request.GET.get('session_id')
     
     cart = get_or_create_cart(request)
+    # We don't rely solely on cart summary anymore as it might be cleared
     context = {
-        'summary': get_cart_summary_data(cart),
         'title': "Payment Successful!",
         'message': "Thank you for your payment.",
         'hero_image': 'images/Success_banner.webp',
@@ -324,9 +330,15 @@ def payment_success(request):
                 
                 # FIX: Ensure order is created immediately (handling race condition with webhook)
                 if intent.metadata.get('product_type') == 'ecommerce_cart':
-                    handle_payment_intent_checkout(intent, request)
-                    # Refresh summary (cart is cleared by the handler)
-                    context['summary'] = get_cart_summary_data(cart)
+                    # This service returns the order object
+                    order = handle_payment_intent_checkout(intent, request)
+                    context['order'] = order
+                    
+                    # Generate the guest link for the template if user is not logged in
+                    if order and order.guest_order_token:
+                        context['guest_order_url'] = request.build_absolute_uri(
+                            reverse('payments:order_detail_guest', args=[order.guest_order_token])
+                        )
             else:
                 context['title'] = "Payment Processing"
                 context['message'] = "Your payment is processing. We will update you via email once completed."
@@ -340,6 +352,13 @@ def payment_success(request):
             if product_type == 'coaching_offering':
                 context['title'] = "Enrollment Successful!"
                 
+                # Try to fetch the actual DB object if webhook was fast enough
+                try:
+                    coaching_order = CoachingOrder.objects.get(stripe_checkout_id=session_id)
+                    context['coaching_order'] = coaching_order
+                except CoachingOrder.DoesNotExist:
+                    pass
+
                 # Fetch details for display
                 offering_id = metadata.get('offering_id')
                 if offering_id:
@@ -367,6 +386,50 @@ def payment_success(request):
     except stripe.error.StripeError as e:
         logger.error(f"Stripe error in payment_success view: {e}", exc_info=True)
         return HttpResponse("An error occurred while confirming your payment.", status=500)
+
+def download_invoice(request, order_id=None, guest_token=None):
+    """
+    Generates a PDF invoice.
+    Securely handles:
+    1. Authenticated users (via order_id, checking ownership).
+    2. Guests (via uuid token).
+    """
+    if weasyprint is None:
+        return HttpResponse("PDF generation is not available on this server.", status=503)
+
+    order = None
+    coaching_order = None
+
+    # 1. Try to fetch Retail Order
+    if guest_token:
+        order = get_object_or_404(Order, guest_order_token=guest_token)
+    elif order_id and request.user.is_authenticated:
+        # Check standard order first
+        order = Order.objects.filter(id=order_id, user=request.user).first()
+        # If not found, check coaching order (if you want to support coaching invoices via this view)
+        if not order:
+             coaching_order = CoachingOrder.objects.filter(id=order_id, enrollment__client=request.user).first()
+    
+    if not order and not coaching_order:
+         return HttpResponse("Invoice not found or access denied.", status=404)
+
+    # 2. Render HTML
+    context = {
+        'order': order, 
+        'coaching_order': coaching_order,
+        'user': order.user if order else coaching_order.enrollment.client,
+        'date': timezone.now()
+    }
+    html_string = render_to_string('account/invoice_template.html', context, request=request)
+
+    # 3. Generate PDF
+    pdf_file = weasyprint.HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf()
+    
+    filename = f"Invoice_{order.id if order else coaching_order.id}.pdf"
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
 
 def order_detail_guest(request, guest_order_token):
     """Displays a guest's order details using a secure token."""

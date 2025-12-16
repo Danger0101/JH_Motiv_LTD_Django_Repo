@@ -24,6 +24,12 @@ urlpatterns = [
     # Corrected URL for creating a coaching checkout session
     path('checkout/create-coaching-checkout-session/<int:offering_id>/', views.create_coaching_checkout_session_view, name='create_coaching_checkout_session'),
 
+    # NEW: Invoice Downloads
+    # For Authenticated Users
+    path('invoice/<int:order_id>/', views.download_invoice, name='download_invoice'),
+    # For Guests (Secure Token)
+    path('invoice/guest/<uuid:guest_token>/', views.download_invoice, name='download_invoice_guest'),
+
     # NEW: My Earnings Dashboard
     path('my-earnings/', MyEarningsView.as_view(), name='my_earnings'),
 ]
