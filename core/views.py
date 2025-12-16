@@ -183,15 +183,8 @@ def verify_cheat_code(request):
     """
     try:
         data = json.loads(request.body)
-        
-        # FIX: Explicitly cast to integer. 
-        # Even if JS sends 101, sometimes it arrives as "101" string.
-        try:
-            cheat_id = int(data.get('cheat_id'))
-        except (TypeError, ValueError):
-            return JsonResponse({'status': 'invalid_format'}, status=400)
 
-        if not cheat_id or cheat_id not in CHEAT_CODES:
+        if cheat_id not in CHEAT_CODES:
             return JsonResponse({'status': 'invalid_id'}, status=400)
 
         # Retrieve config for this ID (e.g. "konami")

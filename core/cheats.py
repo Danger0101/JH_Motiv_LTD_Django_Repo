@@ -65,4 +65,57 @@ CHEAT_CODES = {
         "message": "🔥 CRITICAL SYSTEM FAILURE",
         "type": "error"
     },
+    # Visual Toggles (209-216)
+    209: { # matrix
+        "action": "toggle",
+        "effect_id": "matrix"
+    },
+    210: { # devmode
+        "action": "toggle",
+        "effect_id": "devmode"
+    },
+    211: { # darkmode
+        "action": "toggle",
+        "effect_id": "darkmode"
+    },
+    212: { # cyber
+        "action": "toggle",
+        "effect_id": "cyber"
+    },
+    213: { # retro
+        "action": "toggle",
+        "effect_id": "retro"
+    },
+    214: { # doom
+        "action": "toggle",
+        "effect_id": "doom"
+    },
+    215: { # bighead
+        "action": "toggle",
+        "effect_id": "bighead"
+    },
+    216: { # fpsv -> fps
+        "action": "toggle",
+        "effect_id": "fps"
+    },
+    # Seasons (217-221)
+    217: { # spring
+        "action": "season",
+        "value": "spring"
+    },
+    218: { # summer
+        "action": "season",
+        "value": "summer"
+    },
+    219: { # fall
+        "action": "season",
+        "value": "fall"
+    },
+    220: { # winter
+        "action": "season",
+        "value": "winter"
+    },
+    221: { # seasonpass
+        "action": "season_reset"
+    },
 }
