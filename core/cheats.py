@@ -6,7 +6,7 @@
 CHEAT_CODES = {
     # The Konami Code (Hash -> 101)
     101: {
-        "action": "coupon",  # Frontend handles this action type
+        "action": "coupon",
         "message": "👾 KONAMI CODE ACTIVATED!",
         "type": "success"
     },
