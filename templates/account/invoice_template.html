@@ -138,6 +138,8 @@
                                     <strong>Invoice #:</strong> {{ coaching_order.id }}<br>
                                     <strong>Date:</strong> {{ coaching_order.created_at|date:"d M Y" }}
                                 {% endif %}
+                                <br>
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ order_url }}" alt="Order QR" style="width: 80px; height: 80px; margin-top: 10px;">
                             </td>
                         </tr>
                     </table>

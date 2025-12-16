@@ -413,12 +413,23 @@ def download_invoice(request, order_id=None, guest_token=None):
     if not order and not coaching_order:
          return HttpResponse("Invoice not found or access denied.", status=404)
 
+    # Determine Order URL for QR Code
+    order_url = request.build_absolute_uri('/')
+    if order:
+        if order.guest_order_token:
+            order_url = request.build_absolute_uri(reverse('payments:order_detail_guest', args=[order.guest_order_token]))
+        else:
+            order_url = request.build_absolute_uri(reverse('payments:order_detail', args=[order.id]))
+    elif coaching_order:
+        order_url = request.build_absolute_uri(reverse('accounts:account_profile'))
+
     # 2. Render HTML
     context = {
         'order': order, 
         'coaching_order': coaching_order,
         'user': order.user if order else coaching_order.enrollment.client,
-        'date': timezone.now()
+        'date': timezone.now(),
+        'order_url': order_url
     }
     html_string = render_to_string('account/invoice_template.html', context, request=request)
 
