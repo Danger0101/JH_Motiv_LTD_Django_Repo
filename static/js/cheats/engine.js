@@ -8,8 +8,6 @@ import {
   isStateActive,
 } from "./state.js";
 import { effects } from "./effects.js";
-// We keep redirects client-side for speed, but you can move them to python if you prefer
-import { checkRedirects } from "./redirects.js";
 
 (function initCheatEngine() {
   // --- 1. RESTORE STATE ---

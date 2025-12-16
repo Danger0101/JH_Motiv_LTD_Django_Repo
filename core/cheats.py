@@ -19,5 +19,47 @@ CHEAT_CODES = {
         "url": "/cart/",
         "message": "💰 Opening Inventory...",
         "type": "success"
-    }
+    },
+    "shop": {
+        "action": "redirect",
+        "url": "/products/",
+        "message": "🛡️ Visiting Armory...",
+        "type": "info"
+    },
+    "home": {
+        "action": "redirect",
+        "url": "/",
+        "message": "🏠 Teleporting to Hub...",
+        "type": "info"
+    },
+    "login": {
+        "action": "redirect",
+        "url": "/accounts/login/",
+        "message": "🔑 Access Protocol Initiated",
+        "type": "warning"
+    },
+    "team": {
+        "action": "redirect",
+        "url": "/about/",
+        "message": "👥 Loading Guild Roster...",
+        "type": "info"
+    },
+    "ban": {
+        "action": "redirect",
+        "url": "/system/glitch/403/",
+        "message": "⛔ ACCESS DENIED.",
+        "type": "error"
+    },
+    "lost": {
+        "action": "redirect",
+        "url": "/system/glitch/404/",
+        "message": "🗺️ Signal Lost.",
+        "type": "warning"
+    },
+    "crash": {
+        "action": "redirect",
+        "url": "/system/glitch/500/",
+        "message": "🔥 CRITICAL SYSTEM FAILURE",
+        "type": "error"
+    },
 }
