@@ -76,13 +76,46 @@
             font-size: 20px;
             border: none;
         }
+
+        /* Animations: Simulates Terminal Loading */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .terminal-window {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        /* Blinking Cursor at the end of content */
+        .content::after {
+            content: ' █';
+            animation: blink 1s step-end infinite;
+            margin-left: 5px;
+        }
+
+        /* Glitch Effect */
+        @keyframes glitch {
+            0% { text-shadow: 2px 0 #ff3333, -2px 0 #3333ff; transform: translate(2px, 0); }
+            2% { text-shadow: -2px 0 #ff3333, 2px 0 #3333ff; transform: translate(-2px, 0); }
+            4% { text-shadow: none; transform: translate(0); }
+            100% { text-shadow: none; transform: translate(0); }
+        }
+        .glitch-text {
+            display: inline-block;
+            animation: glitch 5s infinite;
+        }
     </style>
 </head>
 <body>
     <div class="wrapper">
         <div class="terminal-window">
             <div class="terminal-header">
-                &gt; INCOMING_TRANSMISSION // JH_MOTIV_GUILD
+                <span class="glitch-text">&gt; INCOMING_TRANSMISSION // JH_MOTIV_GUILD</span>
             </div>
             
             <div class="content">
