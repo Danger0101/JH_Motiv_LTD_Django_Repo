@@ -1,66 +1,80 @@
 // static/js/cheats/effects.js
 
-export const effects = {
-  // --- 1. THEMES ---
+// Helper to clear all theme classes before applying a new one
+const clearThemes = () => {
+  document.documentElement.classList.remove(
+    "matrix",
+    "retro",
+    "cyber",
+    "doom",
+    "bighead",
+    "dark",
+    "devmode"
+  );
+  // Also clear body classes if any were added manually
+  document.body.classList.remove("matrix-active");
+};
 
-  // NEW: Clean Dark Mode
+export const effects = {
+  // --- THEMES ---
+
   darkmode: (enable) => {
+    // Standard Tailwind Dark Mode
+    document.documentElement.classList.toggle("dark", enable);
+  },
+
+  matrix: (enable) => {
     if (enable) {
-      document.documentElement.classList.add("dark"); // If using Tailwind dark mode
-      document.body.classList.add("bg-gray-900", "text-white");
-      document.body.classList.remove("bg-gray-100", "text-gray-800");
+      clearThemes();
+      document.documentElement.classList.add("matrix");
+      // Optional: Add a canvas for falling code rain here
     } else {
-      document.documentElement.classList.remove("dark");
-      document.body.classList.remove("bg-gray-900", "text-white");
-      document.body.classList.add("bg-gray-100", "text-gray-800");
+      document.documentElement.classList.remove("matrix");
     }
   },
 
-  // NEW: Cyberpunk / Vaporwave Mode
   cyber: (enable) => {
     if (enable) {
-      document.body.classList.add("bg-slate-900", "text-pink-500", "font-mono");
-      // Add a neon glow to all headings
-      const style = document.createElement("style");
-      style.id = "cyber-glow";
-      style.innerHTML = `h1, h2, h3, a { text-shadow: 0 0 5px #d946ef, 0 0 10px #d946ef; }`;
-      document.head.appendChild(style);
+      clearThemes();
+      document.documentElement.classList.add("cyber");
     } else {
-      document.body.classList.remove(
-        "bg-slate-900",
-        "text-pink-500",
-        "font-mono"
-      );
-      const style = document.getElementById("cyber-glow");
-      if (style) style.remove();
+      document.documentElement.classList.remove("cyber");
     }
   },
 
-  // Existing: Matrix Terminal
-  devmode: (enable) => {
+  retro: (enable) => {
     if (enable) {
-      document.body.classList.remove("bg-gray-100", "text-gray-800");
-      document.body.classList.add("font-mono", "text-green-500", "bg-black");
+      clearThemes();
+      document.documentElement.classList.add("retro");
     } else {
-      document.body.classList.remove("font-mono", "text-green-500", "bg-black");
-      document.body.classList.add("bg-gray-100", "text-gray-800");
+      document.documentElement.classList.remove("retro");
     }
   },
 
-  // Existing: Nightmare
   doom: (enable) => {
     if (enable) {
-      document.body.style.transition = "filter 0.5s";
-      document.body.style.filter =
-        "contrast(200%) grayscale(100%) drop-shadow(0 0 5px red)";
-      document.documentElement.style.backgroundColor = "#1a0505";
+      clearThemes(); // Doom overrides everything
+      document.documentElement.classList.add("doom");
+      // Optional: Play sound or add screen shake
+      document.body.style.animation =
+        "shake 0.5s cubic-bezier(.36,.07,.19,.97) both";
     } else {
-      document.body.style.filter = "none";
-      document.documentElement.style.backgroundColor = "";
+      document.documentElement.classList.remove("doom");
+      document.body.style.animation = "";
     }
   },
 
-  // NEW: God Mode (Screen Rotation)
+  devmode: (enable) => {
+    if (enable) {
+      clearThemes();
+      document.documentElement.classList.add("devmode");
+    } else {
+      document.documentElement.classList.remove("devmode");
+    }
+  },
+
+  // --- VISUAL TWEAKS ---
+
   godmode: () => {
     document.body.style.transition = "transform 1s";
     document.body.style.transform = "rotate(180deg)";
@@ -69,103 +83,41 @@ export const effects = {
     }, 2000);
   },
 
-  // --- 2. FUN MODS ---
-
   bighead: (enable) => {
-    const images = document.querySelectorAll("main img");
-    images.forEach((img) => {
-      if (enable) {
-        img.style.transition = "transform 0.3s ease";
-        img.style.transform = "scale(1.5)";
-        img.style.zIndex = "50";
-        img.style.position = "relative";
-        img.style.pointerEvents = "none";
-      } else {
-        img.style.transform = "none";
-        img.style.zIndex = "auto";
-        img.style.position = "static";
-        img.style.pointerEvents = "auto";
-      }
-    });
+    // This needs a global style injection for images
+    if (enable) {
+      document.documentElement.classList.add("bighead");
+      const style = document.createElement("style");
+      style.id = "bighead-style";
+      style.textContent = `img { transform: scale(1.5) !important; transition: transform 0.5s; }`;
+      document.head.appendChild(style);
+    } else {
+      document.documentElement.classList.remove("bighead");
+      const style = document.getElementById("bighead-style");
+      if (style) style.remove();
+    }
   },
 
   fps: (enable) => {
-    let fpsCounter = document.getElementById("cheat-fps-counter");
-    if (enable) {
-      if (!fpsCounter) {
-        fpsCounter = document.createElement("div");
-        fpsCounter.id = "cheat-fps-counter";
-        Object.assign(fpsCounter.style, {
-          position: "fixed",
-          top: "10px",
-          right: "10px",
-          backgroundColor: "rgba(0,0,0,0.8)",
-          color: "#00ff00",
-          fontFamily: "monospace",
-          padding: "5px 10px",
-          borderRadius: "4px",
-          zIndex: "9999",
-        });
-        fpsCounter.innerText = "60 FPS";
-        document.body.appendChild(fpsCounter);
-
-        window.fpsInterval = setInterval(() => {
-          const fps = Math.floor(Math.random() * (61 - 58) + 58);
-          const el = document.getElementById("cheat-fps-counter");
-          if (el) el.innerText = fps + " FPS";
-        }, 500);
-      }
-    } else {
-      if (fpsCounter) fpsCounter.remove();
-      if (window.fpsInterval) clearInterval(window.fpsInterval);
-    }
+    // Toggle FPS counter visibility
+    const meter = document.getElementById("fps-counter");
+    if (meter) meter.style.display = enable ? "block" : "none";
   },
 
-  matrix: (enable) => {
-    let canvas = document.getElementById("matrix-canvas");
-    if (enable) {
-      if (!canvas) {
-        canvas = document.createElement("canvas");
-        canvas.id = "matrix-canvas";
-        Object.assign(canvas.style, {
-          position: "fixed",
-          top: "0",
-          left: "0",
-          width: "100vw",
-          height: "100vh",
-          zIndex: "9990",
-          pointerEvents: "none",
-        });
-        document.body.appendChild(canvas);
-
-        const ctx = canvas.getContext("2d");
-        const w = (canvas.width = window.innerWidth);
-        const h = (canvas.height = window.innerHeight);
-        const cols = Math.floor(w / 20) + 1;
-        const ypos = Array(cols).fill(0);
-
-        window.matrixInterval = setInterval(() => {
-          ctx.fillStyle = "#0001";
-          ctx.fillRect(0, 0, w, h);
-          ctx.fillStyle = "#0f0";
-          ctx.font = "15pt monospace";
-
-          ypos.forEach((y, ind) => {
-            const text = String.fromCharCode(Math.random() * 128);
-            const x = ind * 20;
-            ctx.fillText(text, x, y);
-            if (y > 100 + Math.random() * 10000) ypos[ind] = 0;
-            else ypos[ind] = y + 20;
-          });
-        }, 50);
-      }
-    } else {
-      if (canvas) canvas.remove();
-      if (window.matrixInterval) clearInterval(window.matrixInterval);
-    }
-  },
-
+  // --- SEASONAL ---
   season: (seasonName) => {
+    // Remove old seasons
+    document.documentElement.classList.remove(
+      "spring",
+      "summer",
+      "fall",
+      "winter"
+    );
+    if (seasonName) {
+      document.documentElement.classList.add(seasonName);
+    }
+
+    // Legacy asset swapping logic (optional, kept for compatibility if needed)
     if (!seasonName) return;
     const assetMap = {
       spring: { banner: "spring_banner.webp", footer: "spring_footer.webp" },
