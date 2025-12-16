@@ -436,14 +436,14 @@ def staff_newsletter_dashboard(request):
                 # Render preview
                 base_url = request.build_absolute_uri('/')
                 unsubscribe_url = f"{base_url.rstrip('/')}/newsletter/unsubscribe/preview-token/"
-                context = {'body': content, 'subject': subject, 'unsubscribe_url': unsubscribe_url}
+                context = {'body': content, 'subject': subject, 'unsubscribe_url': unsubscribe_url, 'base_url': base_url.rstrip('/')}
                 preview_html = render_to_string('core/generic_newsletter.html', context)
                 return render(request, 'core/staff_newsletter.html', {'form': form, 'preview_html': preview_html})
             
             elif 'test_send' in request.POST:
                 base_url = request.build_absolute_uri('/')
                 unsubscribe_url = f"{base_url.rstrip('/')}/newsletter/unsubscribe/test-token/"
-                context = {'body': content, 'subject': f"[TEST] {subject}", 'unsubscribe_url': unsubscribe_url}
+                context = {'body': content, 'subject': f"[TEST] {subject}", 'unsubscribe_url': unsubscribe_url, 'base_url': base_url.rstrip('/')}
                 
                 if request.user.email:
                     send_transactional_email_task.delay(
