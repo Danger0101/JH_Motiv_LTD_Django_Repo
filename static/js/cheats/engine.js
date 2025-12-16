@@ -65,11 +65,7 @@ import { effects } from "./effects.js";
             notify("📋 Code copied to clipboard!", "info");
           }
         } else if (effect.action === "godmode") {
-          document.body.style.transition = "transform 1s";
-          document.body.style.transform = "rotate(180deg)";
-          setTimeout(() => {
-            document.body.style.transform = "none";
-          }, 2000);
+          if (effects.godmode) effects.godmode();
         } else if (effect.action === "redirect") {
           setTimeout(() => {
             window.location.href = effect.url;

@@ -60,6 +60,15 @@ export const effects = {
     }
   },
 
+  // NEW: God Mode (Screen Rotation)
+  godmode: () => {
+    document.body.style.transition = "transform 1s";
+    document.body.style.transform = "rotate(180deg)";
+    setTimeout(() => {
+      document.body.style.transform = "none";
+    }, 2000);
+  },
+
   // --- 2. FUN MODS ---
 
   bighead: (enable) => {
