@@ -24,12 +24,52 @@ export const effects = {
   },
 
   matrix: (enable) => {
+    let canvas = document.getElementById("matrix-canvas");
     if (enable) {
       clearThemes();
       document.documentElement.classList.add("matrix");
-      // Optional: Add a canvas for falling code rain here
+
+      if (!canvas) {
+        canvas = document.createElement("canvas");
+        canvas.id = "matrix-canvas";
+        Object.assign(canvas.style, {
+          position: "fixed",
+          top: "0",
+          left: "0",
+          width: "100vw",
+          height: "100vh",
+          zIndex: "-1", // Behind content
+          pointerEvents: "none",
+          opacity: "0.15",
+        });
+        document.body.appendChild(canvas);
+
+        // Simple Matrix Rain Logic
+        const ctx = canvas.getContext("2d");
+        const w = (canvas.width = window.innerWidth);
+        const h = (canvas.height = window.innerHeight);
+        const cols = Math.floor(w / 20) + 1;
+        const ypos = Array(cols).fill(0);
+
+        window.matrixInterval = setInterval(() => {
+          ctx.fillStyle = "#0001"; // Fade effect
+          ctx.fillRect(0, 0, w, h);
+          ctx.fillStyle = "#0f0";
+          ctx.font = "15pt monospace";
+
+          ypos.forEach((y, ind) => {
+            const text = String.fromCharCode(Math.random() * 128);
+            const x = ind * 20;
+            ctx.fillText(text, x, y);
+            if (y > 100 + Math.random() * 10000) ypos[ind] = 0;
+            else ypos[ind] = y + 20;
+          });
+        }, 50);
+      }
     } else {
       document.documentElement.classList.remove("matrix");
+      if (canvas) canvas.remove();
+      if (window.matrixInterval) clearInterval(window.matrixInterval);
     }
   },
 
@@ -100,8 +140,29 @@ export const effects = {
 
   fps: (enable) => {
     // Toggle FPS counter visibility
-    const meter = document.getElementById("fps-counter");
-    if (meter) meter.style.display = enable ? "block" : "none";
+    let meter = document.getElementById("fps-counter");
+    if (enable) {
+      if (!meter) {
+        meter = document.createElement("div");
+        meter.id = "fps-counter";
+        // Basic styling (position handled by engine.js)
+        meter.style.color = "#00ff00";
+        meter.style.fontFamily = "monospace";
+        meter.style.fontWeight = "bold";
+        meter.style.zIndex = "9999";
+        meter.innerText = "60 FPS";
+        document.body.appendChild(meter);
+
+        // Simple Fake FPS for effect (or replace with real requestAnimationFrame)
+        window.fpsInterval = setInterval(() => {
+          meter.innerText = Math.floor(Math.random() * (61 - 58) + 58) + " FPS";
+        }, 500);
+      }
+      meter.style.display = "block";
+    } else {
+      if (meter) meter.style.display = "none";
+      if (window.fpsInterval) clearInterval(window.fpsInterval);
+    }
   },
 
   // --- SEASONAL ---
