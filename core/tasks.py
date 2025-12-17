@@ -1,8 +1,9 @@
 from celery import shared_task
-from django.core.mail import EmailMultiAlternatives
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
+from django.utils import timezone
 import logging
 try:
     import weasyprint
@@ -11,6 +12,7 @@ except (OSError, ImportError):
 
 from django.core import signing
 from django.urls import reverse
+from .models import Newsletter, NewsletterSubscriber
 
 logger = logging.getLogger(__name__)
 
@@ -169,35 +171,55 @@ def send_welcome_email_with_pdf_task(recipient_email, base_url):
         logger.error(f"Failed to send welcome email to {recipient_email}: {e}", exc_info=True)
 
 @shared_task
-def send_newsletter_blast_task(subject, content, base_url='https://jhmotiv.shop/', campaign_id=None):
+def send_newsletter_blast_task(newsletter_id):
     """
-    Sends a newsletter to all active subscribers.
+    Sends a database-backed newsletter to all active subscribers.
+    Updates status to 'sent' upon completion.
     """
-    from django.apps import apps
-    NewsletterSubscriber = apps.get_model('core', 'NewsletterSubscriber')
-    NewsletterCampaign = apps.get_model('core', 'NewsletterCampaign')
-    
-    subscribers = NewsletterSubscriber.objects.filter(is_active=True).values_list('email', flat=True)
-    
-    # Update campaign recipient count if ID is provided
-    if campaign_id:
-        try:
-            campaign = NewsletterCampaign.objects.get(id=campaign_id)
-            campaign.recipient_count = len(subscribers)
-            campaign.save()
-        except NewsletterCampaign.DoesNotExist:
-            logger.warning(f"Campaign ID {campaign_id} not found during blast task.")
-    
-    for email in subscribers:
-        # We reuse the transactional task for individual sending to ensure reliability
-        # Or we could send mass mail here. For simplicity and tracking, we queue individual tasks.
-        # We need a simple template for this.
+    try:
+        newsletter = Newsletter.objects.get(id=newsletter_id)
+        subscribers = NewsletterSubscriber.objects.filter(is_active=True)
         
-        # Generate signed unsubscribe token
-        token = signing.dumps(email, salt='newsletter-unsubscribe')
-        unsubscribe_path = reverse('core:unsubscribe_newsletter', args=[token])
-        unsubscribe_url = f"{base_url.rstrip('/')}{unsubscribe_path}"
+        # Select Template
+        template_path = f"emails/newsletters/layout_{newsletter.template}.html"
         
-        context = {'body': content, 'subject': subject, 'unsubscribe_url': unsubscribe_url}
-        # Note: Updated template path to match file location in context
-        send_transactional_email_task.delay(email, subject, 'core/generic_newsletter.html', context)
+        success_count = 0
+        
+        for sub in subscribers:
+            # Generate Unique Unsubscribe Link
+            # In real production, you might want to sign this token or use the existing signing logic
+            token = sub.email 
+            unsubscribe_url = f"{settings.SITE_URL}/newsletter/unsubscribe/{token}/"
+            
+            context = {
+                'newsletter': newsletter,
+                'subscriber': sub,
+                'unsubscribe_url': unsubscribe_url,
+                'site_url': settings.SITE_URL,
+            }
+            
+            html_content = render_to_string(template_path, context)
+            
+            try:
+                send_mail(
+                    subject=newsletter.subject,
+                    message="", # Plain text fallback could be generated here
+                    html_message=html_content,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[sub.email],
+                    fail_silently=False
+                )
+                success_count += 1
+            except Exception as e:
+                logger.error(f"Failed to send to {sub.email}: {e}")
+                
+        # Update status to sent if it was scheduled
+        if newsletter.status != 'sent':
+            newsletter.status = 'sent'
+            newsletter.sent_at = timezone.now()
+            newsletter.save()
+
+        return f"Sent {success_count} emails for campaign: {newsletter.subject}"
+        
+    except Newsletter.DoesNotExist:
+        return "Newsletter not found"

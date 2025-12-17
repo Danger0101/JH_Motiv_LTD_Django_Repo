@@ -55,3 +55,42 @@ END:VCALENDAR"""
     # Return bytes and a clean filename
     filename = "booking_invite.ics"
     return ics_content.encode('utf-8'), filename
+
+def generate_workshop_ics(workshop):
+    """
+    Generates a VCALENDAR 2.0 string for a Workshop.
+    """
+    def to_ics_format(dt):
+        if timezone.is_naive(dt):
+            dt = timezone.make_aware(dt)
+        return dt.astimezone(pytz.utc).strftime('%Y%m%dTH%H%M%SZ')
+
+    start_dt = datetime.combine(workshop.date, workshop.start_time)
+    end_dt = datetime.combine(workshop.date, workshop.end_time)
+    
+    dt_start = to_ics_format(start_dt)
+    dt_end = to_ics_format(end_dt)
+    dt_stamp = to_ics_format(timezone.now())
+    
+    summary = f"Workshop: {workshop.name}"
+    description = f"{workshop.description}\n\nJoin Link: {workshop.meeting_link or 'TBD'}"
+    
+    uid = f"workshop-{workshop.id}@{settings.ALLOWED_HOSTS[0] if settings.ALLOWED_HOSTS else 'jhmotiv.shop'}"
+
+    ics_content = f"""BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//JH Motiv//Workshops//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:{uid}
+DTSTAMP:{dt_stamp}
+DTSTART:{dt_start}
+DTEND:{dt_end}
+SUMMARY:{summary}
+DESCRIPTION:{description}
+STATUS:CONFIRMED
+END:VEVENT
+END:VCALENDAR"""
+
+    return ics_content.encode('utf-8'), f"workshop_{workshop.slug}.ics"

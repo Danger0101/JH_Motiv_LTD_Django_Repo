@@ -1,0 +1,34 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="p-4 bg-white dark:bg-gray-800 rounded-lg shadow max-w-2xl mx-auto mt-10">
+    <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Repeat Workshop: {{ workshop.name }}</h2>
+    <p class="mb-6 text-gray-600 dark:text-gray-300">
+        This will create copies of the workshop starting from <strong>{{ workshop.date }}</strong>.
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="mb-4">
+            <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">{{ form.frequency.label }}</label>
+            {{ form.frequency }}
+        </div>
+
+        <div class="mb-6">
+            <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">{{ form.occurrences.label }}</label>
+            {{ form.occurrences }}
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <button type="submit" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
+                Create Copies
+            </button>
+            <a href="{% url 'admin:coaching_core_workshop_change' workshop.id %}" class="py-2.5 px-5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

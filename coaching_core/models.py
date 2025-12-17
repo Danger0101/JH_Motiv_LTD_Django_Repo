@@ -189,6 +189,12 @@ class Workshop(models.Model):
         default=True,
         help_text="Is the workshop currently active and bookable?"
     )
+    meeting_link = models.URLField(
+        blank=True,
+        verbose_name="Virtual Meeting Link",
+        help_text="Link for virtual workshops (e.g. Zoom, Google Meet)."
+    )
+    gcal_event_id = models.CharField(max_length=255, blank=True, null=True, verbose_name="Google Calendar Event ID")
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
         User,

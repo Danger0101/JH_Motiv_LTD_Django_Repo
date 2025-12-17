@@ -146,9 +146,10 @@ class SessionBooking(models.Model):
     @property
     def meeting_link(self):
         """
-        Returns the meeting link.
-        Placeholder to prevent AttributeError until the real field is connected.
+        Returns the meeting link. Checks the workshop first.
         """
+        if self.workshop and self.workshop.meeting_link:
+            return self.workshop.meeting_link
         return getattr(self, 'google_meet_link', None)
 
     def save(self, *args, **kwargs):

@@ -494,4 +494,5 @@ UNFOLD = {
             },
         ],
     },
+    "DASHBOARD_CALLBACK": "core.admin.dashboard_callback",
 }

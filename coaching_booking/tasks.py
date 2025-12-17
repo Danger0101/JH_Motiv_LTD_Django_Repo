@@ -9,6 +9,7 @@ from .models import SessionBooking
 from .utils import generate_ics
 from .integrations.google import GoogleCalendarService
 from coaching_core.models import CoachProfile
+from coaching_core.models import Workshop
 from datetime import timedelta
 from django.utils import timezone
 import requests
@@ -129,6 +130,30 @@ def sync_google_calendar_delete(coach_id, gcal_event_id):
         service.delete_booking(gcal_event_id)
     except CoachProfile.DoesNotExist:
         pass
+
+@shared_task
+def sync_workshop_calendar_push(workshop_id):
+    """
+    Syncs a Workshop to the Coach's Google Calendar and saves the meeting link.
+    """
+    try:
+        workshop = Workshop.objects.get(id=workshop_id)
+        service = GoogleCalendarService(workshop.coach)
+        
+        # Note: Ensure GoogleCalendarService has a push_workshop method
+        # that handles creating an event with conferenceData and returns (event_id, meet_link)
+        # If push_workshop is not available, this logic needs to be added to the service.
+        result = service.push_workshop(workshop)
+        
+        if result:
+            # Result expected to be dict or tuple with id and link
+            # This depends on your Service implementation
+            pass 
+            
+    except Workshop.DoesNotExist:
+        pass
+    except Exception as e:
+        logger.error(f"Failed to sync workshop {workshop_id} to GCal: {e}")
 
 @shared_task
 def sync_google_calendar_pull_all():

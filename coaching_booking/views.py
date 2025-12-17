@@ -45,6 +45,11 @@ class CoachLandingView(TemplateView):
         facts = Fact.objects.all()
         KNOWLEDGE_CATEGORIES = [('all', 'Business Coaches')]
         cart = get_or_create_cart(self.request)
+        
+        upcoming_workshops = Workshop.objects.filter(
+            active_status=True,
+            date__gte=timezone.now()
+        ).order_by('date')[:3]
 
         context.update({
             'coaches': coaches,
@@ -54,6 +59,7 @@ class CoachLandingView(TemplateView):
             'facts': facts,
             'knowledge_categories': KNOWLEDGE_CATEGORIES[1:],
             'page_summary_text': "Welcome to our coaching services!",
+            'upcoming_workshops': upcoming_workshops,
             'summary': get_cart_summary_data(cart),
         })
             

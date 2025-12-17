@@ -1,0 +1,24 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<div style="background-color: #ffffff; padding: 40px; border-radius: 8px; border: 1px solid #e5e7eb;">
+    
+    {% if newsletter.header_image %}
+    <img src="{{ site_url }}{{ newsletter.header_image.url }}" alt="{{ newsletter.subject }}" style="width: 100%; max-width: 600px; border-radius: 4px; margin-bottom: 24px;">
+    {% endif %}
+
+    <h1 style="color: #111827; font-size: 24px; margin-bottom: 16px;">{{ newsletter.subject }}</h1>
+    
+    <div style="color: #374151; font-size: 16px; line-height: 1.6;">
+        {{ newsletter.body|safe|linebreaks }}
+    </div>
+
+    {% if newsletter.cta_link %}
+    <div style="margin-top: 32px; text-align: center;">
+        <a href="{{ newsletter.cta_link }}" style="background-color: #000000; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">
+            {{ newsletter.cta_text|default:"Read More" }}
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

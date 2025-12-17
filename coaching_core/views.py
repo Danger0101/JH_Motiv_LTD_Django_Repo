@@ -2,13 +2,17 @@ from django.urls import reverse_lazy
 from django.utils.text import slugify
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.utils import timezone
+from datetime import datetime, timedelta
+import pytz
 
 from .models import Offering, Workshop
 from .forms import OfferingCreationForm, WorkshopForm
+from coaching_booking.models import SessionBooking
+from coaching_booking.utils import generate_workshop_ics
 
 class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     """Mixin to ensure the user is a logged-in staff member."""
@@ -24,6 +28,45 @@ class WorkshopDetailView(DetailView):
     model = Workshop
     template_name = 'coaching_core/workshop_detail.html'
     context_object_name = 'workshop'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        workshop = self.object
+        user = self.request.user
+        
+        # 1. Check if User has Booked
+        user_has_booked = False
+        if user.is_authenticated:
+            user_has_booked = SessionBooking.objects.filter(
+                workshop=workshop,
+                client=user,
+                status__in=['BOOKED', 'PENDING_PAYMENT']
+            ).exists()
+        context['user_has_booked'] = user_has_booked
+
+        # 2. Check Join Window (15 mins before start until end)
+        now = timezone.now()
+        start_dt = datetime.combine(workshop.date, workshop.start_time)
+        end_dt = datetime.combine(workshop.date, workshop.end_time)
+        if timezone.is_naive(start_dt): start_dt = timezone.make_aware(start_dt)
+        if timezone.is_naive(end_dt): end_dt = timezone.make_aware(end_dt)
+        
+        show_join_button = False
+        if user_has_booked and workshop.meeting_link:
+            if now >= (start_dt - timedelta(minutes=15)) and now < end_dt:
+                show_join_button = True
+        context['show_join_button'] = show_join_button
+
+        # 3. Google Calendar Add Link
+        # Format: YYYYMMDDTHHMMSSZ
+        fmt = '%Y%m%dT%H%M%SZ'
+        gcal_start = start_dt.astimezone(pytz.utc).strftime(fmt)
+        gcal_end = end_dt.astimezone(pytz.utc).strftime(fmt)
+        
+        gcal_link = f"https://calendar.google.com/calendar/render?action=TEMPLATE&text={workshop.name}&dates={gcal_start}/{gcal_end}&details={workshop.description}&location={workshop.meeting_link or ''}"
+        context['google_calendar_link'] = gcal_link
+
+        return context
 
 class WorkshopCreateView(LoginRequiredMixin, CreateView):
     model = Workshop
@@ -121,3 +164,12 @@ def api_recurring_availability(request):
         except json.JSONDecodeError:
             return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
     return JsonResponse({'status': 'error', 'message': 'Only POST method is allowed'}, status=405)
+
+def workshop_ics_download(request, slug):
+    """Download ICS file for a workshop."""
+    from django.shortcuts import get_object_or_404
+    workshop = get_object_or_404(Workshop, slug=slug)
+    ics_data, filename = generate_workshop_ics(workshop)
+    response = HttpResponse(ics_data, content_type='text/calendar')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
