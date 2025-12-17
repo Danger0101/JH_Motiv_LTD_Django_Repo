@@ -492,17 +492,6 @@ UNFOLD = {
                     },
                 ],
             },
-            {
-                "title": "System",
-                "separator": True,
-                "items": [
-                    {
-                        "title": "API Tasks",
-                        "icon": "terminal",
-                        "link": reverse_lazy("admin:django_celery_beat_periodictask_changelist"),
-                    },
-                ],
-            },
         ],
     },
 }

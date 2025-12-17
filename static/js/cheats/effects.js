@@ -38,9 +38,10 @@ export const effects = {
           left: "0",
           width: "100vw",
           height: "100vh",
-          zIndex: "-1", // Behind content
+          zIndex: "50", // Bring to front so it's visible over opaque backgrounds
           pointerEvents: "none",
-          opacity: "0.15",
+          mixBlendMode: "screen", // Ensures the black fade background doesn't darken the page
+          opacity: "0.8",
         });
         document.body.appendChild(canvas);
 
