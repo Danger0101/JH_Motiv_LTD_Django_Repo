@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
+from unfold.admin import ModelAdmin
 from django.shortcuts import render
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -38,7 +39,7 @@ class AddressInline(admin.StackedInline):
 # --- MODEL ADMINS ---
 
 @admin.register(User)
-class UserAdmin(BaseUserAdmin):
+class UserAdmin(BaseUserAdmin, ModelAdmin):
     inlines = (CoachProfileInline, MarketingPreferenceInline, AddressInline)
     list_display = ('username', 'email', 'full_name_display', 'is_coach', 'is_client', 'stripe_link', 'date_joined')
     list_filter = BaseUserAdmin.list_filter + ('is_coach', 'is_client', 'is_on_vacation')
@@ -140,7 +141,7 @@ class UserAdmin(BaseUserAdmin):
         return render(request, 'admin/accounts/user/send_bulk_email.html', context={'users': queryset})
 
 @admin.register(CoachProfile)
-class CoachProfileAdmin(admin.ModelAdmin):
+class CoachProfileAdmin(ModelAdmin):
     list_display = ('user_link', 'time_zone', 'is_available_for_new_clients', 'has_gcal_connected')
     list_filter = ('is_available_for_new_clients', 'time_zone')
     list_editable = ('is_available_for_new_clients',)
@@ -158,7 +159,7 @@ class CoachProfileAdmin(admin.ModelAdmin):
 
 # Also register Address model to be managed independently
 @admin.register(Address)
-class AddressAdmin(admin.ModelAdmin):
+class AddressAdmin(ModelAdmin):
     list_display = ('user_link', 'full_name', 'city', 'country', 'is_default')
     list_filter = ('is_default', 'country')
     search_fields = ('user__email', 'street_address', 'postcode')

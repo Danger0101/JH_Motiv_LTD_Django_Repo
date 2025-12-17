@@ -9,6 +9,7 @@ import dj_database_url
 from dotenv import load_dotenv
 from celery.schedules import crontab
 from django.core.exceptions import ImproperlyConfigured
+from django.urls import reverse_lazy
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -29,6 +30,12 @@ SITE_URL = 'https://jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com'
 
 # Application definition
 INSTALLED_APPS = [    
+    # Add these lines at the very top of INSTALLED_APPS
+    "unfold",
+    "unfold.contrib.filters",
+    "unfold.contrib.forms",
+    "unfold.contrib.import_export",
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -397,5 +404,106 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute='0', hour='*/6'), # Every 6 hours on the hour
         'args': (24,), # Find carts abandoned for 24+ hours
         'options': {'queue': 'low_priority'},
+    },
+}
+
+# --- ADMIN DASHBOARD THEME (Django Unfold) ---
+UNFOLD = {
+    "SITE_TITLE": "JH Motiv Control Deck",
+    "SITE_HEADER": "JH Motiv Admin",
+    "SITE_URL": "/",
+    # "SITE_ICON": lambda request: static("images/logo.png"),
+
+    # Primary Color: Matrix Green / Cyber Yellow vibe
+    "COLORS": {
+        "primary": {
+            "50": "240 253 244",
+            "100": "220 252 231",
+            "200": "187 247 208",
+            "300": "134 239 172",
+            "400": "74 222 128",
+            "500": "34 197 94",  # Main Green
+            "600": "22 163 74",
+            "700": "21 128 61",
+            "800": "22 101 52",
+            "900": "20 83 45",
+        },
+    },
+
+    # CRM-Style Sidebar Navigation
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False, # Hide the default messy list
+        "navigation": [
+            {
+                "title": "Commerce Engine",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "Orders",
+                        "icon": "shopping_cart", # Material Icons
+                        "link": reverse_lazy("admin:payments_order_changelist"),
+                    },
+                    {
+                        "title": "Products",
+                        "icon": "inventory_2",
+                        "link": reverse_lazy("admin:products_product_changelist"),
+                    },
+                    {
+                        "title": "Discounts & Coupons",
+                        "icon": "local_offer",
+                        "link": reverse_lazy("admin:payments_coupon_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": "Coaching Ops",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "Session Bookings",
+                        "icon": "calendar_month",
+                        "link": reverse_lazy("admin:coaching_booking_sessionbooking_changelist"),
+                    },
+                    {
+                        "title": "Coaches",
+                        "icon": "school",
+                        "link": reverse_lazy("admin:accounts_coachprofile_changelist"),
+                    },
+                    {
+                        "title": "Workshops",
+                        "icon": "groups",
+                        "link": reverse_lazy("admin:coaching_core_workshop_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": "User Management",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "All Users",
+                        "icon": "group",
+                        "link": reverse_lazy("admin:accounts_user_changelist"),
+                    },
+                    {
+                        "title": "Newsletter Subs",
+                        "icon": "mail",
+                        "link": reverse_lazy("admin:core_newslettersubscriber_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": "System",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "API Tasks",
+                        "icon": "terminal",
+                        "link": reverse_lazy("admin:django_celery_beat_periodictask_changelist"),
+                    },
+                ],
+            },
+        ],
     },
 }

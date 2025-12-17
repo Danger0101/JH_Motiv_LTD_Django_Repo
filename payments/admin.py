@@ -1,6 +1,7 @@
 import csv
 from django.contrib import admin
 from django.db.models import Count, Prefetch
+from unfold.admin import ModelAdmin
 from django.http import HttpResponse
 from .models import Order, OrderItem, CoachingOrder, CoachingOrderItem, Coupon, CouponUsage
 from django.utils.html import format_html
@@ -27,7 +28,7 @@ class OrderItemInline(admin.TabularInline):
         return obj.variant.name
 
 @admin.register(Order)
-class OrderAdmin(admin.ModelAdmin):
+class OrderAdmin(ModelAdmin):
     list_display = ('id', 'user_link', 'email', 'status', 'total_paid', 'created_at', 'item_count', 'stripe_payment_link')
     list_filter = ('status', 'created_at', 'carrier')
     search_fields = ('id', 'user__email', 'email', 'guest_order_token', 'stripe_checkout_id')
@@ -97,7 +98,7 @@ class CoachingOrderItemInline(admin.TabularInline):
     can_delete = False
 
 @admin.register(CoachingOrder)
-class CoachingOrderAdmin(admin.ModelAdmin):
+class CoachingOrderAdmin(ModelAdmin):
     inlines = [CoachingOrderItemInline]
     list_display = ('id', 'client_link', 'coach_link', 'amount_gross', 'amount_coach', 'amount_referrer', 'amount_company', 'payout_status', 'created_at')
     list_editable = ('payout_status',)
@@ -196,7 +197,7 @@ class CouponUsageInline(admin.TabularInline):
         return "-"
 
 @admin.register(Coupon)
-class CouponAdmin(admin.ModelAdmin):
+class CouponAdmin(ModelAdmin):
     list_display = ['code', 'discount_display', 'active', 'times_used', 'valid_until', 'qr_code_preview']
     list_filter = ['active', 'discount_type', 'coupon_type']
     search_fields = ['code', 'user_specific__email', 'referrer__name']

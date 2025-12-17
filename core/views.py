@@ -435,20 +435,25 @@ def staff_newsletter_dashboard(request):
             subject = form.cleaned_data['subject']
             content = form.cleaned_data['content']
             
+            # Helper to get base URL
+            base_url = request.build_absolute_uri('/').rstrip('/')
+            
             if 'preview' in request.POST:
                 # Render preview
-                base_url = request.build_absolute_uri('/')
-                unsubscribe_url = f"{base_url.rstrip('/')}/newsletter/unsubscribe/preview-token/"
-                context = {'body': content, 'subject': subject, 'unsubscribe_url': unsubscribe_url, 'base_url': base_url.rstrip('/')}
+                # FIX: Explicitly create a dummy token for preview
+                unsubscribe_url = f"{base_url}/newsletter/unsubscribe/preview-token/"
+                context = {'body': content, 'subject': subject, 'unsubscribe_url': unsubscribe_url, 'base_url': base_url}
                 preview_html = render_to_string('core/generic_newsletter.html', context)
                 return render(request, 'core/staff_newsletter.html', {'form': form, 'preview_html': preview_html})
             
             elif 'test_send' in request.POST:
-                base_url = request.build_absolute_uri('/')
-                unsubscribe_url = f"{base_url.rstrip('/')}/newsletter/unsubscribe/test-token/"
-                context = {'body': content, 'subject': f"[TEST] {subject}", 'unsubscribe_url': unsubscribe_url, 'base_url': base_url.rstrip('/')}
+                # FIX: Create a dummy token for test emails so the link works (visually)
+                unsubscribe_url = f"{base_url}/newsletter/unsubscribe/test-token/"
+                context = {'body': content, 'subject': f"[TEST] {subject}", 'unsubscribe_url': unsubscribe_url, 'base_url': base_url}
                 
                 if request.user.email:
+                    # FIX: Pass the context directly. 
+                    # The task expects 'context' to contain everything the template needs.
                     send_transactional_email_task.delay(
                         request.user.email, 
                         f"[TEST] {subject}", 
