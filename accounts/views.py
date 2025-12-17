@@ -18,7 +18,7 @@ from allauth.account.views import LoginView, SignupView, PasswordResetView, Pass
 from allauth.socialaccount.views import ConnectionsView
 from cart.utils import get_or_create_cart, get_cart_summary_data
 from coaching_booking.models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer
-from coaching_core.models import Offering
+from coaching_core.models import Offering, Workshop
 from accounts.models import CoachProfile 
 from gcal.models import GoogleCredentials
 from coaching_availability.forms import DateOverrideForm, CoachVacationForm, WeeklyScheduleForm
