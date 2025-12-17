@@ -1,24 +1,72 @@
-<div id="cart-summary-panel">
-    <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-4">Order Summary</h2>
+<section id="cart-summary-panel" 
+         hx-get="{% url 'cart:cart_summary_panel' %}" 
+         hx-trigger="cartUpdated from:body" 
+         hx-target="this" 
+         hx-swap="outerHTML"
+         aria-labelledby="summary-heading" class="mt-16 bg-gray-50 rounded-lg px-4 py-6 sm:p-6 lg:p-8 lg:mt-0 lg:col-span-5">
+    <h2 id="summary-heading" class="text-lg font-medium text-gray-900">Order summary</h2>
 
-    <div class="space-y-4">
-        <div class="flex justify-between items-center text-gray-700">
-            <span class="text-base">Subtotal ({{ summary.item_count }} items)</span>
-            <span class="font-semibold">£{{ summary.subtotal|floatformat:2 }}</span>
+    <dl class="mt-6 space-y-4">
+        <div class="flex items-center justify-between">
+            <dt class="text-sm text-gray-600">Subtotal</dt>
+            <dd class="text-sm font-medium text-gray-900">£{{ summary.subtotal|floatformat:2 }}</dd>
         </div>
-
-        <div class="flex justify-between items-center text-gray-700 pt-2">
-            <span class="text-base">Estimated Tax</span>
-            <span class="font-semibold">£{{ summary.tax|floatformat:2 }}</span>
+        
+        {% if summary.discount_amount > 0 %}
+        <div class="flex items-center justify-between border-t border-gray-200 pt-4 text-green-600">
+            <dt class="flex items-center text-sm">
+                <span>Discount <span class="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800 ml-2">{{ summary.coupon.code }}</span></span>
+            </dt>
+            <dd class="text-sm font-medium">-£{{ summary.discount_amount|floatformat:2 }}</dd>
         </div>
-    </div>
+        {% endif %}
 
-    <div class="flex justify-between items-center border-t border-gray-200 pt-6 mt-6">
-        <h3 class="text-xl font-bold text-gray-900">Order Total</h3>
-        <span class="text-2xl font-extrabold text-blue-600">£{{ summary.total|floatformat:2 }}</span>
-    </div>
+        <div class="flex items-center justify-between border-t border-gray-200 pt-4">
+            <dt class="text-base font-medium text-gray-900">Order total</dt>
+            <dd class="text-base font-medium text-gray-900">£{{ summary.total|floatformat:2 }}</dd>
+        </div>
+    </dl>
 
-    <a href="{% url 'payments:checkout_cart' %}" class="block text-center w-full bg-blue-600 text-white font-bold py-3 mt-6 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md">
-        Proceed to Checkout
-    </a>
-</div>
+    <div class="mt-6">
+        <a href="{% url 'payments:checkout_cart' %}" class="w-full bg-indigo-600 border border-transparent rounded-md shadow-sm py-3 px-4 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-50 focus:ring-indigo-500 block text-center">
+            Checkout
+        </a>
+    </div>
+    
+    <div class="mt-6 border-t border-gray-200 pt-6">
+        {% include 'cart/partials/coupon_message.html' %}
+        {% if not cart.coupon %}
+        <h3 class="text-sm font-medium text-gray-900 mb-2">Have a Cheat Code?</h3>
+        <form hx-post="{% url 'cart:apply_coupon' %}" 
+              hx-target="#cart-summary-panel" 
+              hx-swap="outerHTML" 
+              class="flex space-x-2">
+            {% csrf_token %}
+            <input type="text" name="code" placeholder="Enter code (e.g. GODMODE)" class="flex-1 min-w-0 block w-full px-3 py-2 rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm uppercase" style="text-transform: uppercase;">
+            <button type="submit" class="bg-gray-800 border border-transparent rounded-md shadow-sm px-4 py-2 text-sm font-medium text-white hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900">
+                Activate
+            </button>
+        </form>
+        {% else %}
+        <h3 class="text-sm font-medium text-gray-900 mb-2">Active Cheat Code</h3>
+        <div class="mt-2 p-3 bg-green-50 border border-green-200 rounded-md flex justify-between items-center shadow-sm">
+            <div class="flex items-center overflow-hidden">
+                <svg class="h-5 w-5 text-green-500 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                <div>
+                    <span class="block font-mono font-bold text-green-700 text-sm leading-tight">{{ cart.coupon.code }}</span>
+                </div>
+            </div>
+            <form hx-post="{% url 'cart:remove_coupon' %}" hx-target="#cart-summary-panel" hx-swap="outerHTML">
+                {% csrf_token %}
+                <button type="submit" class="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50" title="Remove Coupon">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</section>

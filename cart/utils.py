@@ -76,7 +76,12 @@ def calculate_discount(coupon, cart=None, offering=None):
     if cart:
         # If coupon has no specific product restrictions, all items are eligible
         if not coupon.specific_products.exists():
-            eligible_total = sum(item.get_total_price() for item in cart.items.all())
+            # FIX: Still check if the product is explicitly excluded
+            eligible_items = [
+                item for item in cart.items.all() 
+                if not getattr(item.variant.product, 'exclude_from_coupons', False)
+            ]
+            eligible_total = sum(item.get_total_price() for item in eligible_items)
         else:
             # Otherwise, only sum up eligible items
             eligible_product_ids = coupon.specific_products.values_list('id', flat=True)
