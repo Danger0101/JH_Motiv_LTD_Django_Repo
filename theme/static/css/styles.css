@@ -77,7 +77,6 @@
     --color-pink-500: oklch(65.6% 0.241 354.308);
     --color-pink-600: oklch(59.2% 0.249 0.584);
     --color-pink-700: oklch(52.5% 0.223 3.958);
-    --color-slate-900: oklch(20.8% 0.042 265.755);
     --color-gray-50: oklch(98.5% 0.002 247.839);
     --color-gray-100: oklch(96.7% 0.003 264.542);
     --color-gray-200: oklch(92.8% 0.006 264.531);
@@ -3570,48 +3569,45 @@
     font-family: var(--font-mono);
     color: var(--color-green-500);
   }
+  .matrix div, .matrix section, .matrix article, .matrix header, .matrix footer, .matrix nav, .matrix aside, .matrix main, .matrix table, .matrix tr, .matrix th, .matrix td, .matrix input, .matrix textarea, .matrix select, .matrix button, .matrix [class*="bg-"], .matrix .card, .matrix .panel {
+    background-color: #000000 !important;
+    color: #22c55e !important;
+    border-color: #14532d !important;
+    box-shadow: none !important;
+  }
   .matrix * {
-    border-color: var(--color-green-900);
+    color: #22c55e !important;
+    border-color: #14532d !important;
+    fill: #22c55e !important;
   }
   .matrix h1, .matrix h2, .matrix h3, .matrix h4, .matrix h5, .matrix h6 {
-    --tw-tracking: var(--tracking-widest);
-    letter-spacing: var(--tracking-widest);
-    color: var(--color-green-400);
-    text-transform: uppercase;
+    --tw-tracking: var(--tracking-widest) !important;
+    letter-spacing: var(--tracking-widest) !important;
+    color: var(--color-green-400) !important;
+    text-transform: uppercase !important;
   }
   .matrix a {
-    color: var(--color-green-300);
-    text-decoration-line: underline;
-    text-decoration-color: var(--color-green-500);
-    &:hover {
-      @media (hover: hover) {
-        color: var(--color-white);
-      }
-    }
+    color: var(--color-green-300) !important;
+    text-decoration-line: underline !important;
+    text-decoration-color: var(--color-green-500) !important;
   }
-  .matrix .bg-white, .matrix .bg-gray-50, .matrix .bg-gray-100, .matrix .bg-slate-50, .matrix .bg-slate-100 {
-    border-style: var(--tw-border-style);
-    border-width: 1px;
-    border-color: var(--color-green-900);
-    background-color: var(--color-black);
-    color: var(--color-green-500);
-    --tw-shadow: 0 0 #0000;
-    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  .matrix a:hover {
+    color: var(--color-white) !important;
   }
   .matrix input, .matrix textarea, .matrix select {
-    border-color: var(--color-green-700);
-    background-color: var(--color-black);
-    color: var(--color-green-500);
     &:focus {
-      border-color: var(--color-green-500);
+      border-color: var(--color-green-500) !important;
     }
     &:focus {
-      --tw-ring-color: var(--color-green-500);
+      --tw-ring-color: var(--color-green-500) !important;
     }
   }
   .matrix ::selection {
     background-color: var(--color-green-900);
     color: var(--color-green-100);
+  }
+  .matrix ::placeholder {
+    color: var(--color-green-800) !important;
   }
   .cyber body {
     background-color: var(--color-gray-900);
@@ -3621,47 +3617,39 @@
     background-size: 20px 20px;
     background-position: 0 0, 10px 10px;
   }
-  .cyber .bg-white, .cyber .bg-gray-50, .cyber .bg-gray-100 {
-    border-style: var(--tw-border-style);
-    border-width: 1px;
-    border-color: var(--color-pink-500);
-    background-color: var(--color-gray-800);
-    color: var(--color-yellow-300);
+  .cyber div, .cyber section, .cyber article, .cyber header, .cyber footer, .cyber nav, .cyber aside, .cyber main, .cyber table, .cyber tr, .cyber th, .cyber td, .cyber input, .cyber textarea, .cyber select, .cyber [class*="bg-"], .cyber .card {
+    background-color: #111827 !important;
+    color: #fde047 !important;
+    border-color: #ec4899 !important;
+  }
+  .cyber * {
+    color: #fde047 !important;
+    border-color: #ec4899 !important;
   }
   .cyber button, .cyber .btn {
-    border-radius: 0;
-    border-style: var(--tw-border-style);
-    border-width: 2px;
-    border-color: var(--color-yellow-400);
-    background-color: var(--color-purple-900);
-    --tw-font-weight: var(--font-weight-bold);
-    font-weight: var(--font-weight-bold);
-    --tw-tracking: var(--tracking-widest);
-    letter-spacing: var(--tracking-widest);
-    color: var(--color-yellow-400);
-    text-transform: uppercase;
-    --tw-shadow: 4px 4px 0px 0px var(--tw-shadow-color, rgba(250,204,21,1));
-    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-    &:hover {
-      @media (hover: hover) {
-        background-color: var(--color-yellow-400);
-      }
-    }
-    &:hover {
-      @media (hover: hover) {
-        color: var(--color-purple-900);
-      }
-    }
+    border-radius: 0 !important;
+    border-style: var(--tw-border-style) !important;
+    border-width: 2px !important;
+    border-color: var(--color-yellow-400) !important;
+    background-color: var(--color-purple-900) !important;
+    --tw-font-weight: var(--font-weight-bold) !important;
+    font-weight: var(--font-weight-bold) !important;
+    --tw-tracking: var(--tracking-widest) !important;
+    letter-spacing: var(--tracking-widest) !important;
+    color: var(--color-yellow-400) !important;
+    text-transform: uppercase !important;
+    box-shadow: 4px 4px 0px 0px rgba(250,204,21,1) !important;
+  }
+  .cyber button:hover, .cyber .btn:hover {
+    background-color: var(--color-yellow-400) !important;
+    color: var(--color-purple-900) !important;
   }
   .cyber input, .cyber textarea, .cyber select {
-    border-color: var(--color-pink-500);
-    background-color: var(--color-gray-900);
-    color: var(--color-yellow-300);
     &:focus {
-      border-color: var(--color-yellow-400);
+      border-color: var(--color-yellow-400) !important;
     }
     &:focus {
-      --tw-ring-color: var(--color-pink-500);
+      --tw-ring-color: var(--color-pink-500) !important;
     }
   }
   .cyber ::selection {
@@ -3676,23 +3664,19 @@
     color: var(--color-amber-900);
     background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%239C92AC' fill-opacity='0.1' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 6V5zM6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E");
   }
-  .retro .bg-white, .retro .bg-gray-50 {
-    border-color: color-mix(in srgb, oklch(41.4% 0.112 45.904) 20%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      border-color: color-mix(in oklab, var(--color-amber-900) 20%, transparent);
-    }
-    background-color: var(--color-orange-50);
-    color: var(--color-amber-900);
+  .retro div, .retro section, .retro article, .retro header, .retro footer, .retro nav, .retro aside, .retro main, .retro table, .retro tr, .retro th, .retro td, .retro input, .retro textarea, .retro select, .retro button, .retro [class*="bg-"] {
+    background-color: #fff7ed !important;
+    color: #78350f !important;
+    border-color: #b45309 !important;
+    box-shadow: none !important;
+  }
+  .retro * {
+    color: #78350f !important;
+    border-color: rgba(120, 53, 15, 0.2) !important;
   }
   .retro input, .retro textarea, .retro select {
-    border-color: color-mix(in srgb, oklch(41.4% 0.112 45.904) 40%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      border-color: color-mix(in oklab, var(--color-amber-900) 40%, transparent);
-    }
-    background-color: var(--color-orange-50);
-    color: var(--color-amber-900);
     &:focus {
-      --tw-ring-color: var(--color-amber-900);
+      --tw-ring-color: var(--color-amber-900) !important;
     }
   }
   .retro ::selection {
@@ -3706,22 +3690,23 @@
     background-color: var(--color-red-900);
     color: var(--color-red-100);
   }
-  .doom .bg-white, .doom .bg-gray-50, .doom .bg-gray-100 {
-    border-color: var(--color-red-800);
-    background-color: var(--color-red-950);
-    color: var(--color-red-200);
+  .doom div, .doom section, .doom article, .doom header, .doom footer, .doom nav, .doom aside, .doom main, .doom table, .doom tr, .doom th, .doom td, .doom input, .doom textarea, .doom select, .doom button, .doom [class*="bg-"] {
+    background-color: #450a0a !important;
+    color: #fecaca !important;
+    border-color: #991b1b !important;
+  }
+  .doom * {
+    color: #fecaca !important;
+    border-color: #991b1b !important;
   }
   .doom img {
-    --tw-contrast: contrast(150%);
-    --tw-grayscale: grayscale(100%);
-    filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
+    --tw-contrast: contrast(150%) !important;
+    --tw-grayscale: grayscale(100%) !important;
+    filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,) !important;
   }
   .doom input, .doom textarea, .doom select {
-    border-color: var(--color-red-800);
-    background-color: var(--color-red-950);
-    color: var(--color-red-200);
     &:focus {
-      --tw-ring-color: var(--color-red-600);
+      --tw-ring-color: var(--color-red-600) !important;
     }
   }
   .doom ::selection {
@@ -3734,18 +3719,12 @@
     color: var(--color-green-400);
   }
   .devmode * {
-    outline: 1px dashed rgba(74, 222, 128, 0.3);
+    outline: 1px dashed rgba(74, 222, 128, 0.3) !important;
   }
-  .devmode .bg-white, .devmode .bg-gray-50 {
-    background-color: var(--color-gray-900);
-    color: var(--color-green-400);
-  }
-  .devmode input, .devmode textarea, .devmode select {
-    --tw-border-style: dashed;
-    border-style: dashed;
-    border-color: var(--color-green-500);
-    background-color: var(--color-black);
-    color: var(--color-green-400);
+  .devmode div, .devmode section, .devmode article, .devmode header, .devmode footer, .devmode nav, .devmode aside, .devmode main, .devmode table, .devmode tr, .devmode th, .devmode td, .devmode input, .devmode textarea, .devmode select, .devmode button, .devmode [class*="bg-"] {
+    background-color: #000000 !important;
+    color: #4ade80 !important;
+    border: 1px dashed #22c55e !important;
   }
   .devmode ::selection {
     background-color: var(--color-green-900);
