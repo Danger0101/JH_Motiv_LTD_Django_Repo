@@ -298,6 +298,13 @@
                                         class="flex-1 whitespace-nowrap py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 focus:outline-none">
                                     Saved Addresses
                                 </button>
+                                {% if has_earnings_profile %}
+                                <button @click="settingsTab = 'payout'" 
+                                        :class="settingsTab === 'payout' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                                        class="flex-1 whitespace-nowrap py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 focus:outline-none">
+                                    Payout Settings
+                                </button>
+                                {% endif %}
                                 <button @click="settingsTab = 'prefs'" 
                                         :class="settingsTab === 'prefs' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
                                         class="flex-1 whitespace-nowrap py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 focus:outline-none">
@@ -365,6 +372,16 @@
                                     {% endif %}
                                 </div>
                             </div>
+
+                            {% if has_earnings_profile %}
+                            <div x-show="settingsTab === 'payout'" x-cloak>
+                                <div class="bg-gray-50 rounded-2xl p-6 border border-gray-200"
+                                     hx-get="{% url 'payments:payout_settings' %}" 
+                                     hx-trigger="intersect once">
+                                     <div class="flex justify-center"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div></div>
+                                </div>
+                            </div>
+                            {% endif %}
 
                             <div x-show="settingsTab === 'prefs'" x-cloak>
                                 <div class="bg-gray-50 rounded-2xl p-6 border border-gray-200">

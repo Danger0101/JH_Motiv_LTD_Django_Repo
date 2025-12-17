@@ -1,0 +1,42 @@
+<div id="payout-settings-container">
+    <div hx-ext="django-messages">
+        <div hx-listen="messages" class="hidden"></div>
+        
+        <form hx-post="{% url 'payments:payout_settings' %}" hx-target="#payout-settings-container" hx-swap="outerHTML" class="space-y-4">
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.bank_name.label }}</label>
+                    {{ form.bank_name }}
+                    {{ form.bank_name.errors }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.account_holder_name.label }}</label>
+                    {{ form.account_holder_name }}
+                    {{ form.account_holder_name.errors }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.sort_code.label }}</label>
+                    {{ form.sort_code }}
+                    {{ form.sort_code.errors }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.account_number.label }}</label>
+                    {{ form.account_number }}
+                    {{ form.account_number.errors }}
+                </div>
+            </div>
+
+            <div class="pt-2">
+                <button type="submit" class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-sm">
+                    Save Bank Details
+                </button>
+                <p class="text-xs text-gray-500 mt-2 flex items-center">
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    Your details are encrypted securely.
+                </p>
+            </div>
+        </form>
+    </div>
+</div>

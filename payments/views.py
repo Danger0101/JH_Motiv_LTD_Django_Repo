@@ -12,7 +12,7 @@ from datetime import datetime, timedelta # NEW IMPORT
 from decimal import Decimal
 from django.template.loader import render_to_string # Required for PDF
 from django.contrib import messages
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMessage
 # Try importing WeasyPrint for PDF generation
 try:
     import weasyprint
@@ -21,11 +21,12 @@ except (OSError, ImportError):
 from cart.utils import get_or_create_cart, get_cart_summary_data, calculate_discount # Import calculate_discount
 from cart.models import Cart
 # NEW/UPDATED IMPORTS
-from coaching_booking.models import ClientOfferingEnrollment 
+from coaching_booking.models import ClientOfferingEnrollment, SessionBooking
 from coaching_core.models import Offering
 from accounts.models import CoachProfile
 from .models import Order, OrderItem, CoachingOrder, Coupon
 from products.models import Product, Variant, StockPool
+from .forms import PayoutSettingsForm
 from products.printful_service import PrintfulService
 from .services import handle_ecommerce_checkout, handle_coaching_enrollment, handle_payment_intent_checkout
 from django.utils import timezone
@@ -717,38 +718,53 @@ def order_detail(request, order_id):
 @require_POST
 def request_payout(request):
     """
-    Triggers an email to admin requesting a payout for all unpaid earnings.
+    Creates a PayoutHistory record for all unpaid earnings and notifies admin.
     """
     user = request.user
     
-    # Calculate Unpaid Total
-    total_unpaid = Decimal('0.00')
-    
-    if hasattr(user, 'coach_profile'):
-        coach_unpaid = CoachingOrder.objects.filter(
-            enrollment__coach=user.coach_profile, 
-            payout_status='unpaid'
-        ).aggregate(total=models.Sum('amount_coach'))['total'] or 0
-        total_unpaid += Decimal(coach_unpaid)
+    with transaction.atomic():
+        # Lock unpaid orders for this user to prevent race conditions
+        unpaid_orders = CoachingOrder.objects.select_for_update().filter(payout_status='unpaid')
+        
+        coach_orders = unpaid_orders.filter(enrollment__coach=user.coach_profile) if hasattr(user, 'coach_profile') else CoachingOrder.objects.none()
+        referrer_orders = unpaid_orders.filter(referrer=user.dreamer_profile) if hasattr(user, 'dreamer_profile') else CoachingOrder.objects.none()
 
-    if hasattr(user, 'dreamer_profile'):
-        ref_unpaid = CoachingOrder.objects.filter(
-            referrer=user.dreamer_profile, 
-            payout_status='unpaid'
-        ).aggregate(total=models.Sum('amount_referrer'))['total'] or 0
-        total_unpaid += Decimal(ref_unpaid)
-    
-    if total_unpaid <= 0:
-        messages.error(request, "No unpaid earnings available to request.")
-        return HttpResponse(status=204, headers={'HX-Refresh': 'true'})
+        # Combine and get unique order IDs
+        all_order_ids = list(coach_orders.values_list('id', flat=True)) + list(referrer_orders.values_list('id', flat=True))
+        unique_order_ids = list(set(all_order_ids))
 
-    # Send Email to Admin
-    subject = f"Payout Request: {user.get_full_name()} (£{total_unpaid})"
+        if not unique_order_ids:
+            messages.error(request, "No unpaid earnings available to request.")
+            return HttpResponse(status=204, headers={'HX-Refresh': 'true'})
+
+        # Calculate total from the locked orders
+        coach_total = coach_orders.aggregate(total=models.Sum('amount_coach'))['total'] or Decimal('0.00')
+        referrer_total = referrer_orders.aggregate(total=models.Sum('amount_referrer'))['total'] or Decimal('0.00')
+        total_payout = coach_total + referrer_total
+
+        if total_payout <= 0:
+            messages.error(request, "Calculated payout is zero. Nothing to request.")
+            return HttpResponse(status=204, headers={'HX-Refresh': 'true'})
+
+        # Create PayoutHistory record
+        payout = PayoutHistory.objects.create(
+            user=user,
+            amount=total_payout,
+            related_orders=unique_order_ids,
+            status='pending'
+        )
+
+        # Mark related orders as 'processing'
+        CoachingOrder.objects.filter(id__in=unique_order_ids).update(payout_status='processing')
+
+    # Send Email to Admin (outside transaction)
+    subject = f"Payout Request: {user.get_full_name()} (£{total_payout})"
     message = f"""
     User: {user.get_full_name()} ({user.email})
-    Requested Amount: £{total_unpaid}
+    Requested Amount: £{total_payout}
     
-    Please review their earnings in the admin panel and process the payout.
+    A new payout request has been created. Please review it in the admin panel.
+    Payout ID: {payout.id}
     """
     
     try:
@@ -759,11 +775,14 @@ def request_payout(request):
             [settings.DEFAULT_FROM_EMAIL], # Send to self/admin
             fail_silently=False,
         )
-        messages.success(request, f"Payout request for £{total_unpaid} sent successfully.")
+        messages.success(request, f"Payout request for £{total_payout} sent successfully.")
     except Exception as e:
         logger.error(f"Failed to send payout request email: {e}")
         messages.error(request, "Failed to send request. Please try again later.")
+        # Note: In a real-world scenario, you might want to roll back the DB changes
+        # if the email fails, or have a more robust notification system.
 
+    # This tells HTMX to do nothing on the frontend, but the messages framework will show the toast.
     return HttpResponse(status=204, headers={'HX-Refresh': 'true'})
 
 @login_required
@@ -871,9 +890,50 @@ class MyEarningsView(ListView):
         context['is_dreamer_profile'] = hasattr(user, 'dreamer_profile')
         context['selected_status'] = self.request.GET.get('status', 'all')
         context['payout_statuses'] = CoachingOrder._meta.get_field('payout_status').choices
+
+        # NEW: Get Payout History
+        context['payout_history'] = PayoutHistory.objects.filter(user=user)[:10] # Show recent 10
         
         # Required for the sidebar highlighting
         context['active_tab'] = 'earnings' 
         context['has_earnings_profile'] = context['is_coach_profile'] or context['is_dreamer_profile']
 
         return context
+
+@login_required
+def payout_settings(request):
+    """
+    HTMX view to manage payout bank details.
+    """
+    user = request.user
+    profile = None
+    
+    # Determine which profile to attach details to
+    if hasattr(user, 'coach_profile'):
+        profile = user.coach_profile
+    elif hasattr(user, 'dreamer_profile'):
+        profile = user.dreamer_profile
+    
+    if not profile:
+        return HttpResponse("No eligible profile found for payouts.", status=403)
+
+    if request.method == 'POST':
+        form = PayoutSettingsForm(request.POST)
+        if form.is_valid():
+            # Save as JSON to the encrypted field
+            profile.payout_details = form.cleaned_data
+            profile.save()
+            messages.success(request, "Payout details updated successfully.")
+            return render(request, 'payments/partials/payout_settings_form.html', {'form': form})
+    else:
+        # Load existing data
+        initial_data = {}
+        if profile.payout_details:
+            # Ensure it's a dict (CustomEncryptedJSONField handles decryption)
+            initial_data = profile.payout_details if isinstance(profile.payout_details, dict) else {}
+        
+        form = PayoutSettingsForm(initial=initial_data)
+
+    return render(request, 'payments/partials/payout_settings_form.html', {
+        'form': form
+    })
