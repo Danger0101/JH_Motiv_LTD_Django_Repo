@@ -84,7 +84,7 @@ class ClientOfferingEnrollment(models.Model):
 class SessionBooking(models.Model):
     enrollment = models.ForeignKey(ClientOfferingEnrollment, on_delete=models.CASCADE, related_name='bookings', verbose_name="Enrollment", null=True, blank=True)
     # Decoupled Booking Fields
-    workshop = models.ForeignKey(Workshop, on_delete=models.CASCADE, related_name='bookings', verbose_name="Workshop", null=True, blank=True)
+    workshop = models.ForeignKey(Workshop, on_delete=models.SET_NULL, related_name='bookings', verbose_name="Workshop", null=True, blank=True)
     coach = models.ForeignKey(CoachProfile, on_delete=models.CASCADE, related_name='bookings', verbose_name="Coach", null=True, blank=True)
     
     # User / Guest Fields

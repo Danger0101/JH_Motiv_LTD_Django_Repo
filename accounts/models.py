@@ -48,6 +48,7 @@ class User(AbstractUser):
     # Existing field - keeping this!
     billing_notes = models.CharField(max_length=255, blank=True, null=True,
                                      help_text="General notes or preferred billing address text.")
+    business_name = models.CharField(max_length=255, blank=True, help_text="Company or Business Name for invoices/networking")
     
     # NEW FIELD: Stripe Customer ID
     stripe_customer_id = models.CharField(max_length=255, blank=True, null=True,

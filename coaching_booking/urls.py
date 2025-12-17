@@ -24,4 +24,5 @@ urlpatterns = [
     path('webhooks/stripe/', webhooks.stripe_webhook, name='stripe_webhook'),
     path('booking/verify/<int:booking_id>/', views.check_payment_status, name='check_payment_status'),
     path('booking/pay/<int:booking_id>/', views.session_payment_page, name='session_payment_page'),
+    path('book-workshop/<slug:slug>/', views.book_workshop, name='book_workshop'),
 ]

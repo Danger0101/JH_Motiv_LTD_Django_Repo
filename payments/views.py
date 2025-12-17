@@ -8,9 +8,11 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 from django.db import transaction, models # ADDED: models for coach query
 from django.contrib.auth import get_user_model # ADDED: Better way to get User model
-from datetime import timedelta # NEW IMPORT
+from datetime import datetime, timedelta # NEW IMPORT
 from decimal import Decimal
 from django.template.loader import render_to_string # Required for PDF
+from django.contrib import messages
+from django.core.mail import send_mail
 # Try importing WeasyPrint for PDF generation
 try:
     import weasyprint
@@ -505,9 +507,105 @@ def stripe_webhook(request):
             except Exception as e:
                 logger.error(f"FATAL ERROR in Coaching Webhook processing: {e}. Metadata: {metadata}")
                 return HttpResponse("Webhook processing error", status=500)
+        
+        # --- WORKSHOP HANDLING ---
+        elif metadata.get('type') == 'workshop_booking':
+            workshop_id = metadata.get('workshop_id')
+            user_id = metadata.get('user_id')
+            
+            try:
+                user = User.objects.get(id=user_id)
+                workshop = Workshop.objects.get(id=workshop_id)
+                
+                # Calculate start datetime
+                start_dt = datetime.combine(workshop.date, workshop.start_time)
+                if timezone.is_naive(start_dt):
+                    start_dt = timezone.make_aware(start_dt)
+
+                # Create the confirmed booking
+                booking, created = SessionBooking.objects.get_or_create(
+                    client=user,
+                    workshop=workshop,
+                    defaults={
+                        'coach': workshop.coach,
+                        'start_datetime': start_dt,
+                        'status': 'BOOKED',
+                        'amount_paid': int(workshop.price * 100),
+                        'stripe_checkout_session_id': session.get('id'),
+                        'is_paid': True
+                    }
+                )
+                
+                if created:
+                    send_mail(
+                        subject=f"Ticket Confirmed: {workshop.name}",
+                        message=f"You are confirmed for {workshop.name}.\nDate: {workshop.date}\nLocation: Online/TBA",
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[user.email],
+                    )
+                    logger.info(f"Workshop booking created for {user.email}")
+                    
+            except Exception as e:
+                logger.error(f"Failed to fulfill workshop booking: {e}")
+                return HttpResponse("Webhook processing error", status=500)
 
     return HttpResponse(status=200)
 
+
+@login_required
+def checkout_workshop(request, workshop_id):
+    """
+    Creates a Stripe Checkout Session for a paid workshop.
+    """
+    workshop = get_object_or_404(Workshop, id=workshop_id)
+    
+    # Security: Ensure user hasn't already booked
+    if SessionBooking.objects.filter(client=request.user, workshop=workshop).exists():
+        messages.info(request, "You are already booked for this workshop.")
+        return redirect('accounts:account_profile')
+
+    if workshop.price <= 0:
+        return redirect('coaching_booking:book_workshop', slug=workshop.slug)
+
+    domain_url = settings.SITE_URL
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+
+    try:
+        # Handle image safely if it exists on the model
+        images = []
+        if hasattr(workshop, 'image') and workshop.image:
+             images = [f"{domain_url}{workshop.image.url}"]
+
+        checkout_session = stripe.checkout.Session.create(
+            customer_email=request.user.email,
+            payment_method_types=['card'],
+            line_items=[{
+                'price_data': {
+                    'currency': 'gbp',
+                    'product_data': {
+                        'name': f"Workshop: {workshop.name}",
+                        'description': f"Date: {workshop.date}",
+                        'images': images,
+                    },
+                    'unit_amount': int(workshop.price * 100),
+                },
+                'quantity': 1,
+            }],
+            mode='payment',
+            success_url=domain_url + reverse('payments:payment_success') + '?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=domain_url + reverse('coaching_core:workshop_detail', args=[workshop.slug]),
+            metadata={
+                'type': 'workshop_booking',
+                'workshop_id': workshop.id,
+                'user_id': request.user.id,
+                'business_name': getattr(request.user, 'business_name', '')
+            }
+        )
+        return redirect(checkout_session.url, code=303)
+        
+    except Exception as e:
+        messages.error(request, f"Error connecting to Stripe: {str(e)}")
+        return redirect('coaching_core:workshop_detail', slug=workshop.slug)
 
 @login_required
 @require_POST

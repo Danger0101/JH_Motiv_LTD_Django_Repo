@@ -14,6 +14,9 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import HttpResponse, HttpResponseForbidden
 import stripe
+from django.contrib.auth import login
+from django.utils.crypto import get_random_string
+from django.core.mail import send_mail
 
 from core.email_utils import send_transactional_email
 from payments.models import CoachingOrder
@@ -26,6 +29,7 @@ from cart.utils import get_or_create_cart, get_cart_summary_data
 from facts.models import Fact
 from .services import BookingService
 from django.core.exceptions import ValidationError
+from accounts.models import User
 
 logger = logging.getLogger(__name__)
 BOOKING_WINDOW_DAYS = 90
@@ -618,6 +622,96 @@ def check_payment_status(request, booking_id):
     else:
         # Keep polling (return the same spinner div)
         return render(request, 'coaching_booking/partials/spinner.html', {'booking': booking})
+
+def book_workshop(request, slug):
+    workshop = get_object_or_404(Workshop, slug=slug)
+    
+    # 1. HANDLE POST REQUEST (Form Submission)
+    if request.method == 'POST':
+        # Get data
+        email = request.POST.get('email')
+        full_name = request.POST.get('full_name')
+        business_name = request.POST.get('business_name')
+        
+        # Validation
+        if not email or not full_name:
+            messages.error(request, "Name and Email are required.")
+            return redirect('coaching_core:workshop_detail', slug=slug)
+
+        # 2. RESOLVE USER (Login or Create)
+        user = None
+        if request.user.is_authenticated:
+            user = request.user
+            # Update business name if missing
+            if business_name and not user.business_name:
+                user.business_name = business_name
+                user.save()
+        else:
+            # Check if user exists
+            existing_user = User.objects.filter(email=email).first()
+            if existing_user:
+                # OPTION B: Auto-link (Easier for User, requires trust)
+                user = existing_user
+                if business_name and not user.business_name:
+                    user.business_name = business_name
+                    user.save()
+            else:
+                # Create New Guest User
+                first_name = full_name.split(' ')[0]
+                last_name = ' '.join(full_name.split(' ')[1:]) if ' ' in full_name else ''
+                random_password = get_random_string(12)
+                
+                user = User.objects.create_user(
+                    username=email,
+                    email=email,
+                    password=random_password,
+                    first_name=first_name,
+                    last_name=last_name,
+                    business_name=business_name
+                )
+                # Auto-login the new user so they see their dashboard
+                login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                
+                # Send Welcome Email with Password
+                send_mail(
+                    subject=f"Welcome to {settings.SITE_NAME}",
+                    message=f"Account created for your workshop booking.\nUsername: {email}\nPassword: {random_password}",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[email],
+                )
+
+        # 3. CREATE BOOKING
+        # Check for duplicates
+        if SessionBooking.objects.filter(client=user, workshop=workshop).exists():
+            messages.info(request, "You are already booked for this workshop!")
+            return redirect('accounts:account_profile')
+
+        if workshop.price == 0:
+            # --- FREE FLOW ---
+            start_dt = datetime.combine(workshop.date, workshop.start_time)
+            if timezone.is_naive(start_dt):
+                start_dt = timezone.make_aware(start_dt)
+
+            booking = SessionBooking.objects.create(
+                client=user,
+                coach=workshop.coach,
+                workshop=workshop,
+                start_datetime=start_dt,
+                status='BOOKED',
+                amount_paid=0
+            )
+            
+            # Send Confirmation
+            BookingService.send_confirmation_emails(request, booking)
+            
+            messages.success(request, "Workshop booked successfully!")
+            return redirect('accounts:account_profile')
+            
+        else:
+            # --- PAID FLOW ---
+            return redirect('payments:checkout_workshop', workshop_id=workshop.id)
+
+    return redirect('coaching_core:workshop_detail', slug=slug)
 
 @login_required
 def get_booking_calendar(request):

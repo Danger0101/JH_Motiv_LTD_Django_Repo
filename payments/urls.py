@@ -23,6 +23,7 @@ urlpatterns = [
     
     # Corrected URL for creating a coaching checkout session
     path('checkout/create-coaching-checkout-session/<int:offering_id>/', views.create_coaching_checkout_session_view, name='create_coaching_checkout_session'),
+    path('checkout/workshop/<int:workshop_id>/', views.checkout_workshop, name='checkout_workshop'),
 
     # NEW: Invoice Downloads
     # For Authenticated Users

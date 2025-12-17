@@ -73,9 +73,45 @@
                         Sold Out
                     </button>
                     {% else %}
-                    <a href="{% url 'coaching_booking:coach_landing' %}" class="w-full bg-indigo-600 border border-transparent rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        Book Your Spot
-                    </a>
+                    
+                    <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Secure Your Spot</h3>
+                        
+                        <form action="{% url 'coaching_booking:book_workshop' workshop.slug %}" method="POST" class="space-y-4">
+                            {% csrf_token %}
+                            
+                            {% if not request.user.is_authenticated %}
+                                <div>
+                                    <label for="full_name" class="block text-sm font-medium text-gray-700">Full Name</label>
+                                    <input type="text" name="full_name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                </div>
+                                <div>
+                                    <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
+                                    <input type="email" name="email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                </div>
+                            {% else %}
+                                <div class="flex items-center space-x-2 text-sm text-gray-600">
+                                    <svg class="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                    <span>Booking as <strong>{{ request.user.get_full_name|default:request.user.email }}</strong></span>
+                                </div>
+                                <input type="hidden" name="full_name" value="{{ request.user.get_full_name }}">
+                                <input type="hidden" name="email" value="{{ request.user.email }}">
+                            {% endif %}
+            
+                            <div>
+                                <label for="business_name" class="block text-sm font-medium text-gray-700">Business Name</label>
+                                <input type="text" name="business_name" value="{{ request.user.business_name|default:'' }}" placeholder="Your Company or Freelance Name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            </div>
+            
+                            <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                {% if workshop.price == 0 %}
+                                    Book Free Session
+                                {% else %}
+                                    Proceed to Payment (£{{ workshop.price }})
+                                {% endif %}
+                            </button>
+                        </form>
+                    </div>
                     {% endif %}
                     
                     <p class="mt-4 text-center text-sm text-gray-500">
