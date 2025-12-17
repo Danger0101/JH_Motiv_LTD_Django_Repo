@@ -146,16 +146,9 @@ def update_cart_item(request, item_id):
         cart_item.save()
         msg = "Cart updated."
 
-    # 3. Return the Updated List + Trigger Summary Refresh
-    # We render directly to avoid @require_GET issues with cart_item_list view
-    response = render(request, 'cart/partials/cart_item_list.html', {'cart': cart})
-    
-    # Add the triggers so the Navbar and Total Price update too
-    response['HX-Trigger'] = json.dumps({
-        'cartUpdated': None,
-        'showToast': {'message': msg, 'type': 'success'}
-    })
-    return response
+    # 3. Return 204 No Content + Trigger Summary Refresh
+    # This prevents the list from reloading twice (once from swap, once from event)
+    return _htmx_response_with_trigger(msg, 'success')
 
 # --- HELPER FUNCTIONS ---
 
