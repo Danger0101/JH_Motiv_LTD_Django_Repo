@@ -191,6 +191,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         # --- COACHING DASHBOARD DATA ---
         context['coach_upcoming_sessions'] = []
         context['pending_taster_requests'] = [] # Initialize
+        context['hosted_workshops'] = [] # Initialize
 
         if hasattr(self.request.user, 'coach_profile'):
             coach_profile = self.request.user.coach_profile
@@ -198,7 +199,8 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             context['coach_upcoming_sessions'] = SessionBooking.objects.filter(
                 coach=coach_profile,
                 start_datetime__gte=timezone.now(),
-                status__in=['BOOKED', 'RESCHEDULED']
+                status__in=['BOOKED', 'RESCHEDULED'],
+                workshop__isnull=True
             ).select_related('client').order_by('start_datetime')
 
             # Fetch Pending Taster Requests
@@ -208,6 +210,14 @@ class ProfileView(LoginRequiredMixin, TemplateView):
                 is_redeemed=False,
                 redemption_deadline__gte=timezone.now()
             ).select_related('client')
+            
+            # NEW: Hosted Workshops
+            context['hosted_workshops'] = Workshop.objects.filter(
+                coach=coach_profile,
+                date__gte=timezone.now()
+            ).annotate(
+                booked_count=models.Count('bookings', filter=models.Q(bookings__status__in=['BOOKED', 'PENDING_PAYMENT']))
+            ).order_by('date')
 
         # For Client: My Taster Status (Already accessible via user.free_offers.all in template, 
         # but explicitly adding it can be cleaner)
@@ -338,8 +348,10 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             client=self.request.user,
             start_datetime__gte=timezone.now(),
             status__in=['BOOKED', 'RESCHEDULED']
-        ).order_by('start_datetime')
+        ).select_related('coach__user', 'workshop').order_by('start_datetime')
         context['bookings'] = upcoming_bookings
+        
+        context['my_workshops'] = upcoming_bookings.filter(workshop__isnull=False)
         
         context['has_urgent_booking'] = upcoming_bookings.filter(start_datetime__lte=timezone.now() + timedelta(hours=24)).exists()
 
@@ -555,7 +567,7 @@ def recent_activity_partial(request):
 def profile_bookings_partial(request):
     now = timezone.now()
     active_tab = request.GET.get('tab', 'upcoming')
-    bookings_qs = SessionBooking.objects.filter(client=request.user)
+    bookings_qs = SessionBooking.objects.filter(client=request.user).select_related('coach__user', 'workshop')
 
     if active_tab == 'upcoming':
         bookings_list = bookings_qs.filter(

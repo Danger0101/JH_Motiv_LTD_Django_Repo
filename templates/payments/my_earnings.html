@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold mb-6">My Payouts</h1>
+    <div id="earnings-content">
+        {% include 'payments/partials/my_earnings_content.html' %}
+    </div>
+</div>
+{% endblock %}

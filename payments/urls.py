@@ -33,4 +33,6 @@ urlpatterns = [
 
     # NEW: My Earnings Dashboard
     path('my-earnings/', MyEarningsView.as_view(), name='my_earnings'),
+    path('request-payout/', views.request_payout, name='request_payout'),
+    path('my-earnings/pdf/', views.export_earnings_pdf, name='export_earnings_pdf'),
 ]

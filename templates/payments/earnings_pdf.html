@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Earnings Report</title>
+    <style>
+        body { font-family: sans-serif; font-size: 12px; color: #333; }
+        .header { margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        h1 { font-size: 24px; margin: 0 0 5px 0; color: #111; }
+        .meta { font-size: 12px; color: #666; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; }
+        th { background-color: #f9fafb; font-weight: bold; color: #374151; }
+        .amount { font-weight: bold; color: #111; }
+        .status-paid { color: #059669; }
+        .status-unpaid { color: #d97706; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Earnings Report</h1>
+        <div class="meta">
+            <p><strong>User:</strong> {{ user.get_full_name|default:user.username }} ({{ user.email }})</p>
+            <p><strong>Date Generated:</strong> {% now "F j, Y" %}</p>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Details</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in earnings_records %}
+            <tr>
+                <td>{{ record.created_at|date:"M d, Y" }}</td>
+                <td>
+                    {{ record.enrollment.offering.name }}<br>
+                    <span style="color: #666; font-size: 10px;">Client: {{ record.enrollment.client.get_full_name|default:record.enrollment.client.username }}</span>
+                </td>
+                <td>{{ record.earning_type }}</td>
+                <td class="amount">£{{ record.user_share|floatformat:2 }}</td>
+                <td>
+                    <span class="{% if record.payout_status == 'paid' %}status-paid{% elif record.payout_status == 'unpaid' %}status-unpaid{% endif %}">
+                        {{ record.get_payout_status_display }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

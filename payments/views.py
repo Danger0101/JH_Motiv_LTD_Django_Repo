@@ -713,6 +713,92 @@ def order_detail(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
     return render(request, 'payments/order_detail.html', {'order': order})
 
+@login_required
+@require_POST
+def request_payout(request):
+    """
+    Triggers an email to admin requesting a payout for all unpaid earnings.
+    """
+    user = request.user
+    
+    # Calculate Unpaid Total
+    total_unpaid = Decimal('0.00')
+    
+    if hasattr(user, 'coach_profile'):
+        coach_unpaid = CoachingOrder.objects.filter(
+            enrollment__coach=user.coach_profile, 
+            payout_status='unpaid'
+        ).aggregate(total=models.Sum('amount_coach'))['total'] or 0
+        total_unpaid += Decimal(coach_unpaid)
+
+    if hasattr(user, 'dreamer_profile'):
+        ref_unpaid = CoachingOrder.objects.filter(
+            referrer=user.dreamer_profile, 
+            payout_status='unpaid'
+        ).aggregate(total=models.Sum('amount_referrer'))['total'] or 0
+        total_unpaid += Decimal(ref_unpaid)
+    
+    if total_unpaid <= 0:
+        messages.error(request, "No unpaid earnings available to request.")
+        return HttpResponse(status=204, headers={'HX-Refresh': 'true'})
+
+    # Send Email to Admin
+    subject = f"Payout Request: {user.get_full_name()} (£{total_unpaid})"
+    message = f"""
+    User: {user.get_full_name()} ({user.email})
+    Requested Amount: £{total_unpaid}
+    
+    Please review their earnings in the admin panel and process the payout.
+    """
+    
+    try:
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [settings.DEFAULT_FROM_EMAIL], # Send to self/admin
+            fail_silently=False,
+        )
+        messages.success(request, f"Payout request for £{total_unpaid} sent successfully.")
+    except Exception as e:
+        logger.error(f"Failed to send payout request email: {e}")
+        messages.error(request, "Failed to send request. Please try again later.")
+
+    return HttpResponse(status=204, headers={'HX-Refresh': 'true'})
+
+@login_required
+def export_earnings_pdf(request):
+    if weasyprint is None:
+        return HttpResponse("PDF generation unavailable.", status=503)
+
+    user = request.user
+    queryset = CoachingOrder.objects.none()
+
+    if hasattr(user, 'coach_profile'):
+        queryset = queryset | CoachingOrder.objects.filter(enrollment__coach=user.coach_profile).annotate(
+            earning_type=Value('Coach Fee', output_field=CharField()),
+            user_share=F('amount_coach')
+        )
+    
+    if hasattr(user, 'dreamer_profile'):
+        queryset = queryset | CoachingOrder.objects.filter(referrer=user.dreamer_profile).annotate(
+            earning_type=Value('Referral Fee', output_field=CharField()),
+            user_share=F('amount_referrer')
+        )
+    
+    queryset = queryset.filter(user_share__gt=0).order_by('-created_at')
+
+    html_string = render_to_string('payments/earnings_pdf.html', {
+        'earnings_records': queryset,
+        'user': user,
+    })
+
+    pdf_file = weasyprint.HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf()
+    
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="earnings_report_{timezone.now().strftime("%Y%m%d")}.pdf"'
+    return response
+
 # NEW: My Earnings View
 class MyEarningsView(ListView):
     model = CoachingOrder
