@@ -27,7 +27,8 @@
     }
 
     .matrix h1, .matrix h2, .matrix h3, .matrix h4, .matrix h5, .matrix h6 {
-        @apply !text-green-400 !uppercase !tracking-widest;
+        @apply !text-green-400 !uppercase !tracking-widest !font-mono;
+        text-shadow: 0 0 5px #22c55e;
     }
 
     .matrix a {

@@ -16,6 +16,13 @@ CHEAT_CODES = {
         "message": "⚡ GOD MODE: ACTIVATED",
         "type": "warning"
     },
+    # Neo (Hash -> 103)
+    103: {
+        "action": "toggle",
+        "effect_id": "matrix",
+        "message": "💊 WAKE UP, NEO...",
+        "type": "success"
+    },
 
     # --- VISUAL TOGGLES (200-299) ---
     # The JS will receive 'toggle' and the internal effect name
