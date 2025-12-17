@@ -43,11 +43,10 @@ logger = logging.getLogger(__name__)
 User = get_user_model() # Get the user model
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
-@login_required
 def checkout_cart_view(request):
     """
     Renders the Single-Page Retail Checkout.
-    Creates a Stripe PaymentIntent to power the Address & Payment Elements.
+    Now supports Guest Checkout.
     """
     cart = get_or_create_cart(request)
     if not cart or not cart.items.exists():
@@ -60,13 +59,16 @@ def checkout_cart_view(request):
     if initial_amount < 50: initial_amount = 50
 
     try:
+        # SAFE USER ID HANDLING
+        user_id = request.user.id if request.user.is_authenticated else None
+
         # 2. Create PaymentIntent
         intent = stripe.PaymentIntent.create(
             amount=initial_amount,
             currency='gbp',
             metadata={
                 'cart_id': cart.id,
-                'user_id': request.user.id,
+                'user_id': user_id,
                 'product_type': 'ecommerce_cart'
             },
             automatic_payment_methods={'enabled': True},

@@ -102,9 +102,43 @@
 <script src="https://js.stripe.com/v3/"></script>
 <script>
     const stripe = Stripe("{{ STRIPE_PUBLISHABLE_KEY }}");
+    
+    // Function to get Stripe Appearance based on active cheat
+    function getStripeAppearance() {
+        const body = document.body;
+        
+        if (body.classList.contains('matrix')) {
+            return {
+                theme: 'night',
+                variables: {
+                    colorPrimary: '#22c55e',
+                    colorBackground: '#000000',
+                    colorText: '#22c55e',
+                    colorDanger: '#ef4444',
+                    fontFamily: 'monospace',
+                }
+            };
+        } 
+        else if (body.classList.contains('cyber')) {
+            return {
+                theme: 'night',
+                variables: {
+                    colorPrimary: '#fde047',
+                    colorBackground: '#111827',
+                    colorText: '#fde047',
+                    colorDanger: '#ec4899',
+                    borderRadius: '0px',
+                }
+            };
+        }
+        
+        // Default (Light theme)
+        return { theme: 'stripe' }; 
+    }
+
     const elements = stripe.elements({
         clientSecret: "{{ client_secret }}",
-        appearance: { theme: 'stripe' },
+        appearance: getStripeAppearance(),
         loader: 'auto'
     });
 
@@ -226,5 +260,10 @@
         document.getElementById("spinner").classList.toggle("hidden", !isLoading);
         document.getElementById("button-text").classList.toggle("hidden", isLoading);
     }
+
+    // OPTIONAL: Listen for cheat activation events to update Stripe on the fly
+    document.addEventListener('cheatActivated', () => {
+        elements.update({ appearance: getStripeAppearance() });
+    });
 </script>
 {% endblock %}
