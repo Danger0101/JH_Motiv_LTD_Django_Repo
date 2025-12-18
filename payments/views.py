@@ -24,7 +24,7 @@ from cart.models import Cart
 from coaching_booking.models import ClientOfferingEnrollment, SessionBooking
 from coaching_core.models import Offering
 from accounts.models import CoachProfile
-from .models import Order, OrderItem, CoachingOrder, Coupon
+from .models import Order, OrderItem, CoachingOrder, Coupon, PayoutHistory
 from products.models import Product, Variant, StockPool
 from .forms import PayoutSettingsForm
 from products.printful_service import PrintfulService
@@ -829,6 +829,7 @@ class MyEarningsView(ListView):
         # Return partial template for HTMX requests (keeping user in dashboard)
         if self.request.headers.get('HX-Request'):
             return ['account/partials/earnings/_main.html']
+        return [self.template_name]
 
     def get_queryset(self):
         user = self.request.user
