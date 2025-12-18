@@ -23,7 +23,7 @@ from django.core.paginator import Paginator
 from core.email_utils import send_transactional_email
 from payments.models import CoachingOrder
 from .models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer
-from accounts.models import CoachProfile
+from accounts.models import CoachProfile, MarketingPreference
 from coaching_availability.utils import get_coach_available_slots
 from coaching_core.models import Offering, Workshop
 from coaching_client.models import ContentPage
@@ -650,6 +650,7 @@ def check_payment_status(request, booking_id):
 def guest_access_view(request, token):
     user = get_object_or_404(User, billing_notes=token)
     
+    user.is_active = True
     # Log them in automatically for this session
     login(request, user, backend='django.contrib.auth.backends.ModelBackend')
     
@@ -690,8 +691,11 @@ def staff_create_guest_account(request):
                 password=random_password,
                 first_name=first_name,
                 last_name=last_name,
-                business_name=business_name
+                business_name=business_name,
+                is_active=False
             )
+            MarketingPreference.objects.create(user=user, is_subscribed=False)
+            
         elif business_name and not user.business_name:
             user.business_name = business_name
             user.save()
@@ -830,17 +834,22 @@ def resend_guest_invite(request, user_id):
         reverse('coaching_booking:guest_access', args=[token])
     )
     
-    send_mail(
-        subject=f"Access Link for {getattr(settings, 'SITE_NAME', 'JH Motiv')}",
-        message=f"Here is your access link again:\n{access_url}\n\nClicking this will log you in immediately.",
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
-    )
-    
-    user.last_invite_sent = timezone.now()
-    user.save()
-    
-    return HttpResponse('<span class="text-xs text-green-600 font-bold px-2">Sent!</span>')
+    try:
+        send_mail(
+            subject=f"Access Link for {getattr(settings, 'SITE_NAME', 'JH Motiv')}",
+            message=f"Here is your access link again:\n{access_url}\n\nClicking this will log you in immediately.",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+        
+        user.last_invite_sent = timezone.now()
+        user.save(update_fields=['last_invite_sent'])
+        
+        return HttpResponse('<span class="text-xs text-green-600 font-bold px-2">Sent!</span>')
+    except Exception as e:
+        logger.error(f"Failed to resend invite: {e}")
+        return HttpResponse(f'<span class="text-xs text-red-600 font-bold px-2" title="{e}">Failed</span>')
 
 @login_required
 @require_POST

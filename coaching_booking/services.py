@@ -16,7 +16,7 @@ from django.utils.crypto import get_random_string
 from .models import SessionBooking, ClientOfferingEnrollment, OneSessionFreeOffer, CoachBusySlot
 from coaching_core.models import CoachProfile, Workshop
 from coaching_availability.utils import get_coach_available_slots
-from accounts.models import User
+from accounts.models import User, MarketingPreference
 from core.email_utils import send_transactional_email
 
 logger = logging.getLogger(__name__)
@@ -307,10 +307,12 @@ class BookingService:
                     email=guest_email,
                     first_name=first_name,
                     last_name=last_name,
+                    is_active=False
                 )
                 user.set_unusable_password()
                 user.billing_notes = get_random_string(32) # Guest Token
                 user.save()
+                MarketingPreference.objects.create(user=user, is_subscribed=False)
 
         # 2. Determine Booking Type (Workshop vs 1-on-1)
         if booking_data.get('workshop_id'):

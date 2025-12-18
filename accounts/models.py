@@ -66,6 +66,8 @@ class User(AbstractUser):
         default='UTC', 
         help_text="User's preferred time zone for display and defining working hours."
     )
+    
+    last_invite_sent = models.DateTimeField(null=True, blank=True, help_text="Timestamp when the last guest invite was sent.")
 
     objects = UserManager()
 
