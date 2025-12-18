@@ -74,6 +74,9 @@
                                     Last sent: {{ guest.last_invite_sent|default:guest.date_joined|date:"M d, H:i" }}
                             </div>
                         </div>
+                        {% else %}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                        {% endif %}
                         <button hx-post="{% url 'coaching_booking:delete_guest_account' guest.id %}"
                                 hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
                                 hx-target="closest tr"
@@ -82,13 +85,7 @@
                                 class="ml-2 inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
                             Delete
                         </button>
-                        {% else %}
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
+                    
                     <td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">No pending guests found.</td>
                 </tr>
                 {% endfor %}

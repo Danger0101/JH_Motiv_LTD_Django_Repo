@@ -861,10 +861,6 @@ def delete_guest_account(request, user_id):
         
     user = get_object_or_404(User, id=user_id)
     
-    # Only allow deleting pending guests (those with a token)
-    if not user.billing_notes:
-        return HttpResponseForbidden("Cannot delete active users.")
-        
     user.delete()
     
     return HttpResponse("")
