@@ -555,7 +555,7 @@ def profile_offerings_partial(request):
 def recent_activity_partial(request):
     """HTMX partial to refresh recent activity."""
     activities = get_recent_activity(request.user)
-    return render(request, 'account/partials/recent_activity.html', {'recent_activities': activities})
+    return render(request, 'account/partials/dashboard/_recent_activity.html', {'recent_activities': activities})
 
 @login_required
 def profile_bookings_partial(request):
@@ -668,7 +668,7 @@ def coach_clients_partial(request):
     context = {
         'coach_clients_page': coach_clients_page,
     }
-    return render(request, 'account/partials/_coach_clients_list.html', context)
+    return render(request, 'account/partials/coach/_clients_list.html', context)
 
 @login_required
 def generate_invoice_pdf(request, order_id):
@@ -773,10 +773,10 @@ def staff_update_order(request, order_id):
         order.save()
         
         # Return the read-only row with updated info
-        return render(request, 'account/partials/staff_order_row.html', {'order': order})
+        return render(request, 'account/partials/staff/_order_row.html', {'order': order})
 
     # GET request returns the edit form
-    return render(request, 'account/partials/staff_order_form.html', {'order': order})
+    return render(request, 'account/partials/staff/_order_form.html', {'order': order})
 
 
 @staff_member_required
@@ -785,7 +785,7 @@ def staff_get_order_row(request, order_id):
     HTMX view to get a single, read-only order row. Used for canceling an edit.
     """
     order = get_object_or_404(Order, id=order_id)
-    return render(request, 'account/partials/staff_order_row.html', {'order': order})
+    return render(request, 'account/partials/staff/_order_row.html', {'order': order})
 
 
 @staff_member_required
@@ -817,7 +817,7 @@ def staff_customer_lookup(request):
             'recent_orders': recent_orders,
             'active_enrollments': active_enrollments,
         }
-        return render(request, 'account/partials/staff_customer_detail.html', context)
+        return render(request, 'account/partials/staff/_customer_detail.html', context)
 
     # 2. HANDLE SEARCH (As you type)
     if query:
@@ -828,7 +828,7 @@ def staff_customer_lookup(request):
             Q(username__icontains=query)
         ).exclude(is_staff=True)[:10] # Exclude staff to keep it clean, limit to 10
         
-        return render(request, 'account/partials/staff_customer_search_results.html', {'results': results})
+        return render(request, 'account/partials/staff/_customer_search_results.html', {'results': results})
 
     return HttpResponse("") # Return nothing if no query
 
