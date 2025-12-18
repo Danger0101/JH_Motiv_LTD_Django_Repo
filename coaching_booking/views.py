@@ -725,7 +725,6 @@ def staff_create_guest_account(request):
         )
         
         context = {
-      cont  ext = {
             'site_name': getattr(settings, 'SITE_NAME', 'JH Motiv'),
             'access_url': access_url,
             'username': email,
@@ -829,9 +828,7 @@ def resend_guest_invite(request, user_id):
         
     token = user.billing_notes
     access_url = request.build_absolute_uri(
-     
-    
-    try:   reverse('coaching_booking:guest_access', args=[token])
+        reverse('coaching_booking:guest_access', args=[token])
     )
     
     try:
