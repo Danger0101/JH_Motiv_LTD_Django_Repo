@@ -11,6 +11,7 @@ import stripe
 from django.conf import settings
 from django.core.cache import cache
 from django.urls import reverse
+from django.utils.crypto import get_random_string
 
 from .models import SessionBooking, ClientOfferingEnrollment, OneSessionFreeOffer, CoachBusySlot
 from coaching_core.models import CoachProfile, Workshop
@@ -289,6 +290,27 @@ class BookingService:
             raise ValidationError("Cannot book a session in the past.")
         if start_datetime_obj > now + timedelta(days=BOOKING_WINDOW_DAYS):
             raise ValidationError(f"Cannot book more than {BOOKING_WINDOW_DAYS} days in advance.")
+
+        # --- GUEST HANDLING: Create Shadow User if needed ---
+        guest_email = booking_data.get('email')
+        if not user and guest_email:
+            # Check if user exists (match views.py logic)
+            user = User.objects.filter(Q(email=guest_email) | Q(username=guest_email)).first()
+            if not user:
+                # Create Shadow User
+                full_name = booking_data.get('name', 'Guest')
+                first_name = full_name.split(' ')[0]
+                last_name = ' '.join(full_name.split(' ')[1:]) if ' ' in full_name else ''
+                
+                user = User.objects.create_user(
+                    username=guest_email,
+                    email=guest_email,
+                    first_name=first_name,
+                    last_name=last_name,
+                )
+                user.set_unusable_password()
+                user.billing_notes = get_random_string(32) # Guest Token
+                user.save()
 
         # 2. Determine Booking Type (Workshop vs 1-on-1)
         if booking_data.get('workshop_id'):

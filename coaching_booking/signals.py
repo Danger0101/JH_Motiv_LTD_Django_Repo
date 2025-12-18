@@ -64,6 +64,9 @@ def handle_session_booking_gcal(sender, instance, created, **kwargs):
             # FIX: No ID exists (sync failed previously?) -> Try Pushing as New
             logger.info(f"Booking {booking.id} updated but has no GCal ID. Attempting push.")
             transaction.on_commit(lambda: sync_google_calendar_push.delay(booking.id))
+            
+            # FIX: Also send email if it's a newly confirmed booking (e.g. via Webhook update)
+            transaction.on_commit(lambda: send_booking_confirmation_email.delay(booking.id))
     # --- MOVED LOGIC END ---
 
 

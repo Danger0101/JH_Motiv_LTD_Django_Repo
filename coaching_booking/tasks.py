@@ -46,12 +46,24 @@ def send_booking_confirmation_email(self, booking_id):
             logger.error(f"No email found for booking {booking.id}")
             return
 
+        # --- GUEST ACCESS LINK ---
+        dashboard_url = f"{settings.SITE_URL}/accounts/profile/"
+        guest_access_link = None
+        
+        # Check if client has a guest token in billing_notes
+        if booking.client and booking.client.billing_notes and len(booking.client.billing_notes) >= 32:
+             token = booking.client.billing_notes
+             guest_path = reverse('coaching_booking:guest_access', args=[token])
+             guest_access_link = f"{settings.SITE_URL}{guest_path}"
+             dashboard_url = guest_access_link # Direct them to magic link
+
         context = {
             'name': recipient_name,
             'session': booking, # Passing full object for template flexibility
             'date': booking.start_datetime, 
             'details': event_details,
-            'dashboard_url': f"{settings.SITE_URL}/accounts/profile/", 
+            'dashboard_url': dashboard_url,
+            'guest_access_link': guest_access_link,
         }
         
         html_content = render_to_string(template_name, context)
