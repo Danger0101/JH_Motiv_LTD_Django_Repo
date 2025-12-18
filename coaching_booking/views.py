@@ -733,7 +733,7 @@ def staff_create_guest_account(request):
         
         try:
             send_mail(
-                subject=f"Welcome to {settings.SITE_NAME}",
+                subject=f"Welcome to {getattr(settings, 'SITE_NAME', 'JH Motiv')}",
                 message=email_message,
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[email],
@@ -831,7 +831,7 @@ def resend_guest_invite(request, user_id):
     )
     
     send_mail(
-        subject=f"Access Link for {settings.SITE_NAME}",
+        subject=f"Access Link for {getattr(settings, 'SITE_NAME', 'JH Motiv')}",
         message=f"Here is your access link again:\n{access_url}\n\nClicking this will log you in immediately.",
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[user.email],

@@ -555,7 +555,7 @@ def profile_offerings_partial(request):
 def recent_activity_partial(request):
     """HTMX partial to refresh recent activity."""
     activities = get_recent_activity(request.user)
-    return render(request, 'account/partials/dashboard/_recent_activity.html', {'recent_activities': activities})
+    return render(request, 'account/partials/recent_activity.html', {'recent_activities': activities})
 
 @login_required
 def profile_bookings_partial(request):
@@ -668,7 +668,7 @@ def coach_clients_partial(request):
     context = {
         'coach_clients_page': coach_clients_page,
     }
-    return render(request, 'account/partials/coach/_clients_list.html', context)
+    return render(request, 'account/partials/coach_clients_list.html', context)
 
 @login_required
 def generate_invoice_pdf(request, order_id):
