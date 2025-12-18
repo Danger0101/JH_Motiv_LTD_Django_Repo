@@ -70,11 +70,10 @@ class WorkshopAdmin(ModelAdmin):
     list_editable = ('active_status',)
     list_filter = ('active_status', 'is_free', 'date', 'coach')
     search_fields = ('name', 'coach__user__email', 'coach__user__last_name')
-    readonly_fields = ('slug', 'created_at', 'updated_at', 'created_by', 'updated_by')
+    readonly_fields = ('display_slug', 'created_at', 'updated_at', 'created_by', 'updated_by')
     autocomplete_fields = ('coach',) # Critical for usability if you have many coaches
     list_select_related = ('coach', 'coach__user')    
     date_hierarchy = 'date'
-    prepopulated_fields = {'slug': ('name',)}
     actions = ['duplicate_workshop_action']
 
     @admin.action(description="Repeat/Duplicate selected workshop")
@@ -128,9 +127,13 @@ class WorkshopAdmin(ModelAdmin):
         booked = getattr(obj, 'booked_count', 0)
         return f"£{booked * obj.price}"
 
+    @admin.display(description='Slug')
+    def display_slug(self, obj):
+        return obj.slug
+
     fieldsets = (
         ('Workshop Info', {
-            'fields': ('name', 'slug', 'description', 'coach')
+            'fields': ('name', 'display_slug', 'description', 'coach')
         }),
         ('Schedule', {
             'fields': ('date', 'start_time', 'end_time', 'meeting_link')
