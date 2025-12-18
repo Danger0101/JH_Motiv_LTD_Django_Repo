@@ -2,9 +2,11 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.utils import timezone
 from datetime import time, date, timedelta
+from django.core import mail
+from django.core.management import call_command
 
 from accounts.models import User, CoachProfile
-from coaching_core.models import Offering
+from coaching_core.models import Offering, Workshop
 from coaching_availability.models import CoachAvailability
 from .models import ClientOfferingEnrollment, SessionBooking
 
@@ -153,3 +155,141 @@ class BookingLogicTests(TestCase):
         # Verify the session count for the second client did NOT change
         enrollment2.refresh_from_db()
         self.assertEqual(enrollment2.remaining_sessions, 5)
+
+class GuestAccessTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.coach_user = User.objects.create_user(
+            username='coach_guest', email='coach_guest@test.com', password='password', is_coach=True
+        )
+        self.coach_profile = CoachProfile.objects.create(user=self.coach_user)
+        
+        self.workshop = Workshop.objects.create(
+            coach=self.coach_profile,
+            name="Guest Access Workshop",
+            slug="guest-access-workshop",
+            description="Test",
+            date=timezone.now().date() + timedelta(days=1),
+            start_time=time(10, 0),
+            end_time=time(12, 0),
+            total_attendees=5,
+            price=0, # Free ensures immediate booking without Stripe mocking
+            active_status=True
+        )
+
+    def test_guest_token_lifecycle(self):
+        """
+        Verifies that:
+        1. Booking as a guest generates a token in billing_notes.
+        2. Accessing the guest_access view logs the user in.
+        3. The token is cleared after use.
+        """
+        guest_email = "newguest@example.com"
+        
+        # 1. Book Workshop as Guest
+        url = reverse('coaching_booking:book_workshop', args=[self.workshop.slug])
+        self.client.post(url, {
+            'email': guest_email,
+            'full_name': 'Guest User',
+            'business_name': 'Guest Corp'
+        })
+        
+        # Verify User Created & Token Saved
+        user = User.objects.get(email=guest_email)
+        self.assertTrue(user.billing_notes, "Token should be saved in billing_notes")
+        token = user.billing_notes
+        
+        # 2. Access Magic Link (Logout first to simulate fresh session)
+        self.client.logout()
+        access_url = reverse('coaching_booking:guest_access', args=[token])
+        response = self.client.get(access_url)
+        
+        # Verify Redirect & Login
+        self.assertRedirects(response, reverse('accounts:account_profile'))
+        self.assertEqual(int(self.client.session['_auth_user_id']), user.pk)
+        
+        # 3. Verify Token Cleared
+        user.refresh_from_db()
+        self.assertEqual(user.billing_notes, "", "Token should be cleared after use")
+        
+        # 4. Verify Token cannot be reused
+        self.client.logout()
+        response = self.client.get(access_url)
+        self.assertEqual(response.status_code, 404)
+
+class StaffGuestCreationTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.staff_user = User.objects.create_user(
+            username='staff', email='staff@example.com', password='password', is_staff=True
+        )
+        self.offering = Offering.objects.create(
+            name='Premium Coaching Package',
+            description='Test Description',
+            price=100.00,
+            duration_type='PACKAGE',
+            total_length_units=1,
+            session_length_minutes=60,
+            total_number_of_sessions=5,
+            active_status=True
+        )
+
+    def test_create_guest_with_enrollment_email_content(self):
+        """
+        Verifies that when a staff member creates a guest and enrolls them,
+        the sent email contains the offering name.
+        """
+        self.client.login(username='staff', password='password')
+        guest_email = "vip_guest@example.com"
+        
+        url = reverse('coaching_booking:staff_create_guest')
+        response = self.client.post(url, {
+            'email': guest_email,
+            'full_name': 'VIP Guest',
+            'offering_id': self.offering.id
+        })
+        
+        # Verify Email Content
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertIn(guest_email, email.to)
+        self.assertIn("Premium Coaching Package", email.body)
+        self.assertIn("You have been enrolled in:", email.body)
+
+class GuestCleanupCommandTests(TestCase):
+    def test_cleanup_guests_command(self):
+        """
+        Verifies that the cleanup_guests command deletes old unactivated guests
+        but preserves recent guests and activated users.
+        """
+        # 1. Old Guest (Should be deleted)
+        old_guest = User.objects.create_user(
+            username='old_guest', email='old@test.com', password='pw'
+        )
+        old_guest.billing_notes = "token_123" # Unactivated
+        old_guest.date_joined = timezone.now() - timedelta(days=31)
+        old_guest.save()
+
+        # 2. Recent Guest (Should be kept)
+        recent_guest = User.objects.create_user(
+            username='recent_guest', email='recent@test.com', password='pw'
+        )
+        recent_guest.billing_notes = "token_456" # Unactivated
+        recent_guest.date_joined = timezone.now() - timedelta(days=10)
+        recent_guest.save()
+
+        # 3. Old Activated User (Should be kept)
+        activated_user = User.objects.create_user(
+            username='activated', email='active@test.com', password='pw'
+        )
+        activated_user.billing_notes = "" # Activated (empty token)
+        activated_user.date_joined = timezone.now() - timedelta(days=40)
+        activated_user.save()
+
+        # Run Command
+        call_command('cleanup_guests')
+
+        # Verify
+        self.assertFalse(User.objects.filter(id=old_guest.id).exists(), "Old guest should be deleted")
+        self.assertTrue(User.objects.filter(id=recent_guest.id).exists(), "Recent guest should remain")
+        self.assertTrue(User.objects.filter(id=activated_user.id).exists(), "Activated user should remain")

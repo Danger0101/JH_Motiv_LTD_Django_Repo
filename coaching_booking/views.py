@@ -17,6 +17,7 @@ import stripe
 from django.contrib.auth import login
 from django.utils.crypto import get_random_string
 from django.core.mail import send_mail
+from django.core.paginator import Paginator
 
 from core.email_utils import send_transactional_email
 from payments.models import CoachingOrder
@@ -645,6 +646,167 @@ def check_payment_status(request, booking_id):
         # Keep polling (return the same spinner div)
         return render(request, 'coaching_booking/partials/spinner.html', {'booking': booking})
 
+def guest_access_view(request, token):
+    user = get_object_or_404(User, billing_notes=token)
+    
+    # Log them in automatically for this session
+    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+    
+    # Clear the token so the link only works once for "activation"
+    user.billing_notes = ""
+    user.save()
+    
+    messages.success(request, "Welcome! Please set a permanent password to secure your account.")
+    return redirect('accounts:account_profile')
+
+@login_required
+def staff_create_guest_account(request):
+    if not request.user.is_staff:
+        return HttpResponseForbidden("Only staff can perform this action.")
+    
+    offerings = Offering.objects.filter(active_status=True)
+    
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        full_name = request.POST.get('full_name')
+        business_name = request.POST.get('business_name')
+        
+        if not email or not full_name:
+            messages.error(request, "Email and Name are required.")
+            return render(request, 'account/partials/staff/staff_create_guest.html', {'offerings': offerings})
+
+        if User.objects.filter(email=email).exists():
+            messages.error(request, "User with this email already exists.")
+            return render(request, 'account/partials/staff/staff_create_guest.html', {'offerings': offerings})
+            
+        first_name = full_name.split(' ')[0]
+        last_name = ' '.join(full_name.split(' ')[1:]) if ' ' in full_name else ''
+        random_password = get_random_string(12)
+        
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            password=random_password,
+            first_name=first_name,
+            last_name=last_name,
+            business_name=business_name
+        )
+        
+        guest_token = get_random_string(32)
+        user.billing_notes = guest_token
+        user.save()
+        
+        # Optional Enrollment
+        offering_id = request.POST.get('offering_id')
+        enrolled_offering_name = None
+        if offering_id:
+            try:
+                offering = Offering.objects.get(id=offering_id)
+                ClientOfferingEnrollment.objects.create(
+                    client=user,
+                    offering=offering,
+                    remaining_sessions=offering.total_number_of_sessions,
+                    is_active=True
+                )
+                enrolled_offering_name = offering.name
+            except Offering.DoesNotExist:
+                pass
+        
+        access_url = request.build_absolute_uri(
+            reverse('coaching_booking:guest_access', args=[guest_token])
+        )
+        
+        email_message = "A guest account has been created for you.\n"
+        if enrolled_offering_name:
+            email_message += f"You have been enrolled in: {enrolled_offering_name}\n"
+        email_message += f"Access your dashboard here: {access_url}\n\nUsername: {email}\nPassword: {random_password}"
+        
+        send_mail(
+            subject=f"Welcome to {settings.SITE_NAME}",
+            message=email_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+        )
+        
+        messages.success(request, f"Guest account created for {email}. Email sent.")
+        return redirect('coaching_booking:staff_create_guest')
+        
+    return render(request, 'account/partials/staff/staff_create_guest.html', {'offerings': offerings})
+
+@login_required
+def recent_guests_widget(request):
+    if not request.user.is_staff:
+        return HttpResponseForbidden()
+    
+    q = request.GET.get('q', '')
+    page = request.GET.get('page')
+    status = request.GET.get('status', 'pending')
+    
+    guests_query = User.objects.all()
+    
+    # Filter by Status
+    if status == 'pending':
+        guests_query = guests_query.exclude(billing_notes='').exclude(billing_notes__isnull=True)
+    elif status == 'active':
+        guests_query = guests_query.filter(Q(billing_notes='') | Q(billing_notes__isnull=True))
+        guests_query = guests_query.filter(is_staff=False)
+    
+    if q:
+        guests_query = guests_query.filter(email__icontains=q)
+    
+    paginator = Paginator(guests_query.order_by('-date_joined'), 5)
+    recent_guests = paginator.get_page(page)
+    
+    return render(request, 'account/partials/staff/_recent_guests.html', {
+        'recent_guests': recent_guests,
+        'q': q,
+        'status': status
+    })
+
+@login_required
+@require_POST
+def resend_guest_invite(request, user_id):
+    if not request.user.is_staff:
+        return HttpResponseForbidden()
+        
+    user = get_object_or_404(User, id=user_id)
+    
+    if not user.billing_notes:
+        return HttpResponse('<span class="text-xs text-gray-500">Active</span>')
+        
+    token = user.billing_notes
+    access_url = request.build_absolute_uri(
+        reverse('coaching_booking:guest_access', args=[token])
+    )
+    
+    send_mail(
+        subject=f"Access Link for {settings.SITE_NAME}",
+        message=f"Here is your access link again:\n{access_url}\n\nClicking this will log you in immediately.",
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+    )
+    
+    user.last_invite_sent = timezone.now()
+    user.save()
+    
+    return HttpResponse('<span class="text-xs text-green-600 font-bold px-2">Sent!</span>')
+
+@login_required
+@require_POST
+def delete_guest_account(request, user_id):
+    if not request.user.is_staff:
+        return HttpResponseForbidden()
+        
+    user = get_object_or_404(User, id=user_id)
+    
+    # Only allow deleting pending guests (those with a token)
+    if not user.billing_notes:
+        return HttpResponseForbidden("Cannot delete active users.")
+        
+    user.delete()
+    
+    return HttpResponse("")
+
 def book_workshop(request, slug):
     workshop = get_object_or_404(Workshop, slug=slug)
     
@@ -691,13 +853,23 @@ def book_workshop(request, slug):
                     last_name=last_name,
                     business_name=business_name
                 )
+                
+                # Generate a unique token for their "Guest Dashboard"
+                guest_token = get_random_string(32)
+                user.billing_notes = guest_token 
+                user.save()
+
                 # Auto-login the new user so they see their dashboard
                 login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                
+                access_url = request.build_absolute_uri(
+                    reverse('coaching_booking:guest_access', args=[guest_token])
+                )
                 
                 # Send Welcome Email with Password
                 send_mail(
                     subject=f"Welcome to {settings.SITE_NAME}",
-                    message=f"Account created for your workshop booking.\nUsername: {email}\nPassword: {random_password}",
+                    message=f"Account created for your workshop booking.\nAccess your sessions here: {access_url}\n\nUsername: {email}\nPassword: {random_password}",
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     recipient_list=[email],
                 )

@@ -1,4 +1,5 @@
 from celery import shared_task, current_app
+from celery.schedules import crontab
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.conf import settings
@@ -6,6 +7,7 @@ from django.utils.html import strip_tags
 from django.urls import reverse
 from core.email_utils import send_transactional_email
 from .models import SessionBooking
+from django.core.management import call_command
 from .utils import generate_ics
 from .integrations.google import GoogleCalendarService
 from coaching_core.models import CoachProfile
@@ -259,6 +261,10 @@ def health_check_email_worker():
     # requests.get("https://nosnch.in/YOUR_ID")
     pass
 
+@shared_task
+def run_guest_cleanup():
+    call_command('cleanup_guests')
+
 @current_app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
     # Run release_expired_holds every 10 minutes (600 seconds)
@@ -266,3 +272,10 @@ def setup_periodic_tasks(sender, **kwargs):
     
     # Run sync_google_calendar_pull_all every 15 minutes (900 seconds)
     sender.add_periodic_task(900.0, sync_google_calendar_pull_all.s(), name='sync_google_calendar_pull_all_every_15_mins')
+
+    # Run guest cleanup every night at 3:00 AM
+    sender.add_periodic_task(
+        crontab(hour=3, minute=0),
+        run_guest_cleanup.s(),
+        name='guest_cleanup_daily'
+    )

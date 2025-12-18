@@ -1,0 +1,48 @@
+<div class="max-w-2xl mx-auto mb-8 p-6 bg-white rounded-lg shadow-md border border-gray-200 relative">
+    <button onclick="document.getElementById('guest-create-container').innerHTML=''" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+    </button>
+    
+    <h2 class="text-xl font-bold mb-2">Create Guest Account</h2>
+    <p class="mb-6 text-sm text-gray-600">This will create a user account and email them a magic link to log in immediately.</p>
+    
+    {% if messages %}
+    <div class="mb-6">
+        {% for message in messages %}
+        <div class="p-3 rounded text-sm {% if message.tags == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <form hx-post="{% url 'coaching_booking:staff_create_guest' %}" hx-target="#guest-create-container" hx-swap="innerHTML">
+        {% csrf_token %}
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="email">Email Address</label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="email" type="email" name="email" required>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="full_name">Full Name</label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="full_name" type="text" name="full_name" required>
+        </div>
+        <div class="mb-6">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="business_name">Business Name (Optional)</label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="business_name" type="text" name="business_name">
+        </div>
+        <div class="mb-6">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="offering_id">Enroll in Offering (Optional)</label>
+            <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="offering_id" name="offering_id">
+                <option value="">-- None --</option>
+                {% for offering in offerings %}
+                <option value="{{ offering.id }}">{{ offering.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex items-center justify-between">
+            <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
+                Create & Send Email
+            </button>
+        </div>
+    </form>
+</div>
