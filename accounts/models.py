@@ -45,6 +45,11 @@ class User(AbstractUser):
         default=True,
         help_text=_("Designates whether this user is a client.")
     )
+    # NEW: Dreamer / Affiliate Flag
+    is_dreamer = models.BooleanField(
+        default=False,
+        help_text=_("Designates whether this user is an approved Dreamer affiliate.")
+    )
     # Existing field - keeping this!
     billing_notes = models.CharField(max_length=255, blank=True, null=True,
                                      help_text="General notes or preferred billing address text.")

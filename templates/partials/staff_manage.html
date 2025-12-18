@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mx-auto py-12">
+    <h1 class="text-2xl font-bold mb-6">Pending Dreamer Applications</h1>
+    <div class="grid gap-4">
+        {% for app in applications %}
+        <div class="bg-white p-6 rounded-lg shadow border flex justify-between items-start">
+            <div>
+                <h3 class="font-bold text-lg">{{ app.name }}</h3>
+                <p class="text-sm text-gray-500">{{ app.user.email }}</p>
+                <p class="mt-2 text-gray-700 italic">"{{ app.story_excerpt }}"</p>
+            </div>
+            <div class="flex flex-col gap-2">
+                <form action="{% url 'dreamers:staff_action' app.pk %}" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="approve">
+                    <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full">Approve</button>
+                </form>
+                <form action="{% url 'dreamers:staff_action' app.pk %}" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="reject">
+                    <input type="text" name="reason" placeholder="Reason" class="text-xs border rounded mb-1 w-full">
+                    <button class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 w-full">Reject</button>
+                </form>
+            </div>
+        </div>
+        {% empty %}
+        <p class="text-gray-500">No pending applications.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

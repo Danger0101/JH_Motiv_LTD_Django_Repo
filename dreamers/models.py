@@ -17,6 +17,16 @@ class Dreamer(models.Model):
 class DreamerProfile(models.Model):
     """Represents an individual or entity on the Wall of Dreamers."""
     
+    STATUS_PENDING = 'pending'
+    STATUS_APPROVED = 'approved'
+    STATUS_REJECTED = 'rejected'
+    
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Application Pending'),
+        (STATUS_APPROVED, 'Approved Affiliate'),
+        (STATUS_REJECTED, 'Application Rejected'),
+    ]
+
     # Core Data
     name = models.CharField(max_length=150, help_text="Full Name or Business Name (e.g., Ashley Johnson | Haijahr)")
     slug = models.SlugField(max_length=150, unique=True, blank=True, help_text="Unique URL-friendly identifier. Auto-generated from name if left blank.")
@@ -25,6 +35,10 @@ class DreamerProfile(models.Model):
     # Display Control
     is_featured = models.BooleanField(default=False, help_text="Check to feature this dreamer prominently.")
     order = models.PositiveIntegerField(default=0, help_text="Manual ordering for display on the site.")
+
+    # Status & Workflow
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    rejection_reason = models.TextField(blank=True, null=True)
 
     # NEW: Link to the User for login/dashboard access
     user = models.OneToOneField(
@@ -48,7 +62,7 @@ class DreamerProfile(models.Model):
         verbose_name_plural = "Dreamer Profiles"
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.get_status_display()})"
 
     def save(self, *args, **kwargs):
         if not self.slug:
