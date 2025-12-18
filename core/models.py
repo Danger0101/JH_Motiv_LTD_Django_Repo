@@ -17,12 +17,18 @@ class NewsletterCampaign(models.Model):
         ('DRAFT', 'Draft'),
         ('SENT', 'Sent'),
     ]
+    TEMPLATE_CHOICES = [
+        ('standard', 'Standard (Text Focused)'),
+        ('hero', 'Visual Impact (Big Image)'),
+        ('showcase', 'Product Showcase (Grid)'),
+    ]
     subject = models.CharField(max_length=200)
     content = models.TextField()
     sent_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     recipient_count = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='SENT')
+    template = models.CharField(max_length=20, choices=TEMPLATE_CHOICES, default='standard')
 
     def __str__(self):
         date_str = self.sent_at.strftime('%Y-%m-%d') if self.sent_at else "Draft"

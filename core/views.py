@@ -427,13 +427,14 @@ def staff_newsletter_dashboard(request):
     initial_data = {}
     if draft_id:
         campaign = get_object_or_404(NewsletterCampaign, id=draft_id, status='DRAFT')
-        initial_data = {'subject': campaign.subject, 'content': campaign.content}
+        initial_data = {'subject': campaign.subject, 'content': campaign.content, 'template': campaign.template}
 
     if request.method == 'POST':
         form = StaffNewsletterForm(request.POST)
         if form.is_valid():
             subject = form.cleaned_data['subject']
             content = form.cleaned_data['content']
+            template = form.cleaned_data['template']
             
             # Helper to get base URL
             base_url = request.build_absolute_uri('/').rstrip('/')
@@ -442,14 +443,34 @@ def staff_newsletter_dashboard(request):
                 # Render preview
                 # FIX: Explicitly create a dummy token for preview
                 unsubscribe_url = f"{base_url}/newsletter/unsubscribe/preview-token/"
-                context = {'body': content, 'subject': subject, 'unsubscribe_url': unsubscribe_url, 'base_url': base_url}
-                preview_html = render_to_string('core/generic_newsletter.html', context)
+                
+                # Create context compatible with both generic (uses 'body') and layout templates (uses 'newsletter.body')
+                newsletter_data = {'subject': subject, 'body': content}
+                context = {
+                    'newsletter': newsletter_data, 
+                    'body': content, 
+                    'subject': subject, 
+                    'unsubscribe_url': unsubscribe_url, 
+                    'base_url': base_url
+                }
+                template_name = f"emails/newsletters/layout_{template}.html"
+                preview_html = render_to_string(template_name, context)
                 return render(request, 'core/staff_newsletter.html', {'form': form, 'preview_html': preview_html})
             
             elif 'test_send' in request.POST:
                 # FIX: Create a dummy token for test emails so the link works (visually)
                 unsubscribe_url = f"{base_url}/newsletter/unsubscribe/test-token/"
-                context = {'body': content, 'subject': f"[TEST] {subject}", 'unsubscribe_url': unsubscribe_url, 'base_url': base_url}
+                
+                newsletter_data = {'subject': subject, 'body': content}
+                context = {
+                    'newsletter': newsletter_data,
+                    'body': content, 
+                    'subject': f"[TEST] {subject}", 
+                    'unsubscribe_url': unsubscribe_url, 
+                    'base_url': base_url
+                }
+                
+                template_name = f"emails/newsletters/layout_{template}.html"
                 
                 if request.user.email:
                     # FIX: Pass the context directly. 
@@ -457,7 +478,7 @@ def staff_newsletter_dashboard(request):
                     send_transactional_email_task.delay(
                         request.user.email, 
                         f"[TEST] {subject}", 
-                        'core/generic_newsletter.html', 
+                        template_name, 
                         context
                     )
                     messages.success(request, f"Test email sent to {request.user.email}")
@@ -467,9 +488,9 @@ def staff_newsletter_dashboard(request):
             
             elif 'save_draft' in request.POST:
                 if draft_id:
-                    NewsletterCampaign.objects.filter(id=draft_id).update(subject=subject, content=content)
+                    NewsletterCampaign.objects.filter(id=draft_id).update(subject=subject, content=content, template=template)
                 else:
-                    NewsletterCampaign.objects.create(subject=subject, content=content, status='DRAFT')
+                    NewsletterCampaign.objects.create(subject=subject, content=content, status='DRAFT', template=template)
                 messages.success(request, "Campaign saved as draft.")
                 return redirect('core:staff_newsletter_history')
             
@@ -480,12 +501,13 @@ def staff_newsletter_dashboard(request):
                     campaign = NewsletterCampaign.objects.get(id=draft_id)
                     campaign.subject = subject
                     campaign.content = content
+                    campaign.template = template
                     campaign.status = 'SENT'
                     campaign.sent_at = timezone.now()
                     campaign.save()
                 else:
                     campaign = NewsletterCampaign.objects.create(
-                        subject=subject, content=content, status='SENT', sent_at=timezone.now()
+                        subject=subject, content=content, status='SENT', sent_at=timezone.now(), template=template
                     )
                 
                 send_campaign_blast_task.delay(subject, content, base_url, campaign.id)

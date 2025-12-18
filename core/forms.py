@@ -55,3 +55,12 @@ class StaffNewsletterForm(forms.Form):
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 10}),
         help_text="HTML content is supported."
     )
+    template = forms.ChoiceField(
+        choices=[
+            ('standard', 'Standard (Text Focused)'),
+            ('hero', 'Visual Impact (Big Image)'),
+            ('showcase', 'Product Showcase (Grid)'),
+        ],
+        initial='standard',
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )

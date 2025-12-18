@@ -146,7 +146,7 @@ class CoachProfileAdmin(ModelAdmin):
     list_filter = ('is_available_for_new_clients', 'time_zone')
     list_editable = ('is_available_for_new_clients',)
     search_fields = ('user__email', 'user__first_name', 'user__last_name', 'bio')
-    list_select_related = ('user') 
+    list_select_related = ('user',)
     
     @admin.display(description='User', ordering='user__username')
     def user_link(self, obj):
@@ -155,7 +155,7 @@ class CoachProfileAdmin(ModelAdmin):
 
     @admin.display(boolean=True, description='GCal Synced?')
     def has_gcal_connected(self, obj):
-        return hasattr(obj.user, 'google_calendar_credentials')
+        return bool(obj.user.google_calendar_credentials)
 
 # Also register Address model to be managed independently
 @admin.register(Address)

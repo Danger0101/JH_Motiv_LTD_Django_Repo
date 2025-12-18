@@ -249,14 +249,18 @@ def send_campaign_blast_task(subject, content, base_url, campaign_id):
             unsubscribe_path = reverse('core:unsubscribe_newsletter', args=[token])
             unsubscribe_url = f"{base_url.rstrip('/')}{unsubscribe_path}"
             
+            # Create context compatible with both generic and layout templates
+            newsletter_data = {'subject': subject, 'body': content}
             context = {
+                'newsletter': newsletter_data,
                 'body': content,
                 'subject': subject,
                 'unsubscribe_url': unsubscribe_url,
                 'base_url': base_url
             }
             
-            html_content = render_to_string('core/generic_newsletter.html', context)
+            template_name = f"emails/newsletters/layout_{campaign.template}.html"
+            html_content = render_to_string(template_name, context)
             text_content = strip_tags(html_content)
             
             try:
