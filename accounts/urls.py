@@ -8,6 +8,7 @@ app_name = 'accounts'
 urlpatterns = [
     path('update-marketing-preference/', views.update_marketing_preference, name='update_marketing_preference'),
     path('profile/', views.ProfileView.as_view(), name='account_profile'),
+    path('profile/dashboard-partial/', views.dashboard_partial, name='dashboard_partial'),
 
 
     path('profile/offerings/', views.profile_offerings_partial, name='profile_offerings'),
