@@ -189,29 +189,30 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
 
         # --- COACHING DASHBOARD DATA ---
-        context['coach_upcoming_sessions'] = []
-        context['pending_taster_requests'] = [] # Initialize
-        context['hosted_workshops'] = [] # Initialize
+        context['upcoming_sessions'] = []  # Renamed to match partials
+        context['pending_offers'] = []     # Renamed to match partials
+        context['hosted_workshops'] = []
 
         if hasattr(self.request.user, 'coach_profile'):
             coach_profile = self.request.user.coach_profile
-            # ... existing session query ...
-            context['coach_upcoming_sessions'] = SessionBooking.objects.filter(
+            
+            # 1. Upcoming Schedule
+            context['upcoming_sessions'] = SessionBooking.objects.filter(
                 coach=coach_profile,
                 start_datetime__gte=timezone.now(),
-                status__in=['BOOKED', 'RESCHEDULED'],
+                status__in=['BOOKED', 'RESCHEDULED', 'CONFIRMED'],
                 workshop__isnull=True
             ).select_related('client').order_by('start_datetime')
 
-            # Fetch Pending Taster Requests
-            context['pending_taster_requests'] = OneSessionFreeOffer.objects.filter(
+            # 2. Pending Requests (Taster Sessions)
+            context['pending_offers'] = OneSessionFreeOffer.objects.filter(
                 coach=coach_profile,
                 is_approved=False,
                 is_redeemed=False,
                 redemption_deadline__gte=timezone.now()
             ).select_related('client')
             
-            # NEW: Hosted Workshops
+            # 3. Hosted Workshops
             context['hosted_workshops'] = Workshop.objects.filter(
                 coach=coach_profile,
                 date__gte=timezone.now()
@@ -219,8 +220,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
                 booked_count=models.Count('bookings', filter=models.Q(bookings__status__in=['BOOKED', 'PENDING_PAYMENT']))
             ).order_by('date')
 
-        # For Client: My Taster Status (Already accessible via user.free_offers.all in template, 
-        # but explicitly adding it can be cleaner)
+        # For Client: My Taster Status
         context['my_taster_status'] = OneSessionFreeOffer.objects.filter(
             client=self.request.user
         ).order_by('-date_offered').first()
@@ -252,7 +252,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
 
             context['staff_30d_revenue'] = retail_revenue + coaching_revenue
 
-            # --- NEW: Chart Data ---
+            # 2. Chart Data
             daily_revenue = { (last_30_days_start + timedelta(days=i)).date(): Decimal('0.00') for i in range(30) }
 
             if Order:
@@ -281,30 +281,28 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             context['revenue_chart_labels'] = json.dumps([d.strftime('%b %d') for d in daily_revenue.keys()])
             context['revenue_chart_data'] = json.dumps([float(v) for v in daily_revenue.values()])
 
-            # 2. Growth Pulse (New Users Last 7 Days)
+            # 3. Growth Pulse
             context['staff_new_users_7d'] = get_user_model().objects.filter(date_joined__gte=last_7_days).count()
 
-            # 3. Operational Pulse (Active Coaching Clients)
+            # 4. Active Clients
             if ClientOfferingEnrollment:
                 context['staff_active_clients'] = ClientOfferingEnrollment.objects.filter(is_active=True).count()
 
-            # 4. Inventory Risks (Low Stock Items)
+            # 5. Inventory Risks
             if StockItem:
-                # Find variants with < 5 items in their pool
                 low_stock_qs = StockItem.objects.filter(quantity__lt=5).select_related('variant', 'variant__product')
                 context['staff_low_stock_count'] = low_stock_qs.count()
-                context['staff_low_stock_items'] = low_stock_qs[:5] # Show top 5 risks
+                context['staff_low_stock_items'] = low_stock_qs[:5]
 
-            # 5. Recent Orders (Existing logic, ensured)
-            if Dreamer:
-                context['staff_dreamer_count'] = Dreamer.objects.count()
-
-            # 6. Unpaid Commissions
+            # 6. Staff Unpaid Commissions
             if CoachingOrder:
                 unpaid_totals = CoachingOrder.objects.filter(payout_status='unpaid').aggregate(
                     coach_total=models.Sum('amount_coach'), referrer_total=models.Sum('amount_referrer')
                 )
                 context['staff_unpaid_commissions'] = (unpaid_totals['coach_total'] or Decimal('0.00')) + (unpaid_totals['referrer_total'] or Decimal('0.00'))
+
+            if Dreamer:
+                context['staff_dreamer_count'] = Dreamer.objects.count()
 
             if Order:
                 context['staff_recent_orders'] = Order.objects.select_related('user').order_by('-created_at')[:5]
@@ -331,6 +329,8 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             ).aggregate(total=models.Sum('amount_referrer'))['total'] or Decimal('0.00')
             total_unpaid_referrer = ref_unpaid
 
+        # NOTE: Explicitly adding total_unpaid_coach to context for the coach dashboard widget
+        context['total_unpaid_coach'] = total_unpaid_coach
         context['my_total_unpaid_earnings'] = total_unpaid_coach + total_unpaid_referrer
 
         # --- CLIENT ORDER HISTORY ---
@@ -338,7 +338,6 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             context['ecomm_orders'] = Order.objects.filter(user=self.request.user).order_by('-created_at')
         
         if CoachingOrder:
-            # Coaching orders are linked via ClientOfferingEnrollment
             context['coaching_orders'] = CoachingOrder.objects.filter(
                 enrollment__client=self.request.user
             ).select_related('enrollment', 'enrollment__offering').order_by('-created_at')
@@ -347,12 +346,11 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         upcoming_bookings = SessionBooking.objects.filter(
             client=self.request.user,
             start_datetime__gte=timezone.now(),
-            status__in=['BOOKED', 'RESCHEDULED']
+            status__in=['BOOKED', 'RESCHEDULED', 'CONFIRMED']
         ).select_related('coach__user', 'workshop').order_by('start_datetime')
         context['bookings'] = upcoming_bookings
         
         context['my_workshops'] = upcoming_bookings.filter(workshop__isnull=False)
-        
         context['has_urgent_booking'] = upcoming_bookings.filter(start_datetime__lte=timezone.now() + timedelta(hours=24)).exists()
 
         context['enrollments'] = ClientOfferingEnrollment.objects.filter(
@@ -405,16 +403,13 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             expiration_date__gte=timezone.now()
         ).order_by('-enrolled_on')
 
-        # --- NEW: "My Rewards" Wallet ---
+        # --- "My Rewards" Wallet ---
         now = timezone.now()
         
-        # 1. Currently Applied Coupon (Active in Cart)
         context['applied_coupon'] = None
         if cart.coupon and cart.coupon.active:
              context['applied_coupon'] = cart.coupon
 
-        # 2. Coupons specifically assigned to this user (Exclusive)
-        # We exclude the one currently applied to avoid duplication if it is also user-specific
         context['exclusive_coupons'] = []
         if Coupon:
             exclusive_qs = Coupon.objects.filter(
@@ -489,14 +484,14 @@ class StaffDashboardView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
         context['revenue_chart_labels'] = json.dumps([d.strftime('%b %d') for d in daily_revenue.keys()])
         context['revenue_chart_data'] = json.dumps([float(v) for v in daily_revenue.values()])
 
-        # 3. Growth Pulse (New Users Last 7 Days)
+        # 3. Growth Pulse
         context['staff_new_users_7d'] = get_user_model().objects.filter(date_joined__gte=last_7_days).count()
 
-        # 4. Operational Pulse (Active Coaching Clients)
+        # 4. Operational Pulse
         if ClientOfferingEnrollment:
             context['staff_active_clients'] = ClientOfferingEnrollment.objects.filter(is_active=True).count()
 
-        # 5. Inventory Risks (Low Stock Items)
+        # 5. Inventory Risks
         if StockItem:
             low_stock_qs = StockItem.objects.filter(quantity__lt=5).select_related('variant', 'variant__product')
             context['staff_low_stock_count'] = low_stock_qs.count()
@@ -517,12 +512,11 @@ def update_marketing_preference(request):
         is_subscribed = request.POST.get('is_subscribed') == 'on' 
         preference, created = MarketingPreference.objects.get_or_create(user=request.user)
         
-        # --- ADD THIS LOGIC ---
         if is_subscribed and not preference.is_subscribed:
             # If they are turning it ON, record the timestamp
             # Ensure your model has a 'subscribed_at' field, or add it to models.py first
-            preference.subscribed_at = timezone.now() 
-        # ----------------------
+            if hasattr(preference, 'subscribed_at'):
+                preference.subscribed_at = timezone.now() 
 
         preference.is_subscribed = is_subscribed
         preference.save()
@@ -541,7 +535,7 @@ def update_marketing_preference(request):
 def profile_offerings_partial(request):
     user_offerings = ClientOfferingEnrollment.objects.filter(client=request.user).order_by('-enrolled_on')
     
-    # FIX: Fetch OneSessionFreeOffers (Taster Sessions) so they can be displayed
+    # Fetch OneSessionFreeOffers (Taster Sessions) so they can be displayed
     free_offers = OneSessionFreeOffer.objects.filter(client=request.user).order_by('-date_offered')
     
     available_credits = ClientOfferingEnrollment.objects.filter(
@@ -571,20 +565,20 @@ def profile_bookings_partial(request):
 
     if active_tab == 'upcoming':
         bookings_list = bookings_qs.filter(
-            status__in=['BOOKED', 'RESCHEDULED'],
+            status__in=['BOOKED', 'RESCHEDULED', 'CONFIRMED'],
             start_datetime__gte=now - timedelta(minutes=60)
         ).order_by('start_datetime')
     elif active_tab == 'past':
         bookings_list = bookings_qs.filter(
             Q(status='COMPLETED') |
-            Q(status__in=['BOOKED', 'RESCHEDULED'], start_datetime__lt=now)
+            Q(status__in=['BOOKED', 'RESCHEDULED', 'CONFIRMED'], start_datetime__lt=now)
         ).order_by('-start_datetime')
     elif active_tab == 'canceled':
         bookings_list = bookings_qs.filter(status='CANCELED').order_by('-start_datetime')
     else:
         active_tab = 'upcoming'
         bookings_list = bookings_qs.filter(
-            status__in=['BOOKED', 'RESCHEDULED'],
+            status__in=['BOOKED', 'RESCHEDULED', 'CONFIRMED'],
             start_datetime__gte=now
         ).order_by('start_datetime')
 
@@ -655,7 +649,7 @@ def coach_clients_partial(request):
     session_enrollment_ids = SessionBooking.objects.filter(
         coach=coach_profile,
         start_datetime__gte=now,
-        status__in=['BOOKED', 'RESCHEDULED'],
+        status__in=['BOOKED', 'RESCHEDULED', 'CONFIRMED'],
         enrollment__isnull=False
     ).values_list('enrollment_id', flat=True).distinct()
 

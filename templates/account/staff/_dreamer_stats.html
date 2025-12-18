@@ -1,0 +1,8 @@
+<div class="bg-gradient-to-br from-indigo-500 to-purple-600 p-5 rounded-xl shadow-md text-white">
+    <h3 class="font-bold text-lg mb-1">Dreamer Community</h3>
+    <p class="text-indigo-100 text-sm mb-4">Total registered affiliates</p>
+    <div class="flex items-end justify-between">
+        <span class="text-4xl font-extrabold">{{ staff_dreamer_count }}</span>
+        <a href="{% url 'admin:dreamers_dreamerprofile_changelist' %}" target="_blank" class="bg-white bg-opacity-20 hover:bg-opacity-30 px-3 py-1 rounded text-xs font-bold transition">View All</a>
+    </div>
+</div>

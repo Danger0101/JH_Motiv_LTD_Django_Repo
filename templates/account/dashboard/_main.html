@@ -1,0 +1,35 @@
+<div class="mb-8 flex items-center justify-between">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-900">Main Menu</h2>
+        <p class="text-sm text-gray-500 mt-1">Overview of your account activity and rewards.</p>
+    </div>
+</div>
+
+{# Widgets: Pending Payouts & Taster Session #}
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+    {% include 'account/partials/dashboard/_widgets.html' %}
+</div>
+
+{# Coupons #}
+{% if applied_coupon or exclusive_coupons %}
+    {% include 'account/partials/dashboard/_coupons.html' %}
+{% endif %}
+
+{# Recent Activity #}
+<div class="mb-10">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-gray-900">Recent Activity</h3>
+        <span class="text-xs text-gray-400 flex items-center"><span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span> Live Updates</span>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden"
+            hx-get="{% url 'accounts:recent_activity_partial' %}"
+            hx-trigger="every 30s">
+        {% include 'account/partials/recent_activity.html' %}
+    </div>
+</div>
+
+{# Settings Tabs #}
+<div class="pt-8 border-t">
+    <h3 class="text-xl font-bold text-gray-900 mb-6">Config / Settings</h3>
+    {% include 'account/partials/dashboard/_settings.html' %}
+</div>

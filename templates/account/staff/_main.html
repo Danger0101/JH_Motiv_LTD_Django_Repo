@@ -1,0 +1,70 @@
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="flex justify-between items-center border-b pb-4">
+    <h2 class="text-2xl font-bold text-gray-800">Command Center</h2>
+    <a href="{% url 'admin:index' %}" target="_blank" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 flex items-center">
+        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+        Full Admin Panel
+    </a>
+</div>
+
+{# Top Grid Stats #}
+{% include 'account/partials/staff/_stats_grid.html' %}
+
+{# Revenue Chart #}
+{% include 'account/partials/staff/_revenue_chart.html' %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="lg:col-span-2 space-y-6">
+        {# Customer Lookup & Orders Table #}
+        {% include 'account/partials/staff/_customer_lookup.html' %}
+        {% include 'account/partials/staff/_recent_orders.html' %}
+    </div>
+
+    <div class="space-y-6">
+        {# Sidebar items like stock alerts #}
+        {% include 'account/partials/staff/_stock_alerts.html' %}
+        {% include 'account/partials/staff/_dreamer_stats.html' %}
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const ctx = document.getElementById('revenueChart');
+        if (ctx) {
+            const revenueLabels = {{ revenue_chart_labels|safe }};
+            const revenueData = {{ revenue_chart_data|safe }};
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: revenueLabels,
+                    datasets: [{
+                        label: 'Daily Revenue',
+                        data: revenueData,
+                        fill: true,
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        borderColor: 'rgba(79, 70, 229, 1)',
+                        tension: 0.3,
+                        pointBackgroundColor: 'rgba(79, 70, 229, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(79, 70, 229, 1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value, index, values) { return '£' + value; }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    });
+</script>
