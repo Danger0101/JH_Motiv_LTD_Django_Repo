@@ -1,0 +1,39 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+        <td style="background-color: #f3f4f6; padding: 20px; text-align: center;">
+            <span style="color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Fresh Drop</span>
+        </td>
+    </tr>
+    {% if newsletter.header_image %}
+    <tr>
+        <td>
+            <img src="{{ site_url }}{{ newsletter.header_image.url }}" style="width: 100%; display: block;">
+        </td>
+    </tr>
+    {% endif %}
+    
+    <tr>
+        <td style="background-color: #ffffff; padding: 40px;">
+            <h2 style="margin-top: 0; color: #111827;">{{ newsletter.subject }}</h2>
+            <div style="color: #4b5563; line-height: 1.5;">
+                {{ newsletter.body|safe|linebreaks }}
+            </div>
+            
+            {% if newsletter.cta_link %}
+            <table width="100%" style="margin-top: 24px;">
+                <tr>
+                    <td align="center">
+                        <a href="{{ newsletter.cta_link }}" style="border-bottom: 2px solid #000000; color: #000000; text-decoration: none; font-weight: bold; padding-bottom: 4px;">
+                            {{ newsletter.cta_text|default:"Shop Now" }}
+                        </a>
+                    </td>
+                </tr>
+            </table>
+            {% endif %}
+        </td>
+    </tr>
+</table>
+{% endblock %}

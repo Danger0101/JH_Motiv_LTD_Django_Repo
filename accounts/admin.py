@@ -142,11 +142,13 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
 
 @admin.register(CoachProfile)
 class CoachProfileAdmin(ModelAdmin):
-    list_display = ('user_link', 'time_zone', 'is_available_for_new_clients', 'has_gcal_connected')
+    list_display = ('user_link', 'time_zone', 'is_available_for_new_clients', 'has_gcal_connected', 'last_synced')
     list_filter = ('is_available_for_new_clients', 'time_zone')
     list_editable = ('is_available_for_new_clients',)
     search_fields = ('user__email', 'user__first_name', 'user__last_name', 'bio')
+    readonly_fields = ('last_synced',)
     list_select_related = ('user',)
+    actions = ['trigger_gcal_sync']
     
     @admin.display(description='User', ordering='user__username')
     def user_link(self, obj):
@@ -156,6 +158,21 @@ class CoachProfileAdmin(ModelAdmin):
     @admin.display(boolean=True, description='GCal Synced?')
     def has_gcal_connected(self, obj):
         return bool(obj.user.google_calendar_credentials)
+
+    @admin.action(description='Force GCal Sync for selected coaches')
+    def trigger_gcal_sync(self, request, queryset):
+        from coaching_booking.tasks import sync_single_coach_calendar
+        
+        triggered_count = 0
+        for coach_profile in queryset:
+            if coach_profile.user.google_calendar_credentials:
+                sync_single_coach_calendar.delay(coach_profile.id)
+                triggered_count += 1
+        
+        if triggered_count > 0:
+            self.message_user(request, f"Sync queued for {triggered_count} coach(es).", level=messages.SUCCESS)
+        else:
+            self.message_user(request, "No selected coaches have Google Calendar connected.", level=messages.WARNING)
 
 # Also register Address model to be managed independently
 @admin.register(Address)

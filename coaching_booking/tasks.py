@@ -168,8 +168,31 @@ def sync_google_calendar_pull_all():
         try:
             service = GoogleCalendarService(coach)
             service.sync_busy_slots()
+            # Update timestamp for auto-sync
+            coach.last_synced = timezone.now()
+            coach.save(update_fields=['last_synced'])
         except Exception as e:
             logger.error(f"Failed to sync calendar for coach {coach}: {e}")
+
+@shared_task
+def sync_single_coach_calendar(coach_id):
+    """
+    Syncs a specific coach's calendar (Manual Trigger).
+    """
+    try:
+        coach = CoachProfile.objects.get(id=coach_id)
+        # Check if credentials exist before trying
+        if hasattr(coach.user, 'google_calendar_credentials') and coach.user.google_calendar_credentials:
+            service = GoogleCalendarService(coach)
+            service.sync_busy_slots()
+            
+            # Update timestamp
+            coach.last_synced = timezone.now()
+            coach.save(update_fields=['last_synced'])
+            
+            logger.info(f"Manually synced calendar for coach {coach}")
+    except Exception as e:
+        logger.error(f"Failed to manual sync calendar for coach {coach_id}: {e}")
 
 @shared_task
 def send_upcoming_session_reminders():

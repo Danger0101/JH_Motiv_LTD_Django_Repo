@@ -110,6 +110,10 @@ class CoachProfile(models.Model):
         blank=True, null=True,
         help_text="Encrypted JSON: {'bank_name': '...', 'sort_code': '...', 'account_number': '...'}"
     )
+    last_synced = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Timestamp of the last successful Google Calendar sync."
+    )
 
     def __str__(self):
         return f"Profile for {self.user.get_full_name()}"

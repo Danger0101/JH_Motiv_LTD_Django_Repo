@@ -26,7 +26,7 @@ CSRF_TRUSTED_ORIGINS = ['https://jhmotiv-shop-ltd-official-040e4cbd5800.herokuap
 
 # --- CUSTOM URL CONFIGURATION ---
 # This is required by the coaching_booking email templates for generating absolute links
-SITE_URL = 'https://jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com'
+SITE_URL = 'https://jhmotiv.shop'
 
 # Application definition
 INSTALLED_APPS = [    
