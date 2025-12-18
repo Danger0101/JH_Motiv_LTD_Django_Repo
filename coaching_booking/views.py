@@ -724,24 +724,22 @@ def staff_create_guest_account(request):
             reverse('coaching_booking:guest_access', args=[guest_token])
         )
         
-        if random_password:
-            email_message = "A guest account has been created for you.\n"
-        else:
-            email_message = "Here is the access link for your account.\n"
-
-        if enrolled_offering_name:
-            email_message += f"You have been enrolled in: {enrolled_offering_name}\n"
-        email_message += f"Access your dashboard here: {access_url}\n\nUsername: {email}"
-        if random_password:
-            email_message += f"\nPassword: {random_password}"
+        context = {
+      cont  ext = {
+            'site_name': getattr(settings, 'SITE_NAME', 'JH Motiv'),
+            'access_url': access_url,
+            'username': email,
+            'password': random_password,
+            'enrolled_offering_name': enrolled_offering_name,
+            'is_new_account': bool(random_password)
+        }
         
         try:
-            send_mail(
-                subject=f"Welcome to {getattr(settings, 'SITE_NAME', 'JH Motiv')}",
-                message=email_message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                fail_silently=False,
+            send_transactional_email(
+                recipient_email=email,
+                subject=f"Welcome to {context['site_name']}",
+                template_name='emails/guest_welcome.html',
+                context=context
             )
         except Exception as e:
             messages.error(request, f"Error sending email: {e}")
@@ -831,16 +829,23 @@ def resend_guest_invite(request, user_id):
         
     token = user.billing_notes
     access_url = request.build_absolute_uri(
-        reverse('coaching_booking:guest_access', args=[token])
+     
+    
+    try:   reverse('coaching_booking:guest_access', args=[token])
     )
     
     try:
-        send_mail(
-            subject=f"Access Link for {getattr(settings, 'SITE_NAME', 'JH Motiv')}",
-            message=f"Here is your access link again:\n{access_url}\n\nClicking this will log you in immediately.",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=False,
+        context = {
+            'site_name': getattr(settings, 'SITE_NAME', 'JH Motiv'),
+            'access_url': access_url,
+            'username': user.email,
+            'is_new_account': False
+        }
+        send_transactional_email(
+            recipient_email=user.email,
+            subject=f"Access Link for {context['site_name']}",
+            template_name='emails/guest_welcome.html',
+            context=context
         )
         
         user.last_invite_sent = timezone.now()
@@ -927,11 +932,19 @@ def book_workshop(request, slug):
                 )
                 
                 # Send Welcome Email with Password
-                send_mail(
-                    subject=f"Welcome to {settings.SITE_NAME}",
-                    message=f"Account created for your workshop booking.\nAccess your sessions here: {access_url}\n\nUsername: {email}\nPassword: {random_password}",
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[email],
+                context = {
+                    'site_name': getattr(settings, 'SITE_NAME', 'JH Motiv'),
+                    'access_url': access_url,
+                    'username': email,
+                    'password': random_password,
+                    'workshop_name': workshop.name,
+                    'is_new_account': True
+                }
+                send_transactional_email(
+                    recipient_email=email,
+                    subject=f"Welcome to {context['site_name']}",
+                    template_name='emails/guest_welcome.html',
+                    context=context
                 )
 
         # 3. CREATE BOOKING
