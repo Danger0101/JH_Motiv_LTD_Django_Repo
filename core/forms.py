@@ -51,6 +51,7 @@ class StaffNewsletterForm(forms.Form):
         max_length=200, 
         widget=forms.TextInput(attrs={'class': 'form-control'})
     )
+    header_image = forms.ImageField(required=False, widget=forms.FileInput(attrs={'class': 'form-control'}))
     content = forms.CharField(
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 10}),
         help_text="HTML content is supported."

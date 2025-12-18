@@ -430,11 +430,12 @@ def staff_newsletter_dashboard(request):
         initial_data = {'subject': campaign.subject, 'content': campaign.content, 'template': campaign.template}
 
     if request.method == 'POST':
-        form = StaffNewsletterForm(request.POST)
+        form = StaffNewsletterForm(request.POST, request.FILES)
         if form.is_valid():
             subject = form.cleaned_data['subject']
             content = form.cleaned_data['content']
             template = form.cleaned_data['template']
+            header_image = form.cleaned_data.get('header_image')
             
             # Helper to get base URL
             base_url = request.build_absolute_uri('/').rstrip('/')
@@ -444,8 +445,23 @@ def staff_newsletter_dashboard(request):
                 # FIX: Explicitly create a dummy token for preview
                 unsubscribe_url = f"{base_url}/newsletter/unsubscribe/preview-token/"
                 
+                # Handle the image for preview
+                header_image_url = None
+                if header_image:
+                    # Note: Handling temp image previews is complex. 
+                    # We pass here, relying on saved drafts or placeholders if needed.
+                    pass 
+                elif draft_id:
+                    campaign = NewsletterCampaign.objects.get(id=draft_id)
+                    if campaign.header_image:
+                        header_image_url = campaign.header_image.url
+
                 # Create context compatible with both generic (uses 'body') and layout templates (uses 'newsletter.body')
-                newsletter_data = {'subject': subject, 'body': content}
+                newsletter_data = {
+                    'subject': subject, 
+                    'body': content,
+                    'header_image': {'url': header_image_url} if header_image_url else None
+                }
                 context = {
                     'newsletter': newsletter_data, 
                     'body': content, 
@@ -488,9 +504,15 @@ def staff_newsletter_dashboard(request):
             
             elif 'save_draft' in request.POST:
                 if draft_id:
-                    NewsletterCampaign.objects.filter(id=draft_id).update(subject=subject, content=content, template=template)
+                    campaign = NewsletterCampaign.objects.get(id=draft_id)
+                    campaign.subject = subject
+                    campaign.content = content
+                    campaign.template = template
+                    if header_image:
+                        campaign.header_image = header_image
+                    campaign.save()
                 else:
-                    NewsletterCampaign.objects.create(subject=subject, content=content, status='DRAFT', template=template)
+                    NewsletterCampaign.objects.create(subject=subject, content=content, status='DRAFT', template=template, header_image=header_image)
                 messages.success(request, "Campaign saved as draft.")
                 return redirect('core:staff_newsletter_history')
             
@@ -502,12 +524,14 @@ def staff_newsletter_dashboard(request):
                     campaign.subject = subject
                     campaign.content = content
                     campaign.template = template
+                    if header_image:
+                        campaign.header_image = header_image
                     campaign.status = 'SENT'
                     campaign.sent_at = timezone.now()
                     campaign.save()
                 else:
                     campaign = NewsletterCampaign.objects.create(
-                        subject=subject, content=content, status='SENT', sent_at=timezone.now(), template=template
+                        subject=subject, content=content, status='SENT', sent_at=timezone.now(), template=template, header_image=header_image
                     )
                 
                 send_campaign_blast_task.delay(subject, content, base_url, campaign.id)

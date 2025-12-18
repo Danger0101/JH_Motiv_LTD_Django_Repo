@@ -29,6 +29,7 @@ class NewsletterCampaign(models.Model):
     recipient_count = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='SENT')
     template = models.CharField(max_length=20, choices=TEMPLATE_CHOICES, default='standard')
+    header_image = models.ImageField(upload_to='campaigns/', blank=True, null=True, help_text="Header image for Hero layouts")
 
     def __str__(self):
         date_str = self.sent_at.strftime('%Y-%m-%d') if self.sent_at else "Draft"
