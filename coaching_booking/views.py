@@ -214,7 +214,14 @@ def session_payment_page(request, booking_id):
 @require_POST
 @transaction.atomic
 def cancel_session(request, booking_id):
-    booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
+    booking = get_object_or_404(SessionBooking, id=booking_id)
+    
+    is_client = booking.client == request.user
+    is_coach = booking.coach.user == request.user
+    
+    if not (is_client or is_coach):
+        return HttpResponseForbidden("You are not authorized to cancel this session.")
+
     coach = booking.coach
     client = booking.client
     
@@ -241,10 +248,18 @@ def cancel_session(request, booking_id):
     client_msg = ""
     if is_refunded and booking.enrollment:
         client_msg = "Your session credit has been successfully restored to your account."
-        messages.success(request, "Session canceled successfully. Your credit has been restored.")
     elif not is_refunded:
         client_msg = "Your session was canceled. As this was within 24 hours of the start time, the session credit was forfeited per our Terms of Service."
-        messages.warning(request, "Session canceled. The credit was forfeited due to late cancellation.")
+
+    if is_client:
+        if is_refunded and booking.enrollment:
+            messages.success(request, "Session canceled successfully. Your credit has been restored.")
+        else:
+            messages.warning(request, "Session canceled. The credit was forfeited due to late cancellation.")
+    elif is_coach:
+        messages.success(request, "Session canceled successfully. The client has been notified.")
+        # Override client message for email context if coach canceled
+        client_msg = f"Coach {coach.user.get_full_name()} has canceled this session. Your credit has been restored."
 
     try:
         # Format dates for email context
@@ -253,9 +268,11 @@ def cancel_session(request, booking_id):
         original_time_end_str = booking.end_datetime.strftime("%I:%M %p UTC")
 
         dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
+        
+        # Email to Client
         send_transactional_email(
             recipient_email=client.email,
-            subject="Your Coaching Session Has Been Canceled",
+            subject=f"Session Canceled by Coach {coach.user.get_full_name()}" if is_coach else "Your Coaching Session Has Been Canceled",
             template_name='emails/cancellation_confirmation.html',
             context={
                 'user_id': client.pk,
@@ -269,25 +286,30 @@ def cancel_session(request, booking_id):
             }
         )
 
-        send_transactional_email(
-            recipient_email=coach.user.email,
-            subject=f"Session Canceled by {client.get_full_name()}",
-            template_name='emails/coach_cancellation_notification.html',
-            context={
-                'coach_id': coach.pk,
-                'client_id': client.pk,
-                'booking_id': booking.pk,
-                'dashboard_url': dashboard_url,
-                'original_date': original_date_str,
-                'original_time': original_time_start_str,
-                'original_time_start': original_time_start_str,
-                'original_time_end': original_time_end_str,
-            }
-        )
+        # Email to Coach (only if client canceled)
+        if is_client:
+            send_transactional_email(
+                recipient_email=coach.user.email,
+                subject=f"Session Canceled by {client.get_full_name()}",
+                template_name='emails/coach_cancellation_notification.html',
+                context={
+                    'coach_id': coach.pk,
+                    'client_id': client.pk,
+                    'booking_id': booking.pk,
+                    'dashboard_url': dashboard_url,
+                    'original_date': original_date_str,
+                    'original_time': original_time_start_str,
+                    'original_time_start': original_time_start_str,
+                    'original_time_end': original_time_end_str,
+                }
+            )
     except Exception as e:
         logger.error(f"CRITICAL: Cancellation for booking {booking.id} succeeded but failed to send emails. Error: {e}")
 
-    return render(request, 'account/profile_bookings.html', {'active_tab': 'canceled'})
+    # Redirect to profile to refresh the dashboard
+    response = HttpResponse(status=200)
+    response['HX-Redirect'] = reverse('accounts:account_profile')
+    return response
 
 @login_required
 def reschedule_session_form(request, booking_id):

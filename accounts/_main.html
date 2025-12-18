@@ -1,0 +1,67 @@
+<h2 class="text-2xl font-bold text-gray-800 border-b pb-4 mb-6">Guild Hall (Coach Dashboard)</h2>
+
+{# 1. Pending Requests Section (New) #}
+{% include 'account/partials/coach/_pending_requests.html' %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    
+    <div class="lg:col-span-2 space-y-8">
+        {# 2. Upcoming Schedule (New) #}
+        {% include 'account/partials/coach/_schedule.html' %}
+        
+        <div>
+            <h3 class="font-bold text-gray-800 mb-4">My Clients</h3>
+            <div hx-get="{% url 'accounts:coach_clients_partial' %}" hx-trigger="load" hx-swap="innerHTML">
+                <div class="animate-pulse space-y-3">
+                    <div class="h-12 bg-gray-100 rounded"></div>
+                    <div class="h-12 bg-gray-100 rounded"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="space-y-6">
+        {# 3. Earnings Widget (New Quick View) #}
+        <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 text-white shadow-lg">
+            <h3 class="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Unpaid Earnings</h3>
+            <p class="text-3xl font-extrabold mb-4">£{{ total_unpaid_coach|floatformat:2 }}</p>
+            <a href="#" @click.prevent="activeTab = 'earnings'" class="block w-full text-center py-2 bg-white bg-opacity-10 hover:bg-opacity-20 rounded-lg text-sm font-bold transition">
+                View Payout History
+            </a>
+        </div>
+
+        {# 4. Availability Management (Existing) #}
+        <div>
+            <h3 class="font-bold text-gray-800 mb-4">Availability</h3>
+            <div x-data="{ mode: 'weekly' }" class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                <div class="flex space-x-2 mb-4">
+                    <button @click="mode = 'weekly'" :class="mode === 'weekly' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'" class="px-3 py-1 text-xs font-bold rounded transition">Weekly</button>
+                    <button @click="mode = 'override'" :class="mode === 'override' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'" class="px-3 py-1 text-xs font-bold rounded transition">Overrides</button>
+                    <button @click="mode = 'vacation'" :class="mode === 'vacation' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'" class="px-3 py-1 text-xs font-bold rounded transition">Vacation</button>
+                </div>
+                
+                <div x-show="mode === 'weekly'" hx-get="{% url 'coaching_availability:profile_availability' %}" hx-trigger="load once"></div>
+                <div x-show="mode === 'override'" hx-get="{% url 'coaching_availability:profile_override' %}" hx-trigger="intersect once"></div>
+                <div x-show="mode === 'vacation'" hx-get="{% url 'coaching_availability:profile_vacation' %}" hx-trigger="intersect once"></div>
+            </div>
+        </div>
+
+        {# 5. Google Calendar (Existing) #}
+        <div class="flex items-center justify-between p-4 bg-blue-50 rounded-xl border border-blue-100">
+            <div class="flex items-center">
+                <img src="https://www.gstatic.com/images/branding/product/1x/calendar_48dp.png" alt="GCal" class="w-8 h-8 mr-3">
+                <div>
+                    <h4 class="font-bold text-gray-800 text-sm">Google Calendar</h4>
+                    <p class="text-[10px] text-gray-600">
+                        {% if user.coach_profile.google_credentials %}Synced{% else %}Not Connected{% endif %}
+                    </p>
+                </div>
+            </div>
+            {% if user.coach_profile.google_credentials %}
+                <a href="{% url 'gcal:google_calendar_disconnect' %}" class="text-xs font-bold text-red-600 hover:underline">Unlink</a>
+            {% else %}
+                <a href="{% url 'gcal:google_calendar_init' %}" class="px-3 py-1.5 bg-white text-blue-600 text-xs font-bold rounded shadow-sm hover:shadow border border-blue-200">Sync</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
