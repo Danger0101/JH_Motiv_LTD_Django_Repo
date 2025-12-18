@@ -107,7 +107,7 @@ class NewsletterAdmin(ModelAdmin):
                 from .tasks import send_transactional_email_task
                 
                 context = {
-                    'newsletter': newsletter,
+                    'newsletter_id': newsletter.id,
                     'unsubscribe_url': "#", # Dummy link for test
                 }
                 # Select template based on model choice

@@ -233,7 +233,7 @@ class Workshop(models.Model):
         if hasattr(self, 'booked_count'):
             return self.total_attendees - self.booked_count
         # Fallback: Count confirmed bookings directly via reverse relationship
-        return self.total_attendees - self.bookings.filter(status='BOOKED').count()
+        return self.total_attendees - self.bookings.filter(status__in=['BOOKED', 'PENDING_PAYMENT']).count()
 
     @property
     def is_full(self):

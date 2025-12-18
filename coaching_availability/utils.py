@@ -54,7 +54,7 @@ def get_coach_available_slots(coach_profile, start_date, end_date, session_lengt
             coach=coach_profile,
             start_datetime__date__gte=start_date,
             start_datetime__date__lte=end_date,
-            status='BOOKED'
+            status__in=['BOOKED', 'RESCHEDULED', 'PENDING_PAYMENT']
         )
         for booking in booked_sessions:
             start_mins = _time_to_minutes(booking.start_datetime.time())

@@ -146,9 +146,12 @@ def sync_workshop_calendar_push(workshop_id):
         result = service.push_workshop(workshop)
         
         if result:
-            # Result expected to be dict or tuple with id and link
-            # This depends on your Service implementation
-            pass 
+            event_id, meet_link = result
+            # Save updates to the DB
+            workshop.gcal_event_id = event_id
+            if meet_link:
+                workshop.meeting_link = meet_link
+            workshop.save(update_fields=['gcal_event_id', 'meeting_link'])
             
     except Workshop.DoesNotExist:
         pass

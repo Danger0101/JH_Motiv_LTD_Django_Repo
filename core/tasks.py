@@ -36,6 +36,7 @@ def send_transactional_email_task(self, recipient_email, subject, template_name,
         coach_id = context.get('coach_id')
         client_id = context.get('client_id')
         offer_id = context.get('offer_id')
+        newsletter_id = context.get('newsletter_id')
         
         # Fetch the actual Django objects for template rendering
         if order_id:
@@ -90,6 +91,13 @@ def send_transactional_email_task(self, recipient_email, subject, template_name,
                 context['offer'] = OneSessionFreeOffer.objects.get(pk=offer_id)
             except Exception as e:
                 logger.warning(f"OneSessionFreeOffer ID {offer_id} not found for email task: {e}")
+
+        if newsletter_id:
+            try:
+                Newsletter = apps.get_model('core', 'Newsletter')
+                context['newsletter'] = Newsletter.objects.get(pk=newsletter_id)
+            except Exception as e:
+                logger.warning(f"Newsletter ID {newsletter_id} not found for email task: {e}")
         # --- END FIX ---
 
         # Add the site name to the context for branding
