@@ -1,0 +1,12 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% block content_title %}
+    {{ block.super }}
+    <div style="margin-top: 10px; padding: 10px; background-color: #f3f4f6; border-radius: 8px; border: 1px solid #e5e7eb;">
+        <h3 style="margin: 0; font-size: 14px; color: #374151;">📊 Admin Note</h3>
+        <p style="margin: 5px 0 0; font-size: 13px; color: #6b7280;">
+            Use the <strong>"Export Unpaid Payouts to CSV"</strong> action in the dropdown menu to generate banking files for weekly payouts.
+        </p>
+    </div>
+{% endblock %}
