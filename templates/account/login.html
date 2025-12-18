@@ -39,7 +39,7 @@
         <h2 class="text-3xl font-black mb-2 text-white tracking-tight">PLAYER LOGIN</h2>
         <p class="text-gray-400 text-sm font-mono mb-8">> Enter credentials to resume session...</p>
 
-        {% url 'account:login' as login_url %}
+        {% url 'accounts:login' as login_url %}
         
         <form method="post" action="{{ login_url }}" hx-post="{{ login_url }}" hx-target="#login-form-container" hx-swap="outerHTML">
             {% csrf_token %}
@@ -79,7 +79,7 @@
                 </div>
                 {% endif %}
                 
-                <a class="text-sm font-medium text-blue-400 hover:text-blue-300" href="{% url 'account:password_reset' %}">
+                <a class="text-sm font-medium text-blue-400 hover:text-blue-300" href="{% url 'accounts:password_reset' %}">
                     {% translate "Lost Credentials?" %}
                 </a>
             </div>
@@ -96,7 +96,7 @@
         {% if ACCOUNT_ALLOW_REGISTRATION %}
         <p class="mt-8 text-center text-sm text-gray-500">
             {% translate "New Player?" %}
-            <a href="{% url 'account:signup' %}" class="font-bold text-blue-400 hover:text-blue-300 ml-1">
+            <a href="{% url 'accounts:signup' %}" class="font-bold text-blue-400 hover:text-blue-300 ml-1">
                 {% translate "Create Character" %}
             </a>
         </p>
