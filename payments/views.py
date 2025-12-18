@@ -828,7 +828,7 @@ class MyEarningsView(ListView):
     def get_template_names(self):
         # Return partial template for HTMX requests (keeping user in dashboard)
         if self.request.headers.get('HX-Request'):
-            return ['template_name]
+            return ['account/partials/earnings/_main.html']
 
     def get_queryset(self):
         user = self.request.user
