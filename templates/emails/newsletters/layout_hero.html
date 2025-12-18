@@ -1,0 +1,11 @@
+{% extends "emails/newsletters/layout_standard.html" %}
+
+{% block content %}
+    {% if newsletter.header_image %}
+    <div style="border-bottom: 1px solid #00ff41; margin-bottom: 20px;">
+        <img src="{{ base_url }}{{ newsletter.header_image.url }}" alt="Hero Image" style="width: 100%; display: block;">
+    </div>
+    {% endif %}
+
+    {{ block.super }}
+{% endblock %}

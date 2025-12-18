@@ -1,0 +1,22 @@
+{% extends "emails/newsletters/layout_standard.html" %}
+
+{% block content %}
+    {{ block.super }}
+
+    <div style="margin-top: 20px; border-top: 1px dashed #00ff41; padding-top: 20px;">
+        <h3 style="color: #00ff41;">> DETECTED_LOOT_DROPS:</h3>
+        
+        <table width="100%" cellpadding="5">
+            <tr>
+                <td width="50%" style="border: 1px solid #333; padding: 10px;">
+                    <strong style="color: #fff;">New Merch</strong><br>
+                    <a href="{{ base_url }}/shop/" style="color: #00ff41;">[ VIEW ]</a>
+                </td>
+                <td width="50%" style="border: 1px solid #333; padding: 10px;">
+                    <strong style="color: #fff;">Coaching</strong><br>
+                    <a href="{{ base_url }}/coaching/" style="color: #00ff41;">[ BOOK ]</a>
+                </td>
+            </tr>
+        </table>
+    </div>
+{% endblock %}

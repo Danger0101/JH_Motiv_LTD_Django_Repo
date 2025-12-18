@@ -119,9 +119,11 @@
             </div>
             
             <div class="content">
-                {{ body|safe }}
+                {% block content %}
+                    {{ body|safe }}
+                {% endblock %}
             </div>
-
+            
             <div class="footer">
                 <p>&gt; SYSTEM_MSG: You are receiving this because you joined the Guild.</p>
                 
