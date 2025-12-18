@@ -12,7 +12,7 @@ except (OSError, ImportError):
 
 from django.core import signing
 from django.urls import reverse
-from .models import Newsletter, NewsletterSubscriber
+from .models import Newsletter, NewsletterSubscriber, NewsletterCampaign
 
 logger = logging.getLogger(__name__)
 
@@ -231,3 +231,56 @@ def send_newsletter_blast_task(newsletter_id):
         
     except Newsletter.DoesNotExist:
         return "Newsletter not found"
+
+@shared_task
+def send_campaign_blast_task(subject, content, base_url, campaign_id):
+    """
+    Sends a simple text/HTML campaign (NewsletterCampaign) to all subscribers.
+    """
+    try:
+        campaign = NewsletterCampaign.objects.get(id=campaign_id)
+        subscribers = NewsletterSubscriber.objects.filter(is_active=True)
+        
+        success_count = 0
+        
+        for sub in subscribers:
+            # Generate secure unsubscribe link
+            token = signing.dumps(sub.email, salt='newsletter-unsubscribe')
+            unsubscribe_path = reverse('core:unsubscribe_newsletter', args=[token])
+            unsubscribe_url = f"{base_url.rstrip('/')}{unsubscribe_path}"
+            
+            context = {
+                'body': content,
+                'subject': subject,
+                'unsubscribe_url': unsubscribe_url,
+                'base_url': base_url
+            }
+            
+            html_content = render_to_string('core/generic_newsletter.html', context)
+            text_content = strip_tags(html_content)
+            
+            try:
+                send_mail(
+                    subject=subject,
+                    message=text_content,
+                    html_message=html_content,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[sub.email],
+                    fail_silently=False
+                )
+                success_count += 1
+            except Exception as e:
+                logger.error(f"Failed to send campaign email to {sub.email}: {e}")
+        
+        # Update status
+        campaign.status = 'SENT'
+        campaign.sent_at = timezone.now()
+        campaign.save()
+
+        return f"Sent {success_count} emails for campaign: {subject}"
+        
+    except NewsletterCampaign.DoesNotExist:
+        return "Campaign not found"
+    except Exception as e:
+        logger.error(f"Campaign blast failed: {e}", exc_info=True)
+        return f"Error: {e}"

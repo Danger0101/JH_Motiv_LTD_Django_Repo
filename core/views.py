@@ -33,7 +33,7 @@ from products.models import Product
 from .forms import NewsletterSubscriptionForm, StaffNewsletterForm
 from .models import NewsletterSubscriber, NewsletterCampaign, CheatUsage, EmailResendLog
 from .cheats import CHEAT_CODES
-from .tasks import send_welcome_email_with_pdf_task, send_newsletter_blast_task, send_transactional_email_task
+from .tasks import send_welcome_email_with_pdf_task, send_newsletter_blast_task, send_transactional_email_task, send_campaign_blast_task
 
 logger = logging.getLogger(__name__)
 
@@ -488,7 +488,7 @@ def staff_newsletter_dashboard(request):
                         subject=subject, content=content, status='SENT', sent_at=timezone.now()
                     )
                 
-                send_newsletter_blast_task.delay(subject, content, base_url, campaign.id)
+                send_campaign_blast_task.delay(subject, content, base_url, campaign.id)
                 messages.success(request, "Newsletter queued for sending!")
                 return redirect('core:staff_newsletter_dashboard')
     else:
