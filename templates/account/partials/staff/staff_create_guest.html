@@ -39,9 +39,16 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
             <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
                 Create & Send Email
+            </button>
+            <button hx-post="{% url 'coaching_booking:staff_send_password_reset' %}" 
+                    hx-target="#guest-create-container" 
+                    hx-swap="innerHTML"
+                    class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" 
+                    type="button">
+                Reset Password
             </button>
         </div>
     </form>

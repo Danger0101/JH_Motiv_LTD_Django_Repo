@@ -26,6 +26,7 @@ urlpatterns = [
     path('booking/pay/<int:booking_id>/', views.session_payment_page, name='session_payment_page'),
     path('guest-access/<str:token>/', views.guest_access_view, name='guest_access'),
     path('staff/create-guest/', views.staff_create_guest_account, name='staff_create_guest'),
+    path('staff/send-password-reset/', views.staff_send_password_reset, name='staff_send_password_reset'),
     path('staff/recent-guests/', views.recent_guests_widget, name='recent_guests_widget'),
     path('staff/resend-invite/<int:user_id>/', views.resend_guest_invite, name='resend_guest_invite'),
     path('staff/delete-guest/<int:user_id>/', views.delete_guest_account, name='delete_guest_account'),

@@ -16,6 +16,7 @@ from django.http import HttpResponse, HttpResponseForbidden
 import stripe
 from django.contrib.auth import login
 from django.utils.crypto import get_random_string
+from django.contrib.auth.forms import PasswordResetForm
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
 
@@ -730,16 +731,56 @@ def staff_create_guest_account(request):
         if random_password:
             email_message += f"\nPassword: {random_password}"
         
-        send_mail(
-            subject=f"Welcome to {settings.SITE_NAME}",
-            message=email_message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-        )
+        try:
+            send_mail(
+                subject=f"Welcome to {settings.SITE_NAME}",
+                message=email_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            messages.error(request, f"Error sending email: {e}")
         
         action_verb = "created" if random_password else "updated"
         messages.success(request, f"Guest account {action_verb} for {email}. Email sent.")
         return redirect('coaching_booking:staff_create_guest')
+        
+    return render(request, 'account/partials/staff/staff_create_guest.html', {'offerings': offerings})
+
+@login_required
+@require_POST
+def staff_send_password_reset(request):
+    if not request.user.is_staff:
+        return HttpResponseForbidden("Only staff can perform this action.")
+    
+    email = request.POST.get('email')
+    offerings = Offering.objects.filter(active_status=True)
+    
+    if not email:
+        messages.error(request, "Email is required.")
+        return render(request, 'account/partials/staff/staff_create_guest.html', {'offerings': offerings})
+
+    # Find user by email or username
+    user = User.objects.filter(Q(email=email) | Q(username=email)).first()
+    
+    if user:
+        # Use Django's built-in PasswordResetForm to generate the standard reset email
+        form = PasswordResetForm({'email': user.email})
+        if form.is_valid():
+            try:
+                form.save(
+                    request=request,
+                    use_https=request.is_secure(),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                )
+                messages.success(request, f"Password reset email sent to {user.email}.")
+            except Exception as e:
+                messages.error(request, f"Error sending password reset: {e}")
+        else:
+            messages.error(request, "Error generating password reset.")
+    else:
+        messages.error(request, f"No user found matching '{email}'.")
         
     return render(request, 'account/partials/staff/staff_create_guest.html', {'offerings': offerings})
 
