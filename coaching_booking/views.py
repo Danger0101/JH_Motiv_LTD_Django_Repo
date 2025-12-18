@@ -675,22 +675,25 @@ def staff_create_guest_account(request):
             messages.error(request, "Email and Name are required.")
             return render(request, 'account/partials/staff/staff_create_guest.html', {'offerings': offerings})
 
-        if User.objects.filter(email=email).exists():
-            messages.error(request, "User with this email already exists.")
-            return render(request, 'account/partials/staff/staff_create_guest.html', {'offerings': offerings})
+        user = User.objects.filter(Q(email=email) | Q(username=email)).first()
+        random_password = None
+
+        if not user:
+            first_name = full_name.split(' ')[0]
+            last_name = ' '.join(full_name.split(' ')[1:]) if ' ' in full_name else ''
+            random_password = get_random_string(12)
             
-        first_name = full_name.split(' ')[0]
-        last_name = ' '.join(full_name.split(' ')[1:]) if ' ' in full_name else ''
-        random_password = get_random_string(12)
-        
-        user = User.objects.create_user(
-            username=email,
-            email=email,
-            password=random_password,
-            first_name=first_name,
-            last_name=last_name,
-            business_name=business_name
-        )
+            user = User.objects.create_user(
+                username=email,
+                email=email,
+                password=random_password,
+                first_name=first_name,
+                last_name=last_name,
+                business_name=business_name
+            )
+        elif business_name and not user.business_name:
+            user.business_name = business_name
+            user.save()
         
         guest_token = get_random_string(32)
         user.billing_notes = guest_token
@@ -716,10 +719,16 @@ def staff_create_guest_account(request):
             reverse('coaching_booking:guest_access', args=[guest_token])
         )
         
-        email_message = "A guest account has been created for you.\n"
+        if random_password:
+            email_message = "A guest account has been created for you.\n"
+        else:
+            email_message = "Here is the access link for your account.\n"
+
         if enrolled_offering_name:
             email_message += f"You have been enrolled in: {enrolled_offering_name}\n"
-        email_message += f"Access your dashboard here: {access_url}\n\nUsername: {email}\nPassword: {random_password}"
+        email_message += f"Access your dashboard here: {access_url}\n\nUsername: {email}"
+        if random_password:
+            email_message += f"\nPassword: {random_password}"
         
         send_mail(
             subject=f"Welcome to {settings.SITE_NAME}",
@@ -728,7 +737,8 @@ def staff_create_guest_account(request):
             recipient_list=[email],
         )
         
-        messages.success(request, f"Guest account created for {email}. Email sent.")
+        action_verb = "created" if random_password else "updated"
+        messages.success(request, f"Guest account {action_verb} for {email}. Email sent.")
         return redirect('coaching_booking:staff_create_guest')
         
     return render(request, 'account/partials/staff/staff_create_guest.html', {'offerings': offerings})
@@ -832,7 +842,7 @@ def book_workshop(request, slug):
                 user.save()
         else:
             # Check if user exists
-            existing_user = User.objects.filter(email=email).first()
+            existing_user = User.objects.filter(Q(email=email) | Q(username=email)).first()
             if existing_user:
                 # OPTION B: Auto-link (Easier for User, requires trust)
                 user = existing_user
