@@ -6,14 +6,26 @@
 
 {% block content %}
 <div class="max-w-md mx-auto py-12 px-4 sm:px-6 lg:px-8">
-    <div class="p-8 bg-gray-900 shadow-2xl rounded-xl border border-gray-700 relative overflow-hidden" id="login-form-container">
+    <div class="p-8 shadow-2xl rounded-xl border relative overflow-hidden" id="login-form-container">
         <style>
+            /* --- BRAND CUSTOMIZATION --- */
+            #login-form-container {
+                --brand-primary: #3b82f6;       /* Main Brand Color (Buttons, Links) */
+                --brand-primary-hover: #1d4ed8; /* Hover State */
+                --brand-bg: #111827;            /* Card Background */
+                --brand-border: #374151;        /* Card Border */
+                --brand-input-bg: #1f2937;      /* Input Background */
+                
+                background-color: var(--brand-bg);
+                border-color: var(--brand-border);
+            }
+
             #login-form-container input:not([type='checkbox']):not([type='hidden']),
             #login-form-container select,
             #login-form-container textarea {
-                background-color: #1f2937;
+                background-color: var(--brand-input-bg);
                 color: #ffffff;
-                border: 1px solid #374151;
+                border: 1px solid var(--brand-border);
                 width: 100%;
                 padding: 0.5rem 0.75rem;
                 border-radius: 0.375rem;
@@ -22,8 +34,24 @@
             #login-form-container select:focus,
             #login-form-container textarea:focus {
                 outline: none;
-                border-color: #3b82f6;
-                box-shadow: 0 0 0 1px #3b82f6;
+                border-color: var(--brand-primary);
+                box-shadow: 0 0 0 1px var(--brand-primary);
+            }
+            
+            .brand-link {
+                color: var(--brand-primary) !important;
+            }
+            .brand-link:hover {
+                color: var(--brand-primary-hover) !important;
+            }
+            
+            .brand-button {
+                background-color: var(--brand-primary) !important;
+                transition: all 0.3s ease;
+            }
+            .brand-button:hover {
+                background-color: var(--brand-primary-hover) !important;
+                box-shadow: 0 0 15px var(--brand-primary-hover);
             }
         </style>
         
@@ -79,7 +107,7 @@
                 </div>
                 {% endif %}
                 
-                <a class="text-sm font-medium text-blue-400 hover:text-blue-300" href="{% url 'accounts:password_reset' %}">
+                <a class="text-sm font-medium brand-link" href="{% url 'accounts:password_reset' %}">
                     {% translate "Lost Credentials?" %}
                 </a>
             </div>
@@ -88,7 +116,7 @@
             <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
             {% endif %}
             
-            <button type="submit" class="w-full py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 uppercase tracking-widest transition-all hover:shadow-[0_0_15px_rgba(37,99,235,0.5)]">
+            <button type="submit" class="w-full py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white brand-button focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 uppercase tracking-widest">
                 {% translate "Initialize Session" %}
             </button>
         </form>
@@ -96,7 +124,7 @@
         {% if ACCOUNT_ALLOW_REGISTRATION %}
         <p class="mt-8 text-center text-sm text-gray-500">
             {% translate "New Player?" %}
-            <a href="{% url 'accounts:signup' %}" class="font-bold text-blue-400 hover:text-blue-300 ml-1">
+            <a href="{% url 'accounts:signup' %}" class="font-bold brand-link ml-1">
                 {% translate "Create Character" %}
             </a>
         </p>
