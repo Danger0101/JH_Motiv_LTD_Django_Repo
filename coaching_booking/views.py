@@ -9,6 +9,7 @@ import calendar
 import logging
 from django.db import transaction
 from django.db.models import Q
+import json
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
@@ -155,9 +156,14 @@ def book_session(request):
             #     pass
             
             # Email is now handled by signals.py -> tasks.py asynchronously
-            messages.success(request, f"Session confirmed for {booking.start_datetime.strftime('%B %d, %Y at %I:%M %p')}. A confirmation email has been sent.")
+            msg = f"Session confirmed for {booking.start_datetime.strftime('%B %d, %Y at %I:%M %p')}. A confirmation email has been sent."
+            messages.success(request, msg)
             response = HttpResponse(status=204)
-            response['HX-Redirect'] = reverse('accounts:account_profile')
+            response['HX-Trigger'] = json.dumps({
+                'refreshBookings': True,
+                'refreshOfferings': True,
+                'showToast': {'message': msg, 'type': 'success'}
+            })
             return response
             
         elif result['type'] == 'checkout':
@@ -253,13 +259,21 @@ def cancel_session(request, booking_id):
     elif not is_refunded:
         client_msg = "Your session was canceled. As this was within 24 hours of the start time, the session credit was forfeited per our Terms of Service."
 
+    msg = ""
+    toast_type = "success"
+
     if is_client:
         if is_refunded and booking.enrollment:
-            messages.success(request, "Session canceled successfully. Your credit has been restored.")
+            msg = "Session canceled successfully. Your credit has been restored."
+            messages.success(request, msg)
         else:
-            messages.warning(request, "Session canceled. The credit was forfeited due to late cancellation.")
+            msg = "Session canceled. The credit was forfeited due to late cancellation."
+            messages.warning(request, msg)
+            toast_type = "warning"
     elif is_coach:
-        messages.success(request, "Session canceled successfully. The client has been notified.")
+        msg = "Session canceled successfully. The client has been notified."
+        messages.success(request, msg)
+        
         # Override client message for email context if coach canceled
         client_msg = f"Coach {coach.user.get_full_name()} has canceled this session. Your credit has been restored."
 
@@ -309,8 +323,12 @@ def cancel_session(request, booking_id):
         logger.error(f"CRITICAL: Cancellation for booking {booking.id} succeeded but failed to send emails. Error: {e}")
 
     # Redirect to profile to refresh the dashboard
-    response = HttpResponse(status=200)
-    response['HX-Redirect'] = reverse('accounts:account_profile')
+    response = HttpResponse(status=204)
+    response['HX-Trigger'] = json.dumps({
+        'refreshBookings': True,
+        'refreshOfferings': True,
+        'showToast': {'message': msg, 'type': toast_type}
+    })
     return response
 
 @login_required
@@ -429,7 +447,8 @@ def reschedule_session(request, booking_id):
                 if result == 'LATE':
                     return htmx_error("Sessions cannot be rescheduled within 24 hours of the start time.")
                 else:
-                    messages.success(request, f"Session successfully rescheduled to {new_start_time.strftime('%B %d, %H:%M')}.")
+                    msg = f"Session successfully rescheduled to {new_start_time.strftime('%B %d, %H:%M')}."
+                    messages.success(request, msg)
                     
                     try:
                         dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
@@ -470,7 +489,10 @@ def reschedule_session(request, booking_id):
             return htmx_error(f"An error occurred: {e}")
 
     response = HttpResponse(status=204)
-    response['HX-Redirect'] = reverse('accounts:account_profile')
+    response['HX-Trigger'] = json.dumps({
+        'refreshBookings': True,
+        'showToast': {'message': msg, 'type': 'success'}
+    })
     return response
 
 @login_required
@@ -639,9 +661,14 @@ def coach_deny_free_session(request):
 def check_payment_status(request, booking_id):
     booking = get_object_or_404(SessionBooking, id=booking_id)
     if booking.status == 'BOOKED': # Maps to CONFIRMED
-        messages.success(request, "Payment confirmed! Your session is booked.")
-        response = HttpResponse(status=200)
-        response['HX-Redirect'] = reverse('accounts:account_profile')
+        msg = "Payment confirmed! Your session is booked."
+        messages.success(request, msg)
+        response = HttpResponse('<div class="text-center text-green-600 font-bold p-4">Payment Confirmed!</div>', status=200)
+        response['HX-Trigger'] = json.dumps({
+            'refreshBookings': True,
+            'refreshOfferings': True,
+            'showToast': {'message': msg, 'type': 'success'}
+        })
         return response
     else:
         # Keep polling (return the same spinner div)

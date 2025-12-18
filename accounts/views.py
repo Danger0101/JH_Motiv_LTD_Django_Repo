@@ -671,6 +671,83 @@ def coach_clients_partial(request):
     return render(request, 'account/partials/coach_clients_list.html', context)
 
 @login_required
+def dashboard_partial(request):
+    """
+    HTMX partial for the main user dashboard tab.
+    Loads lighter context than the full ProfileView to improve performance.
+    """
+    user = request.user
+    now = timezone.now()
+    context = {}
+
+    # --- COACHING DASHBOARD DATA ---
+    context['upcoming_sessions'] = []
+    context['pending_offers'] = []
+    context['hosted_workshops'] = []
+
+    if hasattr(user, 'coach_profile'):
+        coach_profile = user.coach_profile
+        
+        # 1. Upcoming Schedule
+        context['upcoming_sessions'] = SessionBooking.objects.filter(
+            coach=coach_profile,
+            start_datetime__gte=now,
+            status__in=['BOOKED', 'RESCHEDULED', 'CONFIRMED'],
+            workshop__isnull=True
+        ).select_related('client').order_by('start_datetime')
+
+        # 2. Pending Requests (Taster Sessions)
+        context['pending_offers'] = OneSessionFreeOffer.objects.filter(
+            coach=coach_profile,
+            is_approved=False,
+            is_redeemed=False,
+            redemption_deadline__gte=now
+        ).select_related('client')
+        
+        # 3. Hosted Workshops
+        context['hosted_workshops'] = Workshop.objects.filter(
+            coach=coach_profile,
+            date__gte=now
+        ).annotate(
+            booked_count=models.Count('bookings', filter=models.Q(bookings__status__in=['BOOKED', 'PENDING_PAYMENT']))
+        ).order_by('date')
+
+    # For Client: My Taster Status
+    context['my_taster_status'] = OneSessionFreeOffer.objects.filter(
+        client=user
+    ).order_by('-date_offered').first()
+
+    # --- CLIENT BOOKINGS & ENROLLMENTS ---
+    upcoming_bookings = SessionBooking.objects.filter(
+        client=user,
+        start_datetime__gte=now,
+        status__in=['BOOKED', 'RESCHEDULED', 'CONFIRMED']
+    ).select_related('coach__user', 'workshop').order_by('start_datetime')
+    context['bookings'] = upcoming_bookings
+    
+    context['my_workshops'] = upcoming_bookings.filter(workshop__isnull=False)
+    context['has_urgent_booking'] = upcoming_bookings.filter(start_datetime__lte=now + timedelta(hours=24)).exists()
+
+    context['available_credits'] = ClientOfferingEnrollment.objects.filter(
+        client=user,
+        remaining_sessions__gt=0,
+        is_active=True,
+        expiration_date__gte=now
+    ).order_by('-enrolled_on')
+
+    # --- RECENT ACTIVITY ---
+    context['recent_activities'] = get_recent_activity(user)
+
+    context['is_coach'] = user.is_coach
+    
+    # Google Calendar Status
+    context['google_calendar_connected'] = False
+    if user.is_coach and hasattr(user, 'coach_profile'):
+        context['google_calendar_connected'] = GoogleCredentials.objects.filter(coach=user.coach_profile).exists()
+
+    return render(request, 'account/partials/dashboard/_main.html', context)
+
+@login_required
 def generate_invoice_pdf(request, order_id):
     """
     Generates a PDF invoice for a given e-commerce or coaching order.

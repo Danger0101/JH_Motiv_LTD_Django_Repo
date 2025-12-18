@@ -21,10 +21,16 @@
         <script>
             document.body.addEventListener('showToast', function (evt) {
                 const message = evt.detail.message;
+                const type = evt.detail.type || 'success';
                 const toastContainer = document.getElementById('toast-container');
                 
+                let bgClass = 'bg-green-600';
+                if (type === 'warning') bgClass = 'bg-yellow-600';
+                if (type === 'error') bgClass = 'bg-red-600';
+                if (type === 'info') bgClass = 'bg-blue-600';
+
                 const toast = document.createElement('div');
-                toast.className = 'px-4 py-3 rounded shadow-lg flex items-center gap-2 text-white bg-green-600 transition-all duration-300 transform translate-x-full opacity-0';
+                toast.className = `px-4 py-3 rounded shadow-lg flex items-center gap-2 text-white ${bgClass} transition-all duration-300 transform translate-x-full opacity-0`;
                 toast.innerHTML = `
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                     <span>${message}</span>
@@ -53,12 +59,19 @@
         <main class="w-full lg:w-3/4 bg-white rounded-2xl shadow-sm border border-gray-200 min-h-[500px]">
             
             {# 3. DASHBOARD TAB #}
-            <div x-show="activeTab === 'dashboard'" x-cloak class="p-6 lg:p-8">
+            <div x-show="activeTab === 'dashboard'" x-cloak class="p-6 lg:p-8"
+                 id="dashboard-tab-content"
+                 hx-get="{% url 'accounts:dashboard_partial' %}"
+                 hx-trigger="refreshOfferings from:body, refreshBookings from:body"
+                 hx-swap="innerHTML">
                 {% include 'account/partials/dashboard/_main.html' %}
             </div>
 
             {# 4. BOOKINGS TAB #}
-            <div x-show="activeTab === 'bookings'" x-cloak class="p-6">
+            <div x-show="activeTab === 'bookings'" x-cloak class="p-6"
+                 hx-get="{% url 'accounts:profile_bookings' %}"
+                 hx-trigger="refreshBookings from:body"
+                 hx-swap="innerHTML">
                 {% include 'account/partials/bookings/_main.html' %}
             </div>
 
