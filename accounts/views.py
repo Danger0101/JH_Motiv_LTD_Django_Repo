@@ -1053,3 +1053,50 @@ class ReactivateAccountView(View):
         else:
             messages.error(request, "The reactivation link is invalid or has expired.")
             return HttpResponseRedirect(reverse('accounts:login'))
+
+class CopyScheduleView(LoginRequiredMixin, View):
+    def post(self, request):
+        if not getattr(request.user, 'is_coach', False):
+             return HttpResponse("Unauthorized", status=403)
+
+        source_day = request.POST.get('source_day')
+        target_days = request.POST.getlist('target_days')
+
+        if not source_day or not target_days:
+            messages.error(request, "Please select a source day and at least one target day.")
+            return HttpResponseRedirect(reverse('accounts:account_profile'))
+
+        try:
+            # Attempt to retrieve source availability
+            # We handle potential integer/string mismatch for day_of_week
+            source_obj = CoachAvailability.objects.filter(coach=request.user, day_of_week=source_day).first()
+            if not source_obj:
+                 source_obj = CoachAvailability.objects.get(coach=request.user, day_of_week=int(source_day))
+        except (CoachAvailability.DoesNotExist, ValueError):
+            messages.error(request, "Source day availability not found.")
+            return HttpResponseRedirect(reverse('accounts:account_profile'))
+
+        with transaction.atomic():
+            for day in target_days:
+                # Skip if target is same as source
+                if str(day) == str(source_day):
+                    continue
+                
+                try:
+                    day_val = int(day)
+                except ValueError:
+                    day_val = day
+
+                target_obj, created = CoachAvailability.objects.get_or_create(
+                    coach=request.user, 
+                    day_of_week=day_val
+                )
+                
+                # Dynamically copy fields (excluding keys)
+                for field in source_obj._meta.fields:
+                    if field.name not in ['id', 'pk', 'coach', 'coach_id', 'day_of_week']:
+                        setattr(target_obj, field.name, getattr(source_obj, field.name))
+                target_obj.save()
+
+        messages.success(request, "Availability copied successfully.")
+        return HttpResponseRedirect(reverse('accounts:account_profile'))

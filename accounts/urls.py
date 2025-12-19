@@ -40,4 +40,5 @@ urlpatterns = [
     path('convert-guest/', views.ConvertGuestView.as_view(), name='convert_guest'),
     path('deactivate/', views.DeactivateAccountView.as_view(), name='deactivate_account'),
     path('reactivate/<uidb64>/<token>/', views.ReactivateAccountView.as_view(), name='reactivate_account'),
+    path('profile/copy-schedule/', views.CopyScheduleView.as_view(), name='copy_schedule'),
 ]

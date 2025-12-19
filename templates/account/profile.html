@@ -96,6 +96,7 @@
             {% if is_coach %}
             <div x-show="activeTab === 'coach_portal'" x-cloak class="p-6 space-y-8">
                 {% include 'account/partials/coach/_main.html' %}
+                {% include 'account/partials/coach/_copy_schedule_modal.html' %}
             </div>
             {% endif %}
 

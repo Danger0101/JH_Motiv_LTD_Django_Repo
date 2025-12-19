@@ -5,6 +5,7 @@ from django.core import mail
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
+from coaching_availability.models import CoachAvailability
 
 User = get_user_model()
 
@@ -125,3 +126,50 @@ class AuthenticationTests(TestCase):
         key = 'some-random-key'
         url = reverse('accounts:account_confirm_email', kwargs={'key': key})
         self.assertEqual(url, f'/accounts/confirm-email/{key}/')
+
+    def test_copy_schedule_view(self):
+        """
+        Verify that CopyScheduleView copies availability from source to target days.
+        """
+        # Make user a coach
+        self.user.is_coach = True
+        self.user.save()
+        self.client.login(username='testuser', password=self.user_password)
+
+        # Create source availability (Monday = 0)
+        CoachAvailability.objects.create(
+            coach=self.user,
+            day_of_week=0,
+            # Assuming standard fields, though view copies dynamically
+        )
+
+        url = reverse('accounts:copy_schedule')
+        data = {
+            'source_day': '0',
+            'target_days': ['1', '2'] # Tuesday, Wednesday
+        }
+        
+        response = self.client.post(url, data, follow=True)
+        self.assertEqual(response.status_code, 200)
+        
+        # Verify targets were created
+        self.assertTrue(CoachAvailability.objects.filter(coach=self.user, day_of_week=1).exists())
+        self.assertTrue(CoachAvailability.objects.filter(coach=self.user, day_of_week=2).exists())
+
+    def test_copy_schedule_view_unauthorized(self):
+        """
+        Verify that CopyScheduleView prevents unauthorized access (non-coaches).
+        """
+        # Ensure user is NOT a coach
+        self.user.is_coach = False
+        self.user.save()
+        self.client.login(username='testuser', password=self.user_password)
+
+        url = reverse('accounts:copy_schedule')
+        data = {
+            'source_day': '0',
+            'target_days': ['1']
+        }
+        
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 403)
