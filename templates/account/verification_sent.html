@@ -1,16 +1,39 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}{% trans "Verify Your E-mail Address" %}{% endblock %}
+{% block head_title %}{% trans "Verify Your E-mail Address" %}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 sm:px-6 py-12 max-w-2xl">
-    <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 text-center">
-        <h1 class="text-3xl font-bold text-gray-800 mb-6">{% trans "Verify Your E-mail Address" %}</h1>
+<div class="max-w-2xl mx-auto px-4 py-12">
+    <div class="bg-white shadow sm:rounded-lg p-8 text-center border border-gray-200">
+        <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-indigo-100 mb-6">
+            <svg class="h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+        </div>
 
-        <p class="text-gray-600 mb-6">
-            {% blocktrans %}We have sent an e-mail to you for verification. Follow the link provided to finalize the signup process. Please contact us if you do not receive it within a few minutes.{% endblocktrans %}
+        <h1 class="text-3xl font-bold text-gray-900 mb-4">{% trans "Check Your Inbox" %}</h1>
+        
+        <p class="text-lg text-gray-600 mb-8">
+            {% blocktrans %}We have sent an e-mail to you for verification. Follow the link provided to finalize the signup process.{% endblocktrans %}
         </p>
+        
+        <div class="bg-blue-50 rounded-md p-4 mb-8 text-left">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3 flex-1 md:flex md:justify-between">
+                    <p class="text-sm text-blue-700">
+                        {% trans "If you do not receive it within a few minutes, please check your spam folder." %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <a href="{% url 'accounts:login' %}" class="text-indigo-600 font-medium hover:text-indigo-500">{% trans "Return to Login" %}</a>
     </div>
 </div>
 {% endblock %}

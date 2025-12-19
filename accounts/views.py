@@ -5,14 +5,14 @@ from django.contrib import messages
 from django.urls import reverse
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic import TemplateView
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 from django.template.loader import render_to_string
 import logging
-from .forms import CustomSignupForm, CustomChangePasswordForm, CustomSetPasswordForm, CustomResetPasswordForm, CustomResetPasswordKeyForm, CustomAddEmailForm
+from .forms import CustomSignupForm, CustomChangePasswordForm, CustomSetPasswordForm, CustomResetPasswordForm, CustomResetPasswordKeyForm, CustomAddEmailForm, GuestConversionForm
 from .models import MarketingPreference
 from allauth.account.views import LoginView, SignupView, PasswordResetView, PasswordChangeView, PasswordSetView, LogoutView, PasswordResetDoneView, EmailView, ConfirmEmailView, EmailVerificationSentView, PasswordResetFromKeyView, PasswordResetFromKeyDoneView
 from allauth.socialaccount.views import ConnectionsView
@@ -27,7 +27,11 @@ from coaching_availability.models import CoachAvailability, CoachVacation, DateO
 from django.db import transaction, models
 from collections import defaultdict
 from django.views import View
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, logout, update_session_auth_hash, login
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
 from datetime import timedelta, date, datetime
 import json
 from decimal import Decimal
@@ -957,3 +961,95 @@ def download_booking_ics(request, booking_id):
     response = HttpResponse("\r\n".join(ics_lines), content_type='text/calendar')
     response['Content-Disposition'] = f'attachment; filename="session_{booking.id}.ics"'
     return response
+
+class ConvertGuestView(LoginRequiredMixin, View):
+    template_name = 'account/convert_guest.html'
+
+    def get(self, request):
+        if not getattr(request.user, 'is_guest', False):
+            messages.info(request, "You already have a full account.")
+            return HttpResponseRedirect(reverse('accounts:account_profile'))
+        
+        form = GuestConversionForm(user=request.user)
+        return render(request, self.template_name, {'form': form})
+
+    def post(self, request):
+        if not getattr(request.user, 'is_guest', False):
+            return HttpResponseRedirect(reverse('accounts:account_profile'))
+
+        form = GuestConversionForm(request.POST, user=request.user)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)
+            messages.success(request, "Your account has been successfully converted!")
+            return HttpResponseRedirect(reverse('accounts:account_profile'))
+        
+        return render(request, self.template_name, {'form': form})
+
+class DeactivateAccountView(LoginRequiredMixin, View):
+    template_name = 'account/deactivate_confirm.html'
+
+    def get(self, request):
+        return render(request, self.template_name)
+
+    def post(self, request):
+        user = request.user
+        
+        # Generate reactivation link
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        reactivate_url = request.build_absolute_uri(
+            reverse('accounts:reactivate_account', kwargs={'uidb64': uid, 'token': token})
+        )
+        
+        # Send Email
+        subject = "Account Deactivated - Reactivation Link"
+        message = (
+            f"Hello {user.username},\n\n"
+            "Your account has been deactivated as requested.\n"
+            "If this was not you, or if you wish to reactivate your account, please click the link below:\n\n"
+            f"{reactivate_url}\n\n"
+            "Clicking this link will reactivate your account and prompt you to change your password."
+        )
+        
+        try:
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            logger.error(f"Failed to send deactivation email to {user.email}: {e}")
+            messages.error(request, "Failed to send confirmation email, but account will be deactivated.")
+
+        user.is_active = False
+        user.save()
+        logout(request)
+        messages.success(request, "Your account has been deactivated.")
+        return HttpResponseRedirect(reverse('accounts:login'))
+
+class ReactivateAccountView(View):
+    def get(self, request, uidb64, token):
+        User = get_user_model()
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            user = None
+
+        if user is not None and default_token_generator.check_token(user, token):
+            user.is_active = True
+            user.save()
+            # Log the user in
+            # We specify the backend to ensure login works without authentication credentials
+            if not hasattr(user, 'backend'):
+                user.backend = 'allauth.account.auth_backends.AuthenticationBackend'
+            login(request, user)
+            
+            messages.success(request, "Account reactivated. Please change your password now.")
+            return HttpResponseRedirect(reverse('accounts:password_change'))
+        else:
+            messages.error(request, "The reactivation link is invalid or has expired.")
+            return HttpResponseRedirect(reverse('accounts:login'))

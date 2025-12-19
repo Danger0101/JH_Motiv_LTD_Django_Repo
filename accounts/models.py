@@ -37,6 +37,11 @@ class UserManager(BaseUserManager):
         return self.get_queryset().filter(is_client=True)
 
 class User(AbstractUser):
+    email = models.EmailField(_('email address'), unique=True)
+    is_guest = models.BooleanField(
+        default=False,
+        help_text=_("Designates whether this user is a guest account.")
+    )
     is_coach = models.BooleanField(
         default=False,
         help_text=_("Designates whether this user is a coaching staff member.")

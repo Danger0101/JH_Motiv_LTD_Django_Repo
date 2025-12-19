@@ -1,0 +1,11 @@
+{% load i18n %}
+Hello{% if user.first_name %} {{ user.first_name }}{% endif %},
+
+Thank you for creating an account at JH Motiv. To secure your account and access all features, please confirm your email address by clicking the link below:
+
+{{ activate_url }}
+
+If you did not sign up for this account, please ignore this email.
+
+Best regards,
+The JH Motiv Team
