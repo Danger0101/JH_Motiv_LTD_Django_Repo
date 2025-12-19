@@ -50,6 +50,12 @@ class ClientOfferingEnrollment(models.Model):
 
         # Initialize total and remaining sessions on creation
         if not self.pk:
+            # Assign a coach from the offering if one isn't already assigned
+            if not self.coach and self.offering:
+                assigned_coach = self.offering.coaches.first()
+                if assigned_coach:
+                    self.coach = assigned_coach
+
             self.total_sessions = self.offering.total_number_of_sessions
             self.remaining_sessions = self.offering.total_number_of_sessions
 

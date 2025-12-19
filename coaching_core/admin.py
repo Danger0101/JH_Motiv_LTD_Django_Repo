@@ -12,23 +12,15 @@ from unfold.admin import ModelAdmin
 
 # --- INLINES ---
 
-class CoachAssignmentInline(admin.TabularInline):
-    model = Offering.coaches.through
-    extra = 1
-    verbose_name = "Coach Assignment"
-    verbose_name_plural = "Coach Assignments"
-    autocomplete_fields = ('coachprofile',) # Requires search_fields on CoachProfileAdmin
-
 # --- MODEL ADMINS ---
 
 @admin.register(Offering)
 class OfferingAdmin(ModelAdmin):
-    list_display = ('name', 'duration_display', 'price', 'active_status', 'coach_count')
+    list_display = ('name', 'duration_display', 'price', 'active_status')
     list_filter = ('active_status', 'duration_type', 'is_whole_day')
     search_fields = ['name', 'description']
     readonly_fields = ('slug', 'created_at', 'updated_at', 'created_by', 'updated_by')    
-    inlines = [CoachAssignmentInline]
-    exclude = ('coaches',) # Manage via inline to prevent massive multiselect box loading
+    filter_horizontal = ('coaches',)
 
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related('coaches')
@@ -37,13 +29,9 @@ class OfferingAdmin(ModelAdmin):
     def duration_display(self, obj):
         return obj.display_length
 
-    @admin.display(description='Coaches Assigned')
-    def coach_count(self, obj): # Renamed from 'Coaches' to 'Coaches Assigned'
-        return obj.coaches.count()
-
     fieldsets = (
         ('Service Details', {
-            'fields': ('name', 'slug', 'description', 'active_status')
+            'fields': ('name', 'slug', 'description', 'active_status', 'coaches')
         }),
         ('Pricing & Structure', {
             'fields': ('price', 'duration_type', 'total_length_units', 'session_length_minutes', 'total_number_of_sessions', 'is_whole_day')

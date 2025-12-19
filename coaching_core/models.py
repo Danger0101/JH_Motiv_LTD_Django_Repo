@@ -17,12 +17,11 @@ class Offering(models.Model):
         max_length=255, 
         help_text="The Offering's Name/Title."
     )
-    coach = models.ForeignKey(
+    coaches = models.ManyToManyField(
         CoachProfile,
-        on_delete=models.CASCADE, 
-        limit_choices_to={'user__is_coach': True},
         related_name='offerings',
-        help_text="The single coach this offering belongs to."
+        limit_choices_to={'user__is_coach': True},
+        help_text="The coaches who can provide this offering."
     )
     slug = models.SlugField(
         unique=True, 
@@ -103,8 +102,6 @@ class Offering(models.Model):
         if not self.slug:
             self.slug = slugify(self.name)
         
-        # An offering is active if it has a coach.
-        self.active_status = self.coach is not None
         super().save(*args, **kwargs)
 
 

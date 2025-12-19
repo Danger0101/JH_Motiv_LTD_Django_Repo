@@ -99,10 +99,16 @@ class SessionBookingAdmin(admin.ModelAdmin):
             return f"Workshop: {obj.workshop.title}"
         return "1-on-1 Session"
 
+# coaching_booking/admin.py
+
 @admin.register(OneSessionFreeOffer)
 class OneSessionFreeOfferAdmin(admin.ModelAdmin):
-    list_display = ('client', 'coach', 'is_approved', 'is_redeemed', 'redemption_deadline', 'session_link')
-    list_filter = ('is_approved', 'is_redeemed', 'date_offered')
+    # Update list_display to use 'status' instead of 'is_approved' and 'is_redeemed'
+    list_display = ('client', 'coach', 'status', 'redemption_deadline', 'session_link')
+    
+    # Update list_filter to use 'status' instead of the old boolean fields
+    list_filter = ('status', 'date_offered')
+    
     search_fields = ('client__email', 'coach__user__email')
     readonly_fields = ('date_offered', 'redemption_deadline', 'session')
     
@@ -112,8 +118,9 @@ class OneSessionFreeOfferAdmin(admin.ModelAdmin):
     
     @admin.action(description='Approve selected offers')
     def approve_offers(self, request, queryset):
-        queryset.update(is_approved=True)
-        self.message_user(request, "Selected offers approved.")
+        # Update the status field to 'APPROVED' instead of setting a boolean
+        updated = queryset.filter(status='PENDING').update(status='APPROVED')
+        self.message_user(request, f"{updated} offers approved.")
         
     @admin.display(description='Booked Session')
     def session_link(self, obj):

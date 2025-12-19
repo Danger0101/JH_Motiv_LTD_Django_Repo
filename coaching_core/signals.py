@@ -28,15 +28,7 @@ def auto_generate_offering_slug_and_set_status(sender, instance, created, **kwar
         update_fields.append('slug')
 
     # 2. Active Status Check
-    # This assumes a ManyToManyField named 'coaches' exists on the Offering model.
-    # If the logic is different, this part needs to be adjusted.
-    if hasattr(instance, 'coaches'):
-        has_coaches = instance.coaches.exists()
-        if instance.active_status != has_coaches:
-            instance.active_status = has_coaches
-            needs_resave = True
-            if 'active_status' not in update_fields:
-                update_fields.append('active_status')
+    # Logic removed as 'coach' field is replaced by 'coaches' M2M.
 
     # CRITICAL: Only re-save if something has changed, and only update specific fields
     # to prevent an infinite save loop.
