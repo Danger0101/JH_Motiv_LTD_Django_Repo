@@ -17,38 +17,48 @@
         {% csrf_token %}
         {{ formset.management_form }}
 
-        <div class="space-y-8">
-            {% for day_name, day_forms in forms_by_day.items %}
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h2 class="text-2xl font-semibold mb-4">{{ day_name }}</h2>
-                    <div id="form-container-{{ forloop.counter0 }}" class="space-y-4">
-                        {% for form in day_forms %}
-                            <div class="flex items-center space-x-4 p-4 border rounded-md time-slot-form">
-                                {{ form.day_of_week }}
-                                <div class="flex-1">
-                                    <label class="block text-sm font-medium text-gray-700">Start Time</label>
-                                    {{ form.start_time }}
-                                    {% if form.start_time.errors %}
-                                        <p class="text-red-500 text-xs italic">{{ form.start_time.errors|join:", " }}</p>
-                                    {% endif %}
-                                </div>
-                                <div class="flex-1">
-                                    <label class="block text-sm font-medium text-gray-700">End Time</label>
-                                    {{ form.end_time }}
-                                    {% if form.end_time.errors %}
-                                        <p class="text-red-500 text-xs italic">{{ form.end_time.errors|join:", " }}</p>
-                                    {% endif %}
-                                </div>
-                                <button type="button" class="text-red-500 hover:text-red-700 remove-time-slot">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        {% endfor %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% for form in formset %}
+            <div class="border rounded-lg p-4 bg-gray-50 shadow-sm transition-all hover:shadow-md">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-semibold text-lg text-gray-800">
+                        {{ form.instance.get_day_of_week_display }}
+                    </h3>
+                    
+                    <div class="flex items-center space-x-2">
+                         <button type="button" 
+                            @click="$dispatch('open-copy-modal', { 
+                                day: '{{ form.instance.day_of_week }}', 
+                                dayName: '{{ form.instance.get_day_of_week_display }}' 
+                            })"
+                            aria-label="Copy schedule from {{ form.instance.get_day_of_week_display }}"
+                            class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-bold rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>
+                            COPY DAY
+                        </button>
                     </div>
-                    <button type="button" class="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded add-time-slot" data-day-index="{{ forloop.counter0 }}">
-                        <i class="fas fa-plus"></i> Add Time Slot
-                    </button>
                 </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                        <label class="text-xs text-gray-600 uppercase font-semibold">Start Time</label>
+                        {{ form.start_time }}
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-xs text-gray-600 uppercase font-semibold">End Time</label>
+                        {{ form.end_time }}
+                    </div>
+                </div>
+                
+                <div class="mt-3 pt-3 border-t flex items-center">
+                    <label class="flex items-center text-sm font-medium text-gray-700 cursor-pointer">
+                        {{ form.is_closed }}
+                        <span class="ml-2 text-red-600 font-bold">Mark as Closed</span>
+                    </label>
+                </div>
+                {{ form.id }}
+                {{ form.day_of_week.as_hidden }}
+            </div>
             {% endfor %}
         </div>
 

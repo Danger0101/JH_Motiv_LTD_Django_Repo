@@ -1,6 +1,56 @@
-<div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-    <h3 class="font-bold text-gray-800 mb-4">Revenue Trend (Last 30 Days)</h3>
-    <div>
-        <canvas id="revenueChart"></canvas>
+<div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+    <h3 class="font-bold text-gray-900 mb-4">Revenue (Last 30 Days)</h3>
+    <div class="relative h-64">
+        <canvas id="revenueChart" aria-label="Revenue chart showing daily income for the last 30 days" role="img"></canvas>
     </div>
+    
+    <!-- Accessible Data Table (Screen Reader Only) -->
+    <div class="sr-only">
+        <table>
+            <caption>Daily Revenue Data (Last 30 Days)</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Revenue Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in revenue_data_list %}
+                <tr>
+                    <td>{{ item.date|date:"M d, Y" }}</td>
+                    <td>£{{ item.amount|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            const labels = {{ revenue_chart_labels|safe }};
+            const data = {{ revenue_chart_data|safe }};
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Revenue',
+                        data: data,
+                        borderColor: '#4F46E5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        });
+    </script>
 </div>

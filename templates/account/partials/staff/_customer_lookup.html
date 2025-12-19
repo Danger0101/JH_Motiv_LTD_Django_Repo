@@ -1,18 +1,20 @@
-<div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-    <h3 class="font-bold text-gray-800 mb-4 flex items-center">
-        <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-        Customer Lookup
-    </h3>
+<div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+    <h3 class="font-bold text-gray-900 mb-4">Customer Lookup</h3>
     <div class="relative">
-        <input type="text" 
-               id="customer-search-input"
+        <label for="customer-search-input" class="sr-only">Search by name or email</label>
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+        </div>
+        <input type="search" 
+               id="customer-search-input" 
                name="q"
-               class="block w-full pl-4 pr-10 py-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-               placeholder="Search by name, email, or username..."
-               hx-get="{% url 'accounts:staff_customer_lookup' %}"
-               hx-trigger="keyup changed delay:500ms"
-               hx-target="#search-results">
-        <div id="search-results"></div>
+               class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
+               placeholder="Search customers..." 
+               hx-get="{% url 'accounts:staff_customer_lookup' %}" 
+               hx-trigger="keyup changed delay:500ms" 
+               hx-target="#customer-results">
     </div>
-    <div id="customer-detail-panel" class="mt-4"></div>
+    <div id="customer-results" class="mt-4"></div>
 </div>

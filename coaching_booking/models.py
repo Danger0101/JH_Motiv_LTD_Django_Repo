@@ -84,6 +84,7 @@ class ClientOfferingEnrollment(models.Model):
 class SessionBooking(models.Model):
     enrollment = models.ForeignKey(ClientOfferingEnrollment, on_delete=models.CASCADE, related_name='bookings', verbose_name="Enrollment", null=True, blank=True)
     # Decoupled Booking Fields
+    offering = models.ForeignKey(Offering, on_delete=models.SET_NULL, null=True, blank=True, related_name='taster_bookings', help_text="Used for one-off bookings like taster sessions.")
     workshop = models.ForeignKey(Workshop, on_delete=models.SET_NULL, related_name='bookings', verbose_name="Workshop", null=True, blank=True)
     coach = models.ForeignKey(CoachProfile, on_delete=models.CASCADE, related_name='bookings', verbose_name="Coach", null=True, blank=True)
     
@@ -225,12 +226,18 @@ class OneSessionFreeOffer(models.Model):
     Represents a single, non-paid, coach-approved coaching session offer
     with a one-month redemption deadline.
     """
+    STATUS_CHOICES = (
+        ('PENDING', 'Pending Approval'),
+        ('APPROVED', 'Approved'),
+        ('DECLINED', 'Declined'),
+        ('USED', 'Used'),
+    )
     client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='free_offers', verbose_name="Client")
     coach = models.ForeignKey(CoachProfile, on_delete=models.CASCADE, related_name='approved_free_offers', verbose_name="Assigned Coach")
+    offering = models.ForeignKey(Offering, on_delete=models.CASCADE, related_name='taster_offers', null=True, blank=True, help_text="The specific offering this taster is for.")
     date_offered = models.DateTimeField(default=timezone.now, verbose_name="Date Offered/Created")
     redemption_deadline = models.DateTimeField(null=True, blank=True, verbose_name="Redemption Deadline", help_text="The date by which the session must be booked AND scheduled.")
-    is_approved = models.BooleanField(default=False, verbose_name="Coach Approved", help_text="Must be approved by the coach before the client can book.")
-    is_redeemed = models.BooleanField(default=False, verbose_name="Is Redeemed", help_text="Set to True once the session is successfully booked.")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
     
     # Link to the resulting SessionBooking, which confirms the redemption
     session = models.OneToOneField('SessionBooking', on_delete=models.SET_NULL, null=True, blank=True, related_name='free_offer', verbose_name="Booked Session")
@@ -241,8 +248,7 @@ class OneSessionFreeOffer(models.Model):
         ordering = ['-date_offered']
         
     def __str__(self):
-        status = "Approved" if self.is_approved else "Pending Approval"
-        return f"Free Session for {self.client.get_full_name()} with {self.coach.user.get_full_name()} - Status: {status}"
+        return f"Free Session for {self.client.get_full_name()} with {self.coach.user.get_full_name()} - Status: {self.get_status_display()}"
 
     def save(self, *args, **kwargs):
         # Calculate redemption_deadline on creation

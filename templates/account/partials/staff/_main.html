@@ -1,83 +1,39 @@
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<div class="flex justify-between items-center border-b pb-4">
-    <h2 class="text-2xl font-bold text-gray-800">Command Center</h2>
-    <div class="flex items-center gap-4">
-        <button hx-get="{% url 'coaching_booking:staff_create_guest' %}" hx-target="#guest-create-container" hx-swap="innerHTML" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 flex items-center bg-transparent border-0 cursor-pointer">
-            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
-            Create Guest
-        </button>
-        <a href="{% url 'admin:index' %}" target="_blank" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 flex items-center">
-            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            Full Admin Panel
-        </a>
-    </div>
-</div>
-
-{# Container for Guest Creation Form #}
-<div id="guest-create-container"></div>
-
-{# Top Grid Stats #}
-{% include 'account/partials/staff/_stats_grid.html' %}
-
-{# Revenue Chart #}
-{% include 'account/partials/staff/_revenue_chart.html' %}
-
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    <div class="lg:col-span-2 space-y-6">
-        {# Customer Lookup & Orders Table #}
-        {% include 'account/partials/staff/_customer_lookup.html' %}
-        {% include 'account/partials/staff/_recent_orders.html' %}
-        
-        <div hx-get="{% url 'coaching_booking:recent_guests_widget' %}" hx-trigger="load">
-            <div class="animate-pulse bg-gray-100 h-48 rounded-lg"></div>
+<div class="space-y-6">
+    <h2 class="text-2xl font-bold text-gray-900">Staff Dashboard</h2>
+    
+    <!-- Metrics Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Revenue -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <p class="text-sm font-medium text-gray-500">30d Revenue</p>
+            <p class="text-2xl font-bold text-gray-900">£{{ staff_30d_revenue|floatformat:2 }}</p>
+        </div>
+        <!-- New Users -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <p class="text-sm font-medium text-gray-500">New Users (7d)</p>
+            <p class="text-2xl font-bold text-gray-900">{{ staff_new_users_7d }}</p>
+        </div>
+        <!-- Active Clients -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <p class="text-sm font-medium text-gray-500">Active Clients</p>
+            <p class="text-2xl font-bold text-gray-900">{{ staff_active_clients }}</p>
+        </div>
+        <!-- Unpaid Commissions -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <p class="text-sm font-medium text-gray-500">Unpaid Commissions</p>
+            <p class="text-2xl font-bold text-red-600">£{{ staff_unpaid_commissions|floatformat:2 }}</p>
         </div>
     </div>
 
-    <div class="space-y-6">
-        {# Sidebar items like stock alerts #}
-        {% include 'account/partials/staff/_stock_alerts.html' %}
-        {% include 'account/partials/staff/_dreamer_stats.html' %}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Chart Section -->
+        <div class="lg:col-span-2">
+            {% include 'account/partials/staff/_revenue_chart.html' %}
+        </div>
+        
+        <!-- Lookup Section -->
+        <div>
+            {% include 'account/partials/staff/_customer_lookup.html' %}
+        </div>
     </div>
 </div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const ctx = document.getElementById('revenueChart');
-        if (ctx) {
-            const revenueLabels = {{ revenue_chart_labels|safe }};
-            const revenueData = {{ revenue_chart_data|safe }};
-
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: revenueLabels,
-                    datasets: [{
-                        label: 'Daily Revenue',
-                        data: revenueData,
-                        fill: true,
-                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                        borderColor: 'rgba(79, 70, 229, 1)',
-                        tension: 0.3,
-                        pointBackgroundColor: 'rgba(79, 70, 229, 1)',
-                        pointBorderColor: '#fff',
-                        pointHoverRadius: 6,
-                        pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: 'rgba(79, 70, 229, 1)'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value, index, values) { return '£' + value; }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-    });
-</script>

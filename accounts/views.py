@@ -211,9 +211,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             # 2. Pending Requests (Taster Sessions)
             context['pending_offers'] = OneSessionFreeOffer.objects.filter(
                 coach=coach_profile,
-                is_approved=False,
-                is_redeemed=False,
-                redemption_deadline__gte=timezone.now()
+                status='PENDING',
             ).select_related('client')
             
             # 3. Hosted Workshops
@@ -284,6 +282,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
 
             context['revenue_chart_labels'] = json.dumps([d.strftime('%b %d') for d in daily_revenue.keys()])
             context['revenue_chart_data'] = json.dumps([float(v) for v in daily_revenue.values()])
+            context['revenue_data_list'] = [{'date': d, 'amount': v} for d, v in daily_revenue.items()]
 
             # 3. Growth Pulse
             context['staff_new_users_7d'] = get_user_model().objects.filter(date_joined__gte=last_7_days).count()
@@ -487,6 +486,7 @@ class StaffDashboardView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
 
         context['revenue_chart_labels'] = json.dumps([d.strftime('%b %d') for d in daily_revenue.keys()])
         context['revenue_chart_data'] = json.dumps([float(v) for v in daily_revenue.values()])
+        context['revenue_data_list'] = [{'date': d, 'amount': v} for d, v in daily_revenue.items()]
 
         # 3. Growth Pulse
         context['staff_new_users_7d'] = get_user_model().objects.filter(date_joined__gte=last_7_days).count()
@@ -887,7 +887,9 @@ def staff_customer_lookup(request):
         # -----------------------------
 
         # Fetch key data
-        recent_orders = Order.objects.filter(user=customer).order_by('-created_at')[:5]
+        recent_orders = []
+        if Order:
+            recent_orders = Order.objects.filter(user=customer).order_by('-created_at')[:5]
         active_enrollments = ClientOfferingEnrollment.objects.filter(
             client=customer, 
             is_active=True

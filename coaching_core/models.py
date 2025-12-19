@@ -17,6 +17,13 @@ class Offering(models.Model):
         max_length=255, 
         help_text="The Offering's Name/Title."
     )
+    coach = models.ForeignKey(
+        CoachProfile,
+        on_delete=models.CASCADE, 
+        limit_choices_to={'user__is_coach': True},
+        related_name='offerings',
+        help_text="The single coach this offering belongs to."
+    )
     slug = models.SlugField(
         unique=True, 
         editable=False, 
@@ -51,12 +58,6 @@ class Offering(models.Model):
     active_status = models.BooleanField(
         default=False,
         help_text="Is the offering currently active? Auto-set based on assigned coaches."
-    )
-    coaches = models.ManyToManyField(
-        CoachProfile,
-        related_name='offerings',
-        blank=True,
-        help_text="Coaches who can fulfill this offering."
     )
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
@@ -102,24 +103,9 @@ class Offering(models.Model):
         if not self.slug:
             self.slug = slugify(self.name)
         
-        # Auto-update active_status based on whether coaches are assigned
-        # The check `self.pk is not None` ensures this runs after the instance is first saved
-        # and can have M2M relationships.
-        if self.pk is not None:
-            self.active_status = self.coaches.exists()
-        else:
-            # For a new instance, it can't have coaches yet.
-            self.active_status = False
-
+        # An offering is active if it has a coach.
+        self.active_status = self.coach is not None
         super().save(*args, **kwargs)
-        
-        # If it's a new instance, the M2M can't be set until the object exists.
-        # If we are creating it and adding coaches in the same operation,
-        # we might need to re-evaluate active_status after the initial save.
-        # A signal might be more robust here, but this is a common pattern.
-        if self.pk and not self.active_status and self.coaches.exists():
-            self.active_status = True
-            super().save(update_fields=['active_status'])
 
 
     @property

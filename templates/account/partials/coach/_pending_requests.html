@@ -1,42 +1,33 @@
 {% if pending_offers %}
-<div class="mb-8">
-    <h3 class="font-bold text-gray-800 mb-4 flex items-center">
-        <span class="relative flex h-3 w-3 mr-2">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+<div class="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden mb-8">
+    <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+        <h3 class="font-bold text-gray-900">Pending Requests</h3>
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+            {{ pending_offers|length }} New
         </span>
-        Pending Requests
-    </h3>
-    <div class="bg-white border border-orange-200 rounded-xl shadow-sm divide-y divide-orange-100 overflow-hidden">
+    </div>
+    
+    <ul role="list" class="divide-y divide-gray-100">
         {% for offer in pending_offers %}
-        <div class="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4" id="offer-{{ offer.id }}">
-            <div>
-                <div class="flex items-center mb-1">
-                    <span class="font-bold text-gray-900 mr-2">{{ offer.client.get_full_name|default:offer.client.username }}</span>
-                    <span class="px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">Taster Session</span>
+        <li id="offer-{{ offer.id }}">
+            <div class="flex items-center justify-between p-4">
+                <div>
+                    <h4 class="font-bold text-gray-900">{{ offer.client.get_full_name }}</h4>
+                    <p class="text-xs text-gray-500">Requested Taster for: {{ offer.offering.name|default:"General Session" }}</p>
                 </div>
-                <p class="text-sm text-gray-500">{{ offer.client.email }}</p>
-                <p class="text-xs text-gray-400 mt-1">Requested: {{ offer.created_at|timesince }} ago</p>
-            </div>
-            <div class="flex items-center gap-3">
-                <form hx-post="{% url 'coaching_booking:coach_deny_free_session' %}" hx-target="#offer-{{ offer.id }}" hx-swap="outerHTML">
-                    {% csrf_token %}
-                    <input type="hidden" name="offer_id" value="{{ offer.id }}">
-                    <button type="submit" class="px-4 py-2 text-sm font-medium text-red-600 bg-white border border-gray-200 rounded-lg hover:bg-red-50 hover:border-red-200 transition">
+                <div class="flex space-x-2">
+                    <button hx-post="{% url 'coaching_booking:approve_taster' offer.id %}" hx-target="#offer-{{ offer.id }}" hx-swap="outerHTML"
+                            class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-green-700">
+                        Accept
+                    </button>
+                    <button hx-post="{% url 'coaching_booking:decline_taster' offer.id %}" hx-target="#offer-{{ offer.id }}" hx-swap="outerHTML"
+                            class="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold border border-red-200 hover:bg-red-100">
                         Decline
                     </button>
-                </form>
-                
-                <form hx-post="{% url 'coaching_booking:coach_approve_free_session' %}" hx-target="#offer-{{ offer.id }}" hx-swap="outerHTML">
-                    {% csrf_token %}
-                    <input type="hidden" name="offer_id" value="{{ offer.id }}">
-                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-green-600 transition shadow-sm">
-                        Accept Request
-                    </button>
-                </form>
+                </div>
             </div>
-        </div>
+        </li>
         {% endfor %}
-    </div>
+    </ul>
 </div>
 {% endif %}

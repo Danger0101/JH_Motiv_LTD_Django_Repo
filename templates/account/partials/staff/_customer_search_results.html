@@ -1,0 +1,23 @@
+{% if results %}
+<div class="border border-gray-200 rounded-md overflow-hidden bg-white shadow-sm mt-2">
+    <ul class="divide-y divide-gray-100">
+        {% for user in results %}
+        <li>
+            <button class="w-full text-left px-4 py-3 hover:bg-gray-50 transition flex justify-between items-center group focus:outline-none focus:bg-gray-50"
+                    hx-get="{% url 'accounts:staff_customer_lookup' %}?user_id={{ user.id }}"
+                    hx-target="#customer-results">
+                <div>
+                    <p class="text-sm font-medium text-gray-900 group-hover:text-indigo-600">{{ user.get_full_name|default:user.username }}</p>
+                    <p class="text-xs text-gray-500">{{ user.email }}</p>
+                </div>
+                <svg class="h-5 w-5 text-gray-400 group-hover:text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% elif request.GET.q %}
+<p class="text-sm text-gray-500 text-center py-4">No customers found matching "{{ request.GET.q }}".</p>
+{% endif %}

@@ -535,6 +535,73 @@ def apply_for_free_session(request):
     })
 
 @login_required
+@require_POST
+def request_taster(request, offering_id):
+    offering = get_object_or_404(Offering, id=offering_id)
+    
+    if not offering.coach:
+         return HttpResponse('<div class="text-red-600 text-sm mt-2">This offering has no assigned coach.</div>')
+
+    # Check for existing pending/active offers
+    existing = OneSessionFreeOffer.objects.filter(
+        client=request.user,
+        coach=offering.coach,
+        status__in=['PENDING', 'APPROVED']
+    ).exists()
+    
+    if existing:
+        return HttpResponse('<button disabled class="w-full bg-gray-100 text-gray-400 font-bold py-2 px-4 rounded-lg border border-gray-200 cursor-not-allowed">Request Pending / Active</button>')
+
+    # Create the offer
+    OneSessionFreeOffer.objects.create(
+        client=request.user,
+        coach=offering.coach,
+        offering=offering,
+        status='PENDING'
+    )
+    
+    return HttpResponse('<button disabled class="w-full bg-indigo-50 text-indigo-400 font-bold py-2 px-4 rounded-lg border border-indigo-100 cursor-not-allowed">Request Sent</button>')
+
+@login_required
+def book_taster_session(request, offer_id):
+    # Retrieve the specific approved offer
+    offer = get_object_or_404(OneSessionFreeOffer, id=offer_id, client=request.user, status='APPROVED')
+    
+    if request.method == "POST":
+        slot_str = request.POST.get('slot')
+        
+        try:
+            if slot_str:
+                start_dt = datetime.fromisoformat(slot_str)
+                if timezone.is_naive(start_dt):
+                    start_dt = timezone.make_aware(start_dt)
+                
+                # Create a confirmed booking with zero payment
+                booking = SessionBooking.objects.create(
+                    client=request.user,
+                    coach=offer.coach,
+                    offering=offer.offering,
+                    start_datetime=start_dt,
+                    status='BOOKED',
+                    amount_paid=0
+                )
+                # Mark the taster session as used to prevent multiple bookings
+                offer.status = 'USED'
+                offer.session = booking
+                offer.save()
+                
+                messages.success(request, "Free taster session booked successfully!")
+            else:
+                messages.error(request, "No time slot selected.")
+
+        except ValueError:
+            messages.error(request, "Invalid time slot selected.")
+            
+        return redirect('accounts:account_profile')
+    
+    return redirect('accounts:account_profile') # Redirect on GET
+
+@login_required
 def profile_book_session_partial(request):
     user_offerings = ClientOfferingEnrollment.objects.filter(
         client=request.user,
@@ -577,8 +644,7 @@ def profile_book_session_partial(request):
 
 @login_required
 @require_POST
-def coach_approve_free_session(request):
-    offer_id = request.POST.get('offer_id')
+def approve_taster(request, offer_id):
     coach_user = request.user
 
     try:
@@ -587,56 +653,29 @@ def coach_approve_free_session(request):
         messages.error(request, "You are not recognized as a coach.")
         return HttpResponse(status=403)
 
-    try:
-        free_offer = get_object_or_404(OneSessionFreeOffer, id=offer_id)
+    free_offer = get_object_or_404(OneSessionFreeOffer, id=offer_id)
 
-        if free_offer.coach != coach_profile:
-            messages.error(request, "You are not authorized to approve this offer.")
-            return HttpResponse(status=403)
+    if free_offer.coach != coach_profile:
+        messages.error(request, "You are not authorized to approve this offer.")
+        return HttpResponse(status=403)
 
-        if free_offer.is_approved:
-            messages.info(request, "This offer has already been approved.")
-            return HttpResponse(status=200)
-            
-        if free_offer.is_redeemed:
-            messages.info(request, "This offer has already been redeemed.")
-            return HttpResponse(status=200)
+    if free_offer.status != 'PENDING':
+        messages.info(request, "This offer is not pending approval.")
+        return HttpResponse(f'<div hx-swap-oob="true" id="offer-{offer_id}"></div>')
 
-        free_offer.is_approved = True
-        free_offer.save()
+    free_offer.status = 'APPROVED'
+    free_offer.save()
 
-        client_context = {
-            'client_id': free_offer.client.pk,
-            'coach_id': coach_profile.pk,
-            'offer_id': free_offer.pk,
-            'dashboard_url': request.build_absolute_uri(reverse('accounts:account_profile'))
-        }
-        send_transactional_email(
-            recipient_email=free_offer.client.email,
-            subject=f"Your Free Session with {coach_profile.user.get_full_name()} is Approved!",
-            template_name='emails/client_free_session_approved.html',
-            context=client_context
-        )
-        
-        messages.success(request, f"Free session offer for {free_offer.client.get_full_name()} approved.")
-        response = HttpResponse(status=200)
-        response['HX-Trigger'] = 'refreshProfile'
-        return response
-
-    except OneSessionFreeOffer.DoesNotExist:
-        messages.error(request, "Free session offer not found.")
-    except Exception as e:
-        messages.error(request, f"An error occurred: {e}")
+    # client_context = { ... }
+    # send_transactional_email(...)
     
-    response = HttpResponse(status=400)
-    response['HX-Trigger'] = 'refreshProfile'
-    return response
+    messages.success(request, f"Free session offer for {free_offer.client.get_full_name()} approved.")
+    # HTMX will remove the element from the DOM on success
+    return HttpResponse("")
 
 @login_required
 @require_POST
-def coach_deny_free_session(request):
-    offer_id = request.POST.get('offer_id')
-    
+def decline_taster(request, offer_id):
     try:
         coach_profile = request.user.coach_profile
     except CoachProfile.DoesNotExist:
@@ -649,13 +688,13 @@ def coach_deny_free_session(request):
         messages.error(request, "You cannot manage this request.")
         return HttpResponse(status=403)
 
-    free_offer.delete()
+    free_offer.status = 'DECLINED'
+    free_offer.save()
 
     messages.info(request, "Taster session request denied.")
     
-    response = HttpResponse(status=200)
-    response['HX-Trigger'] = 'refreshProfile' 
-    return response
+    # HTMX will remove the element from the DOM on success
+    return HttpResponse("")
 
 @login_required
 def check_payment_status(request, booking_id):

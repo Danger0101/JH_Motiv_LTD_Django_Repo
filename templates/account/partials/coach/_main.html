@@ -1,4 +1,4 @@
-<h2 class="text-2xl font-bold text-gray-800 border-b pb-4 mb-6">Guild Hall (Coach Dashboard)</h2>
+<h2 class="text-2xl font-bold text-gray-900 border-b pb-4 mb-6">Guild Hall (Coach Dashboard)</h2>
 
 {# 1. Pending Requests Section (New) #}
 {% include 'account/partials/coach/_pending_requests.html' %}
@@ -10,7 +10,7 @@
         {% include 'account/partials/coach/_schedule.html' %}
         
         <div>
-            <h3 class="font-bold text-gray-800 mb-4">My Clients</h3>
+            <h3 class="font-bold text-gray-900 mb-4">My Clients</h3>
             <div hx-get="{% url 'accounts:coach_clients_partial' %}" hx-trigger="load" hx-swap="innerHTML">
                 <div class="animate-pulse space-y-3">
                     <div class="h-12 bg-gray-100 rounded"></div>
@@ -32,8 +32,8 @@
 
         {# 4. Availability Management (Existing) #}
         <div>
-            <h3 class="font-bold text-gray-800 mb-4">Availability</h3>
-            <div x-data="{ mode: 'weekly' }" class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+            <h3 class="font-bold text-gray-900 mb-4">Availability</h3>
+            <div x-data="{ mode: 'weekly' }" class="bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
                 <div class="flex space-x-2 mb-4">
                     <button @click="mode = 'weekly'" :class="mode === 'weekly' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'" class="px-3 py-1 text-xs font-bold rounded transition">Weekly</button>
                     <button @click="mode = 'override'" :class="mode === 'override' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'" class="px-3 py-1 text-xs font-bold rounded transition">Overrides</button>
@@ -47,12 +47,12 @@
         </div>
 
         {# 5. Google Calendar (Existing) #}
-        <div class="flex items-center justify-between p-4 bg-blue-50 rounded-xl border border-blue-100">
+        <div class="flex items-center justify-between p-6 bg-blue-50 rounded-xl border border-blue-100">
             <div class="flex items-center">
                 <img src="https://www.gstatic.com/images/branding/product/1x/calendar_48dp.png" alt="GCal" class="w-8 h-8 mr-3">
                 <div>
-                    <h4 class="font-bold text-gray-800 text-sm">Google Calendar</h4>
-                    <p class="text-[10px] text-gray-600">
+                    <h4 class="font-bold text-gray-900 text-sm">Google Calendar</h4>
+                    <p class="text-[10px] text-gray-700">
                         {% if user.coach_profile.google_credentials %}Synced{% else %}Not Connected{% endif %}
                     </p>
                 </div>
