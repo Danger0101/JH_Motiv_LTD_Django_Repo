@@ -21,8 +21,9 @@ class DateOverrideForm(forms.ModelForm):
         fields = ['date', 'is_available', 'start_time', 'end_time']
         widgets = {
             'date': forms.DateInput(attrs={'type': 'date'}),
-            'start_time': forms.TimeInput(format='%H:%M', attrs={'type': 'time'}),
-            'end_time': forms.TimeInput(format='%H:%M', attrs={'type': 'time'}),
+            # Added 'step': '900' to enforce 15-minute increments (15 * 60 = 900 seconds)
+            'start_time': forms.TimeInput(format='%H:%M', attrs={'type': 'time', 'step': '900'}),
+            'end_time': forms.TimeInput(format='%H:%M', attrs={'type': 'time', 'step': '900'}),
         }
 
 class CoachVacationForm(forms.ModelForm):
