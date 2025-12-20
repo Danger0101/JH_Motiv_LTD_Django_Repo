@@ -53,7 +53,7 @@
     </div>
 </div>
 
-{# 6. AVAILABILITY MANAGEMENT (Moved to Bottom Full Width Row) #}
+{# 6. AVAILABILITY MANAGEMENT (Fixed Triggers) #}
 <div class="mt-10 border-t border-gray-100 pt-8">
     <div class="flex items-center justify-between mb-6">
         <h3 class="text-xl font-bold text-gray-900">Availability & Schedule</h3>
@@ -63,17 +63,20 @@
     <div x-data="{ mode: 'weekly' }" class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         {# Tab Navigation #}
         <div class="flex border-b border-gray-200 bg-gray-50">
-            <button @click="mode = 'weekly'" 
+            <button id="tab-weekly"
+                    @click="mode = 'weekly'" 
                     :class="mode === 'weekly' ? 'bg-white text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'" 
                     class="px-6 py-4 text-sm font-bold transition focus:outline-none flex-1 md:flex-none text-center">
                 Weekly Schedule
             </button>
-            <button @click="mode = 'override'" 
+            <button id="tab-override"
+                    @click="mode = 'override'" 
                     :class="mode === 'override' ? 'bg-white text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'" 
                     class="px-6 py-4 text-sm font-bold transition focus:outline-none flex-1 md:flex-none text-center">
                 Date Overrides
             </button>
-            <button @click="mode = 'vacation'" 
+            <button id="tab-vacation"
+                    @click="mode = 'vacation'" 
                     :class="mode === 'vacation' ? 'bg-white text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'" 
                     class="px-6 py-4 text-sm font-bold transition focus:outline-none flex-1 md:flex-none text-center">
                 Vacation Mode
@@ -82,7 +85,7 @@
         
         {# Tab Content #}
         <div class="p-6 md:p-8 min-h-[300px]">
-            {# Weekly - Loads immediately #}
+            {# Weekly - Loads immediately on page load #}
             <div x-show="mode === 'weekly'" 
                  hx-get="{% url 'coaching_availability:profile_availability' %}" 
                  hx-trigger="load once">
@@ -92,18 +95,28 @@
                  </div>
             </div>
 
-            {# Override - Loads on click (using intersect logic inside x-show can be tricky, relying on click is safer for tabs) #}
+            {# Override - Loads ONLY when the 'Date Overrides' button is clicked #}
             <div x-show="mode === 'override'" 
                  hx-get="{% url 'coaching_availability:profile_override' %}" 
-                 hx-trigger="click once from:previous [x-show='mode === \'override\'']">
-                 {# Note: The trigger here relies on the logic that when this div becomes visible, we fetch. #}
-                 {# Or simply trigger it when the button above is clicked. A cleaner way in Alpine/HTMX combo: #}
-                 <div class="h-full" hx-get="{% url 'coaching_availability:profile_override' %}" hx-trigger="revealed"></div>
+                 hx-trigger="click once from:#tab-override">
+                 <div class="flex justify-center items-center h-48 text-gray-400">
+                    <svg class="animate-spin h-8 w-8 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                 </div>
             </div>
 
-            {# Vacation - Loads on reveal #}
-            <div x-show="mode === 'vacation'">
-                 <div class="h-full" hx-get="{% url 'coaching_availability:profile_vacation' %}" hx-trigger="revealed"></div>
+            {# Vacation - Loads ONLY when the 'Vacation Mode' button is clicked #}
+            <div x-show="mode === 'vacation'"
+                 hx-get="{% url 'coaching_availability:profile_vacation' %}" 
+                 hx-trigger="click once from:#tab-vacation">
+                 <div class="flex justify-center items-center h-48 text-gray-400">
+                    <svg class="animate-spin h-8 w-8 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                 </div>
             </div>
         </div>
     </div>
