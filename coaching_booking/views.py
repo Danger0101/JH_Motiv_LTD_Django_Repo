@@ -732,7 +732,7 @@ def staff_create_guest_account(request):
     if not request.user.is_staff:
         return HttpResponseForbidden("Only staff can perform this action.")
     
-    offerings = Offering.objects.filter(active_status=True)
+    offerings = Offering.objects.filter(active_status=True).prefetch_related('coaches__user')
     
     if request.method == 'POST':
         email = request.POST.get('email')
@@ -772,13 +772,25 @@ def staff_create_guest_account(request):
         
         # Optional Enrollment
         offering_id = request.POST.get('offering_id')
+        coach_id = request.POST.get('coach_id')
         enrolled_offering_name = None
         if offering_id:
             try:
                 offering = Offering.objects.get(id=offering_id)
+                
+                # Validation: Ensure a coach is selected if the offering has multiple coaches
+                if offering.coaches.count() > 1 and not coach_id:
+                    messages.error(request, "Please select a coach for this offering.")
+                    return render(request, 'account/partials/staff/staff_create_guest.html', {'offerings': offerings})
+
+                selected_coach = None
+                if coach_id:
+                    selected_coach = offering.coaches.filter(id=coach_id).first()
+
                 ClientOfferingEnrollment.objects.create(
                     client=user,
                     offering=offering,
+                    coach=selected_coach,
                     remaining_sessions=offering.total_number_of_sessions,
                     is_active=True
                 )
@@ -822,7 +834,7 @@ def staff_send_password_reset(request):
         return HttpResponseForbidden("Only staff can perform this action.")
     
     email = request.POST.get('email')
-    offerings = Offering.objects.filter(active_status=True)
+    offerings = Offering.objects.filter(active_status=True).prefetch_related('coaches__user')
     
     if not email:
         messages.error(request, "Email is required.")

@@ -106,6 +106,9 @@ class OfferingListView(StaffRequiredMixin, ListView):
     template_name = 'coaching_core/offering_list.html'
     context_object_name = 'offerings'
 
+    def get_queryset(self):
+        return Offering.objects.prefetch_related('coaches__user')
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['workshops'] = Workshop.objects.filter(active_status=True)

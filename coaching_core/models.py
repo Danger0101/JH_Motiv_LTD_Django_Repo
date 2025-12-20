@@ -104,6 +104,13 @@ class Offering(models.Model):
         
         super().save(*args, **kwargs)
 
+    @property
+    def coach(self):
+        """
+        Returns the first coach. Useful for backward compatibility.
+        """
+        return self.coaches.first()
+
 
     @property
     def display_length(self):

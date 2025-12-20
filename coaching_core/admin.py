@@ -16,18 +16,22 @@ from unfold.admin import ModelAdmin
 
 @admin.register(Offering)
 class OfferingAdmin(ModelAdmin):
-    list_display = ('name', 'duration_display', 'price', 'active_status')
+    list_display = ('name', 'duration_display', 'price', 'active_status', 'coaches_list')
     list_filter = ('active_status', 'duration_type', 'is_whole_day')
     search_fields = ['name', 'description']
     readonly_fields = ('slug', 'created_at', 'updated_at', 'created_by', 'updated_by')    
     filter_horizontal = ('coaches',)
 
     def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related('coaches')
+        return super().get_queryset(request).prefetch_related('coaches__user')
 
     @admin.display(description='Duration')
     def duration_display(self, obj):
         return obj.display_length
+
+    @admin.display(description='Coaches')
+    def coaches_list(self, obj):
+        return ", ".join([c.user.get_full_name() for c in obj.coaches.all()])
 
     fieldsets = (
         ('Service Details', {
