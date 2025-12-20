@@ -31,7 +31,11 @@ class OfferingAdmin(ModelAdmin):
 
     @admin.display(description='Coaches')
     def coaches_list(self, obj):
-        return ", ".join([c.user.get_full_name() for c in obj.coaches.all()])
+        coaches = obj.coaches.all()
+        names = [c.user.get_full_name() for c in coaches[:3]]
+        if coaches.count() > 3:
+            names.append(f"+{coaches.count() - 3} more")
+        return ", ".join(names)
 
     fieldsets = (
         ('Service Details', {

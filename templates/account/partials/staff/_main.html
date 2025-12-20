@@ -1,5 +1,25 @@
 <div class="space-y-6">
-    <h2 class="text-2xl font-bold text-gray-900">Staff Dashboard</h2>
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <h2 class="text-2xl font-bold text-gray-900">Staff Dashboard</h2>
+        
+        <div class="flex flex-wrap gap-3">
+            <button hx-get="{% url 'coaching_booking:staff_create_guest' %}" 
+                    hx-target="#guest-create-container" 
+                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+                Create Guest User
+            </button>
+
+            <a href="{% url 'dreamers:staff_manage' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Manage Dreamers
+            </a>
+            <a href="/admin/" target="_blank" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Django Admin
+            </a>
+        </div>
+    </div>
+
+    <div id="guest-create-container"></div>
     
     <!-- Metrics Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -35,5 +55,19 @@
         <div>
             {% include 'account/partials/staff/_customer_lookup.html' %}
         </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        {% include 'account/partials/staff/_stock_alerts.html' %}
+        
+        {% include 'account/partials/staff/_dreamer_stats.html' %}
+    </div>
+
+    <div class="mt-6">
+        {% include 'account/partials/staff/_recent_orders.html' %}
+    </div>
+
+    <div class="mt-6">
+        {% include 'account/partials/staff/_recent_guests.html' %}
     </div>
 </div>

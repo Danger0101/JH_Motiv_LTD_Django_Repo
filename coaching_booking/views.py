@@ -46,7 +46,7 @@ class CoachLandingView(TemplateView):
         user = self.request.user
 
         coaches = CoachProfile.objects.filter(user__is_active=True, is_available_for_new_clients=True).select_related('user')
-        offerings = Offering.objects.filter(active_status=True).prefetch_related('coaches')
+        offerings = Offering.objects.filter(active_status=True).prefetch_related('coaches__user')
         workshops = Workshop.objects.filter(active_status=True)
         knowledge_pages = ContentPage.objects.filter(is_published=True).order_by('title')[:3]
         facts = Fact.objects.all()
@@ -1061,37 +1061,22 @@ def get_booking_calendar(request):
     coach = None
     slot_target_id = '#time-slots-column' # Default target
 
-    # --- 1. Reschedule Context Logic (Fixes Free Sessions) ---
+    # --- 1. Determine Context (Reschedule vs New Booking) ---
     if reschedule_booking_id:
         try:
-            # If rescheduling, derive context from the booking
             booking = SessionBooking.objects.get(id=reschedule_booking_id, client=request.user)
+            session_length = booking.get_duration_minutes() or 60
+            slot_target_id = '#reschedule-slots-container' # Use the modal's container
             
+            # Default to booking coach if not explicitly changed
             if not coach_id:
                 coach = booking.coach
                 coach_id = coach.id
-            
-            # Use the existing session duration
-            session_length = booking.get_duration_minutes() or 60
-            slot_target_id = '#reschedule-slots-container' # Use the modal's container
         except SessionBooking.DoesNotExist:
             pass
-
-    # --- 2. Standard Booking Context Logic ---
-    if not coach and coach_id:
-        coach = get_object_or_404(CoachProfile, id=coach_id)
-
-    # --- 3. Validate Inputs ---
-    # We allow missing enrollment_id IF we are rescheduling
-    if not coach or (not enrollment_id and not reschedule_booking_id):
-        return HttpResponse(
-            '<div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center h-full flex flex-col justify-center items-center">'
-            '<p class="text-gray-500 font-medium">Select an Offering and a Coach to view availability.</p>'
-            '</div>'
-        )
-
-    # Determine Session Length for Standard Enrollment
-    if not reschedule_booking_id and enrollment_id:
+    
+    elif enrollment_id:
+        # Standard Booking
         if str(enrollment_id).startswith('free_'):
             session_length = 60 
         else:
@@ -1100,6 +1085,18 @@ def get_booking_calendar(request):
                 session_length = enrollment.offering.session_length_minutes
             except ClientOfferingEnrollment.DoesNotExist:
                 pass
+
+    # --- 2. Resolve Coach ---
+    if not coach and coach_id:
+        coach = get_object_or_404(CoachProfile, id=coach_id)
+
+    # --- 3. Validate Inputs ---
+    if not coach:
+        return HttpResponse(
+            '<div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center h-full flex flex-col justify-center items-center">'
+            '<p class="text-gray-500 font-medium">Select an Offering and a Coach to view availability.</p>'
+            '</div>'
+        )
 
     try:
         year = int(request.GET.get('year', timezone.now().year))
