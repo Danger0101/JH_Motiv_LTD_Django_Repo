@@ -4,7 +4,7 @@ from django.conf import settings
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta, datetime, time
 import calendar
 import logging
 from django.db import transaction
@@ -1032,13 +1032,14 @@ def book_workshop(request, slug):
 
 @login_required
 def get_booking_calendar(request):
-    coach_id = request.GET.get('coach_id')
     enrollment_id = request.GET.get('enrollment_id')
     reschedule_booking_id = request.GET.get('reschedule_booking_id')
     
     session_length = 60 # Default
     coach = None
     slot_target_id = '#time-slots-column' # Default target
+    free_offer = None
+    enrollment = None
 
     # --- 1. Determine Context (Reschedule vs New Booking) ---
     if reschedule_booking_id:
@@ -1048,28 +1049,33 @@ def get_booking_calendar(request):
             # slot_target_id = '#reschedule-slots-container' # Removed to match profile_book_session.html target
             
             # Default to booking coach if not explicitly changed
-            if not coach_id:
-                coach = booking.coach
-                coach_id = coach.id
+            coach = booking.coach
         except SessionBooking.DoesNotExist:
             pass
     
     elif enrollment_id:
         # Standard Booking
         if str(enrollment_id).startswith('free_'):
-            session_length = 60 
+            try:
+                offer_id = str(enrollment_id).replace('free_', '')
+                free_offer = get_object_or_404(OneSessionFreeOffer, id=offer_id, client=request.user)
+                coach = free_offer.coach
+                if free_offer.offering:
+                    session_length = free_offer.offering.session_length_minutes
+            except (ValueError, OneSessionFreeOffer.DoesNotExist):
+                pass
         else:
             try:
                 enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id, client=request.user)
+                coach = enrollment.coach
+                # Fallback: If no primary coach assigned, pick the first one from the offering
+                if not coach:
+                    coach = enrollment.offering.coaches.first()
                 session_length = enrollment.offering.session_length_minutes
             except ClientOfferingEnrollment.DoesNotExist:
                 pass
 
-    # --- 2. Resolve Coach ---
-    if not coach and coach_id:
-        coach = get_object_or_404(CoachProfile, id=coach_id)
-
-    # --- 3. Validate Inputs ---
+    # --- 2. Validate Inputs ---
     if not coach:
         return HttpResponse(
             '<div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center h-full flex flex-col justify-center items-center">'
@@ -1123,7 +1129,6 @@ def get_booking_calendar(request):
         'prev_year': prev_date.year,
         'next_month': next_date.month,
         'next_year': next_date.year,
-        'coach_id': coach_id,
         'enrollment_id': enrollment_id, # Can be "free_X" or normal ID
         'coach': coach, # Pass the object, not just ID
         'disable_prev': disable_prev,
@@ -1139,14 +1144,12 @@ def confirm_booking_modal(request):
     Renders the slide-over form when a user clicks a slot.
     """
     slot_iso = request.GET.get('time') # UTC ISO string
-    coach_id = request.GET.get('coach_id')
     enrollment_id = request.GET.get('enrollment_id')
     workshop_id = request.GET.get('workshop_id')
     
     # We pass these back to the form so the POST request has context
     context = {
         'slot_iso': slot_iso,
-        'coach_id': coach_id,
         'enrollment_id': enrollment_id,
         'workshop_id': workshop_id,
     }
@@ -1206,12 +1209,10 @@ def confirm_reschedule_modal(request, booking_id):
 @login_required
 def get_daily_slots(request):
     date_str = request.GET.get('date')
-    coach_id = request.GET.get('coach_id')
     enrollment_id_param = request.GET.get('enrollment_id')
     reschedule_booking_id = request.GET.get('reschedule_booking_id')
 
     context = {
-        'coach_id': coach_id,
         'enrollment_id': '', # Default empty
         'free_offer_id': '', # Default empty
         'selected_date': None,
@@ -1220,12 +1221,12 @@ def get_daily_slots(request):
         'reschedule_booking_id': reschedule_booking_id,
     }
 
-    if not date_str or not coach_id:
-        context['error_message'] = 'Please select a date and coach.'
+    if not date_str:
+        context['error_message'] = 'Please select a date.'
         return render(request, 'coaching_booking/partials/available_slots.html', context)
 
     if not enrollment_id_param and not reschedule_booking_id:
-        context['error_message'] = 'Please select an offering and a coach first.'
+        context['error_message'] = 'Please select an offering first.'
         return render(request, 'coaching_booking/partials/available_slots.html', context)
 
     try:
@@ -1242,13 +1243,14 @@ def get_daily_slots(request):
             context['error_message'] = 'This date is too far in the future.'
             return render(request, 'coaching_booking/partials/available_slots.html', context)
 
-        coach_profile = CoachProfile.objects.get(id=coach_id)
+        coach_profile = None
         
         # FIX 2: Handle Rescheduling Context specifically
         if reschedule_booking_id:
             # If rescheduling, we derive session length from the existing booking
             # We do NOT require enrollment_id_param here
             booking = SessionBooking.objects.get(id=reschedule_booking_id, client=request.user)
+            coach_profile = booking.coach
             session_length = booking.get_duration_minutes() or 60
             
             # If enrollment_id happens to be passed, we can preserve it, but it's optional
@@ -1259,12 +1261,8 @@ def get_daily_slots(request):
         elif str(enrollment_id_param).startswith('free_'):
             free_id = str(enrollment_id_param).split('_')[1]
             free_offer = OneSessionFreeOffer.objects.get(id=free_id, client=request.user, status='APPROVED')
+            coach_profile = free_offer.coach
             
-            # Check for Coach Mismatch
-            if int(coach_id) != free_offer.coach.id:
-                 context['error_message'] = "The selected coach does not match the approved free offer."
-                 return render(request, 'coaching_booking/partials/available_slots.html', context)
-
             session_length = 60 
             context['free_offer_id'] = free_id
             context['enrollment_id'] = ''
@@ -1272,6 +1270,9 @@ def get_daily_slots(request):
         # Handle Standard Enrollment ID
         else:
             enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id_param, client=request.user)
+            coach_profile = enrollment.coach
+            if not coach_profile:
+                coach_profile = enrollment.offering.coaches.first()
             session_length = enrollment.offering.session_length_minutes
             context['enrollment_id'] = enrollment_id_param
             context['free_offer_id'] = ''
@@ -1292,6 +1293,7 @@ def get_daily_slots(request):
                 })
 
         context['available_slots'] = formatted_slots
+        context['coach_id'] = coach_profile.id if coach_profile else None
 
     except (ValueError, CoachProfile.DoesNotExist, ClientOfferingEnrollment.DoesNotExist, OneSessionFreeOffer.DoesNotExist, SessionBooking.DoesNotExist):
         context['error_message'] = 'Invalid request data or enrollment not found.'

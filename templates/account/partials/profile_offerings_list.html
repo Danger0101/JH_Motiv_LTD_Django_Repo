@@ -35,14 +35,20 @@
     <ul class="space-y-4" role="list">
         {% for user_offering in user_offerings %}
         <li class="border-b pb-4 last:border-b-0">
-            <h3 class="text-xl font-semibold text-gray-800">{{ user_offering.offering.name }}</h3>
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-800">{{ user_offering.offering.name }}</h3>
+                    {% if user_offering.coach %}
+                    <p class="text-sm font-medium text-indigo-600 mb-1">Primary Coach: {{ user_offering.coach.user.get_full_name }}</p>
+                    {% endif %}
+                </div>
+            </div>
             
-            {# FIX: Use correct attribute names (purchase_date / expiration_date) #}
-            <p class="text-gray-600">Purchased on: <strong>{{ user_offering.purchase_date|date:"M d, Y" }}</strong></p>
-            
-            <p class="text-gray-600">Sessions remaining: <strong>{{ user_offering.remaining_sessions }}</strong> / {{ user_offering.total_sessions }}</p>
-            
-            <p class="text-gray-600">Access valid until: <strong>{{ user_offering.expiration_date|date:"M d, Y" }}</strong></p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                <p class="text-gray-600 text-sm">Purchased: <strong>{{ user_offering.purchase_date|date:"M d, Y" }}</strong></p>
+                <p class="text-gray-600 text-sm">Sessions: <strong>{{ user_offering.remaining_sessions }}</strong> / {{ user_offering.total_sessions }}</p>
+                <p class="text-gray-600 text-sm">Expires: <strong>{{ user_offering.expiration_date|date:"M d, Y" }}</strong></p>
+            </div>
             
             {% if user_offering.remaining_sessions > 0 and user_offering.is_active and not user_offering.is_expired %}
             <button hx-get="{% url 'coaching_booking:profile_book_session' %}?enrollment_id={{ user_offering.id }}" hx-target="#profile-content" hx-swap="innerHTML"
@@ -50,9 +56,9 @@
                 Book a Session
             </button>
             {% elif user_offering.is_expired %}
-            <p class="text-red-600 mt-2">This offering has expired.</p>
+            <p class="text-red-600 mt-2 text-sm">This offering has expired.</p>
             {% else %}
-            <p class="text-gray-500 mt-2">No sessions remaining or offering is inactive.</p>
+            <p class="text-gray-500 mt-2 text-sm">No sessions remaining or offering is inactive.</p>
             {% endif %}
         </li>
         {% empty %}

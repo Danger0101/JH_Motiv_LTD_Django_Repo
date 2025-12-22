@@ -3,7 +3,7 @@
 
     <div>
         {% csrf_token %}
-        <div class="mb-4">
+        <div class="mb-6">
             <label for="enrollment_id" class="block text-sm font-medium text-gray-700">Select Offering:</label>
             <select id="enrollment_id" name="enrollment_id"
                     class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
@@ -12,8 +12,9 @@
                     <optgroup label="Paid Enrollments">
                     {% for enrollment in user_offerings %}
                         {% if enrollment.remaining_sessions > 0 and enrollment.is_active and not enrollment.is_expired %}
-                            <option value="{{ enrollment.id }}" {% if selected_enrollment_id == enrollment.id|stringformat:"s" %}selected{% endif %}>
-                                {{ enrollment.offering.name }} ({{ enrollment.remaining_sessions }} sessions remaining)
+                            <option value="{{ enrollment.id }}" 
+                                    {% if selected_enrollment_id == enrollment.id|stringformat:"s" %}selected{% endif %}>
+                                {{ enrollment.offering.name }} ({{ enrollment.remaining_sessions }} left) - With {{ enrollment.coach.user.get_full_name }}
                             </option>
                         {% endif %}
                     {% endfor %}
@@ -30,32 +31,18 @@
                     </optgroup>
                 {% endif %}
             </select>
-        </div>
-
-        <div class="mb-4">
-            <label for="coach_id" class="block text-sm font-medium text-gray-700">Select Coach:</label>
-            <select id="coach_id" name="coach_id"
-                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                <option value="">-- Select a Coach --</option>
-                {% if coaches %}
-                    {% for coach in coaches %}
-                        <option value="{{ coach.id }}" {% if selected_coach_id == coach.id|stringformat:"s" %}selected{% endif %}>
-                            {{ coach.user.get_full_name }}
-                        </option>
-                    {% endfor %}
-                {% endif %}
-            </select>
+            <p class="text-xs text-gray-500 mt-1">Bookings are made with the coach assigned to your package.</p>
         </div>
 
         <div class="flex flex-col md:flex-row gap-6 mt-6">
             <div id="calendar-wrapper" class="md:w-2/3"
-                 hx-trigger="change from:#enrollment_id, change from:#coach_id"
+                 hx-trigger="load, change from:#enrollment_id"
                  hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}"
-                 hx-include="#enrollment_id, #coach_id"
+                 hx-include="#enrollment_id"
                  hx-swap="innerHTML">
                 
                 <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    <p class="text-gray-500 font-medium">Select an Offering and a Coach to view the booking calendar.</p>
+                    <p class="text-gray-500 font-medium">Select an Offering to view your coach's availability.</p>
                 </div>
             </div>
 
