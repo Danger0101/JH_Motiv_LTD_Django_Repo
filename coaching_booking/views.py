@@ -12,7 +12,7 @@ from django.db.models import Q
 import json
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 from django.http import HttpResponse, HttpResponseForbidden
 import stripe
 from django.contrib.auth import login
@@ -20,6 +20,7 @@ from django.utils.crypto import get_random_string
 from django.contrib.auth.forms import PasswordResetForm
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
+import pytz
 
 from core.email_utils import send_transactional_email
 from payments.models import CoachingOrder

@@ -1,141 +1,52 @@
-<div id="calendar-container" class="bg-white rounded-lg shadow p-4 relative">
-    <style>
-        .htmx-indicator{opacity:0;transition: opacity 200ms ease-in;pointer-events:none;}
-        .htmx-request .htmx-indicator{opacity:1;pointer-events:auto;}
-        .htmx-request.htmx-indicator{opacity:1;pointer-events:auto;}
-    </style>
-    
-    <div id="calendar-spinner" class="htmx-indicator absolute inset-0 bg-white bg-opacity-75 z-10 flex items-center justify-center rounded-lg">
-        <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-    </div>
-    
-    <div class="flex justify-between items-center mb-4">
-        {% if disable_prev %}
-            <button type="button" disabled class="text-gray-300 font-medium px-2 py-1 cursor-not-allowed">
-                &larr; Prev
-            </button>
-        {% else %}
-            <button type="button"
-                    class="text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 rounded hover:bg-indigo-50 transition-colors"
-                    hx-get="{% url 'coaching_booking:get_booking_calendar' %}"
-                    hx-indicator="#calendar-spinner"
-                    hx-vals='{"month": "{{ prev_month }}", "year": "{{ prev_year }}", "enrollment_id": "{{ enrollment_id|default_if_none:"" }}", "reschedule_booking_id": "{{ reschedule_booking_id|default_if_none:"" }}"}'
-                    hx-target="#calendar-container"
-                    hx-swap="outerHTML">
-                &larr; Prev
-            </button>
-        {% endif %}
-        
-        <div class="flex items-center gap-2">
-            <h3 class="font-bold text-lg text-gray-800">{{ current_month_name }} {{ current_year }}</h3>
-            {% if not is_current_month_view %}
-                <button type="button"
-                        class="text-xs font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded transition-colors"
-                        hx-get="{% url 'coaching_booking:get_booking_calendar' %}"
-                        hx-indicator="#calendar-spinner"
-                        hx-vals='{"month": "{% now "n" %}", "year": "{% now "Y" %}", "enrollment_id": "{{ enrollment_id|default_if_none:"" }}", "reschedule_booking_id": "{{ reschedule_booking_id|default_if_none:"" }}"}'
-                        hx-target="#calendar-container"
-                        hx-swap="outerHTML">
-                    Today
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="flex items-center justify-between px-6 py-4 bg-gray-50 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-900">
+            {{ current_date|date:"F Y" }}
+        </h3>
+        <div class="flex space-x-2">
+            {% with params="year="|add:prev_year|add:"&month="|add:prev_month %}
+                {% if enrollment_id %} {% with params=params|add:"&enrollment_id="|add:enrollment_id %}{% endwith %} {% endif %}
+                {% if reschedule_booking_id %} {% with params=params|add:"&reschedule_booking_id="|add:reschedule_booking_id %}{% endwith %} {% endif %}
+                
+                <button hx-get="{% url 'coaching_booking:get_booking_calendar' %}?{{ params }}&enrollment_id={{ enrollment_id }}&reschedule_booking_id={{ reschedule_booking_id }}"
+                        hx-target="#reschedule-calendar-container"
+                        class="p-2 rounded-full hover:bg-gray-200 text-gray-600 transition">
+                    &larr;
                 </button>
-            {% endif %}
+            {% endwith %}
+            
+            <button hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ next_year }}&month={{ next_month }}&enrollment_id={{ enrollment_id }}&reschedule_booking_id={{ reschedule_booking_id }}"
+                    hx-target="#reschedule-calendar-container"
+                    class="p-2 rounded-full hover:bg-gray-200 text-gray-600 transition">
+                &rarr;
+            </button>
         </div>
-        
-        <button type="button"
-                class="text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 rounded hover:bg-indigo-50 transition-colors"
-                hx-get="{% url 'coaching_booking:get_booking_calendar' %}"
-                hx-indicator="#calendar-spinner"
-                hx-vals='{"month": "{{ next_month }}", "year": "{{ next_year }}", "enrollment_id": "{{ enrollment_id|default_if_none:"" }}", "reschedule_booking_id": "{{ reschedule_booking_id|default_if_none:"" }}"}'
-                hx-target="#calendar-container"
-                hx-swap="outerHTML">
-            Next &rarr;
-        </button>
     </div>
 
-    <table class="w-full border-collapse table-fixed">
-        <thead>
-            <tr>
-                <th class="text-center py-2 text-xs font-semibold text-gray-400 uppercase">Mon</th>
-                <th class="text-center py-2 text-xs font-semibold text-gray-400 uppercase">Tue</th>
-                <th class="text-center py-2 text-xs font-semibold text-gray-400 uppercase">Wed</th>
-                <th class="text-center py-2 text-xs font-semibold text-gray-400 uppercase">Thu</th>
-                <th class="text-center py-2 text-xs font-semibold text-gray-400 uppercase">Fri</th>
-                <th class="text-center py-2 text-xs font-semibold text-gray-400 uppercase">Sat</th>
-                <th class="text-center py-2 text-xs font-semibold text-gray-400 uppercase">Sun</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for week in calendar_rows %}
-                <tr>
-                    {% for day in week %}
-                        <td class="p-1 text-center h-12 w-12 align-middle">
-                            
-                            {% if not day.is_current_month %}
-                                <span class="text-gray-300 text-sm">{{ day.number }}</span>
-                            
-                            {% else %}
-                                {% if day.is_past %}
-                                    <button type="button" disabled
-                                        class="w-8 h-8 flex items-center justify-center rounded-full text-gray-300 cursor-not-allowed mx-auto">
-                                        {{ day.number }}
-                                    </button>
-                                {% else %}
-                                    <button type="button"
-                                        class="w-8 h-8 flex items-center justify-center rounded-full text-sm font-medium mx-auto transition-all duration-200
-                                               {% if day.is_today %}ring-2 ring-offset-1 ring-indigo-600 font-bold{% endif %}
-                                               {% if day.slots %}
-                                                   bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white {% if not day.is_today %}ring-1 ring-indigo-200{% endif %} font-bold group relative
-                                               {% else %}
-                                                   text-gray-700 hover:bg-gray-100
-                                               {% endif %}"
-                                        hx-get="{% url 'coaching_booking:get_daily_slots' %}?date={{ day.date|date:'Y-m-d' }}&enrollment_id={{ enrollment_id }}&reschedule_booking_id={{ reschedule_booking_id|default_if_none:'' }}"
-                                        hx-target="{{ slot_target_id|default:'#time-slots-column' }}"
-                                        hx-swap="innerHTML">
-                                        {{ day.number }}
-                                        
-                                        {% if day.slots %}
-                                            <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-all duration-200 ease-out translate-y-1 group-hover:translate-y-0 z-50 whitespace-nowrap pointer-events-none">
-                                                <div class="bg-gray-900 text-white text-xs rounded py-1 px-2 shadow-lg relative">
-                                                    {% if day.is_fully_booked %}
-                                                        Fully Booked
-                                                    {% else %}
-                                                        {{ day.slots|length }} slots available
-                                                    {% endif %}
-                                                    <div class="w-2 h-2 bg-gray-900 transform rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1"></div>
-                                                </div>
-                                            </div>
-                                        {% endif %}
-                                    </button>
-                                    
-                                    {% if day.has_available %}
-                                        <div class="h-1 w-1 bg-indigo-500 rounded-full mx-auto mt-0.5"></div>
-                                    {% elif day.is_fully_booked %}
-                                        <div class="h-1 w-1 bg-red-500 rounded-full mx-auto mt-0.5"></div>
-                                    {% endif %}
-                                {% endif %}
-                            {% endif %}
-                        </td>
-                    {% endfor %}
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide text-center">
+        <div class="py-2">Mon</div><div class="py-2">Tue</div><div class="py-2">Wed</div>
+        <div class="py-2">Thu</div><div class="py-2">Fri</div><div class="py-2">Sat</div>
+        <div class="py-2">Sun</div>
+    </div>
     
-    <div class="mt-4 pt-3 border-t border-gray-100 flex flex-wrap items-center justify-center gap-6 text-xs text-gray-500">
-        <div class="flex items-center gap-2">
-            <div class="w-2 h-2 rounded-full bg-indigo-500"></div>
-            <span>Available</span>
-        </div>
-        <div class="flex items-center gap-2">
-            <div class="w-2 h-2 rounded-full bg-red-500"></div>
-            <span>Fully Booked</span>
-        </div>
-        <div class="flex items-center gap-2">
-            <div class="w-3 h-3 rounded-full border-2 border-indigo-600"></div>
-            <span>Today</span>
-        </div>
+    <div class="grid grid-cols-7 text-sm">
+        {% for day in schedule %}
+            <div class="relative h-20 border-b border-r border-gray-100 p-1
+                        {% if not day.is_current_month %}bg-gray-50 text-gray-400{% endif %}">
+                
+                <span class="block text-right pr-2 text-xs">{{ day.number }}</span>
+                
+                {% if day.has_available %}
+                    <div class="mt-1 text-center">
+                        <button 
+                            hx-get="{% url 'coaching_booking:get_day_slots' %}?date={{ day.date|date:'Y-m-d' }}&enrollment_id={{ enrollment_id }}&reschedule_booking_id={{ reschedule_booking_id }}"
+                            hx-target="#time-slots-column"
+                            class="inline-block px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full hover:bg-green-200 transition cursor-pointer">
+                            Select
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
     </div>
 </div>

@@ -1,42 +1,34 @@
-<form hx-post="{% url 'coaching_booking:book_session' %}" hx-target="#booking-errors" hx-swap="innerHTML" class="space-y-4">
-    {% csrf_token %}
+<div class="bg-indigo-50 p-4 rounded-lg border border-indigo-100 animate-fade-in-down">
+    <h4 class="font-bold text-indigo-900 mb-2">
+        {% if reschedule_booking_id %}Confirm New Time{% else %}Confirm Booking{% endif %}
+    </h4>
     
-    {# Hidden fields to pass context to the POST view #}
-    <input type="hidden" name="start_time" value="{{ slot_iso }}">
-    <input type="hidden" name="enrollment_id" value="{{ enrollment_id|default:'' }}">
-    <input type="hidden" name="workshop_id" value="{{ workshop_id|default:'' }}">
-    
-    <div>
-        <h3 class="text-lg font-bold text-gray-900">Confirm Booking</h3>
-        <p class="text-sm text-gray-500">
-            {{ pretty_time|default:slot_iso }}
-        </p>
-    </div>
+    <div class="mb-4 text-sm text-indigo-800">
+        <p><strong>Coach:</strong> {{ coach.user.get_full_name }}</p>
+        <p><strong>Date:</strong> {{ date_obj|date:"l, F jS, Y" }}</p>
+        <p><strong>Time:</strong> {{ slots.0.display }}</p> </div>
 
-    <div id="booking-errors"></div>
+    <form action="{% if reschedule_booking_id %}{% url 'coaching_booking:reschedule_session' reschedule_booking_id %}{% else %}{% url 'coaching_booking:book_session' %}{% endif %}" method="POST">
+        {% csrf_token %}
+        
+        {% if enrollment_id %}
+            <input type="hidden" name="enrollment_id" value="{{ enrollment_id }}">
+        {% endif %}
+        
+        <div class="mb-4 max-h-40 overflow-y-auto">
+            {% for slot in slots %}
+            <label class="flex items-center space-x-3 mb-2 p-2 bg-white rounded border cursor-pointer hover:border-indigo-300">
+                <input type="radio" name="start_time" value="{{ slot.iso }}" class="form-radio text-indigo-600" required>
+                <span class="text-sm text-gray-700">{{ slot.display }}</span>
+            </label>
+            {% endfor %}
+        </div>
 
-    <div class="flex justify-end gap-3 pt-4">
-        <button type="button" @click="openBooking = false" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
-        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Confirm Session</button>
-    </div>
-</form>
-
-<script>
-    (function() {
-        // Ensure this script only runs once and htmx is available
-        if (window.htmx && !document.body.hasAttribute('data-booking-error-listener')) {
-            document.body.setAttribute('data-booking-error-listener', 'true');
-
-            htmx.on('htmx:afterRequest', function(evt) {
-                // Check if the request was successful and was NOT the booking submission itself
-                const requestPath = evt.detail.requestConfig.path;
-                if (evt.detail.successful && requestPath.indexOf('book_session') === -1) {
-                    const errorDiv = document.getElementById('booking-errors');
-                    if (errorDiv) {
-                        errorDiv.innerHTML = '';
-                    }
-                }
-            });
-        }
-    })();
-</script>
+        <div class="flex items-center justify-between mt-4">
+            <button type="submit" 
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded shadow-sm transition duration-150 ease-in-out">
+                {% if reschedule_booking_id %}Update Booking{% else %}Confirm Booking{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
