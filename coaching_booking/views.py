@@ -97,6 +97,48 @@ class OfferEnrollmentStartView(LoginRequiredMixin, DetailView):
 
 @login_required
 @require_POST
+def create_checkout_session(request, offering_id):
+    offering = get_object_or_404(Offering, id=offering_id)
+    
+    # 1. Capture the coach selection
+    selected_coach_id = request.POST.get('coach_id')
+    
+    # Optional validation: Ensure coach is valid for this offering
+    if selected_coach_id and not offering.coaches.filter(id=selected_coach_id).exists():
+        messages.error(request, "Invalid coach selected.")
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+    # 2. Create Stripe Session with Metadata
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            customer_email=request.user.email,
+            line_items=[{
+                'price_data': {
+                    'currency': 'gbp',
+                    'product_data': {'name': offering.name},
+                    'unit_amount': int(offering.price * 100),
+                },
+                'quantity': 1,
+            }],
+            mode='payment',
+            success_url=request.build_absolute_uri(reverse('accounts:account_profile')),
+            cancel_url=request.build_absolute_uri(request.META.get('HTTP_REFERER', '/')),
+            metadata={
+                'offering_id': offering.id,
+                'user_id': request.user.id,
+                'coach_id': selected_coach_id,
+                'type': 'offering_enrollment'
+            },
+        )
+        return redirect(checkout_session.url, code=303)
+    except Exception as e:
+        logger.error(f"Stripe Checkout Error: {e}")
+        messages.error(request, "Unable to initiate checkout. Please try again.")
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+@login_required
+@require_POST
 def book_session(request):
     enrollment_id = request.POST.get('enrollment_id')
     free_offer_id = request.POST.get('free_offer_id')

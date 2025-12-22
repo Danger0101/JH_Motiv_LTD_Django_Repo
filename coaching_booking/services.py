@@ -509,6 +509,14 @@ class BookingService:
         if req.requesting_coach == accepting_coach:
             return False, "You cannot accept your own coverage request."
 
+        # Check for Google Calendar conflicts (CoachBusySlot)
+        if CoachBusySlot.objects.filter(
+            coach=accepting_coach, 
+            start_time__lt=req.session.end_datetime, 
+            end_time__gt=req.session.start_datetime
+        ).exists():
+            return False, "You have a Google Calendar conflict at this time."
+
         # Execute Acceptance Logic
         success = req.accept(accepting_coach)
         

@@ -231,7 +231,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
                 Q(target_coach=coach_profile) | Q(target_coach__isnull=True)
             ).exclude(
                 requesting_coach=coach_profile
-            ).select_related('session', 'requesting_coach__user').order_by('session__start_datetime')
+            ).select_related('session', 'session__client', 'requesting_coach__user').order_by('session__start_datetime')
 
         # For Client: My Free/Taster Offers
         my_free_offers = OneSessionFreeOffer.objects.filter(
@@ -747,7 +747,7 @@ def dashboard_partial(request):
             Q(target_coach=coach_profile) | Q(target_coach__isnull=True)
         ).exclude(
             requesting_coach=coach_profile
-        ).select_related('session', 'requesting_coach__user').order_by('session__start_datetime')
+        ).select_related('session', 'session__client', 'requesting_coach__user').order_by('session__start_datetime')
 
     # For Client: My Free/Taster Offers
     my_free_offers = OneSessionFreeOffer.objects.filter(

@@ -32,12 +32,31 @@ Expects the following context variables:
         {% if extra_details_html %}<div class="mb-4">{{ extra_details_html|safe }}</div>{% endif %}
         <div class="mt-auto flex items-center justify-between z-10">
             <p class="text-lg font-bold text-gray-900">{{ price_html|safe }}</p>
-            <span 
-                aria-hidden="true" 
-                class="bg-gray-800 text-white text-sm font-bold py-2 px-4 rounded-md group-hover:bg-gray-900 group-focus-within:bg-gray-900 transition duration-300"
-            >
-                {{ cta_text }}
-            </span>
+            
+            {% if offering %}
+                <form action="{% url 'coaching_booking:create_checkout_session' offering.id %}" method="POST" class="flex-grow ml-4">
+                    {% csrf_token %}
+                    
+                    {% if offering.coaches.exists %}
+                    <div class="mb-2">
+                        <select name="coach_id" required class="block w-full pl-2 pr-8 py-1 text-xs border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
+                            <option value="">Select Coach</option>
+                            {% for coach in offering.coaches.all %}
+                                <option value="{{ coach.id }}">{{ coach.user.get_full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    <button type="submit" class="w-full bg-gray-800 text-white text-sm font-bold py-2 px-4 rounded-md group-hover:bg-gray-900 transition duration-300">
+                        {{ cta_text|default:"Purchase" }}
+                    </button>
+                </form>
+            {% else %}
+                <span aria-hidden="true" class="bg-gray-800 text-white text-sm font-bold py-2 px-4 rounded-md group-hover:bg-gray-900 group-focus-within:bg-gray-900 transition duration-300">
+                    {{ cta_text }}
+                </span>
+            {% endif %}
         </div>
     </div>
 </article>
