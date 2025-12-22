@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import Q, UniqueConstraint
+from django.db.models import Q, UniqueConstraint, F
 from django.utils import timezone
 from datetime import timedelta
 from accounts.models import User
@@ -185,34 +185,46 @@ class SessionBooking(models.Model):
         Returns True if credit was restored (Early Cancel).
         Returns False if credit was forfeited (Late Cancel).
         """
+        if self.status in ['CANCELED', 'COMPLETED']:
+            return False
+
         now = timezone.now()
         cutoff = self.start_datetime - timedelta(hours=24)
+        is_early = now < cutoff
 
-        if now < cutoff:
+        if is_early:
             # > 24 hours notice: Refund credit
             if self.enrollment:
-                self.enrollment.remaining_sessions += 1
-                self.enrollment.save()
+                self.enrollment.remaining_sessions = F('remaining_sessions') + 1
+                self.enrollment.save(update_fields=['remaining_sessions'])
             
-            self.status = 'CANCELED'
-            self.save()
-            return True
-        else:
-            # < 24 hours notice: Forfeit credit
-            self.status = 'CANCELED'
-            self.save()
-            return False
+            # Refund Free Offer (Taster Session)
+            if hasattr(self, 'free_offer') and self.free_offer:
+                self.free_offer.status = 'APPROVED'
+                self.free_offer.session = None
+                self.free_offer.save()
+
+        # < 24 hours notice: Forfeit credit (do nothing to enrollment/offer)
+        self.status = 'CANCELED'
+        self.save()
+        return is_early
 
     def reschedule(self, new_start_time):
         """
         Reschedules the session.
         Returns 'SUCCESS' or 'LATE' if within 24h.
         """
+        if self.status in ['CANCELED', 'COMPLETED']:
+            return 'ERROR'
+
         now = timezone.now()
         cutoff = self.start_datetime - timedelta(hours=24)
 
         if now >= cutoff:
             return 'LATE'
+
+        # Calculate current duration to preserve it if no enrollment exists
+        current_duration = self.end_datetime - self.start_datetime
 
         self.start_datetime = new_start_time
         # end_datetime will be recalculated on save usually, but let's set it explicitly to be safe
@@ -220,7 +232,7 @@ class SessionBooking(models.Model):
             session_minutes = self.enrollment.offering.session_length_minutes
             self.end_datetime = new_start_time + timedelta(minutes=session_minutes)
         else:
-            self.end_datetime = new_start_time + timedelta(minutes=60)
+            self.end_datetime = new_start_time + current_duration
             
         self.status = 'RESCHEDULED'
         self.save()

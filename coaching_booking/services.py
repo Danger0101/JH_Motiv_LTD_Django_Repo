@@ -479,6 +479,7 @@ class BookingService:
         # 5. Create Record
         booking = SessionBooking.objects.create(
             enrollment=enrollment, 
+            offering=free_offer.offering if free_offer else None,
             coach=coach_profile,
             client=user,
             start_datetime=start_datetime_obj,
