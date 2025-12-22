@@ -356,6 +356,7 @@ class BookingService:
 
         booking = SessionBooking.objects.create(
             workshop=workshop,
+            coach=workshop.coach,
             client=user,
             guest_email=guest_email,
             guest_name=guest_name,

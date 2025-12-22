@@ -225,12 +225,20 @@ def cancel_session(request, booking_id):
     booking = get_object_or_404(SessionBooking, id=booking_id)
     
     is_client = booking.client == request.user
-    is_coach = booking.coach.user == request.user
+    
+    # Determine the coach of the session, whether it's 1-on-1 or a workshop
+    session_coach = booking.coach
+    if not session_coach and booking.workshop:
+        session_coach = booking.workshop.coach
+
+    is_coach = False
+    if session_coach:
+        is_coach = session_coach.user == request.user
     
     if not (is_client or is_coach):
         return HttpResponseForbidden("You are not authorized to cancel this session.")
 
-    coach = booking.coach
+    coach = session_coach # Use the resolved coach
     client = booking.client
     
     is_refunded = booking.cancel()
