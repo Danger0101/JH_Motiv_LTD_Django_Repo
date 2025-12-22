@@ -672,7 +672,7 @@ def coach_clients_partial(request):
     context = {
         'coach_clients_page': coach_clients_page,
     }
-    return render(request, 'account/partials/coach_clients_list.html', context)
+    return render(request, 'account/partials/coach/coach_clients_list.html', context)
 
 @login_required
 def dashboard_partial(request):
@@ -703,8 +703,7 @@ def dashboard_partial(request):
         # 2. Pending Requests (Taster Sessions)
         context['pending_offers'] = OneSessionFreeOffer.objects.filter(
             coach=coach_profile,
-            is_approved=False,
-            is_redeemed=False,
+            status='PENDING',
             redemption_deadline__gte=now
         ).select_related('client')
         

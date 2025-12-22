@@ -506,13 +506,13 @@ def apply_for_free_session(request):
     existing_offer = OneSessionFreeOffer.objects.filter(
         client=client,
         coach=coach_instance,
-        is_redeemed=False
+        status__in=['PENDING', 'APPROVED']
     ).filter(
         Q(redemption_deadline__isnull=True) | Q(redemption_deadline__gt=timezone.now())
     ).first()
 
     if existing_offer:
-        if existing_offer.is_approved:
+        if existing_offer.status == 'APPROVED':
             message = 'You already have an approved free session with this coach. Please book it from your profile.'
         else:
             message = 'You already have a pending request with this coach. They will review it shortly.'
@@ -525,8 +525,7 @@ def apply_for_free_session(request):
     OneSessionFreeOffer.objects.create(
         client=client,
         coach=coach_instance,
-        is_approved=False, 
-        is_redeemed=False
+        status='PENDING'
     )
     
     return render(request, 'coaching_booking/partials/free_session_status.html', {
@@ -613,8 +612,7 @@ def profile_book_session_partial(request):
 
     free_offers = OneSessionFreeOffer.objects.filter(
         client=request.user,
-        is_approved=True,
-        is_redeemed=False,
+        status='APPROVED',
         redemption_deadline__gte=timezone.now()
     ).select_related('coach__user')
 
