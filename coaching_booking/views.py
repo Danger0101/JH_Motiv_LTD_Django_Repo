@@ -1015,7 +1015,7 @@ def get_booking_calendar(request):
         try:
             booking = SessionBooking.objects.get(id=reschedule_booking_id, client=request.user)
             session_length = booking.get_duration_minutes() or 60
-            slot_target_id = '#reschedule-slots-container' # Use the modal's container
+            # slot_target_id = '#reschedule-slots-container' # Removed to match profile_book_session.html target
             
             # Default to booking coach if not explicitly changed
             if not coach_id:
@@ -1138,11 +1138,20 @@ def confirm_reschedule_modal(request, booking_id):
     coach_id = request.GET.get('coach_id')
     
     try:
-        new_start_time = datetime.strptime(new_start_time_str, '%Y-%m-%dT%H:%M')
-        if timezone.is_naive(new_start_time):
-            new_start_time = timezone.make_aware(new_start_time)
-    except (ValueError, TypeError):
-        return HttpResponse("Invalid time format", status=400)
+        # Handle ISO format (e.g. 2023-10-25T14:00:00Z)
+        clean_time = new_start_time_str.replace('Z', '+00:00')
+        dt = datetime.fromisoformat(clean_time)
+        if timezone.is_naive(dt):
+            new_start_time = timezone.make_aware(dt)
+        else:
+            new_start_time = dt
+    except ValueError:
+        try:
+            new_start_time = datetime.strptime(new_start_time_str, '%Y-%m-%dT%H:%M')
+            if timezone.is_naive(new_start_time):
+                new_start_time = timezone.make_aware(new_start_time)
+        except (ValueError, TypeError):
+            return HttpResponse("Invalid time format", status=400)
 
     new_coach = booking.coach
     if coach_id and int(coach_id) != booking.coach.id:
