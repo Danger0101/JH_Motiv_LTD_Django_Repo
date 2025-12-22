@@ -4,7 +4,7 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
-from .models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer
+from .models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer, SessionCoverageRequest
 from accounts.models import User
 
 
