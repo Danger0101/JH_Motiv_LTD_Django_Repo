@@ -231,14 +231,19 @@ def cancel_session(request, booking_id):
     if not session_coach and booking.workshop:
         session_coach = booking.workshop.coach
 
-    is_coach = False
+    is_provider = False
     if session_coach:
-        is_coach = session_coach.user == request.user
+        is_provider = session_coach.user == request.user
+
+    # Check if this is the Primary Coach (Account Owner) trying to cancel
+    is_primary = False
+    if booking.enrollment and booking.enrollment.coach:
+        is_primary = booking.enrollment.coach.user == request.user
     
-    if not (is_client or is_coach):
+    if not (is_client or is_provider or is_primary):
         return HttpResponseForbidden("You are not authorized to cancel this session.")
 
-    coach = session_coach # Use the resolved coach
+    coach = session_coach # The Provider
     client = booking.client
     
     is_refunded = booking.cancel()
@@ -278,12 +283,13 @@ def cancel_session(request, booking_id):
             msg = "Session canceled. The credit was forfeited due to late cancellation."
             messages.warning(request, msg)
             toast_type = "warning"
-    elif is_coach:
+    elif is_provider or is_primary:
         msg = "Session canceled successfully. The client has been notified."
         messages.success(request, msg)
         
         # Override client message for email context if coach canceled
-        client_msg = f"Coach {coach.user.get_full_name()} has canceled this session. Your credit has been restored."
+        canceling_coach_name = request.user.get_full_name()
+        client_msg = f"Coach {canceling_coach_name} has canceled this session. Your credit has been restored."
 
     try:
         # Format dates for email context
@@ -296,7 +302,7 @@ def cancel_session(request, booking_id):
         # Email to Client
         send_transactional_email(
             recipient_email=client.email,
-            subject=f"Session Canceled by Coach {coach.user.get_full_name()}" if is_coach else "Your Coaching Session Has Been Canceled",
+            subject=f"Session Canceled by Coach {request.user.get_full_name()}" if (is_provider or is_primary) else "Your Coaching Session Has Been Canceled",
             template_name='emails/cancellation_confirmation.html',
             context={
                 'user_id': client.pk,
@@ -310,23 +316,39 @@ def cancel_session(request, booking_id):
             }
         )
 
-        # Email to Coach (only if client canceled)
-        if is_client:
-            send_transactional_email(
-                recipient_email=coach.user.email,
-                subject=f"Session Canceled by {client.get_full_name()}",
-                template_name='emails/coach_cancellation_notification.html',
-                context={
-                    'coach_id': coach.pk,
-                    'client_id': client.pk,
-                    'booking_id': booking.pk,
-                    'dashboard_url': dashboard_url,
-                    'original_date': original_date_str,
-                    'original_time': original_time_start_str,
-                    'original_time_start': original_time_start_str,
-                    'original_time_end': original_time_end_str,
-                }
-            )
+        # 2. Email Provider Coach (If client or primary canceled)
+        if is_client or is_primary:
+            if coach:
+                send_transactional_email(
+                    recipient_email=coach.user.email,
+                    subject=f"Session Canceled by {request.user.get_full_name()}",
+                    template_name='emails/coach_cancellation_notification.html',
+                    context={
+                        'coach_id': coach.pk,
+                        'client_id': client.pk,
+                        'booking_id': booking.pk,
+                        'dashboard_url': dashboard_url,
+                        'original_date': original_date_str,
+                        'original_time': original_time_start_str,
+                        'original_time_start': original_time_start_str,
+                        'original_time_end': original_time_end_str,
+                    }
+                )
+
+        # 3. NEW: Email Primary Coach (If different from Provider AND they didn't do the canceling)
+        if booking.enrollment and booking.enrollment.coach:
+            primary_coach = booking.enrollment.coach
+            # If Primary != Provider AND Primary != RequestUser
+            if primary_coach != coach and primary_coach.user != request.user:
+                send_transactional_email(
+                    recipient_email=primary_coach.user.email,
+                    subject=f"Update: Covered Session for {client.get_full_name()} Canceled",
+                    template_name='emails/coach_notification.html', # Generic template
+                    context={
+                        'message_body': f"FYI: The session for {client.get_full_name()} that was being covered by {coach.user.get_full_name()} has been canceled by the { 'client' if is_client else 'covering coach' }.",
+                        'dashboard_url': dashboard_url
+                    }
+                )
     except Exception as e:
         logger.error(f"CRITICAL: Cancellation for booking {booking.id} succeeded but failed to send emails. Error: {e}")
 

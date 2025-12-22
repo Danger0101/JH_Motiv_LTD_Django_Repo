@@ -5,10 +5,8 @@ from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
 from .models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer
-from coaching_availability.models import CoachAvailability
 from accounts.models import User
 
-# --- INLINES ---
 
 class SessionBookingInline(admin.TabularInline):
     model = SessionBooking
@@ -128,3 +126,13 @@ class OneSessionFreeOfferAdmin(admin.ModelAdmin):
             url = reverse("admin:coaching_booking_sessionbooking_change", args=[obj.session.pk])
             return format_html('<a href="{}">View Session</a>', url)
         return "Not Booked"
+
+@admin.register(SessionCoverageRequest)
+class SessionCoverageRequestAdmin(admin.ModelAdmin):
+    list_display = ('id', 'session_date', 'requesting_coach', 'target_coach', 'status', 'created_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('requesting_coach__user__email', 'session__client__email')
+    
+    def session_date(self, obj):
+        return obj.session.start_datetime
+    session_date.admin_order_field = 'session__start_datetime'
