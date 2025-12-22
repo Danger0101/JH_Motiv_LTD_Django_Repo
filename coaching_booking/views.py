@@ -1268,7 +1268,7 @@ def get_daily_slots(request):
         # Handle "free_X" enrollment ID
         elif str(enrollment_id_param).startswith('free_'):
             free_id = str(enrollment_id_param).split('_')[1]
-            free_offer = OneSessionFreeOffer.objects.get(id=free_id, client=request.user)
+            free_offer = OneSessionFreeOffer.objects.get(id=free_id, client=request.user, status='APPROVED')
             
             # Check for Coach Mismatch
             if int(coach_id) != free_offer.coach.id:

@@ -423,12 +423,9 @@ class BookingService:
             free_offer = get_object_or_404(
                 OneSessionFreeOffer.objects.select_for_update(),
                 id=free_offer_id,
-                client=user
+                client=user,
+                status='APPROVED'
             )
-            if not free_offer.is_approved:
-                raise ValidationError("This free offer has not yet been approved.")
-            if free_offer.is_redeemed:
-                raise ValidationError("This free offer has already been redeemed.")
             if free_offer.is_expired:
                 raise ValidationError("This free offer has expired.")
             
@@ -492,7 +489,7 @@ class BookingService:
         # 6. Post-Creation Logic (Free Offer Redemption)
         if free_offer:
             free_offer.session = booking
-            free_offer.is_redeemed = True
+            free_offer.status = 'USED'
             free_offer.save()
 
         return {'type': 'confirmed', 'booking': booking}
