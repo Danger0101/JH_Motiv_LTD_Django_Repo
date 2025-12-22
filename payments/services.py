@@ -295,6 +295,10 @@ def handle_coaching_enrollment(session):
         selected_coach = None
         if coach_id:
             selected_coach = CoachProfile.objects.filter(id=coach_id).first()
+        
+        # Fallback: If no coach selected, default to the first one available
+        if not selected_coach:
+            selected_coach = offering.coaches.first()
 
         enrollment = ClientOfferingEnrollment.objects.create(
             client=user, 

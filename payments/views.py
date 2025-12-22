@@ -621,9 +621,11 @@ def create_coaching_checkout_session_view(request, offering_id):
     try:
         data = json.loads(request.body)
         coupon_code = data.get('coupon_code', '').strip()
+        selected_coach_id = data.get('coach_id') # Get coach selection if available
     except json.JSONDecodeError:
         # Fallback for standard form posts
         coupon_code = request.POST.get('coupon_code', '').strip()
+        selected_coach_id = request.POST.get('coach_id')
 
     # 2. Coupon Logic & Price Calculation
     final_price = offering.price
@@ -644,24 +646,29 @@ def create_coaching_checkout_session_view(request, offering_id):
         except Coupon.DoesNotExist:
             return JsonResponse({"error": "Coupon code not found."}, status=400)
 
-    # 3. Coach Assignment (Round Robin / Load Balancing)
-    # Only pick coaches who are active and accepting new clients
-    available_coaches = CoachProfile.objects.filter(
-        offerings=offering, 
-        user__is_active=True,
-        is_available_for_new_clients=True
-    )
-
-    if not available_coaches.exists():
-        return JsonResponse({"error": "No coach currently available for this offering."}, status=400)
-
-    # Assign coach with fewest active enrollments for this specific offering
-    coach = available_coaches.annotate(
-        active_enrollment_count=models.Count(
-            'client_enrollments', 
-            filter=models.Q(client_enrollments__offering=offering, client_enrollments__is_active=True)
+    # 3. Coach Assignment
+    coach = None
+    if selected_coach_id:
+        coach = get_object_or_404(CoachProfile, id=selected_coach_id)
+    else:
+        # Round Robin / Load Balancing if no coach selected
+        # Only pick coaches who are active and accepting new clients
+        available_coaches = CoachProfile.objects.filter(
+            offerings=offering, 
+            user__is_active=True,
+            is_available_for_new_clients=True
         )
-    ).order_by('active_enrollment_count').first()
+
+        if not available_coaches.exists():
+            return JsonResponse({"error": "No coach currently available for this offering."}, status=400)
+
+        # Assign coach with fewest active enrollments for this specific offering
+        coach = available_coaches.annotate(
+            active_enrollment_count=models.Count(
+                'client_enrollments', 
+                filter=models.Q(client_enrollments__offering=offering, client_enrollments__is_active=True)
+            )
+        ).order_by('active_enrollment_count').first()
 
     if not coach:
         return JsonResponse({"error": "Error: No assignable coach found."}, status=400)
