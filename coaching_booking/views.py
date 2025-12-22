@@ -1274,7 +1274,12 @@ def get_daily_slots(request):
     }
 
     if not date_str:
-        allow proceedingand not coach_id_param:
+        return HttpResponse('')
+
+    # Note: We allow proceeding if coach_id is present, even if enrollment is missing,
+    # though booking might fail later if no enrollment is attached.
+    if not enrollment_id_param and not reschedule_booking_id and not coach_id_param:
+        return HttpResponse('<div class="text-red-500 text-sm">Please select an offering or coach first.</div>')
 
     try:
         selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -1288,9 +1293,13 @@ def get_daily_slots(request):
         if selected_date > max_date:
             return HttpResponse('<div class="text-red-500 text-sm">This date is too far in the future.</div>')
 
+        coach_profile = None
+        session_length = 60
+
         # FIX 2: Handle Rescheduling Context specifically
         if reschedule_booking_id:
-            # If rescheduling, we der)
+            # If rescheduling, we derive session length from the existing booking
+            booking = get_object_or_404(SessionBooking, id=reschedule_booking_id, client=request.user)
             coach_profile = booking.coach
             session_length = booking.get_duration_minutes() or 60
             
@@ -1315,8 +1324,10 @@ def get_daily_slots(request):
             if not coach_profile:
                 coach_profile = enrollment.offering.coaches.first()
             session_length = enrollment.offering.session_length_minutes
-            context['enrollment_id'] = encontext['free_offer_id'] = ''
-        lback: Use coach_id if no enrollment/reschedule context determined the coach yet
+            context['enrollment_id'] = enrollment_id_param
+            context['free_offer_id'] = ''
+
+        # Fallback: Use coach_id if no enrollment/reschedule context determined the coach yet
         if not coach_profile and coach_id_param:
             try:
                 coach_profile = CoachProfile.objects.get(id=coach_id_param)
@@ -1355,10 +1366,14 @@ def get_daily_slots(request):
             'enrollment_id': context.get('enrollment_id'),
             'reschedule_booking_id': reschedule_booking_id,
             'coach': coach_profile
-ooachProfile.DoesNotExist, ClientOfferingEnrollment.DoesNotExist, OneSessionFreeOffer.DoesNotExist, SessionBooking.DoesNotExist):
-        return HttpResponse('<div class="text-red-500 text-sm">Invalid request data.</div>')
-    except Excepti
+        })
 
+    except (ValueError, CoachProfile.DoesNotExist, ClientOfferingEnrollment.DoesNotExist, OneSessionFreeOffer.DoesNotExist, SessionBooking.DoesNotExist):
+        return HttpResponse('<div class="text-red-500 text-sm">Invalid request data.</div>')
+    except Exception as e:
+        return HttpResponse(f'<div class="text-red-500 text-sm">Error fetching slots: {str(e)}</div>')
+
+@login_required
 def accept_coverage_view(request, request_id):
     if not hasattr(request.user, 'coach_profile'):
         messages.error(request, "Only coaches can perform this action.")
@@ -1369,9 +1384,13 @@ def accept_coverage_view(request, request_id):
     if success:
         messages.success(request, message)
     else:
+        messages.error(request, message)
         
     return redirect('accounts:account_profile')
-equired
+
+@login_required
+def request_coverage_modal(request, booking_id):
+    """
     HTMX view: Returns the form to request coverage for a specific booking.
     """
     booking = get_object_or_404(SessionBooking, id=booking_id)
