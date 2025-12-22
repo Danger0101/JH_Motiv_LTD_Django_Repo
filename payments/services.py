@@ -291,11 +291,15 @@ def handle_coaching_enrollment(session):
     try:
         user = User.objects.get(id=user_id)
         offering = Offering.objects.get(id=offering_id)
-        coach = CoachProfile.objects.get(id=coach_id)
+        
+        selected_coach = None
+        if coach_id:
+            selected_coach = CoachProfile.objects.filter(id=coach_id).first()
 
         enrollment = ClientOfferingEnrollment.objects.create(
-            client=user, offering=offering, coach=coach,
-            remaining_sessions=offering.total_number_of_sessions, is_active=True
+            client=user, 
+            offering=offering, 
+            coach=selected_coach
         )
 
         coupon_code = metadata.get('coupon_code')
@@ -325,7 +329,7 @@ def handle_coaching_enrollment(session):
         coaching_order.amount_company = splits['company']
         coaching_order.save()
 
-    except (User.DoesNotExist, Offering.DoesNotExist, CoachProfile.DoesNotExist) as e:
+    except (User.DoesNotExist, Offering.DoesNotExist) as e:
         logger.error(f"FATAL ERROR in Coaching Webhook: Could not find object. {e}. Metadata: {metadata}")
     except Exception as e:
         logger.error(f"FATAL ERROR in Coaching Webhook processing: {e}. Metadata: {metadata}", exc_info=True)
