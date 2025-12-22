@@ -1262,6 +1262,7 @@ def get_daily_slots(request):
     date_str = request.GET.get('date')
     enrollment_id_param = request.GET.get('enrollment_id')
     reschedule_booking_id = request.GET.get('reschedule_booking_id')
+    coach_id_param = request.GET.get('coach_id')
 
     context = {
         'enrollment_id': '', # Default empty
@@ -1273,12 +1274,7 @@ def get_daily_slots(request):
     }
 
     if not date_str:
-        context['error_message'] = 'Please select a date.'
-        return render(request, 'coaching_booking/partials/available_slots.html', context)
-
-    if not enrollment_id_param and not reschedule_booking_id:
-        context['error_message'] = 'Please select an offering first.'
-        return render(request, 'coaching_booking/partials/available_slots.html', context)
+        allow proceedingand not coach_id_param:
 
     try:
         selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -1287,20 +1283,14 @@ def get_daily_slots(request):
         max_date = now.date() + timedelta(days=BOOKING_WINDOW_DAYS)
 
         if selected_date < now.date():
-            context['error_message'] = 'Cannot book dates in the past.'
-            return render(request, 'coaching_booking/partials/available_slots.html', context)
+            return HttpResponse('<div class="text-red-500 text-sm">Cannot book dates in the past.</div>')
         
         if selected_date > max_date:
-            context['error_message'] = 'This date is too far in the future.'
-            return render(request, 'coaching_booking/partials/available_slots.html', context)
+            return HttpResponse('<div class="text-red-500 text-sm">This date is too far in the future.</div>')
 
-        coach_profile = None
-        
         # FIX 2: Handle Rescheduling Context specifically
         if reschedule_booking_id:
-            # If rescheduling, we derive session length from the existing booking
-            # We do NOT require enrollment_id_param here
-            booking = SessionBooking.objects.get(id=reschedule_booking_id, client=request.user)
+            # If rescheduling, we der)
             coach_profile = booking.coach
             session_length = booking.get_duration_minutes() or 60
             
@@ -1318,15 +1308,25 @@ def get_daily_slots(request):
             context['free_offer_id'] = free_id
             context['enrollment_id'] = ''
             
-        # Handle Standard Enrollment ID
-        else:
+        # Handle Standard Enrollment ID (if present)
+        elif enrollment_id_param:
             enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id_param, client=request.user)
             coach_profile = enrollment.coach
             if not coach_profile:
                 coach_profile = enrollment.offering.coaches.first()
             session_length = enrollment.offering.session_length_minutes
-            context['enrollment_id'] = enrollment_id_param
-            context['free_offer_id'] = ''
+            context['enrollment_id'] = encontext['free_offer_id'] = ''
+        lback: Use coach_id if no enrollment/reschedule context determined the coach yet
+        if not coach_profile and coach_id_param:
+            try:
+                coach_profile = CoachProfile.objects.get(id=coach_id_param)
+                # Default session length if we don't have an enrollment context
+                session_length = 60 
+            except CoachProfile.DoesNotExist:
+                pass
+
+        if not coach_profile:
+             return HttpResponse('<div class="text-red-500 text-sm">Coach not found.</div>')
         
         available_slots = BookingService.get_slots_for_coach(
             coach_profile,
@@ -1334,26 +1334,31 @@ def get_daily_slots(request):
             session_length
         )
         
+        # Convert slots to user TZ for display and format for booking_form.html
+        user_tz_str = request.session.get('django_timezone', 'UTC')
+        user_tz = pytz.timezone(user_tz_str)
+
         formatted_slots = []
         for slot in available_slots:
             slot_aware = slot if timezone.is_aware(slot) else timezone.make_aware(slot)
             if slot_aware > now:
+                local_dt = slot_aware.astimezone(user_tz)
                 formatted_slots.append({
-                    'start_time': slot_aware,
-                    'end_time': slot_aware + timedelta(minutes=session_length)
+                    'iso': slot_aware.isoformat(),
+                    'display': local_dt.strftime('%I:%M %p')
                 })
 
-        context['available_slots'] = formatted_slots
-        context['coach_id'] = coach_profile.id if coach_profile else None
+        # Render the form partial instead of the list partial
+        return render(request, 'coaching_booking/partials/booking_form.html', {
+            'slots': formatted_slots,
+            'date_obj': selected_date,
+            'enrollment_id': context.get('enrollment_id'),
+            'reschedule_booking_id': reschedule_booking_id,
+            'coach': coach_profile
+ooachProfile.DoesNotExist, ClientOfferingEnrollment.DoesNotExist, OneSessionFreeOffer.DoesNotExist, SessionBooking.DoesNotExist):
+        return HttpResponse('<div class="text-red-500 text-sm">Invalid request data.</div>')
+    except Excepti
 
-    except (ValueError, CoachProfile.DoesNotExist, ClientOfferingEnrollment.DoesNotExist, OneSessionFreeOffer.DoesNotExist, SessionBooking.DoesNotExist):
-        context['error_message'] = 'Invalid request data or enrollment not found.'
-    except Exception as e:
-        context['error_message'] = f'Error fetching slots: {str(e)}'
-
-    return render(request, 'coaching_booking/partials/available_slots.html', context)
-
-@login_required
 def accept_coverage_view(request, request_id):
     if not hasattr(request.user, 'coach_profile'):
         messages.error(request, "Only coaches can perform this action.")
@@ -1364,13 +1369,9 @@ def accept_coverage_view(request, request_id):
     if success:
         messages.success(request, message)
     else:
-        messages.error(request, message)
         
     return redirect('accounts:account_profile')
-
-@login_required
-def request_coverage_modal(request, booking_id):
-    """
+equired
     HTMX view: Returns the form to request coverage for a specific booking.
     """
     booking = get_object_or_404(SessionBooking, id=booking_id)
