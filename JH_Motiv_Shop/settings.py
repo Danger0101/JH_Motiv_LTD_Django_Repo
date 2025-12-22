@@ -21,8 +21,8 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = False
 
 HEROKU_APP_NAME = os.environ.get('HEROKU_APP_NAME')
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com', 'jhmotiv.shop', 'www.jhmotiv.shop']
-CSRF_TRUSTED_ORIGINS = ['https://jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com', 'https://*.127.0.0.1', 'https://*.localhost', 'https://jhmotiv.shop', 'https://www.jhmotiv.shop']
+ALLOWED_HOSTS = ['jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com', 'jhmotiv.shop']
+CSRF_TRUSTED_ORIGINS = ['https://jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com', 'https://jhmotiv.shop']
 
 # --- CUSTOM URL CONFIGURATION ---
 # This is required by the coaching_booking email templates for generating absolute links
@@ -120,7 +120,7 @@ WSGI_APPLICATION = 'JH_Motiv_Shop.wsgi.application'
 # Database
 DATABASES = {
     'default': dj_database_url.config(
-        conn_max_age=0, 
+        conn_max_age=600, 
         ssl_require=True,
     )
 }
