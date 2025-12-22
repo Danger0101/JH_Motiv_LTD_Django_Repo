@@ -625,42 +625,44 @@ def book_taster_session(request, offer_id):
     return redirect('accounts:account_profile') # Redirect on GET
 
 @login_required
-def profile_book_session_partial(request):
+def profile_book_session(request):
+    """
+    Renders the main booking page where clients select an offering to book.
+    """
+    # Fetch data for the dropdowns
     user_offerings = ClientOfferingEnrollment.objects.filter(
-        client=request.user,
-        remaining_sessions__gt=0,
-        is_active=True
-    ).filter(
-        Q(expiration_date__gte=timezone.now()) | Q(expiration_date__isnull=True)
-    ).select_related('offering')
-
+        client=request.user, 
+        is_active=True,
+        remaining_sessions__gt=0
+    ).select_related('offering', 'coach__user')
+    
     free_offers = OneSessionFreeOffer.objects.filter(
-        client=request.user,
-        status='APPROVED',
-        redemption_deadline__gte=timezone.now()
+        client=request.user, 
+        status='APPROVED'
     ).select_related('coach__user')
 
+    # Fetch coaches for the dropdown
     coaches = CoachProfile.objects.filter(
-        # Only show coaches who are available for booking
         user__is_active=True,
         is_available_for_new_clients=True
     ).select_related('user')
     
-    today = timezone.now().date()
-
-    # Add an empty div for HTMX error swapping
-    # <div id="booking-errors"></div>
+    # Handle pre-selection from query params (e.g. from "Book Now" buttons)
+    selected_enrollment_id = request.GET.get('enrollment_id')
+    selected_free_offer_id = request.GET.get('free_offer_id')
+    
+    # Determine initial calendar state if something is pre-selected
+    initial_year = timezone.now().year
+    initial_month = timezone.now().month
 
     context = {
-        # This partial is used for booking, so it's part of the 'book' tab
         'user_offerings': user_offerings,
         'free_offers': free_offers,
         'coaches': coaches,
-        'initial_year': today.year,
-        'initial_month': today.month,
-        'selected_enrollment_id': request.GET.get('enrollment_id', ''), 
-        'selected_coach_id': request.GET.get('coach_id', ''),      
-        'selected_free_offer_id': request.GET.get('free_offer_id', ''),
+        'selected_enrollment_id': selected_enrollment_id,
+        'selected_free_offer_id': selected_free_offer_id,
+        'initial_year': initial_year,
+        'initial_month': initial_month,
     }
     return render(request, 'coaching_booking/profile_book_session.html', context)
 
