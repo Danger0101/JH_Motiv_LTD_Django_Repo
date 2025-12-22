@@ -355,12 +355,17 @@ def reschedule_session_form(request, booking_id):
     
     today = timezone.now().date()
     
-    return render(request, 'account/partials/reschedule_form.html', {
+    return render(request, 'coaching_booking/profile_book_session.html', {
+        'reschedule_booking_id': booking.id,
         'booking': booking,
         'coaches': coaches,
         'initial_year': today.year,
         'initial_month': today.month,
-        'selected_coach_id': booking.coach.id
+        'selected_coach_id': booking.coach.id,
+        'user_offerings': [],
+        'free_offers': [],
+        'selected_enrollment_id': booking.enrollment.id if booking.enrollment else '',
+        'selected_free_offer_id': '',
     })
 
 @login_required
