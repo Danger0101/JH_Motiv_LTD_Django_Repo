@@ -17,7 +17,7 @@ from .models import MarketingPreference
 from allauth.account.views import LoginView, SignupView, PasswordResetView, PasswordChangeView, PasswordSetView, LogoutView, PasswordResetDoneView, EmailView, ConfirmEmailView, EmailVerificationSentView, PasswordResetFromKeyView, PasswordResetFromKeyDoneView
 from allauth.socialaccount.views import ConnectionsView
 from cart.utils import get_or_create_cart, get_cart_summary_data
-from coaching_booking.models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer
+from coaching_booking.models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer, SessionCoverageRequest
 from coaching_core.models import Offering, Workshop
 from accounts.models import CoachProfile 
 from gcal.models import GoogleCredentials
@@ -222,6 +222,16 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             ).annotate(
                 booked_count=models.Count('bookings', filter=models.Q(bookings__status__in=['BOOKED', 'PENDING_PAYMENT']))
             ).order_by('date')
+            
+            # NEW: Fetch Incoming Coverage Requests
+            # Requests where target is ME, OR target is NULL (Pool) but exclude my own requests
+            context['coverage_requests'] = SessionCoverageRequest.objects.filter(
+                status='PENDING'
+            ).filter(
+                Q(target_coach=coach_profile) | Q(target_coach__isnull=True)
+            ).exclude(
+                requesting_coach=coach_profile
+            ).select_related('session', 'requesting_coach__user').order_by('session__start_datetime')
 
         # For Client: My Free/Taster Offers
         my_free_offers = OneSessionFreeOffer.objects.filter(
@@ -514,6 +524,15 @@ class StaffDashboardView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
             )
             context['staff_unpaid_commissions'] = (unpaid_totals['coach_total'] or Decimal('0.00')) + (unpaid_totals['referrer_total'] or Decimal('0.00'))
 
+        # 7. Coverage Requests (For Coaches)
+        if hasattr(self.request.user, 'coach_profile'):
+            current_coach = self.request.user.coach_profile
+            context['coverage_requests'] = SessionCoverageRequest.objects.filter(
+                status='PENDING'
+            ).filter(
+                Q(target_coach=current_coach) | Q(target_coach__isnull=True)
+            ).exclude(requesting_coach=current_coach)
+
         return context
 
 @login_required
@@ -720,6 +739,15 @@ def dashboard_partial(request):
         ).annotate(
             booked_count=models.Count('bookings', filter=models.Q(bookings__status__in=['BOOKED', 'PENDING_PAYMENT']))
         ).order_by('date')
+        
+        # NEW: Fetch Incoming Coverage Requests
+        context['coverage_requests'] = SessionCoverageRequest.objects.filter(
+            status='PENDING'
+        ).filter(
+            Q(target_coach=coach_profile) | Q(target_coach__isnull=True)
+        ).exclude(
+            requesting_coach=coach_profile
+        ).select_related('session', 'requesting_coach__user').order_by('session__start_datetime')
 
     # For Client: My Free/Taster Offers
     my_free_offers = OneSessionFreeOffer.objects.filter(

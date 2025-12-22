@@ -16,15 +16,30 @@ SESSION_STATUS_CHOICES = (
 )
 
 class ClientOfferingEnrollment(models.Model):
+    """
+    Connects a Client to an Offering and a specific 'Primary Coach'.
+    The Primary Coach is the relationship owner, but individual sessions
+    can be covered by others.
+    """
     client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='enrollments', verbose_name="Client")
     offering = models.ForeignKey(Offering, on_delete=models.PROTECT, related_name='enrollments', verbose_name="Offering")
-    coach = models.ForeignKey(CoachProfile, on_delete=models.SET_NULL, null=True, blank=True, related_name='client_enrollments', verbose_name="Assigned Coach")
-    total_sessions = models.IntegerField(verbose_name="Total Sessions", help_text="Initial number of sessions purchased.")
-    remaining_sessions = models.IntegerField(verbose_name="Remaining Sessions", help_text="Number of sessions left for the client to book.")
+    
+    # Renamed/Clarified: This is the coach the user chose at checkout.
+    coach = models.ForeignKey(
+        CoachProfile, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=False, # Make mandatory in forms
+        related_name='primary_client_enrollments', 
+        verbose_name="Primary Coach"
+    )
+    
+    total_sessions = models.IntegerField(verbose_name="Total Sessions")
+    remaining_sessions = models.IntegerField(verbose_name="Remaining Sessions")
     purchase_date = models.DateTimeField(auto_now_add=True, verbose_name="Purchase Date")
-    expiration_date = models.DateTimeField(null=True, blank=True, verbose_name="Expiration Date", help_text="The date when the enrollment expires.")
-    is_active = models.BooleanField(default=True, verbose_name="Is Active", help_text="True if the enrollment is current and has sessions remaining.")
-    deactivated_on = models.DateTimeField(null=True, blank=True, verbose_name="Deactivated On", help_text="The date and time when the enrollment became inactive (e.g., sessions ran out).")
+    expiration_date = models.DateTimeField(null=True, blank=True, verbose_name="Expiration Date")
+    is_active = models.BooleanField(default=True, verbose_name="Is Active")
+    deactivated_on = models.DateTimeField(null=True, blank=True, verbose_name="Deactivated On")
     enrolled_on = models.DateTimeField(auto_now_add=True, verbose_name="Enrolled On")
 
     class Meta:
@@ -36,36 +51,20 @@ class ClientOfferingEnrollment(models.Model):
         return f"{self.client.get_full_name()} - {self.offering.name}"
 
     def save(self, *args, **kwargs):
-        # Store original values if object already exists
-        if self.pk:
-            original_enrollment = ClientOfferingEnrollment.objects.get(pk=self.pk)
-            # We only care if is_active changes, so we don't need all original fields
-            original_is_active = original_enrollment.is_active
-            # It's important to get the current state of remaining_sessions from the DB
-            # before potentially modifying it.
-            original_remaining_sessions = original_enrollment.remaining_sessions
-        else:
-            original_is_active = None
-            original_remaining_sessions = None
-
-        # Initialize total and remaining sessions on creation
+        # Initialize total/remaining sessions on creation
         if not self.pk:
-            # Assign a coach from the offering if one isn't already assigned
-            if not self.coach and self.offering:
-                assigned_coach = self.offering.coaches.first()
-                if assigned_coach:
-                    self.coach = assigned_coach
-
             self.total_sessions = self.offering.total_number_of_sessions
             self.remaining_sessions = self.offering.total_number_of_sessions
 
-        # Logic for managing is_active and deactivated_on
-        # Check if the enrollment is becoming inactive
+            # Fallback: If no coach selected (admin creation?), try to pick first available
+            if not self.coach and self.offering:
+                self.coach = self.offering.coaches.first()
+
+        # Logic for managing is_active
         if self.remaining_sessions <= 0 and self.is_active:
             self.is_active = False
-            if self.deactivated_on is None: # Only set if not already set
+            if self.deactivated_on is None:
                 self.deactivated_on = timezone.now()
-        # Check if the enrollment is becoming active again (e.g., sessions added back)
         elif self.remaining_sessions > 0 and not self.is_active:
             self.is_active = True
             self.deactivated_on = None
@@ -92,7 +91,9 @@ class SessionBooking(models.Model):
     # Decoupled Booking Fields
     offering = models.ForeignKey(Offering, on_delete=models.SET_NULL, null=True, blank=True, related_name='taster_bookings', help_text="Used for one-off bookings like taster sessions.")
     workshop = models.ForeignKey(Workshop, on_delete=models.SET_NULL, related_name='bookings', verbose_name="Workshop", null=True, blank=True)
-    coach = models.ForeignKey(CoachProfile, on_delete=models.CASCADE, related_name='bookings', verbose_name="Coach", null=True, blank=True)
+    
+    # The Coach actually delivering the session (can differ from enrollment.coach)
+    coach = models.ForeignKey(CoachProfile, on_delete=models.CASCADE, related_name='delivered_bookings', verbose_name="Session Provider", null=True, blank=True)
     
     # User / Guest Fields
     client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bookings', verbose_name="Client", null=True, blank=True)
@@ -102,8 +103,13 @@ class SessionBooking(models.Model):
     start_datetime = models.DateTimeField(verbose_name="Start Time", db_index=True)
     end_datetime = models.DateTimeField(verbose_name="End Time")
     status = models.CharField(max_length=20, choices=SESSION_STATUS_CHOICES, default='BOOKED', verbose_name="Status")
-    gcal_event_id = models.CharField(max_length=255, blank=True, null=True, verbose_name="Google Calendar Event ID", help_text="The unique ID for the event in Google Calendar.")
-    reminder_sent = models.BooleanField(default=False, verbose_name="Reminder Sent", help_text="True if a reminder email has been sent for this session.")
+    
+    # Coverage Tracking
+    is_coverage_session = models.BooleanField(default=False, help_text="True if this session is being covered by a coach other than the primary enrollment coach.")
+    
+    # Integrations & Meta
+    gcal_event_id = models.CharField(max_length=255, blank=True, null=True, verbose_name="Google Calendar Event ID")
+    reminder_sent = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     
     # Payment Fields
@@ -124,22 +130,19 @@ class SessionBooking(models.Model):
         ]
 
     def clean(self):
-        from django.core.exceptions import ValidationError
+        # Validate that the delivering coach is not double-booked
         if self.start_datetime and self.end_datetime and self.coach and not self.workshop:
-            # Check for overlapping sessions for the same coach
-            # Exclude self from query for updates
             query = SessionBooking.objects.filter(
                 coach=self.coach,
                 start_datetime__lt=self.end_datetime,
                 end_datetime__gt=self.start_datetime,
-            ).exclude(
-                status='CANCELED'
-            )
+            ).exclude(status='CANCELED')
+            
             if self.pk:
                 query = query.exclude(pk=self.pk)
 
             if query.exists():
-                raise ValidationError("This session overlaps with an existing active session for this coach.")
+                raise ValidationError(f"Coach {self.coach.user.get_full_name()} is already booked for this time.")
 
     def __str__(self):
         return f"Session for {self.client.get_full_name()} with {self.coach.user.get_full_name()} at {self.start_datetime.strftime('%Y-%m-%d %H:%M')}"
@@ -160,11 +163,23 @@ class SessionBooking(models.Model):
         return getattr(self, 'google_meet_link', None)
 
     def save(self, *args, **kwargs):
+        # Set Client defaults
         if self.enrollment and not self.client_id and not self.guest_email:
             self.client = self.enrollment.client
+            
+        # Coach Assignment Logic
         if self.enrollment and not self.coach_id:
+            # Default to the Primary Coach
             self.coach = self.enrollment.coach
         
+        # Determine if this is a coverage session
+        if self.enrollment and self.coach and self.enrollment.coach:
+            if self.coach != self.enrollment.coach:
+                self.is_coverage_session = True
+            else:
+                self.is_coverage_session = False
+
+        # Set Durations
         if self.start_datetime and not self.end_datetime:
             if self.enrollment:
                 session_minutes = self.enrollment.offering.session_length_minutes
@@ -172,19 +187,20 @@ class SessionBooking(models.Model):
             else:
                 self.end_datetime = self.start_datetime + timedelta(minutes=60)
 
-        # Decrement sessions only on creation if it's a new booking
+        # Decrement sessions only on new booking
         if not self.pk and self.enrollment:
             self.enrollment.remaining_sessions -= 1
             self.enrollment.save()
             
         super().save(*args, **kwargs)
+        
+    @property
+    def earnings_recipient(self):
+        """Who receives the payout?"""
+        return self.coach
 
     def cancel(self):
-        """
-        Cancels the session.
-        Returns True if credit was restored (Early Cancel).
-        Returns False if credit was forfeited (Late Cancel).
-        """
+        """Standard cancellation logic (refunds credit if early)."""
         if self.status in ['CANCELED', 'COMPLETED']:
             return False
 
@@ -193,19 +209,18 @@ class SessionBooking(models.Model):
         is_early = now < cutoff
 
         if is_early:
-            # > 24 hours notice: Refund credit
             if self.enrollment:
                 self.enrollment.remaining_sessions = F('remaining_sessions') + 1
                 self.enrollment.save(update_fields=['remaining_sessions'])
             
-            # Refund Free Offer (Taster Session)
             if hasattr(self, 'free_offer') and self.free_offer:
                 self.free_offer.status = 'APPROVED'
                 self.free_offer.session = None
                 self.free_offer.save()
 
-        # < 24 hours notice: Forfeit credit (do nothing to enrollment/offer)
         self.status = 'CANCELED'
+        # If it was a coverage session, cancelling it might mean re-opening the request
+        # logic handled in views/services
         self.save()
         return is_early
 
@@ -223,11 +238,9 @@ class SessionBooking(models.Model):
         if now >= cutoff:
             return 'LATE'
 
-        # Calculate current duration to preserve it if no enrollment exists
         current_duration = self.end_datetime - self.start_datetime
 
         self.start_datetime = new_start_time
-        # end_datetime will be recalculated on save usually, but let's set it explicitly to be safe
         if self.enrollment:
             session_minutes = self.enrollment.offering.session_length_minutes
             self.end_datetime = new_start_time + timedelta(minutes=session_minutes)
@@ -238,6 +251,54 @@ class SessionBooking(models.Model):
         self.save()
         return 'SUCCESS'
 
+
+class SessionCoverageRequest(models.Model):
+    """
+    Mechanism for Coach A to request Coach B (or anyone) to cover a session.
+    """
+    STATUS_CHOICES = (
+        ('PENDING', 'Pending'),
+        ('ACCEPTED', 'Accepted'),
+        ('REJECTED', 'Rejected'),
+        ('CANCELLED', 'Cancelled'),
+    )
+
+    requesting_coach = models.ForeignKey(CoachProfile, on_delete=models.CASCADE, related_name='outgoing_coverage_requests')
+    
+    # Optional: If null, the request is open to the "pool" of qualified coaches
+    target_coach = models.ForeignKey(CoachProfile, on_delete=models.SET_NULL, null=True, blank=True, related_name='incoming_coverage_requests')
+    
+    session = models.ForeignKey(SessionBooking, on_delete=models.CASCADE, related_name='coverage_requests')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    note = models.TextField(blank=True, help_text="Notes for the covering coach.")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Session Coverage Request"
+        verbose_name_plural = "Session Coverage Requests"
+
+    def accept(self, accepting_coach):
+        """
+        Logic to transfer the session to the accepting coach.
+        """
+        if self.status != 'PENDING':
+            return False
+            
+        self.status = 'ACCEPTED'
+        self.target_coach = accepting_coach # Ensure we record who accepted it
+        self.save()
+        
+        # Update the actual session booking
+        self.session.coach = accepting_coach
+        self.session.is_coverage_session = True
+        self.session.save()
+        
+        # Reject other pending requests for this session
+        self.session.coverage_requests.exclude(pk=self.pk).update(status='REJECTED')
+        
+        return True
 
 class OneSessionFreeOffer(models.Model):
     """

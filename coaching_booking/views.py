@@ -1277,3 +1277,59 @@ def get_daily_slots(request):
         context['error_message'] = f'Error fetching slots: {str(e)}'
 
     return render(request, 'coaching_booking/partials/available_slots.html', context)
+
+@login_required
+def accept_coverage_view(request, request_id):
+    if not hasattr(request.user, 'coach_profile'):
+        messages.error(request, "Only coaches can perform this action.")
+        return redirect('accounts:account_profile')
+        
+    success, message = BookingService.accept_session_coverage(request_id, request.user.coach_profile)
+    
+    if success:
+        messages.success(request, message)
+    else:
+        messages.error(request, message)
+        
+    return redirect('accounts:account_profile')
+
+@login_required
+def request_coverage_modal(request, booking_id):
+    """
+    HTMX view: Returns the form to request coverage for a specific booking.
+    """
+    booking = get_object_or_404(SessionBooking, id=booking_id)
+    
+    # Security: Only the assigned coach can request coverage
+    if booking.coach != request.user.coach_profile:
+        return HttpResponseForbidden("You cannot request coverage for this session.")
+        
+    context = {
+        'booking': booking,
+    }
+    return render(request, 'coaching_booking/partials/request_coverage_modal.html', context)
+
+@login_required
+@require_POST
+def create_coverage_request(request, booking_id):
+    """
+    Handles the form submission to create a coverage request.
+    """
+    booking = get_object_or_404(SessionBooking, id=booking_id)
+    
+    if booking.coach != request.user.coach_profile:
+        return HttpResponseForbidden("Unauthorized.")
+
+    note = request.POST.get('note', '')
+    
+    try:
+        BookingService.request_session_coverage(booking, request.user.coach_profile, note)
+        messages.success(request, "Coverage request broadcasted to other coaches.")
+    except ValidationError as e:
+        messages.error(request, str(e.message))
+    except Exception as e:
+        logger.error(f"Error creating coverage request: {e}")
+        messages.error(request, "An error occurred.")
+        
+    # Refresh the dashboard or redirect
+    return redirect('accounts:account_profile')

@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 
 from cart.models import Cart
-from coaching_booking.models import ClientOfferingEnrollment
+from coaching_booking.models import ClientOfferingEnrollment, SessionBooking
 from coaching_core.models import Offering
 from accounts.models import CoachProfile
 from products.models import StockPool
@@ -329,3 +329,129 @@ def handle_coaching_enrollment(session):
         logger.error(f"FATAL ERROR in Coaching Webhook: Could not find object. {e}. Metadata: {metadata}")
     except Exception as e:
         logger.error(f"FATAL ERROR in Coaching Webhook processing: {e}. Metadata: {metadata}", exc_info=True)
+
+
+def calculate_coach_earnings(coach, start_date, end_date):
+    """
+    Calculates earnings for a specific coach based on sessions DELIVERED 
+    (Provider) in a given date range.
+    """
+    earnings_report = {
+        'total_earnings': Decimal('0.00'),
+        'sessions_count': 0,
+        'breakdown': []
+    }
+
+    # Query: Find all COMPLETED sessions where this coach was the PROVIDER
+    sessions = SessionBooking.objects.filter(
+        coach=coach,
+        status='COMPLETED',
+        start_datetime__date__range=(start_date, end_date)
+    ).select_related('enrollment', 'enrollment__offering', 'client', 'offering')
+
+    for session in sessions:
+        session_value = Decimal('0.00')
+        revenue_share_percentage = Decimal('70.00') # Default fallback
+
+        # A. Get the Raw Value of the Session
+        if session.amount_paid > 0:
+            # 1. Direct Paid Session (e.g. Drop-in / One-off)
+            # amount_paid is usually in cents if using Stripe, convert to standard unit
+            session_value = Decimal(session.amount_paid) / 100
+            
+            if session.offering:
+                revenue_share_percentage = session.offering.coach_revenue_share
+            elif session.enrollment and session.enrollment.offering:
+                 revenue_share_percentage = session.enrollment.offering.coach_revenue_share
+
+        elif session.enrollment:
+            # 2. Package Session (Pre-paid)
+            # Calculate pro-rated value: Package Price / Total Sessions
+            offering = session.enrollment.offering
+            if offering.total_number_of_sessions > 0:
+                session_value = offering.price / offering.total_number_of_sessions
+            
+            revenue_share_percentage = offering.coach_revenue_share
+
+        # B. Calculate Coach's Cut
+        # Formula: Session Value * (Coach Share / 100)
+        coach_cut = session_value * (revenue_share_percentage / 100)
+        
+        # Rounding (Currency standard)
+        coach_cut = coach_cut.quantize(Decimal('0.01'))
+
+        # C. Add to Report
+        earnings_report['total_earnings'] += coach_cut
+        earnings_report['sessions_count'] += 1
+        earnings_report['breakdown'].append({
+            'date': session.start_datetime,
+            'client': session.client.get_full_name(),
+            'type': 'Coverage' if session.is_coverage_session else 'Primary',
+            'session_value': session_value,
+            'coach_earnings': coach_cut
+        })
+
+    return earnings_report
+
+def calculate_coach_earnings_for_period(coach, start_date, end_date):
+    """
+    Calculates earnings for a specific coach based on sessions DELIVERED 
+    (Provider) in a given date range. This ignores who sold the package
+    and focuses on who did the work.
+    """
+    earnings_report = {
+        'total_earnings': Decimal('0.00'),
+        'sessions_count': 0,
+        'breakdown': []
+    }
+
+    # Query: Find all COMPLETED sessions where this coach was the PROVIDER
+    sessions = SessionBooking.objects.filter(
+        coach=coach,
+        status='COMPLETED',
+        start_datetime__date__range=(start_date, end_date)
+    ).select_related('enrollment', 'enrollment__offering', 'client')
+
+    for session in sessions:
+        session_value = Decimal('0.00')
+        revenue_share_percentage = Decimal('70.00') # Default fallback
+
+        # A. Get the Raw Value of the Session
+        if session.amount_paid > 0:
+            # 1. Direct Paid Session (e.g. Drop-in / One-off)
+            session_value = Decimal(session.amount_paid) / 100
+            
+            if session.offering:
+                revenue_share_percentage = session.offering.coach_revenue_share
+            elif session.workshop:
+                # Logic for workshop share could go here
+                pass
+
+        elif session.enrollment:
+            # 2. Package Session (Pre-paid)
+            # Calculate pro-rated value: Package Price / Total Sessions
+            offering = session.enrollment.offering
+            if offering.total_number_of_sessions > 0:
+                session_value = offering.price / offering.total_number_of_sessions
+            
+            revenue_share_percentage = offering.coach_revenue_share
+
+        # B. Calculate Coach's Cut
+        # Formula: Session Value * (Coach Share / 100)
+        coach_cut = session_value * (revenue_share_percentage / 100)
+        
+        # Rounding
+        coach_cut = coach_cut.quantize(Decimal('0.01'))
+
+        # C. Add to Report
+        earnings_report['total_earnings'] += coach_cut
+        earnings_report['sessions_count'] += 1
+        earnings_report['breakdown'].append({
+            'date': session.start_datetime,
+            'client': session.client.get_full_name(),
+            'type': 'Coverage' if session.is_coverage_session else 'Primary',
+            'session_value': session_value,
+            'coach_earnings': coach_cut
+        })
+
+    return earnings_report

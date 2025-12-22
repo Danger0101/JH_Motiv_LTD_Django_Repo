@@ -33,4 +33,7 @@ urlpatterns = [
     path('staff/resend-invite/<int:user_id>/', views.resend_guest_invite, name='resend_guest_invite'),
     path('staff/delete-guest/<int:user_id>/', views.delete_guest_account, name='delete_guest_account'),
     path('book-workshop/<slug:slug>/', views.book_workshop, name='book_workshop'),
+    path('coverage/accept/<int:request_id>/', views.accept_coverage_view, name='accept_coverage'),
+    path('coverage/request-modal/<int:booking_id>/', views.request_coverage_modal, name='request_coverage_modal'),
+    path('coverage/create/<int:booking_id>/', views.create_coverage_request, name='create_coverage_request'),
 ]

@@ -25,6 +25,27 @@
                         <svg class="w-4 h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                         With: <span class="font-medium text-gray-900 ml-1">{{ booking.client.get_full_name }}</span>
                     </div>
+                    
+                    {# Request Cover Button #}
+                    <div class="flex space-x-2 mt-2">
+                        {% if not booking.is_coverage_session %}
+                            <div x-data="{ open: false }">
+                                <button @click="open = true" 
+                                        hx-get="{% url 'coaching_booking:request_coverage_modal' booking.id %}" 
+                                        hx-target="#coverage_modal_content_{{ booking.id }}"
+                                        class="text-xs text-indigo-600 hover:text-indigo-800 border border-indigo-200 px-2 py-1 rounded ml-2">
+                                    Request Cover
+                                </button>
+                                <div x-show="open" style="display: none;">
+                                    <div id="coverage_modal_content_{{ booking.id }}"></div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <span class="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-100 ml-2" title="You are covering this session">
+                                Covering
+                            </span>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
 

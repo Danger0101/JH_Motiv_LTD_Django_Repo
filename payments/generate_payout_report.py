@@ -1,11 +1,12 @@
 import csv
-from datetime import datetime
+from datetime import datetime, date
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Sum, Count
 from django.utils import timezone
 from payments.models import CoachingOrder
 from accounts.models import CoachProfile
 from dreamers.models import DreamerProfile
+from payments.services import calculate_coach_earnings_for_period
 from decimal import Decimal
 
 class Command(BaseCommand):
@@ -39,78 +40,36 @@ class Command(BaseCommand):
         year = options['year'] or now.year
         month = options['month']
 
+        import calendar
         if not month:
             # Default to the previous month
             first_day_of_current_month = now.replace(day=1)
             last_day_of_previous_month = first_day_of_current_month - timezone.timedelta(days=1)
             month = last_day_of_previous_month.month
             year = last_day_of_previous_month.year
-
+        
         if not (1 <= month <= 12):
             raise CommandError("Month must be between 1 and 12.")
-        min_payout = Decimal(str(options['min_payout']))
+            
+        last_day = calendar.monthrange(year, month)[1]
+        start_date = date(year, month, 1)
+        end_date = date(year, month, last_day)
 
-        self.stdout.write(self.style.SUCCESS(f"Generating payout report for {datetime(year, month, 1).strftime('%B %Y')}..."))
-
-        # --- Query for Coach Payouts ---
-        coach_payouts = CoachingOrder.objects.filter(
-            created_at__year=year,
-            created_at__month=month,
-            payout_status='unpaid',
-            amount_coach__gt=0
-        ).values('enrollment__coach').annotate(
-            total_payout=Sum('amount_coach'),
-            order_count=Count('id')
-        ).filter(total_payout__gte=min_payout).order_by('-total_payout')
-
-        # --- Query for Referrer Payouts ---
-        referrer_payouts = CoachingOrder.objects.filter(
-            created_at__year=year,
-            created_at__month=month,
-            payout_status='unpaid',
-            amount_referrer__gt=0
-        ).values('referrer').annotate(
-            total_payout=Sum('amount_referrer'),
-            order_count=Count('id')
-        ).filter(total_payout__gte=min_payout).order_by('-total_payout')
-
-        # --- Prepare data for output ---
+        self.stdout.write(self.style.SUCCESS(f"Generating payout report for {start_date.strftime('%B %Y')}..."))
+        
+        coaches = CoachProfile.objects.filter(user__is_active=True)
+        grand_total = 0
         report_data = []
-        self.stdout.write(self.style.HTTP_INFO("\n--- Coach Payout Summary ---"))
 
-        # OPTIMIZATION: Pre-fetch all relevant coach profiles to avoid N+1 queries
-        coach_ids = [item['enrollment__coach'] for item in coach_payouts]
-        coaches = CoachProfile.objects.filter(id__in=coach_ids).select_related('user')
-        coach_map = {coach.id: coach for coach in coaches}
+        for coach in coaches:
+            report = calculate_coach_earnings_for_period(coach, start_date, end_date)
+            if report['total_earnings'] > 0:
+                self.stdout.write(f"Coach: {coach.user.get_full_name()} | Amount: £{report['total_earnings']} | Sessions: {report['sessions_count']}")
+                grand_total += report['total_earnings']
+                report_data.append(['Coach', coach.user.get_full_name(), coach.user.email, report['total_earnings'], report['sessions_count']])
 
-        if coach_payouts:
-            for item in coach_payouts:
-                coach = coach_map.get(item['enrollment__coach'])
-                if coach:
-                    line = f"Coach: {coach.user.get_full_name()} | Amount: £{item['total_payout']:.2f} | Orders: {item['order_count']}"
-                    self.stdout.write(line)
-                    report_data.append(['Coach', coach.user.get_full_name(), coach.user.email, item['total_payout'], item['order_count']])
-        else:
-            self.stdout.write("No unpaid coach commissions for this period.")
-
-        self.stdout.write(self.style.HTTP_INFO("\n--- Referrer Payout Summary ---"))
-
-        # OPTIMIZATION: Pre-fetch all relevant referrer profiles
-        referrer_ids = [item['referrer'] for item in referrer_payouts]
-        referrers = DreamerProfile.objects.filter(id__in=referrer_ids).select_related('user')
-        referrer_map = {ref.id: ref for ref in referrers}
-
-        if referrer_payouts:
-            for item in referrer_payouts:
-                referrer = referrer_map.get(item['referrer'])
-                if referrer:
-                    line = f"Referrer: {referrer.name} | Amount: £{item['total_payout']:.2f} | Orders: {item['order_count']}"
-                    self.stdout.write(line)
-                    # FIX: Safely access user email, as user link is optional
-                    email = referrer.user.email if referrer.user else "N/A"
-                    report_data.append(['Referrer', referrer.name, email, item['total_payout'], item['order_count']])
-        else:
-            self.stdout.write("No unpaid referrer commissions for this period.")
+        self.stdout.write("-" * 40)
+        self.stdout.write(f"GRAND TOTAL PAYOUT: £{grand_total}")
 
         # --- Handle CSV Output ---
         output_file = options['output']

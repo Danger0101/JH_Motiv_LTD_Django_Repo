@@ -13,7 +13,7 @@ from django.core.cache import cache
 from django.urls import reverse
 from django.utils.crypto import get_random_string
 
-from .models import SessionBooking, ClientOfferingEnrollment, OneSessionFreeOffer, CoachBusySlot
+from .models import SessionBooking, ClientOfferingEnrollment, OneSessionFreeOffer, CoachBusySlot, SessionCoverageRequest
 from coaching_core.models import CoachProfile, Workshop
 from coaching_availability.utils import get_coach_available_slots
 from accounts.models import User, MarketingPreference
@@ -256,18 +256,10 @@ class BookingService:
 
     @staticmethod
     @transaction.atomic
-    def create_booking(booking_data, user=None):
+    def create_booking(booking_data, user=None, provider_coach=None):
         """
         Universal booking creator. Handles Atomicity, Guest logic, and Race Conditions.
-        booking_data: {
-            'coach_id': int (optional),
-            'workshop_id': int (optional),
-            'enrollment_id': int (optional),
-            'free_offer_id': int (optional),
-            'start_time': str or datetime,
-            'email': str (for guests),
-            'name': str (for guests)
-        }
+        provider_coach: Optional CoachProfile override (for coverage).
         """
         # 1. Parse Start Time
         start_time_input = booking_data.get('start_time')
@@ -318,7 +310,8 @@ class BookingService:
         if booking_data.get('workshop_id'):
             result = BookingService._create_workshop_booking(booking_data, user, start_datetime_obj)
         else:
-            result = BookingService._create_1on1_booking(booking_data, user, start_datetime_obj)
+            # Pass provider_coach to 1on1 logic
+            result = BookingService._create_1on1_booking(booking_data, user, start_datetime_obj, provider_coach)
             
         return result
 
@@ -483,7 +476,48 @@ class BookingService:
         return booking
 
     @staticmethod
-    def _create_1on1_booking(booking_data, user, start_datetime_obj):
+    def request_session_coverage(booking, requesting_coach, note=""):
+        """
+        Coach A (requesting_coach) asks for help covering a session.
+        """
+        if booking.coach != requesting_coach:
+            raise ValidationError("Only the currently assigned coach can request coverage.")
+            
+        request = SessionCoverageRequest.objects.create(
+            requesting_coach=requesting_coach,
+            session=booking,
+            note=note,
+            status='PENDING'
+        )
+        return request
+
+    @staticmethod
+    @transaction.atomic
+    def accept_session_coverage(coverage_request_id, accepting_coach):
+        """
+        Coach B (accepting_coach) accepts the request.
+        """
+        try:
+            req = SessionCoverageRequest.objects.select_related('session').get(
+                pk=coverage_request_id, 
+                status='PENDING'
+            )
+        except SessionCoverageRequest.DoesNotExist:
+            return False, "Request not found or already processed."
+
+        # Validate: Prevent coach from accepting their own request
+        if req.requesting_coach == accepting_coach:
+            return False, "You cannot accept your own coverage request."
+
+        # Execute Acceptance Logic
+        success = req.accept(accepting_coach)
+        
+        if success:
+            return True, f"You are now covering this session for {req.session.client.get_full_name()}."
+        return False, "Could not accept request."
+
+    @staticmethod
+    def _create_1on1_booking(booking_data, user, start_datetime_obj, provider_coach=None):
         coach_id = booking_data.get('coach_id')
         enrollment_id = booking_data.get('enrollment_id')
         free_offer_id = booking_data.get('free_offer_id')
@@ -504,8 +538,10 @@ class BookingService:
                 raise ValidationError("No sessions remaining for this enrollment.")
             session_length = enrollment.offering.session_length_minutes
             
-            # Infer coach if missing
-            if not coach_id and enrollment.coach:
+            # If explicit provider requested, use it; otherwise use enrollment primary
+            if provider_coach:
+                coach_id = provider_coach.id
+            elif not coach_id and enrollment.coach:
                 coach_id = enrollment.coach.id
             
         elif free_offer_id:
