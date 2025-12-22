@@ -284,7 +284,8 @@ def cancel_session(request, booking_id):
         is_primary = booking.enrollment.coach.user == request.user
     
     if not (is_client or is_provider or is_primary):
-        return HttpResponseForbidden("You are not authorized to cancel this session.")
+        messages.error(request, "You are not authorized to cancel this session.")
+        return redirect('accounts:account_profile')
 
     coach = session_coach # The Provider
     client = booking.client
@@ -396,13 +397,7 @@ def cancel_session(request, booking_id):
         logger.error(f"CRITICAL: Cancellation for booking {booking.id} succeeded but failed to send emails. Error: {e}")
 
     # Redirect to profile to refresh the dashboard
-    response = HttpResponse(status=204)
-    response['HX-Trigger'] = json.dumps({
-        'refreshBookings': True,
-        'refreshOfferings': True,
-        'showToast': {'message': msg, 'type': toast_type}
-    })
-    return response
+    return redirect('accounts:account_profile')
 
 @login_required
 def reschedule_session_form(request, booking_id):
@@ -1079,12 +1074,20 @@ def book_workshop(request, slug):
 def get_booking_calendar(request):
     enrollment_id = request.GET.get('enrollment_id')
     reschedule_booking_id = request.GET.get('reschedule_booking_id')
+    coach_id = request.GET.get('coach_id')
     
     session_length = 60 # Default
     coach = None
     slot_target_id = '#time-slots-column' # Default target
     free_offer = None
     enrollment = None
+
+    # --- 0. Check for Explicit Coach Selection ---
+    if coach_id:
+        try:
+            coach = CoachProfile.objects.get(id=coach_id)
+        except CoachProfile.DoesNotExist:
+            pass
 
     # --- 1. Determine Context (Reschedule vs New Booking) ---
     if reschedule_booking_id:
@@ -1094,7 +1097,8 @@ def get_booking_calendar(request):
             # slot_target_id = '#reschedule-slots-container' # Removed to match profile_book_session.html target
             
             # Default to booking coach if not explicitly changed
-            coach = booking.coach
+            if not coach:
+                coach = booking.coach
         except SessionBooking.DoesNotExist:
             pass
     
@@ -1104,7 +1108,8 @@ def get_booking_calendar(request):
             try:
                 offer_id = str(enrollment_id).replace('free_', '')
                 free_offer = get_object_or_404(OneSessionFreeOffer, id=offer_id, client=request.user)
-                coach = free_offer.coach
+                if not coach:
+                    coach = free_offer.coach
                 if free_offer.offering:
                     session_length = free_offer.offering.session_length_minutes
             except (ValueError, OneSessionFreeOffer.DoesNotExist):
@@ -1112,7 +1117,8 @@ def get_booking_calendar(request):
         else:
             try:
                 enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id, client=request.user)
-                coach = enrollment.coach
+                if not coach:
+                    coach = enrollment.coach
                 # Fallback: If no primary coach assigned, pick the first one from the offering
                 if not coach:
                     coach = enrollment.offering.coaches.first()

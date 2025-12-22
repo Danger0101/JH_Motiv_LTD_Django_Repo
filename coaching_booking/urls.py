@@ -10,7 +10,7 @@ urlpatterns = [
     path('enroll/<slug:slug>/', views.OfferEnrollmentStartView.as_view(), name='offer-enroll'),
     
     path('book-session/', views.book_session, name='book_session'),
-    path('cancel-session/<int:booking_id>/', views.cancel_session, name='cancel_session'),
+    path('booking/cancel/<int:booking_id>/', views.cancel_session, name='cancel_session'),
     path('reschedule-session/<int:booking_id>/', views.reschedule_session, name='reschedule_session'),
     path('reschedule-session-form/<int:booking_id>/', views.reschedule_session_form, name='reschedule_session_form'),
     path('reschedule/confirm/<int:booking_id>/', views.confirm_reschedule_modal, name='confirm_reschedule_modal'),
