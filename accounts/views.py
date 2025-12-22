@@ -191,6 +191,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        now = timezone.now()
 
         # --- COACHING DASHBOARD DATA ---
         context['upcoming_sessions'] = []  # Renamed to match partials
@@ -203,7 +204,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             # 1. Upcoming Schedule
             context['upcoming_sessions'] = SessionBooking.objects.filter(
                 coach=coach_profile,
-                start_datetime__gte=timezone.now(),
+                start_datetime__gte=now,
                 status__in=['BOOKED', 'RESCHEDULED', 'CONFIRMED'],
                 workshop__isnull=True
             ).select_related('client').order_by('start_datetime')
@@ -217,15 +218,18 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             # 3. Hosted Workshops
             context['hosted_workshops'] = Workshop.objects.filter(
                 coach=coach_profile,
-                date__gte=timezone.now()
+                date__gte=now
             ).annotate(
                 booked_count=models.Count('bookings', filter=models.Q(bookings__status__in=['BOOKED', 'PENDING_PAYMENT']))
             ).order_by('date')
 
-        # For Client: My Taster Status
-        context['my_taster_status'] = OneSessionFreeOffer.objects.filter(
-            client=self.request.user
-        ).order_by('-date_offered').first()
+        # For Client: My Free/Taster Offers
+        my_free_offers = OneSessionFreeOffer.objects.filter(
+            client=self.request.user,
+            status__in=['PENDING', 'APPROVED'],
+            redemption_deadline__gte=now
+        ).select_related('coach__user', 'offering').order_by('-date_offered')
+        context['my_free_offers'] = my_free_offers
 
         # Initialized as empty; loaded via HTMX
         context['coach_clients'] = []
@@ -233,7 +237,6 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         # --- STAFF DASHBOARD METRICS ---
         context['is_staff'] = self.request.user.is_staff
         if self.request.user.is_staff:
-            now = timezone.now()
             last_30_days_start = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=29)
             last_7_days = now - timedelta(days=7)
 
@@ -348,13 +351,13 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         # --- CLIENT BOOKINGS & ENROLLMENTS ---
         upcoming_bookings = SessionBooking.objects.filter(
             client=self.request.user,
-            start_datetime__gte=timezone.now(),
+            start_datetime__gte=now,
             status__in=['BOOKED', 'RESCHEDULED', 'CONFIRMED']
         ).select_related('coach__user', 'workshop').order_by('start_datetime')
         context['bookings'] = upcoming_bookings
         
         context['my_workshops'] = upcoming_bookings.filter(workshop__isnull=False)
-        context['has_urgent_booking'] = upcoming_bookings.filter(start_datetime__lte=timezone.now() + timedelta(hours=24)).exists()
+        context['has_urgent_booking'] = upcoming_bookings.filter(start_datetime__lte=now + timedelta(hours=24)).exists()
 
         context['enrollments'] = ClientOfferingEnrollment.objects.filter(
             client=self.request.user,
@@ -399,15 +402,18 @@ class ProfileView(LoginRequiredMixin, TemplateView):
             context['override_form'] = DateOverrideForm()
             context['days_of_week'] = CoachAvailability.DAYS_OF_WEEK
 
-        context['available_credits'] = ClientOfferingEnrollment.objects.filter(
+        available_credits = ClientOfferingEnrollment.objects.filter(
             client=self.request.user,
             remaining_sessions__gt=0,
             is_active=True,
-            expiration_date__gte=timezone.now()
+            expiration_date__gte=now
         ).order_by('-enrolled_on')
+        context['available_credits'] = available_credits
 
         # --- "My Rewards" Wallet ---
-        now = timezone.now()
+        # Determine if the "Book Session" button should be shown
+        has_bookable_approved_offers = any(offer.status == 'APPROVED' for offer in my_free_offers)
+        context['can_book_session'] = available_credits.exists() or has_bookable_approved_offers
         
         context['applied_coupon'] = None
         if cart.coupon and cart.coupon.active:
@@ -715,10 +721,13 @@ def dashboard_partial(request):
             booked_count=models.Count('bookings', filter=models.Q(bookings__status__in=['BOOKED', 'PENDING_PAYMENT']))
         ).order_by('date')
 
-    # For Client: My Taster Status
-    context['my_taster_status'] = OneSessionFreeOffer.objects.filter(
-        client=user
-    ).order_by('-date_offered').first()
+    # For Client: My Free/Taster Offers
+    my_free_offers = OneSessionFreeOffer.objects.filter(
+        client=user,
+        status__in=['PENDING', 'APPROVED'],
+        redemption_deadline__gte=now
+    ).select_related('coach__user', 'offering').order_by('-date_offered')
+    context['my_free_offers'] = my_free_offers
 
     # --- CLIENT BOOKINGS & ENROLLMENTS ---
     upcoming_bookings = SessionBooking.objects.filter(
@@ -731,13 +740,18 @@ def dashboard_partial(request):
     context['my_workshops'] = upcoming_bookings.filter(workshop__isnull=False)
     context['has_urgent_booking'] = upcoming_bookings.filter(start_datetime__lte=now + timedelta(hours=24)).exists()
 
-    context['available_credits'] = ClientOfferingEnrollment.objects.filter(
+    available_credits = ClientOfferingEnrollment.objects.filter(
         client=user,
         remaining_sessions__gt=0,
         is_active=True,
         expiration_date__gte=now
     ).order_by('-enrolled_on')
+    context['available_credits'] = available_credits
 
+    # Determine if the "Book Session" button should be shown
+    has_bookable_approved_offers = any(offer.status == 'APPROVED' for offer in my_free_offers)
+    context['can_book_session'] = available_credits.exists() or has_bookable_approved_offers
+    
     # --- RECENT ACTIVITY ---
     context['recent_activities'] = get_recent_activity(user)
 

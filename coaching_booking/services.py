@@ -394,6 +394,94 @@ class BookingService:
         return {'type': 'checkout', 'url': checkout_session.url, 'booking_id': booking.id}
 
     @staticmethod
+    @transaction.atomic
+    def reschedule_booking(booking, new_start_time_input, new_coach_id=None):
+        """
+        Reschedules an existing booking to a new time and optionally a new coach.
+        """
+        # 1. Parse Start Time
+        if isinstance(new_start_time_input, str):
+            try:
+                # Handle ISO format (e.g. 2023-10-25T14:00:00Z or 2023-10-25T14:00:00+00:00)
+                clean_time = new_start_time_input.replace('Z', '+00:00')
+                dt = datetime.fromisoformat(clean_time)
+                if timezone.is_naive(dt):
+                    new_start_time = timezone.make_aware(dt)
+                else:
+                    new_start_time = dt
+            except ValueError:
+                # Fallback to legacy formats
+                try:
+                    if 'T' in new_start_time_input:
+                        dt = datetime.strptime(new_start_time_input, '%Y-%m-%dT%H:%M')
+                    else:
+                        dt = datetime.strptime(new_start_time_input, '%Y-%m-%d %H:%M')
+                    new_start_time = timezone.make_aware(dt)
+                except ValueError:
+                    raise ValidationError("Invalid date format.")
+        else:
+            new_start_time = new_start_time_input
+
+        # 2. Basic Validation
+        now = timezone.now()
+        if new_start_time < now:
+            raise ValidationError("Cannot reschedule to a time in the past.")
+        
+        # 3. Handle Coach Change
+        target_coach = booking.coach
+        if new_coach_id and int(new_coach_id) != booking.coach.id:
+            # Validate if user is allowed to switch to this coach
+            if booking.enrollment and not booking.enrollment.coach:
+                # If enrollment is open (no specific coach assigned), check if new coach is in offering
+                if booking.enrollment.offering.coaches.filter(id=new_coach_id).exists():
+                    target_coach = get_object_or_404(CoachProfile, id=new_coach_id)
+                else:
+                    raise ValidationError("Invalid coach selection.")
+            else:
+                raise ValidationError("Cannot change coach for this booking.")
+
+        # 4. Availability Check
+        if booking.enrollment:
+            session_length = booking.enrollment.offering.session_length_minutes
+        else:
+            session_length = booking.get_duration_minutes() or 60
+
+        available_slots = BookingService.get_slots_for_coach(
+            target_coach, new_start_time.date(), session_length
+        )
+        
+        is_available = False
+        for slot in available_slots:
+            slot_aware = slot if timezone.is_aware(slot) else timezone.make_aware(slot)
+            if slot_aware == new_start_time:
+                is_available = True
+                break
+        
+        if not is_available:
+            raise ValidationError("That time slot is no longer available. Please choose another.")
+
+        # 5. Double Booking Check (Race Condition)
+        if SessionBooking.objects.filter(
+            coach=target_coach,
+            start_datetime=new_start_time,
+            status__in=['BOOKED', 'PENDING_PAYMENT', 'RESCHEDULED']
+        ).exclude(id=booking.id).exists():
+            raise ValidationError("This time slot has already been booked. Please select another time.")
+
+        # 6. Apply Changes
+        if target_coach != booking.coach:
+            booking.coach = target_coach
+        
+        result = booking.reschedule(new_start_time)
+        
+        if result == 'LATE':
+            raise ValidationError("Sessions cannot be rescheduled within 24 hours of the start time.")
+        elif result == 'ERROR':
+            raise ValidationError("Cannot reschedule a canceled or completed session.")
+            
+        return booking
+
+    @staticmethod
     def _create_1on1_booking(booking_data, user, start_datetime_obj):
         coach_id = booking_data.get('coach_id')
         enrollment_id = booking_data.get('enrollment_id')

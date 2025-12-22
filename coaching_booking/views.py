@@ -385,108 +385,54 @@ def reschedule_session(request, booking_id):
 
     if not new_start_time_str:
         return htmx_error("Please select a new time.")
-    else:
+
+    try:
+        original_start_time = booking.start_datetime
+        
+        # Use Service for robust rescheduling
+        BookingService.reschedule_booking(booking, new_start_time_str, new_coach_id)
+        
+        # Success Logic
+        new_start_time = booking.start_datetime
+        msg = f"Session successfully rescheduled to {new_start_time.strftime('%B %d, %H:%M')}."
+        messages.success(request, msg)
+        
         try:
-            # Handle standard ISO format from code or browser
-            if 'T' in new_start_time_str:
-                new_start_time = datetime.strptime(new_start_time_str, '%Y-%m-%dT%H:%M')
-            else:
-                new_start_time = datetime.strptime(new_start_time_str, '%Y-%m-%d %H:%M')
-                
-            new_start_time = timezone.make_aware(new_start_time)
-
-            # Handle Coach Change
-            target_coach = booking.coach
-            if new_coach_id and int(new_coach_id) != booking.coach.id:
-                # Validate if user is allowed to switch to this coach
-                if booking.enrollment and not booking.enrollment.coach:
-                     if booking.enrollment.offering.coaches.filter(id=new_coach_id).exists():
-                         target_coach = get_object_or_404(CoachProfile, id=new_coach_id)
-                     else:
-                         return htmx_error("Invalid coach selection.")
-                else:
-                     return htmx_error("Cannot change coach for this booking.")
-
-            # --- 2. Safe Session Length Lookup (Fixes Free Session Crash) ---
-            if booking.enrollment:
-                session_length = booking.enrollment.offering.session_length_minutes
-            else:
-                # Fallback for Free/Direct sessions: use existing duration
-                session_length = booking.get_duration_minutes() or 60
-
-            # Use BookingService to respect Google Calendar busy slots
-            available_slots = BookingService.get_slots_for_coach(
-                target_coach, new_start_time.date(), session_length
-            )
+            dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
+            formatted_original_time = original_start_time.strftime('%A, %B %d, %Y, %I:%M %p %Z')
             
-            is_available = False
-            for slot in available_slots:
-                 slot_aware = slot if timezone.is_aware(slot) else timezone.make_aware(slot)
-                 if slot_aware == new_start_time:
-                     is_available = True
-                     break
+            send_transactional_email(
+                recipient_email=booking.client.email,
+                subject="Your Coaching Session Has Been Rescheduled",
+                template_name='emails/reschedule_confirmation.html',
+                context={
+                    'user_id': booking.client.pk,
+                    'booking_id': booking.pk,
+                    'original_start_time': formatted_original_time,
+                    'dashboard_url': dashboard_url,
+                }
+            )
 
-            if not is_available:
-                return htmx_error("That time slot is no longer available. Please choose another.")
-            else:
-                # Double check against local DB to prevent double booking
-                if SessionBooking.objects.filter(
-                    coach=target_coach,
-                    start_datetime=new_start_time,
-                    status__in=['BOOKED', 'PENDING_PAYMENT', 'RESCHEDULED']
-                ).exclude(id=booking.id).exists():
-                    return htmx_error("This time slot has already been booked. Please select another time.")
-
-                original_start_time = booking.start_datetime
-                
-                if target_coach != booking.coach:
-                    booking.coach = target_coach
-                
-                result = booking.reschedule(new_start_time)
-
-                if result == 'LATE':
-                    return htmx_error("Sessions cannot be rescheduled within 24 hours of the start time.")
-                else:
-                    msg = f"Session successfully rescheduled to {new_start_time.strftime('%B %d, %H:%M')}."
-                    messages.success(request, msg)
-                    
-                    try:
-                        dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
-                        # Format original start time for template since we can't pass datetime object
-                        formatted_original_time = original_start_time.strftime('%A, %B %d, %Y, %I:%M %p %Z')
-                        
-                        send_transactional_email(
-                            recipient_email=booking.client.email,
-                            subject="Your Coaching Session Has Been Rescheduled",
-                            template_name='emails/reschedule_confirmation.html',
-                            context={
-                                'user_id': booking.client.pk,
-                                'booking_id': booking.pk,
-                                'original_start_time': formatted_original_time,
-                                'dashboard_url': dashboard_url,
-                            }
-                        )
-
-                        send_transactional_email(
-                            recipient_email=booking.coach.user.email,
-                            subject=f"Session Rescheduled by {booking.client.get_full_name()}",
-                            template_name='emails/coach_reschedule_notification.html',
-                            context={
-                                'coach_id': booking.coach.pk,
-                                'client_id': booking.client.pk,
-                                'booking_id': booking.pk,
-                                'original_start_time': formatted_original_time,
-                                'dashboard_url': dashboard_url,
-                            }
-                        )
-                    except Exception as e:
-                        logger.error(f"CRITICAL: Reschedule for booking {booking.id} succeeded but failed to send emails. Error: {e}")
-
-        except ValueError:
-            return htmx_error("Invalid date format.")
+            send_transactional_email(
+                recipient_email=booking.coach.user.email,
+                subject=f"Session Rescheduled by {booking.client.get_full_name()}",
+                template_name='emails/coach_reschedule_notification.html',
+                context={
+                    'coach_id': booking.coach.pk,
+                    'client_id': booking.client.pk,
+                    'booking_id': booking.pk,
+                    'original_start_time': formatted_original_time,
+                    'dashboard_url': dashboard_url,
+                }
+            )
         except Exception as e:
-            logger.error(f"Reschedule Error: {e}", exc_info=True)
-            return htmx_error(f"An error occurred: {e}")
+            logger.error(f"CRITICAL: Reschedule for booking {booking.id} succeeded but failed to send emails. Error: {e}")
+
+    except ValidationError as e:
+        return htmx_error(e.messages[0] if hasattr(e, 'messages') else str(e))
+    except Exception as e:
+        logger.error(f"Reschedule Error: {e}", exc_info=True)
+        return htmx_error(f"An error occurred: {str(e)}")
 
     response = HttpResponse(status=204)
     response['HX-Trigger'] = json.dumps({
