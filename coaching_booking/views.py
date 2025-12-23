@@ -1243,6 +1243,23 @@ def confirm_booking_modal(request):
         except (CoachProfile.DoesNotExist, ValueError):
             pass
 
+    if enrollment_id:
+        if str(enrollment_id).startswith('free_'):
+            context['offering_name'] = "Free Taster Session"
+        else:
+            try:
+                enrollment = ClientOfferingEnrollment.objects.select_related('offering').get(id=enrollment_id, client=request.user)
+                context['offering_name'] = enrollment.offering.name
+            except (ClientOfferingEnrollment.DoesNotExist, ValueError):
+                pass
+    elif reschedule_booking_id:
+        try:
+            booking = SessionBooking.objects.select_related('offering').get(id=reschedule_booking_id, client=request.user)
+            if booking.offering:
+                context['offering_name'] = booking.offering.name
+        except (SessionBooking.DoesNotExist, ValueError):
+            pass
+
     return render(request, 'coaching_booking/partials/booking_form.html', context)
 
 @login_required

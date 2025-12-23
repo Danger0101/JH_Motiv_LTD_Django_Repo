@@ -7,6 +7,10 @@
         <br>
         with Coach <span class="font-semibold text-gray-800">{{ coach_name }}</span>
         {% endif %}
+        {% if offering_name %}
+        <br>
+        for <span class="font-semibold text-gray-800">{{ offering_name }}</span>
+        {% endif %}
     </p>
 
     <form method="POST" 
