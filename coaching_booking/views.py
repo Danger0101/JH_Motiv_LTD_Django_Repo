@@ -1082,112 +1082,117 @@ def get_booking_calendar(request):
     free_offer = None
     enrollment = None
 
-    # --- 0. Check for Explicit Coach Selection ---
-    if coach_id:
-        try:
-            coach = CoachProfile.objects.get(id=coach_id)
-        except CoachProfile.DoesNotExist:
-            pass
-
-    # --- 1. Determine Context (Reschedule vs New Booking) ---
-    if reschedule_booking_id:
-        try:
-            booking = SessionBooking.objects.get(id=reschedule_booking_id, client=request.user)
-            session_length = booking.get_duration_minutes() or 60
-            # slot_target_id = '#reschedule-slots-container' # Removed to match profile_book_session.html target
-            
-            # Default to booking coach if not explicitly changed
-            if not coach:
-                coach = booking.coach
-        except SessionBooking.DoesNotExist:
-            pass
-    
-    elif enrollment_id:
-        # Standard Booking
-        if str(enrollment_id).startswith('free_'):
+    try:
+        # --- 0. Check for Explicit Coach Selection ---
+        if coach_id:
             try:
-                offer_id = str(enrollment_id).replace('free_', '')
-                free_offer = get_object_or_404(OneSessionFreeOffer, id=offer_id, client=request.user)
-                if not coach:
-                    coach = free_offer.coach
-                if free_offer.offering:
-                    session_length = free_offer.offering.session_length_minutes
-            except (ValueError, OneSessionFreeOffer.DoesNotExist):
-                pass
-        else:
-            try:
-                enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id, client=request.user)
-                if not coach:
-                    coach = enrollment.coach
-                # Fallback: If no primary coach assigned, pick the first one from the offering
-                if not coach:
-                    coach = enrollment.offering.coaches.first()
-                session_length = enrollment.offering.session_length_minutes
-            except ClientOfferingEnrollment.DoesNotExist:
+                coach = CoachProfile.objects.get(id=coach_id)
+            except CoachProfile.DoesNotExist:
                 pass
 
-    # --- 2. Validate Inputs ---
-    if not coach:
-        return HttpResponse(
-            '<div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center h-full flex flex-col justify-center items-center">'
-            '<p class="text-gray-500 font-medium">Select an Offering and a Coach to view availability.</p>'
-            '</div>'
+        # --- 1. Determine Context (Reschedule vs New Booking) ---
+        if reschedule_booking_id:
+            try:
+                booking = SessionBooking.objects.get(id=reschedule_booking_id, client=request.user)
+                session_length = booking.get_duration_minutes() or 60
+                
+                # Default to booking coach if not explicitly changed
+                if not coach:
+                    coach = booking.coach
+            except SessionBooking.DoesNotExist:
+                pass
+        
+        elif enrollment_id:
+            # Standard Booking
+            if str(enrollment_id).startswith('free_'):
+                try:
+                    offer_id = str(enrollment_id).replace('free_', '')
+                    free_offer = get_object_or_404(OneSessionFreeOffer, id=offer_id, client=request.user)
+                    if not coach:
+                        coach = free_offer.coach
+                    if free_offer.offering:
+                        session_length = free_offer.offering.session_length_minutes
+                except (ValueError, OneSessionFreeOffer.DoesNotExist):
+                    pass
+            else:
+                try:
+                    enrollment = ClientOfferingEnrollment.objects.get(id=enrollment_id, client=request.user)
+                    if not coach:
+                        coach = enrollment.coach
+                    # Fallback: If no primary coach assigned, pick the first one from the offering
+                    if not coach:
+                        coach = enrollment.offering.coaches.first()
+                    session_length = enrollment.offering.session_length_minutes
+                except ClientOfferingEnrollment.DoesNotExist:
+                    pass
+
+        # --- 2. Validate Inputs ---
+        if not coach:
+            return HttpResponse(
+                '<div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center h-full flex flex-col justify-center items-center">'
+                '<p class="text-gray-500 font-medium">Select an Offering and a Coach to view availability.</p>'
+                '</div>'
+            )
+
+        try:
+            year = int(request.GET.get('year', timezone.now().year))
+            month = int(request.GET.get('month', timezone.now().month))
+        except ValueError:
+            year = timezone.now().year
+            month = timezone.now().month
+
+        # Get Timezone from Cookie
+        user_tz = request.COOKIES.get('USER_TIMEZONE', 'UTC')
+
+        # Call Service
+        calendar_data = BookingService.get_month_schedule(
+            coach, year, month, user_tz, session_length
         )
 
-    try:
-        year = int(request.GET.get('year', timezone.now().year))
-        month = int(request.GET.get('month', timezone.now().month))
-    except ValueError:
-        year = timezone.now().year
-        month = timezone.now().month
+        # Convert the flat list of days into a list of weeks (7 days per week)
+        calendar_rows = [calendar_data[i:i+7] for i in range(0, len(calendar_data), 7)]
 
-    # Get Timezone from Cookie
-    user_tz = request.COOKIES.get('USER_TIMEZONE', 'UTC')
+        # Navigation Logic
+        current_date = date(year, month, 1)
+        
+        # Disable 'Prev' if we are at the start of the current real month
+        now_date = timezone.now().date()
+        real_current_month_start = date(now_date.year, now_date.month, 1)
+        disable_prev = current_date <= real_current_month_start
+        is_current_month_view = (current_date.year == now_date.year and current_date.month == now_date.month)
 
-    # Call Service
-    calendar_data = BookingService.get_month_schedule(
-        coach, year, month, user_tz, session_length
-    )
+        prev_date = current_date - timedelta(days=1)
+        if month == 12:
+            next_date = date(year + 1, 1, 1)
+        else:
+            next_date = date(year, month + 1, 1)
 
-    # Convert the flat list of days into a list of weeks (7 days per week)
-    calendar_rows = [calendar_data[i:i+7] for i in range(0, len(calendar_data), 7)]
-
-    # Navigation Logic
-    current_date = date(year, month, 1)
-    
-    # Disable 'Prev' if we are at the start of the current real month
-    now_date = timezone.now().date()
-    real_current_month_start = date(now_date.year, now_date.month, 1)
-    disable_prev = current_date <= real_current_month_start
-    is_current_month_view = (current_date.year == now_date.year and current_date.month == now_date.month)
-
-    def get_month_link(d):
-        return {'month': d.month, 'year': d.year}
-
-    prev_date = current_date - timedelta(days=1)
-    # Logic to get next month safely
-    if month == 12:
-        next_date = date(year + 1, 1, 1)
-    else:
-        next_date = date(year, month + 1, 1)
-
-    context = {
-        'calendar_rows': calendar_rows,
-        'current_year': year,
-        'current_month': month,
-        'current_month_name': current_date.strftime('%B'),
-        'prev_month': prev_date.month,
-        'prev_year': prev_date.year,
-        'next_month': next_date.month,
-        'next_year': next_date.year,
-        'enrollment_id': enrollment_id, # Can be "free_X" or normal ID
-        'coach': coach, # Pass the object, not just ID
-        'disable_prev': disable_prev,
-        'is_current_month_view': is_current_month_view,
-        'reschedule_booking_id': reschedule_booking_id,
-        'slot_target_id': slot_target_id,
-    }
-    return render(request, 'coaching_booking/partials/_calendar_widget.html', context)
+        context = {
+            'calendar_rows': calendar_rows,
+            'current_year': year,
+            'current_month': month,
+            'current_month_name': current_date.strftime('%B'),
+            'prev_month': prev_date.month,
+            'prev_year': prev_date.year,
+            'next_month': next_date.month,
+            'next_year': next_date.year,
+            'enrollment_id': enrollment_id,
+            'coach': coach,
+            'disable_prev': disable_prev,
+            'is_current_month_view': is_current_month_view,
+            'reschedule_booking_id': reschedule_booking_id,
+            'slot_target_id': slot_target_id,
+        }
+        return render(request, 'coaching_booking/partials/_calendar_widget.html', context)
+        
+    except Exception as e:
+        logger.error(f"Calendar Loading Error: {e}", exc_info=True)
+        return HttpResponse(
+            f'<div class="p-4 text-red-600 bg-red-50 border border-red-200 rounded-lg text-center">'
+            f'<p class="font-bold">Error loading calendar</p>'
+            f'<p class="text-sm mt-1">Please try refreshing the page.</p>'
+            f'</div>'
+        )
 
 @login_required
 def confirm_booking_modal(request):
