@@ -400,6 +400,11 @@ def cancel_session(request, booking_id):
     return redirect('accounts:account_profile')
 
 @login_required
+def cancel_booking_modal(request, booking_id):
+    booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
+    return render(request, 'coaching_booking/partials/cancel_confirmation_modal.html', {'booking': booking})
+
+@login_required
 def reschedule_session_form(request, booking_id):
     """
     Returns the HTMX partial for the reschedule form.
@@ -423,7 +428,7 @@ def reschedule_session_form(request, booking_id):
     
     today = timezone.now().date()
     
-    return render(request, 'coaching_booking/profile_book_session.html', {
+    context = {
         'reschedule_booking_id': booking.id,
         'booking': booking,
         'coaches': coaches,
@@ -434,7 +439,12 @@ def reschedule_session_form(request, booking_id):
         'free_offers': [],
         'selected_enrollment_id': booking.enrollment.id if booking.enrollment else '',
         'selected_free_offer_id': '',
-    })
+    }
+
+    if request.headers.get('HX-Request'):
+        return render(request, 'coaching_booking/partials/reschedule_modal.html', context)
+
+    return render(request, 'coaching_booking/profile_book_session.html', context)
 
 @login_required
 @require_POST
