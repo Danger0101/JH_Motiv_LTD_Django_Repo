@@ -14,7 +14,6 @@ urlpatterns = [
     path('booking/cancel-modal/<int:booking_id>/', views.cancel_booking_modal, name='cancel_booking'),
     path('reschedule-session/<int:booking_id>/', views.reschedule_session, name='reschedule_session'),
     path('reschedule-session-form/<int:booking_id>/', views.reschedule_session_form, name='reschedule_session_form'),
-    path('reschedule/confirm/<int:booking_id>/', views.confirm_reschedule_modal, name='confirm_reschedule_modal'),
     path('book/', views.profile_book_session, name='profile_book_session'),
     path('get-booking-calendar/', views.get_booking_calendar, name='get_booking_calendar'),
     path('confirm-booking-modal/', views.confirm_booking_modal, name='confirm_booking_modal'),

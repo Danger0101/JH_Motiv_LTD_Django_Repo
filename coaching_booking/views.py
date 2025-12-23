@@ -400,11 +400,13 @@ def cancel_session(request, booking_id):
     return redirect('accounts:account_profile')
 
 @login_required
+@require_GET
 def cancel_booking_modal(request, booking_id):
     booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
     return render(request, 'coaching_booking/partials/cancel_confirmation_modal.html', {'booking': booking})
 
 @login_required
+@require_GET
 def reschedule_session_form(request, booking_id):
     """
     Returns the HTMX partial for the reschedule form.
@@ -463,7 +465,7 @@ def reschedule_session(request, booking_id):
     if booking.status == 'COMPLETED':
         return htmx_error("Cannot reschedule a completed session.")
 
-    new_start_time_str = request.POST.get('new_start_time')
+    new_start_time_str = request.POST.get('start_time')
     new_coach_id = request.POST.get('coach_id')
 
     if not new_start_time_str:
@@ -520,6 +522,7 @@ def reschedule_session(request, booking_id):
     response = HttpResponse(status=204)
     response['HX-Trigger'] = json.dumps({
         'refreshBookings': True,
+        'closeModal': True,
         'showToast': {'message': msg, 'type': 'success'}
     })
     return response
@@ -1233,49 +1236,14 @@ def confirm_booking_modal(request):
         except ValueError:
             pass
 
-    return render(request, 'coaching_booking/partials/booking_form.html', context)
-
-@login_required
-def confirm_reschedule_modal(request, booking_id):
-    booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
-    new_start_time_str = request.GET.get('new_start_time')
-    coach_id = request.GET.get('coach_id')
-    
-    try:
-        # Handle ISO format (e.g. 2023-10-25T14:00:00Z)
-        clean_time = new_start_time_str.replace('Z', '+00:00')
-        dt = datetime.fromisoformat(clean_time)
-        if timezone.is_naive(dt):
-            new_start_time = timezone.make_aware(dt)
-        else:
-            new_start_time = dt
-    except ValueError:
+    if coach_id:
         try:
-            new_start_time = datetime.strptime(new_start_time_str, '%Y-%m-%dT%H:%M')
-            if timezone.is_naive(new_start_time):
-                new_start_time = timezone.make_aware(new_start_time)
-        except (ValueError, TypeError):
-            return HttpResponse("Invalid time format", status=400)
+            coach = CoachProfile.objects.select_related('user').get(id=coach_id)
+            context['coach_name'] = coach.user.get_full_name()
+        except (CoachProfile.DoesNotExist, ValueError):
+            pass
 
-    new_coach = booking.coach
-    if coach_id and int(coach_id) != booking.coach.id:
-        new_coach = get_object_or_404(CoachProfile, id=coach_id)
-
-    # Calculate end time for display
-    if booking.enrollment:
-        session_length = booking.enrollment.offering.session_length_minutes
-    else:
-        session_length = booking.get_duration_minutes() or 60
-    new_end_time = new_start_time + timedelta(minutes=session_length)
-
-    context = {
-        'booking': booking,
-        'new_start_time': new_start_time,
-        'new_end_time': new_end_time,
-        'new_start_time_iso': new_start_time_str,
-        'new_coach': new_coach,
-    }
-    return render(request, 'coaching_booking/partials/reschedule_confirmation_modal.html', context)
+    return render(request, 'coaching_booking/partials/booking_form.html', context)
 
 @login_required
 def get_daily_slots(request):

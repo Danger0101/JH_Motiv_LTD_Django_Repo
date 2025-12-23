@@ -3,6 +3,10 @@
     
     <p class="text-sm text-gray-600 mb-4">
         You are selecting: <span class="font-semibold text-indigo-600">{{ slot_time|date:"F j, g:i a" }}</span>
+        {% if coach_name %}
+        <br>
+        with Coach <span class="font-semibold text-gray-800">{{ coach_name }}</span>
+        {% endif %}
     </p>
 
     <form method="POST" 
