@@ -31,13 +31,10 @@
                 </div>
             </div>
 
-            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <script>
-                    // Generates the base URL safely using a specific placeholder ID '999999'
-                    const cancelBaseUrl = "{% url 'coaching_booking:cancel_session' 999999 %}".replace('999999/', '');
-                </script>
-
-                <form method="POST" :action="cancelBaseUrl + bookingToCancel + '/'">
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse"
+                 data-base-url="{% url 'coaching_booking:cancel_session' 0 %}">
+                
+                <form method="POST" :action="$el.parentElement.dataset.baseUrl.replace('0/', '') + bookingToCancel + '/'">
                     {% csrf_token %}
                     <button type="submit" 
                             class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
