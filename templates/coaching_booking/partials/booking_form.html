@@ -6,9 +6,14 @@
     <div class="mb-4 text-sm text-indigo-800">
         <p><strong>Coach:</strong> {{ coach.user.get_full_name }}</p>
         <p><strong>Date:</strong> {{ date_obj|date:"l, F jS, Y" }}</p>
-        <p><strong>Time:</strong> {{ slots.0.display }}</p> </div>
+        <p><strong>Time:</strong> {{ slots.0.display }}</p> 
+    </div>
 
-    <form action="{% if reschedule_booking_id %}{% url 'coaching_booking:reschedule_session' reschedule_booking_id %}{% else %}{% url 'coaching_booking:book_session' %}{% endif %}" method="POST">
+    <div id="booking-errors"></div>
+
+    <form hx-post="{% if reschedule_booking_id %}{% url 'coaching_booking:reschedule_session' reschedule_booking_id %}{% else %}{% url 'coaching_booking:book_session' %}{% endif %}" 
+          hx-target="#booking-errors"
+          hx-swap="innerHTML">
         {% csrf_token %}
         
         {% if enrollment_id %}

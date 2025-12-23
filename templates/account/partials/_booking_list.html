@@ -1,5 +1,10 @@
 {% if bookings %}
-<div class="space-y-4">
+<div class="space-y-4" 
+     id="booking-list-container"
+     hx-get="{% url 'accounts:account_profile' %}" 
+     hx-select="#booking-list-container" 
+     hx-trigger="refreshBookings from:body">
+    
     {% for booking in bookings %}
     <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
         <div class="flex justify-between items-start">
@@ -59,7 +64,10 @@
     {% endfor %}
 </div>
 {% else %}
-<div class="text-center py-8 bg-gray-50 rounded-lg">
+<div class="text-center py-8 bg-gray-50 rounded-lg"
+     hx-get="{% url 'accounts:account_profile' %}" 
+     hx-select="#booking-list-container" 
+     hx-trigger="refreshBookings from:body">
     <p class="text-gray-500">No upcoming sessions.</p>
 </div>
 {% endif %}

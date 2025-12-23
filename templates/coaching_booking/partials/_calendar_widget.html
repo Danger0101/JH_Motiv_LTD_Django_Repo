@@ -31,19 +31,19 @@
     
     <div class="grid grid-cols-7 text-sm">
         {% for day in schedule %}
-            <div class="relative h-20 border-b border-r border-gray-100 p-1
-                        {% if not day.is_current_month %}bg-gray-50 text-gray-400{% endif %}">
+            <div class="relative h-20 border-b border-r border-gray-100 p-1 transition-colors duration-150
+                        {% if not day.is_current_month %}bg-gray-50 text-gray-400{% else %}text-gray-700{% endif %}
+                        {% if day.has_available %}bg-white hover:bg-green-50 cursor-pointer{% endif %}"
+                 {% if day.has_available %}
+                 hx-get="{% url 'coaching_booking:get_daily_slots' %}?date={{ day.date|date:'Y-m-d' }}&enrollment_id={{ enrollment_id }}&reschedule_booking_id={{ reschedule_booking_id }}&coach_id={{ coach.id }}"
+                 hx-target="#time-slots-column"
+                 {% endif %}>
                 
-                <span class="block text-right pr-2 text-xs">{{ day.number }}</span>
+                <span class="block text-right pr-2 text-xs font-medium">{{ day.number }}</span>
                 
                 {% if day.has_available %}
-                    <div class="mt-1 text-center">
-                        <button 
-                            hx-get="{% url 'coaching_booking:get_daily_slots' %}?date={{ day.date|date:'Y-m-d' }}&enrollment_id={{ enrollment_id }}&reschedule_booking_id={{ reschedule_booking_id }}&coach_id={{ coach.id }}"
-                            hx-target="#time-slots-column"
-                            class="inline-block px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full hover:bg-green-200 transition cursor-pointer">
-                            Select
-                        </button>
+                    <div class="absolute bottom-2 right-2">
+                        <span class="inline-block h-2 w-2 rounded-full bg-green-400"></span>
                     </div>
                 {% endif %}
             </div>

@@ -33,8 +33,8 @@
 
             <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                 <script>
-                    // Generates the base URL like "/booking/cancel/" by stripping the placeholder "0"
-                    const cancelBaseUrl = "{% url 'coaching_booking:cancel_session' 0 %}".replace('0/', '');
+                    // Generates the base URL safely using a specific placeholder ID '999999'
+                    const cancelBaseUrl = "{% url 'coaching_booking:cancel_session' 999999 %}".replace('999999/', '');
                 </script>
 
                 <form method="POST" :action="cancelBaseUrl + bookingToCancel + '/'">
