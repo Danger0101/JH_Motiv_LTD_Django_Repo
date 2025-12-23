@@ -455,7 +455,7 @@ def reschedule_session_form(request, booking_id):
 @login_required
 @require_POST
 def reschedule_session(request, booking_id):
-    booking = get_object_or_404(SessionBooking, id=booking_id
+    booking = get_object_or_404(SessionBooking, id=booking_id)
     # Permission Check: Allow Client OR Coach
     is_client = booking.client == request.user
     is_coach = booking.coach.user == request.user
