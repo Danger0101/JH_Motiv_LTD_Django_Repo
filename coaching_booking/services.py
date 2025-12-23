@@ -395,7 +395,7 @@ class BookingService:
 
     @staticmethod
     @transaction.atomic
-    def reschedule_booking(booking, new_start_time_input, new_coach_id=None):
+    def reschedule_booking(booking, new_start_time_input, new_coach_id=None, requesting_user=None):
         """
         Reschedules an existing booking to a new time and optionally a new coach.
         """
@@ -474,7 +474,12 @@ class BookingService:
         if target_coach != booking.coach:
             booking.coach = target_coach
         
-        result = booking.reschedule(new_start_time)
+        # Allow the assigned coach to bypass the 24-hour restriction
+        bypass = False
+        if requesting_user and booking.coach.user == requesting_user:
+            bypass = True
+
+        result = booking.reschedule(new_start_time, bypass_policy=bypass)
         
         if result == 'LATE':
             raise ValidationError("Sessions cannot be rescheduled within 24 hours of the start time.")

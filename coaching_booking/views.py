@@ -455,7 +455,12 @@ def reschedule_session_form(request, booking_id):
 @login_required
 @require_POST
 def reschedule_session(request, booking_id):
-    booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
+    booking = get_object_or_404(SessionBooking, id=booking_id
+    # Permission Check: Allow Client OR Coach
+    is_client = booking.client == request.user
+    is_coach = booking.coach.user == request.user
+    if not (is_client or is_coach):
+        return HttpResponseForbidden("You are not authorized to reschedule this session.")
     
     def htmx_error(msg):
         return HttpResponse(
@@ -479,8 +484,7 @@ def reschedule_session(request, booking_id):
         original_start_time = booking.start_datetime
         
         # Use Service for robust rescheduling
-        BookingService.reschedule_booking(booking, new_start_time_str, new_coach_id)
-        
+        BookingService.reschedule_booking(boo
         # Success Logic
         new_start_time = booking.start_datetime
         msg = f"Session successfully rescheduled to {new_start_time.strftime('%B %d, %H:%M')}."

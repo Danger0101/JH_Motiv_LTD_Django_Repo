@@ -223,7 +223,7 @@ class SessionBooking(models.Model):
         self.save()
         return is_early
 
-    def reschedule(self, new_start_time):
+    def reschedule(self, new_start_time, bypass_policy=False):
         """
         Reschedules the session.
         Returns 'SUCCESS' or 'LATE' if within 24h.
@@ -231,11 +231,12 @@ class SessionBooking(models.Model):
         if self.status in ['CANCELED', 'COMPLETED']:
             return 'ERROR'
 
-        now = timezone.now()
-        cutoff = self.start_datetime - timedelta(hours=24)
+        if not bypass_policy:
+            now = timezone.now()
+            cutoff = self.start_datetime - timedelta(hours=24)
 
-        if now >= cutoff:
-            return 'LATE'
+            if now >= cutoff:
+                return 'LATE'
 
         current_duration = self.end_datetime - self.start_datetime
 
