@@ -34,6 +34,7 @@
                 <div class="relative h-20 border-b border-r border-gray-100 p-1 transition-colors duration-150
                             {% if not day.is_current_month %}bg-gray-50 text-gray-400{% else %}text-gray-700{% endif %}
                             {% if day.has_available %}bg-white hover:bg-green-50 cursor-pointer{% endif %}"
+                     title="{{ day.tooltip }}"
                      {% if day.has_available %}
                      hx-get="{% url 'coaching_booking:get_daily_slots' %}?date={{ day.date|date:'Y-m-d' }}{% if enrollment_id %}&enrollment_id={{ enrollment_id }}{% endif %}{% if reschedule_booking_id %}&reschedule_booking_id={{ reschedule_booking_id }}{% endif %}&coach_id={{ coach.id }}"
                      hx-target="#time-slots-column"

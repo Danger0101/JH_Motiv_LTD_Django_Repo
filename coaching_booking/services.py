@@ -242,19 +242,24 @@ class BookingService:
 
             # --- UI Visual Logic ---
             css_class = "bg-white text-gray-400" # Default (Future, no slots)
+            tooltip = "Unavailable"
             
             if d < today:
                 # Past
                 css_class = "bg-red-50 text-red-300 cursor-not-allowed"
+                tooltip = "Past date"
             elif has_available:
                 # Available
                 css_class = "bg-green-100 text-green-900 font-bold border border-green-200 hover:bg-green-200 cursor-pointer shadow-sm"
+                tooltip = "Click to view slots"
             elif is_fully_booked:
                 # Fully Booked
                 css_class = "bg-red-100 text-red-800 border border-red-200 cursor-not-allowed"
+                tooltip = "Fully booked"
             else:
                 # Future, No Slots (Coach Off)
                 css_class = "bg-gray-50 text-gray-300 cursor-not-allowed"
+                tooltip = "No availability scheduled"
             
             if d == today:
                 css_class += " ring-2 ring-indigo-500 z-10"
@@ -268,7 +273,8 @@ class BookingService:
                 'slots': day_slots,
                 'has_available': has_available,
                 'is_fully_booked': is_fully_booked,
-                'css_class': css_class
+                'css_class': css_class,
+                'tooltip': tooltip
             })
             
         # 4. Save to Cache (e.g., for 1 hour)
