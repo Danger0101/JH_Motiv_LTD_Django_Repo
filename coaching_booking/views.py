@@ -1232,8 +1232,11 @@ def confirm_booking_modal(request):
     
     # Optional: Pre-fetch data to show nice summary in the modal
     if slot_iso:
+        context['slot_time'] = slot_iso
         try:
             dt = datetime.fromisoformat(slot_iso)
+            clean_time = slot_iso.replace('Z', '+00:00')
+            dt = datetime.fromisoformat(clean_time)
             context['pretty_time'] = dt.strftime('%B %d, %I:%M %p')
             context['slot_time'] = slot_iso
         except ValueError:
