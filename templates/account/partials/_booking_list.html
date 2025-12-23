@@ -28,17 +28,23 @@
 
             <div class="flex flex-col space-y-2 items-end">
                 {% if booking.status == 'BOOKED' or booking.status == 'RESCHEDULED' %}
+                    {# --- UPDATED: Use Bootstrap Modal for Reschedule --- #}
                     <button 
-                        @click="rescheduleModalOpen = true"
-                        hx-get="{% url 'coaching_booking:get_booking_calendar' %}?reschedule_booking_id={{ booking.id }}"
-                        hx-target="#reschedule-calendar-container"
-                        class="text-sm text-indigo-600 hover:text-indigo-900 font-medium">
+                        hx-get="{% url 'coaching_booking:reschedule_session_form' booking.id %}" 
+                        hx-target="#modal-container"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modal-container"
+                        class="text-sm text-indigo-600 hover:text-indigo-900 font-medium bg-transparent border-0 p-0 cursor-pointer">
                         Reschedule
                     </button>
 
+                    {# --- UPDATED: Use Bootstrap Modal for Cancel --- #}
                     <button 
-                        @click="cancelModalOpen = true; bookingToCancel = {{ booking.id }}"
-                        class="text-sm text-red-600 hover:text-red-900 font-medium">
+                        hx-get="{% url 'coaching_booking:cancel_booking' booking.id %}"
+                        hx-target="#modal-container"
+                        data-bs-toggle="modal" 
+                        data-bs-target="#modal-container"
+                        class="text-sm text-red-600 hover:text-red-900 font-medium bg-transparent border-0 p-0 cursor-pointer">
                         Cancel
                     </button>
                 {% else %}
@@ -71,3 +77,6 @@
     <p class="text-gray-500">No upcoming sessions.</p>
 </div>
 {% endif %}
+
+{# --- ADDED: Modal Container for popups --- #}
+<div id="modal-container" class="modal fade" tabindex="-1" aria-hidden="true" style="z-index: 1055;"></div>

@@ -57,10 +57,11 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
             
             {# Left Column: Calendar (Takes 2/3 space) #}
+            {# --- UPDATED: Conditional trigger and include to avoid errors during reschedule --- #}
             <div id="reschedule-calendar-container" class="md:col-span-2 min-w-0"
-                 hx-trigger="load, change from:#enrollment_id"
+                 hx-trigger="load{% if not reschedule_booking_id %}, change from:#enrollment_id{% endif %}"
                  hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}{% if reschedule_booking_id %}&reschedule_booking_id={{ reschedule_booking_id }}{% endif %}{% if selected_enrollment_id %}&enrollment_id={{ selected_enrollment_id }}{% endif %}"
-                 hx-include="#enrollment_id"
+                 {% if not reschedule_booking_id %}hx-include="#enrollment_id"{% endif %}
                  hx-swap="innerHTML">
                 
                 <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
