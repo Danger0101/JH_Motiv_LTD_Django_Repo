@@ -263,6 +263,9 @@ class BookingService:
         """
         # 1. Parse Start Time
         start_time_input = booking_data.get('start_time')
+        if not start_time_input:
+            raise ValidationError("Please select a start time.")
+
         if isinstance(start_time_input, str):
             try:
                 start_datetime_naive = datetime.strptime(start_time_input, '%Y-%m-%d %H:%M')
