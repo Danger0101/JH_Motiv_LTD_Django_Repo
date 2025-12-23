@@ -11,6 +11,7 @@ urlpatterns = [
     
     path('book-session/', views.book_session, name='book_session'),
     path('booking/cancel/<int:booking_id>/', views.cancel_session, name='cancel_session'),
+    path('booking/cancel-modal/<int:booking_id>/', views.cancel_booking_modal, name='cancel_booking'),
     path('reschedule-session/<int:booking_id>/', views.reschedule_session, name='reschedule_session'),
     path('reschedule-session-form/<int:booking_id>/', views.reschedule_session_form, name='reschedule_session_form'),
     path('reschedule/confirm/<int:booking_id>/', views.confirm_reschedule_modal, name='confirm_reschedule_modal'),

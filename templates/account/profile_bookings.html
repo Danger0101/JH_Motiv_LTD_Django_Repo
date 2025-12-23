@@ -33,7 +33,7 @@
                 </button>
                 
                 <button 
-                    hx-get="{% url 'coaching_booking:cancel_booking_modal' booking.id %}"
+                    hx-get="{% url 'coaching_booking:cancel_booking' booking.id %}"
                     hx-target="#modal-container"
                     data-bs-toggle="modal" 
                     data-bs-target="#modal-container"
