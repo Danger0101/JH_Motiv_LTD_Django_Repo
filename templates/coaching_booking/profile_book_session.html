@@ -1,48 +1,75 @@
 <div class="bg-white p-6 rounded-lg shadow-lg">
-    <h2 class="text-2xl font-bold text-gray-800 mb-6">Book a New Session</h2>
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">
+        {% if reschedule_booking_id %}
+            Reschedule Session
+        {% else %}
+            Book a New Session
+        {% endif %}
+    </h2>
 
     <div>
         {% csrf_token %}
-        <div class="mb-6">
-            <label for="enrollment_id" class="block text-sm font-medium text-gray-700">Select Offering:</label>
-            <select id="enrollment_id" name="enrollment_id"
-                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                <option value="">-- Select an Offering --</option>
-                {% if user_offerings %}
-                    <optgroup label="Paid Enrollments">
-                    {% for enrollment in user_offerings %}
-                        {% if enrollment.remaining_sessions > 0 and enrollment.is_active and not enrollment.is_expired %}
-                            <option value="{{ enrollment.id }}" 
-                                    {% if selected_enrollment_id == enrollment.id|stringformat:"s" %}selected{% endif %}>
-                                {{ enrollment.offering.name }} ({{ enrollment.remaining_sessions }} left) - With {{ enrollment.coach.user.get_full_name }}
-                            </option>
-                        {% endif %}
-                    {% endfor %}
-                    </optgroup>
-                {% endif %}
+        
+        {# --- FIX: Hide Dropdown if Rescheduling --- #}
+        {% if not reschedule_booking_id %}
+            <div class="mb-6">
+                <label for="enrollment_id" class="block text-sm font-medium text-gray-700">Select Offering:</label>
+                <select id="enrollment_id" name="enrollment_id"
+                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                    <option value="">-- Select an Offering --</option>
+                    {% if user_offerings %}
+                        <optgroup label="Paid Enrollments">
+                        {% for enrollment in user_offerings %}
+                            {% if enrollment.remaining_sessions > 0 and enrollment.is_active and not enrollment.is_expired %}
+                                <option value="{{ enrollment.id }}" 
+                                        {% if selected_enrollment_id == enrollment.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ enrollment.offering.name }} ({{ enrollment.remaining_sessions }} left) - With {{ enrollment.coach.user.get_full_name }}
+                                </option>
+                            {% endif %}
+                        {% endfor %}
+                        </optgroup>
+                    {% endif %}
 
-                {% if free_offers %}
-                    <optgroup label="Free Taster Sessions">
-                    {% for offer in free_offers %}
-                        <option value="free_{{ offer.id }}" {% if selected_free_offer_id == offer.id|stringformat:"s" %}selected{% endif %}>
-                            Free Taster Session with {{ offer.coach.user.get_full_name }}
-                        </option>
-                    {% endfor %}
-                    </optgroup>
-                {% endif %}
-            </select>
-            <p class="text-xs text-gray-500 mt-1">Bookings are made with the coach assigned to your package.</p>
-        </div>
+                    {% if free_offers %}
+                        <optgroup label="Free Taster Sessions">
+                        {% for offer in free_offers %}
+                            <option value="free_{{ offer.id }}" {% if selected_free_offer_id == offer.id|stringformat:"s" %}selected{% endif %}>
+                                Free Taster Session with {{ offer.coach.user.get_full_name }}
+                            </option>
+                        {% endfor %}
+                        </optgroup>
+                    {% endif %}
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Bookings are made with the coach assigned to your package.</p>
+            </div>
+        {% else %}
+            {# --- Info Box for Rescheduling --- #}
+            <div class="mb-6 bg-blue-50 p-4 rounded border border-blue-100">
+                <p class="text-blue-800 font-semibold">Rescheduling Session</p>
+                <p class="text-sm text-blue-600">
+                    Originally with {{ booking.coach.user.get_full_name }}<br>
+                    Current time: {{ booking.start_datetime|date:"F j, Y, g:i a" }}
+                </p>
+                <input type="hidden" id="reschedule_booking_id" name="reschedule_booking_id" value="{{ reschedule_booking_id }}">
+            </div>
+        {% endif %}
 
         <div class="flex flex-col md:flex-row gap-6 mt-6">
+            {# --- FIX: Updated hx-get to include params immediately --- #}
             <div id="reschedule-calendar-container" class="md:w-2/3"
                  hx-trigger="load, change from:#enrollment_id"
-                 hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}"
+                 hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}{% if reschedule_booking_id %}&reschedule_booking_id={{ reschedule_booking_id }}{% endif %}{% if selected_enrollment_id %}&enrollment_id={{ selected_enrollment_id }}{% endif %}"
                  hx-include="#enrollment_id"
                  hx-swap="innerHTML">
                 
                 <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    <p class="text-gray-500 font-medium">Select an Offering to view your coach's availability.</p>
+                    <p class="text-gray-500 font-medium">
+                        {% if reschedule_booking_id %}
+                            Loading calendar...
+                        {% else %}
+                            Select an Offering to view your coach's availability.
+                        {% endif %}
+                    </p>
                 </div>
             </div>
 

@@ -4,6 +4,7 @@
             {{ current_date|date:"F Y" }}
         </h3>
         <div class="flex space-x-2">
+            {# --- FIX: Added specific check for reschedule_booking_id in the URL construction --- #}
             <button 
                 hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ prev_year }}&month={{ prev_month }}{% if enrollment_id %}&enrollment_id={{ enrollment_id }}{% endif %}{% if reschedule_booking_id %}&reschedule_booking_id={{ reschedule_booking_id }}{% endif %}{% if coach %}&coach_id={{ coach.id }}{% endif %}"
                 hx-target="#reschedule-calendar-container"
@@ -28,16 +29,13 @@
     </div>
     
     <div class="grid grid-cols-7 text-sm">
-        {% for day in calendar_rows|first %} 
-        {# Note: Iterate through rows in outer structure if full render needed, here assuming simplified loop for display #}
-        {% endfor %}
-        
         {% for week in calendar_rows %}
             {% for day in week %}
                 <div class="relative h-20 border-b border-r border-gray-100 p-1 transition-colors duration-150
                             {% if not day.is_current_month %}bg-gray-50 text-gray-400{% else %}text-gray-700{% endif %}
                             {% if day.has_available %}bg-white hover:bg-green-50 cursor-pointer{% endif %}"
                      {% if day.has_available %}
+                     {# --- FIX: Ensure reschedule_booking_id is passed to get_daily_slots --- #}
                      hx-get="{% url 'coaching_booking:get_daily_slots' %}?date={{ day.date|date:'Y-m-d' }}{% if enrollment_id %}&enrollment_id={{ enrollment_id }}{% endif %}{% if reschedule_booking_id %}&reschedule_booking_id={{ reschedule_booking_id }}{% endif %}&coach_id={{ coach.id }}"
                      hx-target="#time-slots-column"
                      {% endif %}>
