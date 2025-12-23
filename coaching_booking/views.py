@@ -1202,12 +1202,16 @@ def confirm_booking_modal(request):
     slot_iso = request.GET.get('time') # UTC ISO string
     enrollment_id = request.GET.get('enrollment_id')
     workshop_id = request.GET.get('workshop_id')
+    reschedule_booking_id = request.GET.get('reschedule_booking_id')
+    coach_id = request.GET.get('coach_id')
     
     # We pass these back to the form so the POST request has context
     context = {
         'slot_iso': slot_iso,
         'enrollment_id': enrollment_id,
         'workshop_id': workshop_id,
+        'reschedule_booking_id': reschedule_booking_id,
+        'coach_id': coach_id,
     }
     
     # Optional: Pre-fetch data to show nice summary in the modal
@@ -1215,6 +1219,7 @@ def confirm_booking_modal(request):
         try:
             dt = datetime.fromisoformat(slot_iso)
             context['pretty_time'] = dt.strftime('%B %d, %I:%M %p')
+            context['slot_time'] = slot_iso
         except ValueError:
             pass
 
@@ -1360,17 +1365,17 @@ def get_daily_slots(request):
             if slot_aware > now:
                 local_dt = slot_aware.astimezone(user_tz)
                 formatted_slots.append({
-                    'iso': slot_aware.isoformat(),
-                    'display': local_dt.strftime('%I:%M %p')
+                    'iso_format': slot_aware.isoformat(),
+                    'label': local_dt.strftime('%I:%M %p')
                 })
 
-        # Render the form partial instead of the list partial
-        return render(request, 'coaching_booking/partials/booking_form.html', {
+        # Render the day slots partial
+        return render(request, 'coaching_booking/partials/_day_slots.html', {
             'slots': formatted_slots,
-            'date_obj': selected_date,
+            'selected_date': selected_date,
             'enrollment_id': context.get('enrollment_id'),
             'reschedule_booking_id': reschedule_booking_id,
-            'coach': coach_profile
+            'coach': coach_profile,
         })
 
     except (ValueError, CoachProfile.DoesNotExist, ClientOfferingEnrollment.DoesNotExist, OneSessionFreeOffer.DoesNotExist, SessionBooking.DoesNotExist):

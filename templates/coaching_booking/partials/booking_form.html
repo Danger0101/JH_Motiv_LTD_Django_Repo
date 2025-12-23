@@ -1,39 +1,37 @@
-<div class="bg-indigo-50 p-4 rounded-lg border border-indigo-100 animate-fade-in-down">
-    <h4 class="font-bold text-indigo-900 mb-2">
-        {% if reschedule_booking_id %}Confirm New Time{% else %}Confirm Booking{% endif %}
-    </h4>
+<div class="bg-gray-50 p-4 rounded-lg border border-gray-200 animate-fade-in-down">
+    <h5 class="font-bold text-gray-800 mb-2">Confirm Selection</h5>
     
-    <div class="mb-4 text-sm text-indigo-800">
-        <p><strong>Coach:</strong> {{ coach.user.get_full_name }}</p>
-        <p><strong>Date:</strong> {{ date_obj|date:"l, F jS, Y" }}</p>
-        <p><strong>Time:</strong> {{ slots.0.display }}</p> 
-    </div>
+    <p class="text-sm text-gray-600 mb-4">
+        You are selecting: <span class="font-semibold text-indigo-600">{{ slot_time|date:"F j, g:i a" }}</span>
+    </p>
 
-    <div id="booking-errors"></div>
-
-    <form hx-post="{% if reschedule_booking_id %}{% url 'coaching_booking:reschedule_session' reschedule_booking_id %}{% else %}{% url 'coaching_booking:book_session' %}{% endif %}" 
-          hx-target="#booking-errors"
-          hx-swap="innerHTML">
+    <form method="POST" 
+          {% if reschedule_booking_id %}
+              action="{% url 'coaching_booking:reschedule_session' reschedule_booking_id %}"
+          {% else %}
+              action="{% url 'coaching_booking:book_session' %}"
+          {% endif %}
+          hx-post="{% if reschedule_booking_id %}{% url 'coaching_booking:reschedule_session' reschedule_booking_id %}{% else %}{% url 'coaching_booking:book_session' %}{% endif %}"
+          hx-target="#booking-errors">
+        
         {% csrf_token %}
+        <input type="hidden" name="start_time" value="{{ slot_time }}">
+        <input type="hidden" name="coach_id" value="{{ coach_id }}">
         
         {% if enrollment_id %}
             <input type="hidden" name="enrollment_id" value="{{ enrollment_id }}">
         {% endif %}
-        
-        <div class="mb-4 max-h-40 overflow-y-auto">
-            {% for slot in slots %}
-            <label class="flex items-center space-x-3 mb-2 p-2 bg-white rounded border cursor-pointer hover:border-indigo-300">
-                <input type="radio" name="start_time" value="{{ slot.iso }}" class="form-radio text-indigo-600" required>
-                <span class="text-sm text-gray-700">{{ slot.display }}</span>
-            </label>
-            {% endfor %}
-        </div>
 
-        <div class="flex items-center justify-between mt-4">
-            <button type="submit" 
-                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded shadow-sm transition duration-150 ease-in-out">
-                {% if reschedule_booking_id %}Update Booking{% else %}Confirm Booking{% endif %}
-            </button>
-        </div>
+        <div id="booking-errors"></div>
+
+        <button type="submit" 
+                class="w-full py-2 px-4 rounded-md text-white font-semibold shadow-sm transition-colors mt-4
+                       {% if reschedule_booking_id %}bg-blue-600 hover:bg-blue-700{% else %}bg-green-600 hover:bg-green-700{% endif %}">
+            {% if reschedule_booking_id %}
+                Confirm Reschedule
+            {% else %}
+                Book Session
+            {% endif %}
+        </button>
     </form>
 </div>
