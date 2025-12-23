@@ -484,7 +484,7 @@ def reschedule_session(request, booking_id):
         original_start_time = booking.start_datetime
         
         # Use Service for robust rescheduling
-        BookingService.reschedule_booking(boo
+        BookingService.reschedule_booking(booking, new_start_time_str, new_coach_id)
         # Success Logic
         new_start_time = booking.start_datetime
         msg = f"Session successfully rescheduled to {new_start_time.strftime('%B %d, %H:%M')}."
