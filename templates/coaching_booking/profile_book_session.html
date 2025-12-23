@@ -54,6 +54,23 @@
         {% endif %}
 
         {# --- FIX: CSS Grid Layout to prevent overflow --- #}
+        
+        {# --- ADDED: Legend for Calendar --- #}
+        <div class="flex flex-wrap gap-4 mb-4 text-sm justify-center md:justify-start">
+            <div class="flex items-center">
+                <span class="w-4 h-4 inline-block bg-green-100 border border-green-200 rounded mr-2"></span>
+                <span class="text-gray-700">Available</span>
+            </div>
+            <div class="flex items-center">
+                <span class="w-4 h-4 inline-block bg-red-100 border border-red-200 rounded mr-2"></span>
+                <span class="text-gray-700">Fully Booked</span>
+            </div>
+            <div class="flex items-center">
+                <span class="w-4 h-4 inline-block bg-red-50 border border-red-100 rounded mr-2"></span>
+                <span class="text-gray-700">Past / Unavailable</span>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
             
             {# Left Column: Calendar (Takes 2/3 space) #}

@@ -232,11 +232,32 @@ class BookingService:
 
         # 6. Construct the Grid Data
         schedule = []
-        today = timezone.now().date()
+        # Fix: Use user's timezone for 'today' comparison to ensure accurate UI
+        today = timezone.now().astimezone(user_tz).date()
+        
         for d in flat_dates:
             day_slots = slots_by_date.get(d, [])
             has_available = any(s['available'] for s in day_slots)
             is_fully_booked = len(day_slots) > 0 and not has_available
+
+            # --- UI Visual Logic ---
+            css_class = "bg-white text-gray-400" # Default (Future, no slots)
+            
+            if d < today:
+                # Past
+                css_class = "bg-red-50 text-red-300 cursor-not-allowed"
+            elif has_available:
+                # Available
+                css_class = "bg-green-100 text-green-900 font-bold border border-green-200 hover:bg-green-200 cursor-pointer shadow-sm"
+            elif is_fully_booked:
+                # Fully Booked
+                css_class = "bg-red-100 text-red-800 border border-red-200 cursor-not-allowed"
+            else:
+                # Future, No Slots (Coach Off)
+                css_class = "bg-gray-50 text-gray-300 cursor-not-allowed"
+            
+            if d == today:
+                css_class += " ring-2 ring-indigo-500 z-10"
 
             schedule.append({
                 'date': d,
@@ -246,7 +267,8 @@ class BookingService:
                 'is_current_month': d.month == month,
                 'slots': day_slots,
                 'has_available': has_available,
-                'is_fully_booked': is_fully_booked
+                'is_fully_booked': is_fully_booked,
+                'css_class': css_class
             })
             
         # 4. Save to Cache (e.g., for 1 hour)
