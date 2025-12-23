@@ -153,6 +153,8 @@ def book_session(request):
         )
         return response
 
+    check_start_time = None
+
     try:
         # Check for double booking (race condition or missing service check)
         if start_time_str and coach_id:
@@ -179,7 +181,7 @@ def book_session(request):
             'free_offer_id': free_offer_id,
             'coach_id': coach_id,
             'workshop_id': workshop_id,
-            'start_time': start_time_str,
+            'start_time': check_start_time if check_start_time else start_time_str,
             # Guest data could be pulled from POST if user is not authenticated
             'email': request.POST.get('email'),
             'name': request.POST.get('name'),
@@ -603,7 +605,8 @@ def book_taster_session(request, offer_id):
         
         try:
             if slot_str:
-                start_dt = datetime.fromisoformat(slot_str)
+                clean_time = slot_str.replace('Z', '+00:00')
+                start_dt = datetime.fromisoformat(clean_time)
                 if timezone.is_naive(start_dt):
                     start_dt = timezone.make_aware(start_dt)
                 

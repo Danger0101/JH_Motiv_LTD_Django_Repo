@@ -268,7 +268,8 @@ class BookingService:
                 start_datetime_naive = datetime.strptime(start_time_input, '%Y-%m-%d %H:%M')
                 start_datetime_obj = timezone.make_aware(start_datetime_naive)
             except ValueError:
-                dt = datetime.fromisoformat(start_time_input)
+                clean_time = start_time_input.replace('Z', '+00:00')
+                dt = datetime.fromisoformat(clean_time)
                 if timezone.is_naive(dt):
                     start_datetime_obj = timezone.make_aware(dt)
                 else:
