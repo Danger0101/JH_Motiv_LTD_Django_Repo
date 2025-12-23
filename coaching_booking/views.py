@@ -400,6 +400,16 @@ def cancel_session(request, booking_id):
     except Exception as e:
         logger.error(f"CRITICAL: Cancellation for booking {booking.id} succeeded but failed to send emails. Error: {e}")
 
+    # Handle HTMX requests (e.g. from the Cancel Modal)
+    if request.headers.get('HX-Request'):
+        response = HttpResponse(status=204)
+        response['HX-Trigger'] = json.dumps({
+            'refreshBookings': True,
+            'closeModal': True,
+            'showToast': {'message': msg, 'type': toast_type}
+        })
+        return response
+
     # Redirect to profile to refresh the dashboard
     return redirect('accounts:account_profile')
 
