@@ -210,8 +210,9 @@ class SessionBooking(models.Model):
 
         if is_early:
             if self.enrollment:
-                self.enrollment.remaining_sessions = F('remaining_sessions') + 1
-                self.enrollment.save(update_fields=['remaining_sessions'])
+                self.enrollment.refresh_from_db()
+                self.enrollment.remaining_sessions += 1
+                self.enrollment.save()
             
             if hasattr(self, 'free_offer') and self.free_offer:
                 self.free_offer.status = 'APPROVED'
@@ -219,8 +220,6 @@ class SessionBooking(models.Model):
                 self.free_offer.save()
 
         self.status = 'CANCELED'
-        # If it was a coverage session, cancelling it might mean re-opening the request
-        # logic handled in views/services
         self.save()
         return is_early
 
