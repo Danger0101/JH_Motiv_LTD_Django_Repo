@@ -162,6 +162,8 @@ def book_session(request):
                 # Normalize start_time_str to datetime
                 # Frontend usually sends ISO format (e.g. 2023-10-25T14:00:00Z)
                 clean_time = start_time_str.replace('Z', '+00:00')
+                if 'T' in clean_time and ' ' in clean_time:
+                    clean_time = clean_time.replace(' ', '+')
                 check_start_time = datetime.fromisoformat(clean_time)
                 
                 if timezone.is_naive(check_start_time):
@@ -606,6 +608,8 @@ def book_taster_session(request, offer_id):
         try:
             if slot_str:
                 clean_time = slot_str.replace('Z', '+00:00')
+                if 'T' in clean_time and ' ' in clean_time:
+                    clean_time = clean_time.replace(' ', '+')
                 start_dt = datetime.fromisoformat(clean_time)
                 if timezone.is_naive(start_dt):
                     start_dt = timezone.make_aware(start_dt)
@@ -1234,11 +1238,11 @@ def confirm_booking_modal(request):
     if slot_iso:
         context['slot_time'] = slot_iso
         try:
-            dt = datetime.fromisoformat(slot_iso)
             clean_time = slot_iso.replace('Z', '+00:00')
+            if 'T' in clean_time and ' ' in clean_time:
+                clean_time = clean_time.replace(' ', '+')
             dt = datetime.fromisoformat(clean_time)
             context['pretty_time'] = dt.strftime('%B %d, %I:%M %p')
-            context['slot_time'] = slot_iso
         except ValueError:
             pass
 

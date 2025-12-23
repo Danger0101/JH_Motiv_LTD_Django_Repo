@@ -272,6 +272,8 @@ class BookingService:
                 start_datetime_obj = timezone.make_aware(start_datetime_naive)
             except ValueError:
                 clean_time = start_time_input.replace('Z', '+00:00')
+                if 'T' in clean_time and ' ' in clean_time:
+                    clean_time = clean_time.replace(' ', '+')
                 dt = datetime.fromisoformat(clean_time)
                 if timezone.is_naive(dt):
                     start_datetime_obj = timezone.make_aware(dt)
@@ -402,6 +404,8 @@ class BookingService:
             try:
                 # Handle ISO format (e.g. 2023-10-25T14:00:00Z or 2023-10-25T14:00:00+00:00)
                 clean_time = new_start_time_input.replace('Z', '+00:00')
+                if 'T' in clean_time and ' ' in clean_time:
+                    clean_time = clean_time.replace(' ', '+')
                 dt = datetime.fromisoformat(clean_time)
                 if timezone.is_naive(dt):
                     new_start_time = timezone.make_aware(dt)
