@@ -1,33 +1,38 @@
-<div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-        <div class="modal-header bg-red-50 border-b border-red-100">
-            <h5 class="modal-title text-red-800 font-bold">Cancel Session</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        
-        <div class="modal-body p-6">
-            <p class="text-gray-600 mb-4">
-                Are you sure you want to cancel your session with 
-                <span class="font-semibold text-gray-800">{{ booking.coach.user.get_full_name }}</span> on 
-                <span class="font-semibold text-gray-800">{{ booking.start_datetime|date:"F j, g:i a" }}</span>?
-            </p>
-            <p class="text-sm text-gray-500 italic">
-                This action cannot be undone.
-            </p>
-        </div>
+<div>
+    <div class="bg-red-50 px-4 py-3 border-b border-red-100 flex justify-between items-center">
+        <h5 class="text-lg font-bold text-red-800">Cancel Session</h5>
+        <button type="button" @click="open = false" class="text-gray-400 hover:text-gray-500 focus:outline-none">
+            <span class="sr-only">Close</span>
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    </div>
+    
+    <div class="p-6">
+        <p class="text-gray-600 mb-4">
+            Are you sure you want to cancel your session with 
+            <span class="font-semibold text-gray-800">{{ booking.coach.user.get_full_name }}</span> on 
+            <span class="font-semibold text-gray-800">{{ booking.start_datetime|date:"F j, g:i a" }}</span>?
+        </p>
+        <p class="text-sm text-gray-500 italic">
+            This action cannot be undone.
+        </p>
+    </div>
 
-        <div class="modal-footer bg-gray-50 px-6 py-4 flex justify-end gap-3 rounded-b-lg">
-            <button type="button" class="px-4 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium transition" data-bs-dismiss="modal">
-                Keep Session
+    <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3">
+        <button type="button" 
+                @click="open = false"
+                class="px-4 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium transition">
+            Keep Session
+        </button>
+        
+        {# Added hx-post to enable HTMX processing #}
+        <form hx-post="{% url 'coaching_booking:cancel_session' booking.id %}" hx-swap="none">
+            {% csrf_token %}
+            <button type="submit" class="px-4 py-2 bg-red-600 border border-transparent rounded-md text-white hover:bg-red-700 font-medium shadow-sm transition">
+                Yes, Cancel It
             </button>
-            
-            {# Added hx-post to enable HTMX processing #}
-            <form hx-post="{% url 'coaching_booking:cancel_session' booking.id %}" hx-swap="none">
-                {% csrf_token %}
-                <button type="submit" class="px-4 py-2 bg-red-600 border border-transparent rounded-md text-white hover:bg-red-700 font-medium shadow-sm transition">
-                    Yes, Cancel It
-                </button>
-            </form>
-        </div>
+        </form>
     </div>
 </div>

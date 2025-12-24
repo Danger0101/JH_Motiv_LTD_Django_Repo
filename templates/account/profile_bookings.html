@@ -28,29 +28,45 @@
         
         <div class="mt-4 md:mt-0 flex space-x-3">
             {% if booking.status == 'BOOKED' or booking.status == 'RESCHEDULED' %}
-                <button 
-                   hx-get="{% url 'coaching_booking:reschedule_session_form' booking.id %}" 
-                   hx-target="#modal-container"
-                   data-bs-toggle="modal"
-                   data-bs-target="#modal-container"
-                   class="text-indigo-600 hover:text-indigo-800 text-sm font-medium focus:outline-none">
-                    Reschedule
-                </button>
-                
-                <button 
-                    hx-get="{% url 'coaching_booking:cancel_booking' booking.id %}"
-                    hx-target="#modal-container"
-                    data-bs-toggle="modal" 
-                    data-bs-target="#modal-container"
-                    class="text-red-600 hover:text-red-800 text-sm font-medium focus:outline-none">
-                    Cancel
-                </button>
+                <div x-data="{ open: false }" @close-modal.window="open = false" @keydown.escape.window="open = false">
+                    <button 
+                        hx-get="{% url 'coaching_booking:reschedule_session_form' booking.id %}" 
+                        hx-target="#reschedule-modal-{{ booking.id }}"
+                        @htmx:after-request="open = true"
+                        class="text-indigo-600 hover:text-indigo-800 text-sm font-medium focus:outline-none">
+                        Reschedule
+                    </button>
+                    
+                    <div x-show="open" style="display: none;" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                            <div @click="open = false" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+                            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                            <div id="reschedule-modal-{{ booking.id }}" class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div x-data="{ open: false }" @close-modal.window="open = false" @keydown.escape.window="open = false">
+                    <button 
+                        hx-get="{% url 'coaching_booking:cancel_booking_modal' booking.id %}"
+                        hx-target="#cancel-modal-{{ booking.id }}"
+                        @htmx:after-request="open = true"
+                        class="text-red-600 hover:text-red-800 text-sm font-medium focus:outline-none">
+                        Cancel
+                    </button>
+                    
+                    <div x-show="open" style="display: none;" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                            <div @click="open = false" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+                            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                            <div id="cancel-modal-{{ booking.id }}" class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"></div>
+                        </div>
+                    </div>
+                </div>
             {% endif %}
         </div>
     </div>
     {% empty %}
     <p class="text-gray-500 italic">No upcoming bookings found.</p>
     {% endfor %}
-
-    <div id="modal-container" class="modal fade" tabindex="-1" aria-hidden="true" style="z-index: 1055;"></div>
 </div>
