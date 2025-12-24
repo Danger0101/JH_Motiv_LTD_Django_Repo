@@ -21,7 +21,8 @@
                 Keep Session
             </button>
             
-            <form method="POST" action="{% url 'coaching_booking:cancel_session' booking.id %}">
+            {# Added hx-post to enable HTMX processing #}
+            <form hx-post="{% url 'coaching_booking:cancel_session' booking.id %}" hx-swap="none">
                 {% csrf_token %}
                 <button type="submit" class="px-4 py-2 bg-red-600 border border-transparent rounded-md text-white hover:bg-red-700 font-medium shadow-sm transition">
                     Yes, Cancel It

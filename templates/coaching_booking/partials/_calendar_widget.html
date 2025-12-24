@@ -5,16 +5,16 @@
         </h3>
         <div class="flex space-x-2">
             <button 
-                hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ prev_year }}&month={{ prev_month }}{% if enrollment_id %}&enrollment_id={{ enrollment_id }}{% endif %}{% if reschedule_booking_id %}&reschedule_booking_id={{ reschedule_booking_id }}{% endif %}{% if coach %}&coach_id={{ coach.id }}{% endif %}"
-                hx-target="#reschedule-calendar-container"
+                hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ prev_year }}&month={{ prev_month }}{% if enrollment_id %}&enrollment_id={{ enrollment_id }}{% endif %}{% if reschedule_booking_id %}&reschedule_booking_id={{ reschedule_booking_id }}{% endif %}{% if coach %}&coach_id={{ coach.id }}{% endif %}&slot_target_id={{ slot_target_id|urlencode }}"
+                hx-target="closest div[id^='calendar-container-']"
                 class="p-2 rounded-full hover:bg-gray-200 text-gray-600 transition {% if disable_prev %}opacity-50 cursor-not-allowed{% endif %}"
                 {% if disable_prev %}disabled{% endif %}>
                 &larr;
             </button>
             
             <button 
-                hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ next_year }}&month={{ next_month }}{% if enrollment_id %}&enrollment_id={{ enrollment_id }}{% endif %}{% if reschedule_booking_id %}&reschedule_booking_id={{ reschedule_booking_id }}{% endif %}{% if coach %}&coach_id={{ coach.id }}{% endif %}"
-                hx-target="#reschedule-calendar-container"
+                hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ next_year }}&month={{ next_month }}{% if enrollment_id %}&enrollment_id={{ enrollment_id }}{% endif %}{% if reschedule_booking_id %}&reschedule_booking_id={{ reschedule_booking_id }}{% endif %}{% if coach %}&coach_id={{ coach.id }}{% endif %}&slot_target_id={{ slot_target_id|urlencode }}"
+                hx-target="closest div[id^='calendar-container-']"
                 class="p-2 rounded-full hover:bg-gray-200 text-gray-600 transition">
                 &rarr;
             </button>
@@ -37,7 +37,7 @@
                      title="{{ day.tooltip }}"
                      {% if day.has_available %}
                      hx-get="{% url 'coaching_booking:get_daily_slots' %}?date={{ day.date|date:'Y-m-d' }}{% if enrollment_id %}&enrollment_id={{ enrollment_id }}{% endif %}{% if reschedule_booking_id %}&reschedule_booking_id={{ reschedule_booking_id }}{% endif %}&coach_id={{ coach.id }}"
-                     hx-target="#time-slots-column"
+                     hx-target="{{ slot_target_id }}"
                      {% endif %}>
                     
                     <span class="block text-right pr-2 text-xs font-medium">{{ day.number }}</span>

@@ -1112,7 +1112,8 @@ def get_booking_calendar(request):
     
     session_length = 60 # Default
     coach = None
-    slot_target_id = '#time-slots-column' # Default target
+    # FETCH THE TARGET FROM REQUEST (Fixes ID targeting in modals)
+    slot_target_id = request.GET.get('slot_target_id', '#time-slots-column')
     free_offer = None
     enrollment = None
 
