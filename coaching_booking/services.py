@@ -395,6 +395,10 @@ class BookingService:
         if price_in_cents == 0:
             return {'type': 'confirmed', 'booking': booking}
             
+        # FIX: Use reverse to match urls.py definitions
+        success_path = reverse('coaching_booking:check_payment_status', args=[booking.id])
+        cancel_path = reverse('accounts:account_profile')
+
         # Create Stripe Checkout Session
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=['card'],
@@ -408,8 +412,8 @@ class BookingService:
                 'quantity': 1,
             }],
             mode='payment',
-            success_url=f"{settings.SITE_URL}/booking/verify-payment/{booking.id}/",
-            cancel_url=f"{settings.SITE_URL}/booking/cancel-payment/{booking.id}/",
+            success_url=f"{settings.SITE_URL}{success_path}",
+            cancel_url=f"{settings.SITE_URL}{cancel_path}",
             metadata={
                 'booking_id': booking.id,
                 'type': 'coaching_booking'

@@ -8,7 +8,6 @@ urlpatterns = [
     path('', views.CoachLandingView.as_view(), name='coach_landing'),
     path('offers/', views.OfferListView.as_view(), name='offer-list'),
     path('enroll/<slug:slug>/', views.OfferEnrollmentStartView.as_view(), name='offer-enroll'),
-    
     path('book-session/', views.book_session, name='book_session'),
     path('booking/cancel/<int:booking_id>/', views.cancel_session, name='cancel_session'),
     path('booking/cancel-modal/<int:booking_id>/', views.cancel_booking_modal, name='cancel_booking_modal'),
