@@ -32,7 +32,7 @@
                     <button 
                         hx-get="{% url 'coaching_booking:reschedule_session_form' booking.id %}" 
                         hx-target="#reschedule-modal-{{ booking.id }}"
-                        @htmx:after-request="open = true"
+                        @htmx:after-swap="open = true"
                         class="text-indigo-600 hover:text-indigo-800 text-sm font-medium focus:outline-none">
                         Reschedule
                     </button>
@@ -50,7 +50,7 @@
                     <button 
                         hx-get="{% url 'coaching_booking:cancel_booking_modal' booking.id %}"
                         hx-target="#cancel-modal-{{ booking.id }}"
-                        @htmx:after-request="open = true"
+                        @htmx:after-swap="open = true"
                         class="text-red-600 hover:text-red-800 text-sm font-medium focus:outline-none">
                         Cancel
                     </button>
