@@ -16,11 +16,15 @@
     <form method="POST" 
           {% if reschedule_booking_id %}
               action="{% url 'coaching_booking:reschedule_session' reschedule_booking_id %}"
+              hx-post="{% url 'coaching_booking:reschedule_session' reschedule_booking_id %}"
+              hx-target="#booking-list-container"
+              hx-swap="outerHTML"
+              @htmx:after-request="if(event.detail.successful) open = false"
           {% else %}
               action="{% url 'coaching_booking:book_session' %}"
-          {% endif %}
-          hx-post="{% if reschedule_booking_id %}{% url 'coaching_booking:reschedule_session' reschedule_booking_id %}{% else %}{% url 'coaching_booking:book_session' %}{% endif %}"
-          hx-target="#booking-errors">
+              hx-post="{% url 'coaching_booking:book_session' %}"
+              hx-target="#booking-errors"
+          {% endif %}>
         
         {% csrf_token %}
         <input type="hidden" name="start_time" value="{{ slot_time }}">
