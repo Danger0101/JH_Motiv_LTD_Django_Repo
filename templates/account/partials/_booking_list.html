@@ -99,6 +99,7 @@
 </div>
 {% else %}
 <div class="text-center py-8 bg-gray-50 rounded-lg"
+     id="booking-list-container"
      hx-get="{% url 'accounts:account_profile' %}" 
      hx-select="#booking-list-container"
      hx-swap="outerHTML"
