@@ -496,7 +496,7 @@ def reschedule_session(request, booking_id):
         )
         response['HX-Retarget'] = '#booking-errors'
         return response
-- 1. Prevent Rescheduling Canceled Sessions ---
+# 1. Prevent Rescheduling Canceled Sessions ---
     if booking.status == 'CANCELED':
         return htmx_error("This session has been canceled and cannot be rescheduled. Please book a new session.")
         
@@ -561,8 +561,14 @@ def reschedule_session(request, booking_id):
         client=request.user, 
         start_datetime__gte=timezone.now()
     ).order_by('start_datetime')
-    ,
-ply_for_free_session(request):
+    
+    response = render(request, 'account/partials/_booking_list.html', {'bookings': bookings})
+    response.content += render(request, 'partials/toast_oob.html').content
+    return response
+
+@login_required
+@require_POST
+def apply_for_free_session(request):
     client = request.user
     coach_id = request.POST.get('coach_id')
     coach_instance = get_object_or_404(CoachProfile, id=coach_id)
