@@ -416,26 +416,44 @@ def cancel_session(request, booking_id):
 @login_required
 @require_GET
 def cancel_booking_modal(request, booking_id):
-    booking = get_object_or_404(SessionBooking, id=booking_id, client=request.user)
+    # Remove client=request.user restriction from the query
+    booking = get_object_or_404(SessionBooking, id=booking_id)
+
+    # Add robust permission check (matches cancel_session view)
+    is_client = booking.client == request.user
+    
+    # Check if user is the assigned coach
+    is_coach = booking.coach and booking.coach.user == request.user
+    if not is_coach and booking.workshop:
+        is_coach = booking.workshop.coach.user == request.user
+
+    # Check if user is the primary coach (owner of the enrollment)
+    is_primary = False
+    if booking.enrollment and booking.enrollment.coach:
+        is_primary = booking.enrollment.coach.user == request.user
+    
+    if not (is_client or is_coach or is_primary):
+        return HttpResponseForbidden("You are not authorized to cancel this session.")
+
     return render(request, 'coaching_booking/partials/cancel_confirmation_modal.html', {'booking': booking})
 
 @login_required
 @require_GET
 def reschedule_session_form(request, booking_id):
-    """
-    Returns the HTMX partial for the reschedule form.
-    """
     booking = get_object_or_404(SessionBooking, id=booking_id)
     
-    # Security check: Ensure the user is the client or the coach for this booking
+    # Safe permission check
     is_client = booking.client == request.user
-    is_coach = booking.coach.user == request.user
+    is_coach = booking.coach and booking.coach.user == request.user
     
     if not (is_client or is_coach):
         return HttpResponseForbidden("You are not authorized to reschedule this session.")
         
-    # Determine allowed coaches for this reschedule
-    coaches = [booking.coach]
+    # Determine allowed coaches safely
+    coaches = []
+    if booking.coach:
+        coaches = [booking.coach]
+        
     if booking.enrollment and not booking.enrollment.coach:
          coaches = booking.enrollment.offering.coaches.filter(
             user__is_active=True,
@@ -444,13 +462,16 @@ def reschedule_session_form(request, booking_id):
     
     today = timezone.now().date()
     
+    # Safely get selected_coach_id
+    selected_coach_id = booking.coach.id if booking.coach else None
+    
     context = {
         'reschedule_booking_id': booking.id,
         'booking': booking,
         'coaches': coaches,
         'initial_year': today.year,
         'initial_month': today.month,
-        'selected_coach_id': booking.coach.id,
+        'selected_coach_id': selected_coach_id,
         'user_offerings': [],
         'free_offers': [],
         'selected_enrollment_id': booking.enrollment.id if booking.enrollment else '',
