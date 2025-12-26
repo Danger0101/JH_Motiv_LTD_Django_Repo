@@ -31,7 +31,7 @@
         </style>
         <h2 class="text-2xl font-bold mb-6 text-white">{% translate "Create Account" %}</h2>
 
-        <form id="signup_form" method="post" action="{% url 'account:signup' %}">
+        <form id="signup_form" method="post" action="{% url 'accounts:signup' %}">
             {% csrf_token %} 
 
             {% if form.non_field_errors %}
@@ -113,7 +113,7 @@
 
         <p class="mt-4 text-center text-sm text-gray-400">
             {% translate "Already have an account?" %}
-            <a href="{% url 'account:login' %}" class="font-medium text-blue-400 hover:text-blue-300">
+            <a href="{% url 'accounts:login' %}" class="font-medium text-blue-400 hover:text-blue-300">
                 {% translate "Log in here" %}
             </a>
         </p>
