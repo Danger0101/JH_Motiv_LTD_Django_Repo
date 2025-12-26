@@ -402,6 +402,11 @@ def cancel_session(request, booking_id):
 
     # Handle HTMX requests (e.g. from the Cancel Modal)
     if request.headers.get('HX-Request'):
+        bookings = SessionBooking.objects.filter(
+            client=request.user, 
+            start_datetime__gte=timezone.now()
+        ).order_by('start_datetime')
+
         response = render(request, 'account/partials/_booking_list.html', {'bookings': bookings})
         response.content += render(request, 'partials/toast_oob.html').content
         return response
