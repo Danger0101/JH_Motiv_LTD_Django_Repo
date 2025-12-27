@@ -207,6 +207,7 @@ def book_session(request):
             messages.success(request, msg)
             response = HttpResponse(status=204)
             response['HX-Trigger'] = json.dumps({
+                'closeModal': True,
                 'refreshBookings': True,
                 'refreshOfferings': True,
                 'showToast': {'message': msg, 'type': 'success'}

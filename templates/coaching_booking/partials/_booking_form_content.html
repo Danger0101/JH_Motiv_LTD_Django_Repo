@@ -12,6 +12,7 @@
 
     <div>
         {% csrf_token %}
+        <div id="booking-errors" class="mb-4"></div>
         
         {# --- Logic to Hide Dropdown if Rescheduling --- #}
         {% if not reschedule_booking_id %}

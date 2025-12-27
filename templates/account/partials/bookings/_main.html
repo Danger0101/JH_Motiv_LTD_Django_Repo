@@ -26,7 +26,7 @@
                     </div>
                     <p class="text-xs text-gray-500">With coach {{ my_taster_status.coach.user.get_full_name }}</p>
                 </div>
-                <div x-data="{ openBooking: false }">
+                <div x-data="{ openBooking: false }" @close-modal.window="openBooking = false">
                     <button @click="openBooking = true" class="w-full py-3 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-purple-600 transition-colors shadow-sm flex items-center justify-center group-hover:shadow-md">
                         <span>Book Taster</span>
                         <svg class="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
@@ -65,7 +65,7 @@
                         <span class="text-sm text-gray-500 font-medium">sessions remaining</span>
                     </div>
                 </div>
-                <div x-data="{ openBooking: false }">
+                <div x-data="{ openBooking: false }" @close-modal.window="openBooking = false">
                     <button @click="openBooking = true" class="w-full py-3 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-blue-600 transition-colors shadow-sm flex items-center justify-center group-hover:shadow-md">
                         <span>Book Session</span>
                         <svg class="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
