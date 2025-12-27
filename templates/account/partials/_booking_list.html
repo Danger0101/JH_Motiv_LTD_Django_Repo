@@ -58,26 +58,14 @@
                         </div>
                     </div>
 
-                    <div x-data="{ open: false }" @close-modal.window="open = false" @keydown.escape.window="open = false">
+                    <div>
                         <button 
                             type="button"
-                            @click="open = true"
-                            hx-get="{% url 'coaching_booking:cancel_booking_modal' booking.id %}"
-                            hx-target="#cancel-modal-{{ booking.id }}"
-                            hx-swap="innerHTML"
+                            hx-post="{% url 'coaching_booking:cancel_session' booking.id %}"
+                            hx-confirm="Are you sure you want to cancel this session?"
                             class="text-sm text-red-600 hover:text-red-900 font-medium bg-transparent border-0 p-0 cursor-pointer focus:outline-none">
                             Cancel
                         </button>
-                        
-                        <div x-show="open" style="display: none;" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-                            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                                <div @click="open = false" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-                                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                                <div id="cancel-modal-{{ booking.id }}" class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                                     <div class="p-10 text-center"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div></div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 {% else %}
                     <span class="text-xs font-semibold px-2 py-1 rounded 
