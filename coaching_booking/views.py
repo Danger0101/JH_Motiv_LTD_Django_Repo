@@ -409,6 +409,7 @@ def cancel_session(request, booking_id):
 
         response = render(request, 'account/partials/_booking_list.html', {'bookings': bookings})
         response.content += render(request, 'partials/toast_oob.html').content
+        response['HX-Trigger'] = 'closeModal'
         return response
 
     # Redirect to profile to refresh the dashboard
@@ -569,6 +570,7 @@ def reschedule_session(request, booking_id):
     
     response = render(request, 'account/partials/_booking_list.html', {'bookings': bookings})
     response.content += render(request, 'partials/toast_oob.html').content
+    response['HX-Trigger'] = 'closeModal'
     return response
 
 @login_required
