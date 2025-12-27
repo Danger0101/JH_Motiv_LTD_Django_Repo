@@ -562,15 +562,13 @@ def reschedule_session(request, booking_id):
         logger.error(f"Reschedule Error: {e}", exc_info=True)
         return htmx_error(f"An error occurred: {str(e)}")
 
-    # Fetch updated bookings for the list
-    bookings = SessionBooking.objects.filter(
-        client=request.user, 
-        start_datetime__gte=timezone.now()
-    ).order_by('start_datetime')
-    
-    response = render(request, 'account/partials/_booking_list.html', {'bookings': bookings})
-    response.content += render(request, 'partials/toast_oob.html').content
-    response['HX-Trigger'] = 'closeModal'
+    # Return 204 No Content with triggers to update UI
+    response = HttpResponse(status=204)
+    response['HX-Trigger'] = json.dumps({
+        'closeModal': True,
+        'refreshBookings': True,
+        'showToast': {'message': msg, 'type': 'success'}
+    })
     return response
 
 @login_required
