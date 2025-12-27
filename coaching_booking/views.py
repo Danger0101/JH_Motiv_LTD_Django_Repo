@@ -402,14 +402,12 @@ def cancel_session(request, booking_id):
 
     # Handle HTMX requests (e.g. from the Cancel Modal)
     if request.headers.get('HX-Request'):
-        bookings = SessionBooking.objects.filter(
-            client=request.user, 
-            start_datetime__gte=timezone.now()
-        ).order_by('start_datetime')
-
-        response = render(request, 'account/partials/_booking_list.html', {'bookings': bookings})
-        response.content += render(request, 'partials/toast_oob.html').content
-        response['HX-Trigger'] = 'closeModal'
+        response = HttpResponse(status=204)
+        response['HX-Trigger'] = json.dumps({
+            'closeModal': True,
+            'refreshBookings': True,
+            'showToast': {'message': msg, 'type': toast_type}
+        })
         return response
 
     # Redirect to profile to refresh the dashboard
