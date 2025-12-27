@@ -1,5 +1,6 @@
 {% with unique_suffix=reschedule_booking_id|default:"new" %}
-<div class="bg-white p-6 rounded-lg shadow-lg">
+<div class="{% if not is_inline %}bg-white p-6 rounded-lg shadow-lg{% else %}mt-4 border-t border-gray-100 pt-6{% endif %}">
+    {% if not is_inline %}
     <h2 class="text-2xl font-bold text-gray-800 mb-6">
         {% if reschedule_booking_id %}
             Reschedule Session
@@ -7,6 +8,7 @@
             Book a New Session
         {% endif %}
     </h2>
+    {% endif %}
 
     <div>
         {% csrf_token %}
