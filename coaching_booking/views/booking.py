@@ -251,7 +251,8 @@ def reschedule_session_form(request, booking_id):
     }
     if request.headers.get('HX-Request'):
         context['is_inline'] = True
-        return render(request, 'coaching_booking/partials/_booking_form_content.html', context)
+        context['is_modal'] = True
+        return render(request, 'coaching_booking/partials/reschedule_modal.html', context)
     return render(request, 'coaching_booking/profile_book_session.html', context)
 
 @login_required

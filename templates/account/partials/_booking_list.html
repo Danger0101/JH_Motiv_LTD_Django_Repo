@@ -36,12 +36,18 @@
 
             <div class="flex flex-col space-y-2 items-end">
                 {% if booking.status == 'BOOKED' or booking.status == 'RESCHEDULED' %}
-                    <div>
-                        <a 
-                            href="{% url 'coaching_booking:profile_book_session' %}?reschedule_booking_id={{ booking.id }}"
-                            class="text-sm text-indigo-600 hover:text-indigo-900 font-medium bg-transparent border-0 p-0 cursor-pointer focus:outline-none">
+                    <div x-data="{ open: false }" @close-modal.window="open = false">
+                        <button type="button" @click="open = true" class="text-sm text-indigo-600 hover:text-indigo-900 font-medium bg-transparent border-0 p-0 cursor-pointer focus:outline-none">
                             Reschedule
-                        </a>
+                        </button>
+                        
+                        <div x-show="open" class="fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-50 flex items-center justify-center p-4" style="display: none;" x-cloak>
+                            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden relative" @click.away="open = false">
+                                <div hx-get="{% url 'coaching_booking:reschedule_session_form' booking.id %}" hx-trigger="intersect" hx-swap="innerHTML" class="h-full">
+                                    <div class="flex justify-center py-10"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div>
