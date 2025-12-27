@@ -31,13 +31,22 @@ from coaching_core.models import Offering, Workshop
 from coaching_client.models import ContentPage
 from cart.utils import get_or_create_cart, get_cart_summary_data
 from facts.models import Fact
-from .services import BookingService
+from .services import BookingService, BookingPermissions
 from django.core.exceptions import ValidationError
 from accounts.models import User
 
 logger = logging.getLogger(__name__)
 BOOKING_WINDOW_DAYS = 90
 stripe.api_key = settings.STRIPE_SECRET_KEY
+
+def htmx_error(message, target='#booking-errors'):
+    """Helper to return an error message to a specific DOM element."""
+    response = HttpResponse(
+        f'<div class="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg mb-4">{message}</div>'
+    )
+    response['HX-Retarget'] = target
+    response['HX-Reswap'] = 'innerHTML'
+    return response
 
 class CoachLandingView(TemplateView):
     template_name = "coaching_booking/coach_landing.html"
@@ -272,27 +281,14 @@ def session_payment_page(request, booking_id):
 def cancel_session(request, booking_id):
     booking = get_object_or_404(SessionBooking, id=booking_id)
     
-    is_client = booking.client == request.user
-    
-    # Determine the coach of the session, whether it's 1-on-1 or a workshop
-    session_coach = booking.coach
-    if not session_coach and booking.workshop:
-        session_coach = booking.workshop.coach
-
-    is_provider = False
-    if session_coach:
-        is_provider = session_coach.user == request.user
-
-    # Check if this is the Primary Coach (Account Owner) trying to cancel
-    is_primary = False
-    if booking.enrollment and booking.enrollment.coach:
-        is_primary = booking.enrollment.coach.user == request.user
-    
-    if not (is_client or is_provider or is_primary):
-        messages.error(request, "You are not authorized to cancel this session.")
+    if not BookingPermissions.can_manage_booking(request.user, booking):
+        msg = "You are not authorized to cancel this session."
+        if request.headers.get('HX-Request'):
+             return htmx_error(msg)
+        messages.error(request, msg)
         return redirect('accounts:account_profile')
 
-    coach = session_coach # The Provider
+    coach = booking.coach # The Provider
     client = booking.client
     
     is_refunded = BookingService.cancel_booking(booking)
@@ -305,6 +301,13 @@ def cancel_session(request, booking_id):
 
     msg = ""
     toast_type = "success"
+
+    # Re-derive flags for messaging logic
+    is_client = booking.client == request.user
+    is_provider = booking.coach and booking.coach.user == request.user
+    is_primary = False
+    if booking.enrollment and booking.enrollment.coach:
+        is_primary = booking.enrollment.coach.user == request.user
 
     if is_client:
         if is_refunded and booking.enrollment:
@@ -399,23 +402,9 @@ def cancel_session(request, booking_id):
 @login_required
 @require_GET
 def cancel_booking_modal(request, booking_id):
-    # Remove client=request.user restriction from the query
     booking = get_object_or_404(SessionBooking, id=booking_id)
 
-    # Add robust permission check (matches cancel_session view)
-    is_client = booking.client == request.user
-    
-    # Check if user is the assigned coach
-    is_coach = booking.coach and booking.coach.user == request.user
-    if not is_coach and booking.workshop:
-        is_coach = booking.workshop.coach.user == request.user
-
-    # Check if user is the primary coach (owner of the enrollment)
-    is_primary = False
-    if booking.enrollment and booking.enrollment.coach:
-        is_primary = booking.enrollment.coach.user == request.user
-    
-    if not (is_client or is_coach or is_primary):
+    if not BookingPermissions.can_manage_booking(request.user, booking):
         return HttpResponseForbidden("You are not authorized to cancel this session.")
 
     return render(request, 'coaching_booking/partials/cancel_confirmation_modal.html', {'booking': booking})
@@ -425,16 +414,7 @@ def cancel_booking_modal(request, booking_id):
 def reschedule_session_form(request, booking_id):
     booking = get_object_or_404(SessionBooking, id=booking_id)
     
-    # Safe permission check
-    is_client = booking.client == request.user
-    is_provider = booking.coach and booking.coach.user == request.user
-    
-    # Check Primary Coach (Enrollment Owner)
-    is_primary = False
-    if booking.enrollment and booking.enrollment.coach:
-        is_primary = booking.enrollment.coach.user == request.user
-    
-    if not (is_client or is_provider or is_primary):
+    if not BookingPermissions.can_manage_booking(request.user, booking):
         return HttpResponseForbidden("You are not authorized to reschedule this session.")
         
     # Determine allowed coaches safely
@@ -477,25 +457,9 @@ def reschedule_session_form(request, booking_id):
 def reschedule_session(request, booking_id):
     booking = get_object_or_404(SessionBooking, id=booking_id)
     
-    # Permission Check: Allow Client OR Provider OR Primary Coach
-    is_client = booking.client == request.user
-    is_provider = booking.coach and booking.coach.user == request.user
-    
-    is_primary = False
-    if booking.enrollment and booking.enrollment.coach:
-        is_primary = booking.enrollment.coach.user == request.user
+    if not BookingPermissions.can_manage_booking(request.user, booking):
+        return htmx_error("You are not authorized to reschedule this session.")
 
-    if not (is_client or is_provider or is_primary):
-        return HttpResponseForbidden("You are not authorized to reschedule this session.")
-    
-    def htmx_error(msg):
-        # Return error with HX-Retarget to ensure it goes to the error container, not the list
-        response = HttpResponse(
-            f'<div class="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">{msg}</div>'
-        )
-        response['HX-Retarget'] = '#booking-errors'
-        return response
-# 1. Prevent Rescheduling Canceled Sessions ---
     if booking.status == 'CANCELED':
         return htmx_error("This session has been canceled and cannot be rescheduled. Please book a new session.")
         
@@ -518,6 +482,13 @@ def reschedule_session(request, booking_id):
         msg = f"Session successfully rescheduled to {new_start_time.strftime('%B %d, %H:%M')}."
         messages.success(request, msg)
         
+        # Re-derive flags for email logic
+        is_client = booking.client == request.user
+        is_provider = booking.coach and booking.coach.user == request.user
+        is_primary = False
+        if booking.enrollment and booking.enrollment.coach:
+            is_primary = booking.enrollment.coach.user == request.user
+
         try:
             dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
             formatted_original_time = original_start_time.strftime('%A, %B %d, %Y, %I:%M %p %Z')
@@ -1223,7 +1194,7 @@ def get_booking_calendar(request):
 
         # Call Service
         calendar_data = BookingService.get_month_schedule(
-            coach, year, month, user_tz, session_length
+            coach, year, month, user_tz, session_length, exclude_booking_id=reschedule_booking_id
         )
 
         # Convert the flat list of days into a list of weeks (7 days per week)

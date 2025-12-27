@@ -12,7 +12,7 @@ SESSION_STATUS_CHOICES = (
     ('BOOKED', 'Booked'),
     ('COMPLETED', 'Completed'),
     ('CANCELED', 'Canceled'),
-    ('RESCHEDULED', 'Rescheduled'),
+    ('RESCHEDULED', 'Rescheduled'), # Kept for historical logs, but active sessions should use BOOKED
 )
 
 class ClientOfferingEnrollment(models.Model):
@@ -162,6 +162,10 @@ class SessionBooking(models.Model):
             return self.workshop.meeting_link
         return getattr(self, 'google_meet_link', None)
 
+    @property
+    def is_active_booking(self):
+        return self.status in ['BOOKED', 'PENDING_PAYMENT', 'RESCHEDULED']
+
     def save(self, *args, **kwargs):
         # Set Client defaults
         if self.enrollment and not self.client_id and not self.guest_email:
@@ -237,7 +241,8 @@ class SessionBooking(models.Model):
     def reschedule(self, new_start_time, bypass_policy=False):
         """
         Reschedules the session.
-        Returns 'SUCCESS' or 'LATE' if within 24h.
+        CRITICAL FIX: Resets status to 'BOOKED' to ensure it remains active.
+        Returns 'SUCCESS', 'LATE', or 'ERROR'.
         """
         if self.status in ['CANCELED', 'COMPLETED']:
             return 'ERROR'
@@ -252,13 +257,10 @@ class SessionBooking(models.Model):
         current_duration = self.end_datetime - self.start_datetime
 
         self.start_datetime = new_start_time
-        if self.enrollment:
-            session_minutes = self.enrollment.offering.session_length_minutes
-            self.end_datetime = new_start_time + timedelta(minutes=session_minutes)
-        else:
-            self.end_datetime = new_start_time + current_duration
+        self.end_datetime = new_start_time + current_duration
             
-        self.status = 'RESCHEDULED'
+        # IMPORTANT: Set status to BOOKED so it is seen as a valid upcoming session
+        self.status = 'BOOKED'
         self.save()
         return 'SUCCESS'
 

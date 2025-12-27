@@ -25,10 +25,38 @@ BOOKING_WINDOW_DAYS = 90
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
+class BookingPermissions:
+    @staticmethod
+    def can_manage_booking(user, booking):
+        """
+        Returns True if the user is authorized to Cancel or Reschedule this booking.
+        Authorized roles:
+        1. The Client
+        2. The Session Provider (the coach delivering this specific session)
+        3. The Primary Coach (the owner of the enrollment)
+        """
+        # 1. Is Client?
+        if booking.client == user:
+            return True
+        
+        # 2. Is Session Provider?
+        if booking.coach and booking.coach.user == user:
+            return True
+        
+        # 3. Is Workshop Coach?
+        if booking.workshop and booking.workshop.coach.user == user:
+            return True
+            
+        # 4. Is Primary Coach?
+        if booking.enrollment and booking.enrollment.coach and booking.enrollment.coach.user == user:
+            return True
+            
+        return False
+
 class BookingService:
     
     @staticmethod
-    def get_slots_for_coach(coach, date_obj, session_length=60):
+    def get_slots_for_coach(coach, date_obj, session_length=60, exclude_booking_id=None):
         """
         Returns list of available start_times for a specific date.
         Wraps the existing availability utility.
@@ -60,6 +88,9 @@ class BookingService:
             end_datetime__gt=day_start
         )
         
+        if exclude_booking_id:
+            existing_bookings = existing_bookings.exclude(id=exclude_booking_id)
+        
         valid_slots = []
         session_delta = timedelta(minutes=session_length)
         
@@ -87,7 +118,7 @@ class BookingService:
         return valid_slots
 
     @staticmethod
-    def get_month_schedule(coach, year, month, user_timezone_str='UTC', session_length=60):
+    def get_month_schedule(coach, year, month, user_timezone_str='UTC', session_length=60, exclude_booking_id=None):
         """
         Generates a calendar payload for the view.
         Returns a list of days, each containing status and slots.
@@ -96,7 +127,7 @@ class BookingService:
         # We use a separate cache key for the version since we can't modify the Coach model
         version_key = f"coach_calendar_version_{coach.id}"
         version = cache.get_or_set(version_key, 1, timeout=None)
-        cache_key = f"calendar_{coach.id}_v{version}_{year}_{month}_{user_timezone_str}_{session_length}"
+        cache_key = f"calendar_{coach.id}_v{version}_{year}_{month}_{user_timezone_str}_{session_length}_{exclude_booking_id or 'none'}"
         
         cached_data = cache.get(cache_key)
         if cached_data:
@@ -145,6 +176,9 @@ class BookingService:
             start_datetime__lt=end_dt,
             end_datetime__gt=start_dt
         )
+        
+        if exclude_booking_id:
+            existing_bookings = existing_bookings.exclude(id=exclude_booking_id)
         
         session_delta = timedelta(minutes=session_length)
 
@@ -435,31 +469,16 @@ class BookingService:
         # 1. Parse Start Time
         if isinstance(new_start_time_input, str):
             try:
-                # Handle ISO format (e.g. 2023-10-25T14:00:00Z or 2023-10-25T14:00:00+00:00)
-                clean_time = new_start_time_input.replace('Z', '+00:00')
-                if 'T' in clean_time and ' ' in clean_time:
-                    clean_time = clean_time.replace(' ', '+')
+                clean_time = new_start_time_input.replace('Z', '+00:00').replace(' ', '+') if 'T' in new_start_time_input else new_start_time_input
                 dt = datetime.fromisoformat(clean_time)
-                if timezone.is_naive(dt):
-                    new_start_time = timezone.make_aware(dt)
-                else:
-                    new_start_time = dt
+                new_start_time = timezone.make_aware(dt) if timezone.is_naive(dt) else dt
             except ValueError:
-                # Fallback to legacy formats
-                try:
-                    if 'T' in new_start_time_input:
-                        dt = datetime.strptime(new_start_time_input, '%Y-%m-%dT%H:%M')
-                    else:
-                        dt = datetime.strptime(new_start_time_input, '%Y-%m-%d %H:%M')
-                    new_start_time = timezone.make_aware(dt)
-                except ValueError:
-                    raise ValidationError("Invalid date format.")
+                raise ValidationError("Invalid date format.")
         else:
             new_start_time = new_start_time_input
 
         # 2. Basic Validation
-        now = timezone.now()
-        if new_start_time < now:
+        if new_start_time < timezone.now():
             raise ValidationError("Cannot reschedule to a time in the past.")
         
         # 3. Handle Coach Change
@@ -481,27 +500,13 @@ class BookingService:
         else:
             session_length = booking.get_duration_minutes() or 60
 
-        available_slots = BookingService.get_slots_for_coach(
-            target_coach, new_start_time.date(), session_length
+        # 4. Availability Check (Excluding current booking)
+        slots = BookingService.get_slots_for_coach(
+            target_coach, new_start_time.date(), session_length, exclude_booking_id=booking.id
         )
         
-        is_available = False
-        for slot in available_slots:
-            slot_aware = slot if timezone.is_aware(slot) else timezone.make_aware(slot)
-            if slot_aware == new_start_time:
-                is_available = True
-                break
-        
-        if not is_available:
+        if not any(s == new_start_time for s in slots):
             raise ValidationError("That time slot is no longer available. Please choose another.")
-
-        # 5. Double Booking Check (Race Condition)
-        if SessionBooking.objects.filter(
-            coach=target_coach,
-            start_datetime=new_start_time,
-            status__in=['BOOKED', 'PENDING_PAYMENT', 'RESCHEDULED']
-        ).exclude(id=booking.id).exists():
-            raise ValidationError("This time slot has already been booked. Please select another time.")
 
         # 6. Apply Changes
         if target_coach != booking.coach:
