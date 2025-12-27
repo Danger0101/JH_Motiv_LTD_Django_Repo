@@ -30,10 +30,10 @@
             {% if booking.status == 'BOOKED' or booking.status == 'RESCHEDULED' %}
                 <div x-data="{ open: false }" 
                      @close-modal.window="open = false" 
-                     @keydown.escape.window="open = false"
-                     @htmx:after-swap="open = true">
+                     @keydown.escape.window="open = false">
                     <button 
                         type="button"
+                        @click="open = true"
                         hx-get="{% url 'coaching_booking:reschedule_session_form' booking.id %}" 
                         hx-target="#reschedule-modal-{{ booking.id }}"
                         hx-swap="innerHTML"
@@ -54,10 +54,10 @@
 
                 <div x-data="{ open: false }" 
                      @close-modal.window="open = false" 
-                     @keydown.escape.window="open = false"
-                     @htmx:after-swap="open = true">
+                     @keydown.escape.window="open = false">
                     <button 
                         type="button"
+                        @click="open = true"
                         hx-get="{% url 'coaching_booking:cancel_booking_modal' booking.id %}"
                         hx-target="#cancel-modal-{{ booking.id }}"
                         hx-swap="innerHTML"
