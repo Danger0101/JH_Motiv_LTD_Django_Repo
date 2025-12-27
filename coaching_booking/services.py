@@ -17,6 +17,7 @@ from .models import SessionBooking, ClientOfferingEnrollment, OneSessionFreeOffe
 from coaching_core.models import CoachProfile, Workshop
 from coaching_availability.utils import get_coach_available_slots
 from accounts.models import User, MarketingPreference
+from payments.models import CoachingOrder
 from core.email_utils import send_transactional_email
 
 logger = logging.getLogger(__name__)
@@ -672,6 +673,33 @@ class BookingService:
             free_offer.save()
 
         return {'type': 'confirmed', 'booking': booking}
+
+    @staticmethod
+    def cancel_booking(booking):
+        """
+        Cancels a booking and handles related financial side-effects (voiding commissions).
+        Returns True if the session was refunded (early cancellation), False otherwise.
+        """
+        is_refunded = booking.cancel()
+        
+        if is_refunded and booking.enrollment:
+            # Check if there is a related financial order to void commissions
+            try:
+                order = CoachingOrder.objects.get(enrollment=booking.enrollment)
+                
+                # AUTOMATICALLY VOID COMMISSIONS
+                if order.payout_status == 'unpaid':
+                    order.payout_status = 'void'
+                    order.save()
+                    logger.info(f"Commissions for Order {order.id} VOIDED due to session cancellation.")
+                elif order.payout_status == 'paid':
+                    # CRITICAL ALERT: Refund issued for PAID Order. Manual clawback required.
+                    logger.warning(f"ALERT: Refund issued for PAID Order {order.id}. Manual clawback required.")
+                    
+            except CoachingOrder.DoesNotExist:
+                pass # No financial order linked
+        
+        return is_refunded
 
     @staticmethod
     def send_confirmation_emails(request, booking, is_free_session=False):

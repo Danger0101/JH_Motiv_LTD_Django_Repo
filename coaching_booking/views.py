@@ -295,26 +295,8 @@ def cancel_session(request, booking_id):
     coach = session_coach # The Provider
     client = booking.client
     
-    is_refunded = booking.cancel()
-    
-    if is_refunded and booking.enrollment:
-        # Check if there is a related financial order
-        try:
-            order = CoachingOrder.objects.get(enrollment=booking.enrollment)
-            
-            # AUTOMATICALLY VOID COMMISSIONS
-            if order.payout_status == 'unpaid':
-                order.payout_status = 'void'
-                order.save()
-                logger.info(f"Commissions for Order {order.id} VOIDED due to session cancellation.")
-            elif order.payout_status == 'paid':
-                # CRITICAL ALERT: You already paid the coach, but the client got a refund!
-                # You need to manually claw this back from future earnings.
-                logger.warning(f"ALERT: Refund issued for PAID Order {order.id}. Manual clawback required.")
-                
-        except CoachingOrder.DoesNotExist:
-            pass # No financial order linked, so nothing to void.
-    
+    is_refunded = BookingService.cancel_booking(booking)
+
     client_msg = ""
     if is_refunded and booking.enrollment:
         client_msg = "Your session credit has been successfully restored to your account."
@@ -573,6 +555,20 @@ def reschedule_session(request, booking_id):
                         'dashboard_url': dashboard_url,
                     }
                 )
+            
+            # 3. Email to Primary Coach (if they are different from Provider and didn't do it)
+            if booking.enrollment and booking.enrollment.coach:
+                primary_coach = booking.enrollment.coach
+                if primary_coach != booking.coach and primary_coach.user != request.user:
+                    send_transactional_email(
+                        recipient_email=primary_coach.user.email,
+                        subject=f"Update: Covered Session for {booking.client.get_full_name()} Rescheduled",
+                        template_name='emails/coach_notification.html',
+                        context={
+                            'message_body': f"FYI: The session for {booking.client.get_full_name()} that was being covered by {booking.coach.user.get_full_name()} has been rescheduled by {actor_name} to {new_start_time.strftime('%B %d, %H:%M')}.",
+                            'dashboard_url': dashboard_url
+                        }
+                    )
         except Exception as e:
             logger.error(f"CRITICAL: Reschedule for booking {booking.id} succeeded but failed to send emails. Error: {e}")
 
