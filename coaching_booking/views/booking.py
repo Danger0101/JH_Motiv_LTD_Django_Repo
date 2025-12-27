@@ -25,12 +25,19 @@ def profile_book_session(request):
     free_offers = OneSessionFreeOffer.objects.filter(client=request.user, status='APPROVED').select_related('coach__user')
     coaches = CoachProfile.objects.filter(user__is_active=True, is_available_for_new_clients=True).select_related('user')
     
+    reschedule_id = request.GET.get('reschedule_booking_id')
+    booking = None
+    if reschedule_id:
+        booking = get_object_or_404(SessionBooking, id=reschedule_id, client=request.user)
+
     context = {
         'user_offerings': user_offerings,
         'free_offers': free_offers,
         'coaches': coaches,
         'selected_enrollment_id': request.GET.get('enrollment_id'),
         'selected_free_offer_id': request.GET.get('free_offer_id'),
+        'reschedule_booking_id': reschedule_id,
+        'booking': booking,
         'initial_year': timezone.now().year,
         'initial_month': timezone.now().month,
     }

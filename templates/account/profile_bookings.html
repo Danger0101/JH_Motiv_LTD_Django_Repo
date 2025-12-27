@@ -30,14 +30,11 @@
         <div class="mt-4 md:mt-0 flex space-x-3">
             {% if booking.status == 'BOOKED' or booking.status == 'RESCHEDULED' %}
                 <div>
-                    <button 
-                        type="button"
-                        hx-get="{% url 'coaching_booking:reschedule_session_form' booking.id %}" 
-                        hx-target="#reschedule-container-{{ booking.id }}"
-                        hx-swap="innerHTML"
+                    <a 
+                        href="{% url 'coaching_booking:profile_book_session' %}?reschedule_booking_id={{ booking.id }}"
                         class="text-indigo-600 hover:text-indigo-800 text-sm font-medium focus:outline-none">
                         Reschedule
-                    </button>
+                    </a>
                 </div>
 
                 <div>
@@ -52,9 +49,6 @@
             {% endif %}
         </div>
         </div>
-        
-        <!-- Inline Reschedule Container -->
-        <div id="reschedule-container-{{ booking.id }}" class="w-full"></div>
     </div>
     {% empty %}
     <p class="text-gray-500 italic">No upcoming bookings found.</p>

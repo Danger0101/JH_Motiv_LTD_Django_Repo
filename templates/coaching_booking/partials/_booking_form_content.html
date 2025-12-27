@@ -48,12 +48,18 @@
                 <p class="text-xs text-gray-500 mt-1">Bookings are made with the coach assigned to your package.</p>
             </div>
         {% else %}
-            <div class="mb-6 bg-blue-50 p-4 rounded border border-blue-100">
-                <p class="text-blue-800 font-semibold">Rescheduling Session</p>
-                <p class="text-sm text-blue-600">
-                    Originally with {{ booking.coach.user.get_full_name }}<br>
-                    Current time: {{ booking.start_datetime|date:"F j, Y, g:i a" }}
-                </p>
+            <div class="mb-6 bg-blue-50 p-4 rounded border border-blue-100 flex justify-between items-center">
+                <div>
+                    <p class="text-blue-800 font-semibold">Rescheduling Session</p>
+                    <p class="text-sm text-blue-600">
+                        Originally with {{ booking.coach.user.get_full_name }}<br>
+                        Current time: {{ booking.start_datetime|date:"F j, Y, g:i a" }}
+                    </p>
+                </div>
+                <a href="{% url 'coaching_booking:profile_book_session' %}" 
+                   class="text-xs bg-white border border-blue-300 text-blue-600 px-2 py-1 rounded hover:bg-blue-50">
+                    Switch to New Booking
+                </a>
                 <input type="hidden" id="reschedule_booking_id_{{ unique_suffix }}" name="reschedule_booking_id" value="{{ reschedule_booking_id }}">
             </div>
         {% endif %}

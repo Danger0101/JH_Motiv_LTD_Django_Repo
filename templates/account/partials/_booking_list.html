@@ -37,14 +37,11 @@
             <div class="flex flex-col space-y-2 items-end">
                 {% if booking.status == 'BOOKED' or booking.status == 'RESCHEDULED' %}
                     <div>
-                        <button 
-                            type="button"
-                            hx-get="{% url 'coaching_booking:reschedule_session_form' booking.id %}" 
-                            hx-target="#reschedule-container-{{ booking.id }}"
-                            hx-swap="innerHTML"
+                        <a 
+                            href="{% url 'coaching_booking:profile_book_session' %}?reschedule_booking_id={{ booking.id }}"
                             class="text-sm text-indigo-600 hover:text-indigo-900 font-medium bg-transparent border-0 p-0 cursor-pointer focus:outline-none">
                             Reschedule
-                        </button>
+                        </a>
                     </div>
 
                     <div>
@@ -76,8 +73,6 @@
         </div>
         {% endif %}
 
-        <!-- Inline Reschedule Container -->
-        <div id="reschedule-container-{{ booking.id }}"></div>
     </div>
     {% endfor %}
 </div>
