@@ -3,6 +3,18 @@ from datetime import datetime
 from django.conf import settings
 from django.utils import timezone
 import pytz
+from django.http import HttpResponse
+
+BOOKING_WINDOW_DAYS = 90
+
+def htmx_error(message, target='#booking-errors'):
+    """Helper to return an error message to a specific DOM element."""
+    response = HttpResponse(
+        f'<div class="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg mb-4">{message}</div>'
+    )
+    response['HX-Retarget'] = target
+    response['HX-Reswap'] = 'innerHTML'
+    return response
 
 def generate_ics(booking):
     """

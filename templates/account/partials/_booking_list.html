@@ -36,26 +36,15 @@
 
             <div class="flex flex-col space-y-2 items-end">
                 {% if booking.status == 'BOOKED' or booking.status == 'RESCHEDULED' %}
-                    <div x-data="{ open: false }" @close-modal.window="open = false" @keydown.escape.window="open = false">
+                    <div>
                         <button 
                             type="button"
-                            @click="open = true"
                             hx-get="{% url 'coaching_booking:reschedule_session_form' booking.id %}" 
-                            hx-target="#reschedule-modal-{{ booking.id }}"
+                            hx-target="#reschedule-container-{{ booking.id }}"
                             hx-swap="innerHTML"
                             class="text-sm text-indigo-600 hover:text-indigo-900 font-medium bg-transparent border-0 p-0 cursor-pointer focus:outline-none">
                             Reschedule
                         </button>
-                        
-                        <div x-show="open" style="display: none;" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-                            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                                <div @click="open = false" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-                                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                                <div id="reschedule-modal-{{ booking.id }}" class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full">
-                                    <div class="p-10 text-center"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div></div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     <div>
@@ -86,6 +75,9 @@
             </a>
         </div>
         {% endif %}
+
+        <!-- Inline Reschedule Container -->
+        <div id="reschedule-container-{{ booking.id }}"></div>
     </div>
     {% endfor %}
 </div>

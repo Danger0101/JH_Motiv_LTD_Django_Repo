@@ -35,4 +35,5 @@ urlpatterns = [
     path('coverage/accept/<int:request_id>/', views.accept_coverage_view, name='accept_coverage'),
     path('coverage/request-modal/<int:booking_id>/', views.request_coverage_modal, name='request_coverage_modal'),
     path('coverage/create/<int:booking_id>/', views.create_coverage_request, name='create_coverage_request'),
+    path('checkout/create/<int:offering_id>/', views.create_checkout_session, name='create_checkout_session'),
 ]

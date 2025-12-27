@@ -1309,9 +1309,6 @@
   .border-red-500 {
     border-color: var(--color-red-500);
   }
-  .border-red-600 {
-    border-color: var(--color-red-600);
-  }
   .border-red-800 {
     border-color: var(--color-red-800);
   }
@@ -3407,11 +3404,6 @@
   .sm\:w-full {
     @media (width >= 40rem) {
       width: 100%;
-    }
-  }
-  .sm\:max-w-6xl {
-    @media (width >= 40rem) {
-      max-width: var(--container-6xl);
     }
   }
   .sm\:max-w-lg {
