@@ -1,5 +1,5 @@
 {% with unique_suffix=reschedule_booking_id|default:"new" %}
-<div class="{% if not is_inline %}bg-white p-6 rounded-lg shadow-lg{% elif not is_modal %}mt-4 border-t border-gray-100 pt-6{% endif %}">
+<div class="{% if not is_inline %}bg-white p-6 rounded-lg shadow-lg{% elif is_modal %}p-6{% else %}mt-4 border-t border-gray-100 pt-6{% endif %}">
     {% if not is_inline %}
     <h2 class="text-2xl font-bold text-gray-800 mb-6">
         {% if reschedule_booking_id %}
@@ -79,7 +79,7 @@
             {# Left Column: Calendar (Takes 2/3 space) #}
             {# Added dynamic ID and Updated hx-trigger/include/get to use unique_suffix and pass slot_target_id #}
             <div id="calendar-container-{{ unique_suffix }}" class="md:col-span-2 min-w-0"
-                 hx-trigger="revealed, intersect{% if not reschedule_booking_id %}, change from:#enrollment_id_{{ unique_suffix }}{% endif %}"
+                 hx-trigger="load, revealed, intersect{% if not reschedule_booking_id %}, change from:#enrollment_id_{{ unique_suffix }}{% endif %}"
                  hx-get="{% url 'coaching_booking:get_booking_calendar' %}?year={{ initial_year }}&month={{ initial_month }}{% if reschedule_booking_id %}&reschedule_booking_id={{ reschedule_booking_id }}{% endif %}{% if selected_enrollment_id %}&enrollment_id={{ selected_enrollment_id }}{% endif %}&slot_target_id=%23time-slots-column-{{ unique_suffix }}"
                  {% if not reschedule_booking_id %}hx-include="#enrollment_id_{{ unique_suffix }}"{% endif %}
                  hx-swap="innerHTML">
