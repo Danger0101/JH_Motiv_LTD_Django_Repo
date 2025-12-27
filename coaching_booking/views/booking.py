@@ -7,7 +7,7 @@ import logging
 from django.http import HttpResponse, HttpResponseForbidden
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST, require_GET
+from django.views.decorators.http import require_POST
 from django.core.exceptions import ValidationError
 from django.db import transaction
 import pytz
@@ -230,32 +230,6 @@ def book_session(request):
         return htmx_error(f"An error occurred: {str(e)}")
 
 @login_required
-@require_GET
-def reschedule_session_form(request, booking_id):
-    booking = get_object_or_404(SessionBooking, id=booking_id)
-    if not BookingPermissions.can_manage_booking(request.user, booking):
-        return HttpResponseForbidden("Unauthorized.")
-    
-    coaches = [booking.coach] if booking.coach else []
-    if booking.enrollment and not booking.enrollment.coach:
-        coaches = booking.enrollment.offering.coaches.filter(user__is_active=True, is_available_for_new_clients=True)
-
-    context = {
-        'reschedule_booking_id': booking.id,
-        'booking': booking,
-        'coaches': coaches,
-        'initial_year': timezone.now().year,
-        'initial_month': timezone.now().month,
-        'selected_coach_id': booking.coach.id if booking.coach else None,
-        'selected_enrollment_id': booking.enrollment.id if booking.enrollment else '',
-    }
-    if request.headers.get('HX-Request'):
-        context['is_inline'] = True
-        context['is_modal'] = True
-        return render(request, 'coaching_booking/partials/reschedule_modal.html', context)
-    return render(request, 'coaching_booking/profile_book_session.html', context)
-
-@login_required
 @require_POST
 def reschedule_session(request, booking_id):
     booking = get_object_or_404(SessionBooking, id=booking_id)
@@ -284,14 +258,6 @@ def reschedule_session(request, booking_id):
     except Exception as e:
         logger.error(f"Reschedule Error: {e}", exc_info=True)
         return htmx_error("An unexpected error occurred.")
-
-@login_required
-@require_GET
-def cancel_booking_modal(request, booking_id):
-    booking = get_object_or_404(SessionBooking, id=booking_id)
-    if not BookingPermissions.can_manage_booking(request.user, booking):
-        return HttpResponseForbidden("Unauthorized.")
-    return render(request, 'coaching_booking/partials/cancel_confirmation_modal.html', {'booking': booking})
 
 @login_required
 @require_POST
