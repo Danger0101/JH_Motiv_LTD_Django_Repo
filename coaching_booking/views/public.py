@@ -115,7 +115,7 @@ def book_workshop(request, slug):
             start_dt = datetime.combine(workshop.date, workshop.start_time)
             if timezone.is_naive(start_dt): start_dt = timezone.make_aware(start_dt)
             booking = SessionBooking.objects.create(client=user, coach=workshop.coach, workshop=workshop, start_datetime=start_dt, status='BOOKED', amount_paid=0)
-            BookingService.send_confirmation_emails(request, booking)
+            # Email sent via signals.py -> tasks.py automatically
             messages.success(request, "Workshop booked successfully!")
             return redirect('accounts:account_profile')
         else:
