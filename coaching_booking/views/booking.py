@@ -162,6 +162,12 @@ def confirm_booking_modal(request):
         'coach_id': request.GET.get('coach_id'),
     }
 
+    # Determine POST URL for the form
+    if context['reschedule_booking_id']:
+        context['post_url'] = reverse('coaching_booking:reschedule_session', args=[context['reschedule_booking_id']])
+    else:
+        context['post_url'] = reverse('coaching_booking:book_session')
+
     # Restore UI Context Helpers
     if context['slot_iso']:
         try:
