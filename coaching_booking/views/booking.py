@@ -217,7 +217,7 @@ def book_session(request):
             msg = f"Session confirmed for {result['booking'].start_datetime.strftime('%B %d, %Y at %I:%M %p')}."
             messages.success(request, msg)
             response = HttpResponse(status=204)
-            response['HX-Trigger'] = json.dumps({'closeModal': True, 'refreshBookings': True, 'refreshOfferings': True, 'showToast': {'message': msg, 'type': 'success'}})
+            response['HX-Redirect'] = reverse('accounts:account_profile')
             return response
         elif result['type'] == 'checkout':
             response = HttpResponse(status=204)
@@ -277,7 +277,7 @@ def reschedule_session(request, booking_id):
         messages.success(request, msg)
         
         response = HttpResponse(status=204)
-        response['HX-Trigger'] = json.dumps({'closeModal': True, 'refreshBookings': True, 'showToast': {'message': msg, 'type': 'success'}})
+        response['HX-Redirect'] = reverse('accounts:account_profile')
         return response
     except ValidationError as e:
         return htmx_error(e.messages[0] if hasattr(e, 'messages') else str(e))
