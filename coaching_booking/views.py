@@ -445,9 +445,14 @@ def reschedule_session_form(request, booking_id):
     
     # Safe permission check
     is_client = booking.client == request.user
-    is_coach = booking.coach and booking.coach.user == request.user
+    is_provider = booking.coach and booking.coach.user == request.user
     
-    if not (is_client or is_coach):
+    # Check Primary Coach (Enrollment Owner)
+    is_primary = False
+    if booking.enrollment and booking.enrollment.coach:
+        is_primary = booking.enrollment.coach.user == request.user
+    
+    if not (is_client or is_provider or is_primary):
         return HttpResponseForbidden("You are not authorized to reschedule this session.")
         
     # Determine allowed coaches safely
@@ -489,10 +494,16 @@ def reschedule_session_form(request, booking_id):
 @require_POST
 def reschedule_session(request, booking_id):
     booking = get_object_or_404(SessionBooking, id=booking_id)
-    # Permission Check: Allow Client OR Coach
+    
+    # Permission Check: Allow Client OR Provider OR Primary Coach
     is_client = booking.client == request.user
-    is_coach = booking.coach.user == request.user
-    if not (is_client or is_coach):
+    is_provider = booking.coach and booking.coach.user == request.user
+    
+    is_primary = False
+    if booking.enrollment and booking.enrollment.coach:
+        is_primary = booking.enrollment.coach.user == request.user
+
+    if not (is_client or is_provider or is_primary):
         return HttpResponseForbidden("You are not authorized to reschedule this session.")
     
     def htmx_error(msg):
@@ -528,31 +539,40 @@ def reschedule_session(request, booking_id):
         try:
             dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
             formatted_original_time = original_start_time.strftime('%A, %B %d, %Y, %I:%M %p %Z')
+            actor_name = request.user.get_full_name()
             
+            # 1. Email to Client
+            client_subject = "Your Coaching Session Has Been Rescheduled"
+            if is_provider or is_primary:
+                client_subject = f"Session Rescheduled by Coach {actor_name}"
+
             send_transactional_email(
                 recipient_email=booking.client.email,
-                subject="Your Coaching Session Has Been Rescheduled",
+                subject=client_subject,
                 template_name='emails/reschedule_confirmation.html',
                 context={
                     'user_id': booking.client.pk,
                     'booking_id': booking.pk,
                     'original_start_time': formatted_original_time,
                     'dashboard_url': dashboard_url,
+                    'rescheduled_by_coach': (is_provider or is_primary),
                 }
             )
 
-            send_transactional_email(
-                recipient_email=booking.coach.user.email,
-                subject=f"Session Rescheduled by {booking.client.get_full_name()}",
-                template_name='emails/coach_reschedule_notification.html',
-                context={
-                    'coach_id': booking.coach.pk,
-                    'client_id': booking.client.pk,
-                    'booking_id': booking.pk,
-                    'original_start_time': formatted_original_time,
-                    'dashboard_url': dashboard_url,
-                }
-            )
+            # 2. Email to Provider (if they didn't do it)
+            if (is_client or (is_primary and not is_provider)) and booking.coach:
+                send_transactional_email(
+                    recipient_email=booking.coach.user.email,
+                    subject=f"Session Rescheduled by {actor_name}",
+                    template_name='emails/coach_reschedule_notification.html',
+                    context={
+                        'coach_id': booking.coach.pk,
+                        'client_id': booking.client.pk,
+                        'booking_id': booking.pk,
+                        'original_start_time': formatted_original_time,
+                        'dashboard_url': dashboard_url,
+                    }
+                )
         except Exception as e:
             logger.error(f"CRITICAL: Reschedule for booking {booking.id} succeeded but failed to send emails. Error: {e}")
 
