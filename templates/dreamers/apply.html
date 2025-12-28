@@ -1,64 +1,70 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-md mx-auto py-12 px-4 sm:px-6 lg:px-8">
+<div class="max-w-6xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
     <div class="text-center mb-8">
         <h2 class="text-3xl font-extrabold text-gray-900">Apply to be a Dreamer</h2>
         <p class="mt-2 text-sm text-gray-600">Join our affiliate program, share your story, and earn commissions.</p>
     </div>
 
-    <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-8">
-        <h3 class="text-lg font-bold text-gray-900 mb-4">Program Details & Legal Information</h3>
-        <div class="text-sm text-gray-700 space-y-4">
-            <div>
-                <strong class="block text-gray-900 mb-1">What is this?</strong>
-                <p>The Dreamer Program is an affiliate partnership designed to help you monetize your influence. We provide the platform and services; you provide the story and reach.</p>
-            </div>
-            <div>
-                <strong class="block text-gray-900 mb-1">What it offers:</strong>
-                <ul class="list-disc pl-5 space-y-1">
-                    <li><strong>Commissions:</strong> Earn a percentage on every sale generated via your unique code.</li>
-                    <li><strong>Profile Page:</strong> A dedicated landing page to showcase your bio and social links.</li>
-                    <li><strong>Discounts:</strong> Offer your audience exclusive savings when they support you.</li>
-                </ul>
-            </div>
-            <div>
-                <strong class="block text-gray-900 mb-1">Legal & Terms:</strong>
-                <p>By applying, you acknowledge that you are an independent contractor, not an employee. You are responsible for reporting your own taxes. We reserve the right to approve or reject applications and to revoke status for violations of our community guidelines.</p>
-            </div>
-        </div>
-    </div>
-
-    <form method="post" class="space-y-6 bg-white p-8 shadow rounded-lg">
-        {% csrf_token %}
-        
-        {% for field in form %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <!-- Left Column: Program Details -->
         <div>
-            {% if field.field.widget.input_type == 'checkbox' %}
-                <div class="flex items-start">
-                    <div class="flex items-center h-5">
-                        {{ field }}
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 sticky top-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Program Details & Legal Information</h3>
+                <div class="text-sm text-gray-700 space-y-4">
+                    <div>
+                        <strong class="block text-gray-900 mb-1">What is this?</strong>
+                        <p>The Dreamer Program is an affiliate partnership designed to help you monetize your influence. We provide the platform and services; you provide the story and reach.</p>
                     </div>
-                    <div class="ml-3 text-sm">
-                        <label for="{{ field.id_for_label }}" class="font-medium text-gray-700">{{ field.label }}</label>
-                        {% if field.help_text %}<p class="text-gray-500">{{ field.help_text }}</p>{% endif %}
+                    <div>
+                        <strong class="block text-gray-900 mb-1">What it offers:</strong>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>Commissions:</strong> Earn a percentage on every sale generated via your unique code.</li>
+                            <li><strong>Profile Page:</strong> A dedicated landing page to showcase your bio and social links.</li>
+                            <li><strong>Discounts:</strong> Offer your audience exclusive savings when they support you.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <strong class="block text-gray-900 mb-1">Legal & Terms:</strong>
+                        <p>By applying, you acknowledge that you are an independent contractor, not an employee. You are responsible for reporting your own taxes. We reserve the right to approve or reject applications and to revoke status for violations of our community guidelines.</p>
                     </div>
                 </div>
-            {% else %}
-                <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
-                <div class="mt-1">{{ field }}</div>
-                {% if field.help_text %}<p class="mt-2 text-sm text-gray-500">{{ field.help_text }}</p>{% endif %}
-            {% endif %}
-            
-            {% if field.errors %}
-            <p class="mt-2 text-sm text-red-600">{{ field.errors.0 }}</p>
-            {% endif %}
+            </div>
         </div>
-        {% endfor %}
 
-        <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-            Submit Application
-        </button>
-    </form>
+        <!-- Right Column: Application Form -->
+        <form method="post" class="space-y-6 bg-white p-8 shadow rounded-lg border border-gray-100">
+            {% csrf_token %}
+            
+            {% for field in form %}
+            <div>
+                {% if field.field.widget.input_type == 'checkbox' %}
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            {{ field }}
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="{{ field.id_for_label }}" class="font-medium text-gray-700">{{ field.label }}</label>
+                            {% if field.help_text %}<p class="text-gray-500">{{ field.help_text }}</p>{% endif %}
+                        </div>
+                    </div>
+                {% else %}
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
+                    <div class="mt-1">{{ field }}</div>
+                    {% if field.help_text %}<p class="mt-2 text-sm text-gray-500">{{ field.help_text }}</p>{% endif %}
+                {% endif %}
+                
+                {% if field.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ field.errors.0 }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Submit Application
+            </button>
+        </form>
+    </div>
 </div>
 {% endblock %}

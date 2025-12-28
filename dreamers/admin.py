@@ -1,12 +1,12 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
-from .models import Dreamer, DreamerProfile, ChannelLink
+from .models import Dreamer, DreamerProfile, DreamerChannel
 
 # --- INLINES ---
 
-class ChannelLinkInline(admin.TabularInline):
-    model = ChannelLink
+class DreamerChannelInline(admin.TabularInline):
+    model = DreamerChannel
     extra = 1
     verbose_name = "Social Channel"
     verbose_name_plural = "Social Channels"
@@ -29,7 +29,7 @@ class DreamerProfileAdmin(admin.ModelAdmin):
     list_filter = ('is_featured',)
     search_fields = ('name', 'user__email', 'user__username')
     readonly_fields = ('slug',)
-    inlines = [ChannelLinkInline]
+    inlines = [DreamerChannelInline]
     
     # Optimization
     list_select_related = ('user',)

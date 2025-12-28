@@ -71,7 +71,7 @@ class DreamerProfile(models.Model):
         # (A more robust solution might handle collisions with a counter)
         super().save(*args, **kwargs)
 
-class ChannelLink(models.Model):
+class DreamerChannel(models.Model):
     """
     Represents a social media or website link for a dreamer.
     
@@ -108,11 +108,12 @@ class ChannelLink(models.Model):
         max_length=300, 
         help_text="Full URL to their profile or website (or mailto: link)."
     )
+    active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ['dreamer', 'channel_type'] # Order links logically within the admin
-        verbose_name = "Channel Link"
-        verbose_name_plural = "Channel Links"
+        verbose_name = "Dreamer Channel"
+        verbose_name_plural = "Dreamer Channels"
         # unique_together constraint removed here.
 
     def __str__(self):

@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.db import transaction
 from django.core.mail import send_mail
 from django.conf import settings
-from .models import DreamerProfile
+from .models import DreamerProfile, DreamerChannel
 from .forms import DreamerApplicationForm
 from payments.models import Coupon
 import logging
@@ -70,6 +70,37 @@ class DreamerApplicationView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.user = self.request.user
         form.instance.status = DreamerProfile.STATUS_PENDING
+        
+        # Save the application first to ensure we have a primary key for the channels
+        response = super().form_valid(form)
+        
+        # Process 'social_links' to create DreamerChannel objects
+        social_text = form.cleaned_data.get('social_links')
+        if social_text:
+            lines = social_text.split('\n')
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                
+                # Simple heuristic to determine channel type
+                c_type = 'website' # Default fallback
+                lower = line.lower()
+                if 'instagram' in lower: c_type = 'instagram'
+                elif 'tiktok' in lower: c_type = 'tiktok'
+                elif 'youtube' in lower: c_type = 'youtube'
+                elif 'twitter' in lower or 'x.com' in lower: c_type = 'twitter'
+                elif 'facebook' in lower: c_type = 'facebook'
+                elif 'linkedin' in lower: c_type = 'linkedin'
+                
+                # Create the channel object
+                DreamerChannel.objects.create(
+                    dreamer=self.object,
+                    channel_type=c_type,
+                    url=line,
+                    active=True
+                )
+
         messages.success(self.request, "Application submitted! Our staff will review your request shortly.")
         
         # Notify Staff (Optional: You could use a background task here)
@@ -88,7 +119,7 @@ class DreamerApplicationView(LoginRequiredMixin, CreateView):
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[self.request.user.email],
         )
-        return super().form_valid(form)
+        return response
 
 class StaffDreamerManageView(UserPassesTestMixin, ListView):
     """Staff dashboard view to manage pending applications."""
