@@ -174,6 +174,7 @@ def confirm_booking_modal(request):
             clean_time = context['slot_iso'].replace('Z', '+00:00').replace(' ', '+')
             dt = datetime.fromisoformat(clean_time)
             context['pretty_time'] = dt.strftime('%B %d, %I:%M %p')
+            context['slot_iso'] = clean_time
         except ValueError: pass
 
     if context['coach_id']:
