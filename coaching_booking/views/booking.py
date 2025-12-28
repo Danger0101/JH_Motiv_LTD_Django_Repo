@@ -241,9 +241,14 @@ def reschedule_session(request, booking_id):
 
     try:
         dashboard_url = request.build_absolute_uri(reverse('accounts:account_profile'))
+        
+        start_time = request.POST.get('new_start_time') or request.POST.get('start_time')
+        if start_time:
+            start_time = start_time.replace(' ', '+')
+            
         BookingService.reschedule_booking(
             booking, 
-            request.POST.get('new_start_time') or request.POST.get('start_time'), 
+            start_time, 
             request.POST.get('coach_id'), 
             requesting_user=request.user,
             dashboard_url=dashboard_url
