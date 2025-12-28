@@ -16,7 +16,7 @@
             <button 
                 @click="activePolicy = 'retail'"
                 :class="{ 'border-blue-500 text-blue-600': activePolicy === 'retail', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activePolicy !== 'retail' }"
-                class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-base focus:outline-none"
+                class="w-1/3 py-4 px-1 text-center border-b-2 font-medium text-base focus:outline-none"
                 id="retail-tos-tab"
                 role="tab"
                 aria-controls="retail-tos-panel"
@@ -27,13 +27,24 @@
             <button 
                 @click="activePolicy = 'coaching'"
                 :class="{ 'border-blue-500 text-blue-600': activePolicy === 'coaching', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activePolicy !== 'coaching' }"
-                class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-base focus:outline-none"
+                class="w-1/3 py-4 px-1 text-center border-b-2 font-medium text-base focus:outline-none"
                 id="coaching-tos-tab"
                 role="tab"
                 aria-controls="coaching-tos-panel"
                 :aria-selected="activePolicy === 'coaching'"
             >
                 Coaching Offering Terms
+            </button>
+            <button 
+                @click="activePolicy = 'dreamer'"
+                :class="{ 'border-blue-500 text-blue-600': activePolicy === 'dreamer', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activePolicy !== 'dreamer' }"
+                class="w-1/3 py-4 px-1 text-center border-b-2 font-medium text-base focus:outline-none"
+                id="dreamer-tos-tab"
+                role="tab"
+                aria-controls="dreamer-tos-panel"
+                :aria-selected="activePolicy === 'dreamer'"
+            >
+                Dreamer Affiliate Terms
             </button>
         </div>
 
@@ -65,6 +76,46 @@
                         </div>
                     </section>
                 {% endfor %}
+            </div>
+
+            <div x-show="activePolicy === 'dreamer'" role="tabpanel" id="dreamer-tos-panel" aria-labelledby="dreamer-tos-tab" x-cloak>
+                <h2 class="text-2xl font-bold mb-4">Dreamer Affiliate Program Terms</h2>
+                <p class="text-sm text-gray-600 mb-8">Effective Date: October 26, 2023</p>
+
+                <section class="mb-8">
+                    <h3 class="text-xl font-semibold mb-3">1. Independent Contractor Status</h3>
+                    <div class="text-gray-700 leading-relaxed space-y-4">
+                        <p>As a Dreamer (Affiliate), you agree that you are an independent contractor and not an employee, agent, or partner of JH Motiv Ltd. You have no authority to create obligations on behalf of JH Motiv Ltd. You are solely responsible for reporting and paying all applicable taxes on commissions earned.</p>
+                    </div>
+                </section>
+
+                <section class="mb-8">
+                    <h3 class="text-xl font-semibold mb-3">2. Commissions and Payments</h3>
+                    <div class="text-gray-700 leading-relaxed space-y-4">
+                        <p>Commissions are earned on net sales (excluding shipping, taxes, and returns) generated through your unique affiliate code. Payments are processed monthly, subject to a minimum payout threshold. JH Motiv Ltd reserves the right to reverse commissions on refunded orders.</p>
+                    </div>
+                </section>
+
+                <section class="mb-8">
+                    <h3 class="text-xl font-semibold mb-3">3. Code of Conduct</h3>
+                    <div class="text-gray-700 leading-relaxed space-y-4">
+                        <p>You agree to represent the JH Motiv Ltd brand professionally. You shall not engage in spamming, misleading advertising, or bidding on JH Motiv Ltd trademarked keywords in paid search. Violation of these standards may result in immediate termination of your account and forfeiture of pending commissions.</p>
+                    </div>
+                </section>
+
+                <section class="mb-8">
+                    <h3 class="text-xl font-semibold mb-3">4. Termination</h3>
+                    <div class="text-gray-700 leading-relaxed space-y-4">
+                        <p>Either party may terminate this agreement at any time, with or without cause, by giving written notice. Upon termination, you must immediately cease using JH Motiv Ltd branding and remove all affiliate links.</p>
+                    </div>
+                </section>
+
+                <section class="mb-8">
+                    <h3 class="text-xl font-semibold mb-3">5. Limitation of Liability</h3>
+                    <div class="text-gray-700 leading-relaxed space-y-4">
+                        <p>JH Motiv Ltd will not be liable for indirect, special, or consequential damages arising in connection with this agreement or the affiliate program. Our aggregate liability arising with respect to this agreement will not exceed the total commissions paid or payable to you.</p>
+                    </div>
+                </section>
             </div>
 
         </div>
