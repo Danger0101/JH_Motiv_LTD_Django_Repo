@@ -10,10 +10,13 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import PasswordResetForm
 import pytz
 
 from ..models import SessionBooking, ClientOfferingEnrollment, OneSessionFreeOffer
 from accounts.models import CoachProfile
+from coaching_core.models import Offering
 from ..services import BookingService, BookingPermissions
 from ..utils import htmx_error, BOOKING_WINDOW_DAYS
 
@@ -322,3 +325,71 @@ def accept_coverage_view(request, request_id):
     if success: messages.success(request, message)
     else: messages.error(request, message)
     return redirect('accounts:account_profile')
+
+@login_required
+def staff_create_guest(request):
+    if not request.user.is_staff:
+        return HttpResponseForbidden("Unauthorized")
+    
+    offerings = Offering.objects.all()
+    
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        full_name = request.POST.get('full_name')
+        business_name = request.POST.get('business_name')
+        offering_id = request.POST.get('offering_id')
+        session_override = request.POST.get('session_override')
+        expiration_override = request.POST.get('expiration_override')
+        
+        User = get_user_model()
+        if User.objects.filter(email=email).exists():
+            messages.error(request, f"User {email} already exists.")
+        else:
+            try:
+                first_name = full_name.split(' ')[0]
+                last_name = ' '.join(full_name.split(' ')[1:]) if ' ' in full_name else ''
+                user = User.objects.create_user(username=email, email=email, first_name=first_name, last_name=last_name)
+                user.set_unusable_password()
+                if business_name and hasattr(user, 'client_profile'):
+                    user.client_profile.business_name = business_name
+                    user.client_profile.save()
+                user.save()
+                
+                if offering_id:
+                    offering = get_object_or_404(Offering, id=offering_id)
+                    sessions = int(session_override) if session_override else offering.included_sessions
+                    enrollment = ClientOfferingEnrollment.objects.create(
+                        client=user, offering=offering, remaining_sessions=sessions
+                    )
+                    if expiration_override:
+                        enrollment.expiration_date = expiration_override
+                        enrollment.save()
+                
+                # Send Invite
+                form = PasswordResetForm({'email': email})
+                if form.is_valid():
+                    form.save(request=request)
+                    messages.success(request, f"Guest {email} created and invite sent.")
+                else:
+                    messages.warning(request, f"Guest {email} created but invite failed.")
+            except Exception as e:
+                messages.error(request, f"Error creating guest: {str(e)}")
+                
+    return render(request, 'account/partials/staff/staff_create_guest.html', {'offerings': offerings})
+
+@login_required
+def staff_send_password_reset(request):
+    if not request.user.is_staff: return HttpResponseForbidden("Unauthorized")
+    email = request.POST.get('email')
+    if email:
+        form = PasswordResetForm({'email': email})
+        if form.is_valid():
+            form.save(request=request)
+            messages.success(request, f"Reset link sent to {email}.")
+        else:
+            messages.error(request, "Invalid email.")
+    else:
+        messages.error(request, "Email is required.")
+        
+    offerings = Offering.objects.all()
+    return render(request, 'account/partials/staff/staff_create_guest.html', {'offerings': offerings})
