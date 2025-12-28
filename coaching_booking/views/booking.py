@@ -277,19 +277,19 @@ def cancel_session(request, booking_id):
     is_refunded = BookingService.cancel_booking(booking, actor=request.user, dashboard_url=dashboard_url)
     
     msg = "Session canceled."
-    toast_type = "success"
     if booking.client == request.user:
-        if is_refunded: msg += " Credit restored."
+        if is_refunded: 
+            msg += " Credit restored."
+            messages.success(request, msg)
         else: 
             msg += " Credit forfeited (late cancellation)."
-            toast_type = "warning"
             messages.warning(request, msg)
     else:
         messages.success(request, msg)
 
     if request.headers.get('HX-Request'):
         response = HttpResponse(status=204)
-        response['HX-Trigger'] = json.dumps({'closeModal': True, 'refreshBookings': True, 'showToast': {'message': msg, 'type': 'success'}})
+        response['HX-Redirect'] = reverse('accounts:account_profile')
         return response
     return redirect('accounts:account_profile')
 
