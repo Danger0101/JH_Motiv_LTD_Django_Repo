@@ -19,7 +19,11 @@
           hx-target="#booking-errors">
         
         {% csrf_token %}
-        <input type="hidden" name="start_time" value="{{ slot_iso }}">
+        {% if reschedule_booking_id %}
+            <input type="hidden" name="new_start_time" value="{{ slot_iso }}">
+        {% else %}
+            <input type="hidden" name="start_time" value="{{ slot_iso }}">
+        {% endif %}
         <input type="hidden" name="coach_id" value="{{ coach_id }}">
         
         {% if enrollment_id %}
