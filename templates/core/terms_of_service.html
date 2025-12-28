@@ -11,7 +11,7 @@
         <p class="mt-4 text-lg text-gray-500">Governing your use of JHMotiv.Shop</p>
     </div>
 
-    <div x-data="{ activePolicy: 'retail' }" class="mt-12">
+    <div x-data="{ activePolicy: new URLSearchParams(window.location.search).get('tab') || 'retail' }" class="mt-12">
         <div class="flex justify-center border-b border-gray-200 mb-8" role="tablist" aria-label="Terms of Service Versions">
             <button 
                 @click="activePolicy = 'retail'"
