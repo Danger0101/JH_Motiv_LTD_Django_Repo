@@ -58,6 +58,7 @@
             <button hx-post="{% url 'coaching_booking:staff_send_password_reset' %}" 
                     hx-target="#guest-create-container" 
                     hx-swap="innerHTML"
+                    hx-include="closest form"
                     class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" 
                     type="button">
                 Reset Password
