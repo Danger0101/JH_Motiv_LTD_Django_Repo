@@ -505,7 +505,22 @@ class BookingService:
             target_coach, new_start_time.date(), session_length, exclude_booking_id=booking.id
         )
         
-        if not any(s == new_start_time for s in slots):
+        # Normalize input to aware UTC
+        if timezone.is_naive(new_start_time):
+            new_start_time = timezone.make_aware(new_start_time, pytz.UTC)
+        else:
+            new_start_time = new_start_time.astimezone(pytz.UTC)
+
+        # Strip microseconds for comparison
+        new_start_time = new_start_time.replace(microsecond=0)
+
+        # Normalize slots to aware UTC and strip microseconds
+        normalized_slots = [
+            (s if timezone.is_aware(s) else timezone.make_aware(s, pytz.UTC)).astimezone(pytz.UTC).replace(microsecond=0)
+            for s in slots
+        ]
+
+        if not any(s == new_start_time for s in normalized_slots):
             raise ValidationError("That time slot is no longer available. Please choose another.")
 
         # 6. Apply Changes
