@@ -2,7 +2,7 @@
     <h5 class="font-bold text-gray-800 mb-2">Confirm Selection</h5>
     
     <p class="text-sm text-gray-600 mb-4">
-        You are selecting: <span class="font-semibold text-indigo-600">{{ slot_time|date:"F j, g:i a" }}</span>
+        You are selecting: <span class="font-semibold text-indigo-600">{{ pretty_time }}</span>
         {% if coach_name %}
         <br>
         with Coach <span class="font-semibold text-gray-800">{{ coach_name }}</span>
@@ -27,7 +27,7 @@
           {% endif %}>
         
         {% csrf_token %}
-        <input type="hidden" name="start_time" value="{{ slot_time }}">
+        <input type="hidden" name="start_time" value="{{ slot_iso }}">
         <input type="hidden" name="coach_id" value="{{ coach_id }}">
         
         {% if enrollment_id %}
