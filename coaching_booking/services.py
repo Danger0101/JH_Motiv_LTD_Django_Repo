@@ -61,6 +61,8 @@ class BookingService:
         Returns list of available start_times for a specific date.
         Wraps the existing availability utility.
         """
+        london_tz = pytz.timezone('Europe/London')
+
         raw_slots = get_coach_available_slots(
             coach,
             date_obj,
@@ -71,7 +73,8 @@ class BookingService:
         
         # Filter out slots that overlap with Google Calendar Busy Slots
         # Fetch busy slots for the day
-        day_start = timezone.make_aware(datetime.combine(date_obj, datetime.min.time()))
+        # Use London time for start of day to ensure we catch all relevant busy slots
+        day_start = timezone.make_aware(datetime.combine(date_obj, datetime.min.time()), london_tz)
         day_end = day_start + timedelta(days=1)
         
         busy_slots = CoachBusySlot.objects.filter(
@@ -95,7 +98,7 @@ class BookingService:
         session_delta = timedelta(minutes=session_length)
         
         for slot in raw_slots:
-            slot_aware = slot if timezone.is_aware(slot) else timezone.make_aware(slot)
+            slot_aware = slot if timezone.is_aware(slot) else timezone.make_aware(slot, london_tz)
             slot_end = slot_aware + session_delta
             
             is_blocked = False
@@ -133,6 +136,8 @@ class BookingService:
         if cached_data:
             return cached_data
 
+        london_tz = pytz.timezone('Europe/London')
+
         try:
             user_tz = pytz.timezone(user_timezone_str)
         except pytz.UnknownTimeZoneError:
@@ -160,8 +165,8 @@ class BookingService:
         
         # Fetch Busy Slots for the whole range
         # Convert dates to aware datetimes to avoid RuntimeWarning about naive datetimes
-        start_dt = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
-        end_dt = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
+        start_dt = timezone.make_aware(datetime.combine(start_date, datetime.min.time()), london_tz)
+        end_dt = timezone.make_aware(datetime.combine(end_date, datetime.max.time()), london_tz)
 
         busy_slots = CoachBusySlot.objects.filter(
             coach=coach,
@@ -186,7 +191,7 @@ class BookingService:
         slots_by_date = {}
         for slot in available_slots_utc:
             # slot is a datetime object in UTC (or aware)
-            slot_aware = slot if timezone.is_aware(slot) else timezone.make_aware(slot)
+            slot_aware = slot if timezone.is_aware(slot) else timezone.make_aware(slot, london_tz)
             slot_end = slot_aware + session_delta
             
             # Check against busy slots
@@ -234,7 +239,7 @@ class BookingService:
             # Convert to User Local Time
             dt = datetime.combine(ws.date, ws.start_time)
             if timezone.is_naive(dt):
-                dt = timezone.make_aware(dt)
+                dt = timezone.make_aware(dt, london_tz)
             local_start = dt.astimezone(user_tz)
             day_key = local_start.date()
             
@@ -324,6 +329,9 @@ class BookingService:
         Universal booking creator. Handles Atomicity, Guest logic, and Race Conditions.
         provider_coach: Optional CoachProfile override (for coverage).
         """
+        # Define London TZ as the base
+        london_tz = pytz.timezone('Europe/London')
+
         # 1. Parse Start Time
         start_time_input = booking_data.get('start_time')
         if not start_time_input:
@@ -332,18 +340,22 @@ class BookingService:
         if isinstance(start_time_input, str):
             try:
                 start_datetime_naive = datetime.strptime(start_time_input, '%Y-%m-%d %H:%M')
-                start_datetime_obj = timezone.make_aware(start_datetime_naive)
+                # Interpret naive input as London time
+                start_datetime_obj = timezone.make_aware(start_datetime_naive, london_tz)
             except ValueError:
                 clean_time = start_time_input.replace('Z', '+00:00')
                 if 'T' in clean_time and ' ' in clean_time:
                     clean_time = clean_time.replace(' ', '+')
                 dt = datetime.fromisoformat(clean_time)
                 if timezone.is_naive(dt):
-                    start_datetime_obj = timezone.make_aware(dt)
+                    start_datetime_obj = timezone.make_aware(dt, london_tz)
                 else:
-                    start_datetime_obj = dt
+                    start_datetime_obj = dt.astimezone(london_tz)
         else:
-            start_datetime_obj = start_time_input
+            if timezone.is_naive(start_time_input):
+                start_datetime_obj = timezone.make_aware(start_time_input, london_tz)
+            else:
+                start_datetime_obj = start_time_input.astimezone(london_tz)
 
         # Basic Time Validation
         now = timezone.now()
