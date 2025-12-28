@@ -89,6 +89,8 @@ class DreamerApplicationView(LoginRequiredMixin, CreateView):
                 if 'instagram' in lower: c_type = 'instagram'
                 elif 'tiktok' in lower: c_type = 'tiktok'
                 elif 'youtube' in lower: c_type = 'youtube'
+                elif 'spotify' in lower: c_type = 'spotify'
+                elif 'pinterest' in lower: c_type = 'pinterest'
                 elif 'twitter' in lower or 'x.com' in lower: c_type = 'twitter'
                 elif 'facebook' in lower: c_type = 'facebook'
                 elif 'linkedin' in lower: c_type = 'linkedin'
