@@ -16,7 +16,7 @@
     </div>
     {% endif %}
     
-    <form hx-post="{% url 'coaching_booking:staff_create_guest' %}" hx-target="#guest-create-container" hx-swap="innerHTML">
+    <form hx-post="{% url 'coaching_booking:staff_create_guest' %}" hx-target="#guest-create-container" hx-swap="innerHTML" x-data="{ sessionCount: '' }">
         {% csrf_token %}
         <div class="mb-4">
             <label class="block text-gray-700 text-sm font-bold mb-2" for="email">Email Address</label>
@@ -32,12 +32,17 @@
         </div>
         <div class="mb-6">
             <label class="block text-gray-700 text-sm font-bold mb-2" for="offering_id">Enroll in Offering (Optional)</label>
-            <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="offering_id" name="offering_id">
-                <option value="">-- None --</option>
+            <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="offering_id" name="offering_id" @change="sessionCount = $event.target.options[$event.target.selectedIndex].dataset.sessions">
+                <option value="" data-sessions="">-- None --</option>
                 {% for offering in offerings %}
-                <option value="{{ offering.id }}">{{ offering.name }}</option>
+                <option value="{{ offering.id }}" data-sessions="{{ offering.included_sessions|default:'' }}">{{ offering.name }}</option>
                 {% endfor %}
             </select>
+        </div>
+        <div class="mb-6" x-show="sessionCount" x-transition>
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="session_override">Session Count Override</label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="session_override" type="number" name="session_override" x-model="sessionCount">
+            <p class="text-xs text-gray-500 mt-1">Modify this to override the default session count.</p>
         </div>
         <div class="flex items-center gap-4">
             <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
