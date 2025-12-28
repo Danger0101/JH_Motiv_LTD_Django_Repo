@@ -25,21 +25,31 @@ class DreamerLandingView(DetailView):
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Pass the coupon to the template so we can display the code (e.g. "ASHLEY10")
+        context['coupon'] = Coupon.objects.filter(affiliate_dreamer=self.object, active=True).first()
+        return context
+
     def get(self, request, *args, **kwargs):
         response = super().get(request, *args, **kwargs)
-        dreamer_profile = self.get_object()
+        dreamer_profile = self.object
 
         # FIX: Look up by 'affiliate_dreamer', NOT 'user_specific'
         # This allows the coupon to be public (shareable) but still owned by the Dreamer.
-        try:
-            coupon = Coupon.objects.get(affiliate_dreamer=dreamer_profile, active=True)
+        # Use filter().first() to avoid crashes if multiple coupons exist
+        coupons = Coupon.objects.filter(affiliate_dreamer=dreamer_profile, active=True)
+        
+        if coupons.exists():
+            coupon = coupons.first()
+            if coupons.count() > 1:
+                logger.warning(f"Multiple active coupons found for dreamer '{dreamer_profile.name}'. Using '{coupon.code}'.")
+            
             # Set the cookie for affiliate tracking. Expires in 30 days.
             response.set_cookie('affiliate_coupon', coupon.code, max_age=2592000, samesite='Lax', secure=True)
             logger.info(f"Affiliate cookie '{coupon.code}' set for visitor of '{dreamer_profile.slug}'.")
-        except Coupon.DoesNotExist:
+        else:
             logger.warning(f"No active affiliate coupon found for dreamer '{dreamer_profile.name}'.")
-        except Coupon.MultipleObjectsReturned:
-            logger.error(f"Multiple active coupons found for dreamer '{dreamer_profile.name}'.")
 
         return response
 
@@ -69,6 +79,14 @@ class DreamerApplicationView(LoginRequiredMixin, CreateView):
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[settings.DEFAULT_FROM_EMAIL], # Send to admin
             fail_silently=True
+        )
+
+        # Notify User of receipt
+        send_mail(
+            subject="We received your Dreamer Application",
+            message=f"Hi {self.request.user.username},\n\nThanks for applying to the Dreamer program! We have received your application and our team will review it shortly.\n\nYou will receive another email once a decision has been made.",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[self.request.user.email],
         )
         return super().form_valid(form)
 

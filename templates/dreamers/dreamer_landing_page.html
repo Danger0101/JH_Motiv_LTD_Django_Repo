@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <div class="text-center">
+        {% if dreamer.profile_pic %}
+            <img class="h-32 w-32 rounded-full mx-auto mb-4 object-cover shadow-lg" src="{{ dreamer.profile_pic.url }}" alt="{{ dreamer.name }}">
+        {% endif %}
+        <h1 class="text-4xl font-extrabold text-gray-900 sm:text-5xl">{{ dreamer.name }}</h1>
+        <p class="mt-4 text-xl text-gray-500">
+            {% if dreamer.bio %}
+                {{ dreamer.bio|linebreaks }}
+            {% elif dreamer.story_excerpt %}
+                {{ dreamer.story_excerpt }}
+            {% else %}
+                Welcome to my dreamer profile!
+            {% endif %}
+        </p>
+    </div>
+
+    <!-- Social Links -->
+    <div class="mt-8 flex justify-center space-x-6">
+        {% for channel in dreamer.channels.all %}
+            <a href="{{ channel.url }}" target="_blank" class="text-gray-400 hover:text-gray-500 flex items-center space-x-2">
+                <!-- You can add specific icons here based on channel.channel_type if needed -->
+                <span class="text-lg font-medium">{{ channel.get_channel_type_display }}</span>
+            </a>
+        {% empty %}
+            <p class="text-gray-400 italic">No social links added yet.</p>
+        {% endfor %}
+    </div>
+
+    <!-- Call to Action / Discount Notice -->
+    <div class="mt-12 bg-indigo-50 rounded-lg p-8 text-center border border-indigo-100 shadow-sm">
+        <h3 class="text-2xl font-bold text-indigo-900">Support My Dream!</h3>
+        <p class="mt-2 text-indigo-700">
+            By visiting this page, a special discount code 
+            {% if coupon %}
+                <span class="font-bold text-indigo-900 bg-indigo-100 px-2 py-1 rounded">({{ coupon.code }})</span>
+            {% endif %}
+            has been automatically applied to your session.
+        </p>
+        <div class="mt-6">
+            <!-- Adjust the url 'home' to point to your main booking or services page -->
+            <a href="/" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
+                Browse Services & Book Now
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
