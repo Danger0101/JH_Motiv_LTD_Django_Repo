@@ -14,17 +14,9 @@
     </p>
 
     <form method="POST" 
-          {% if reschedule_booking_id %}
-              action="{% url 'coaching_booking:reschedule_session' reschedule_booking_id %}"
-              hx-post="{% url 'coaching_booking:reschedule_session' reschedule_booking_id %}"
-              hx-target="#booking-list-container"
-              hx-swap="outerHTML"
-              @htmx:after-request="if(event.detail.successful) open = false"
-          {% else %}
-              action="{% url 'coaching_booking:book_session' %}"
-              hx-post="{% url 'coaching_booking:book_session' %}"
-              hx-target="#booking-errors"
-          {% endif %}>
+          action="{{ post_url }}"
+          hx-post="{{ post_url }}"
+          hx-target="#booking-errors">
         
         {% csrf_token %}
         <input type="hidden" name="start_time" value="{{ slot_iso }}">
