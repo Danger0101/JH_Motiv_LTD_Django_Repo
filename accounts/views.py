@@ -17,7 +17,7 @@ from .models import MarketingPreference
 from allauth.account.views import LoginView, SignupView, PasswordResetView, PasswordChangeView, PasswordSetView, LogoutView, PasswordResetDoneView, EmailView, ConfirmEmailView, EmailVerificationSentView, PasswordResetFromKeyView, PasswordResetFromKeyDoneView
 from allauth.socialaccount.views import ConnectionsView
 from cart.utils import get_or_create_cart, get_cart_summary_data
-from coaching_booking.models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer, SessionCoverageRequest
+from coaching_booking.models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer, SessionCoverageRequest, CoachReview
 from coaching_core.models import Offering, Workshop
 from accounts.models import CoachProfile 
 from gcal.models import GoogleCredentials
@@ -533,6 +533,9 @@ class StaffDashboardView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
                 Q(target_coach=current_coach) | Q(target_coach__isnull=True)
             ).exclude(requesting_coach=current_coach)
 
+        # 8. Flagged Reviews (Moderation Queue)
+        context['flagged_reviews'] = CoachReview.objects.filter(status='PENDING_STAFF').select_related('coach__user', 'client').order_by('-created_at')
+
         return context
 
 @login_required
@@ -630,6 +633,7 @@ def profile_bookings_partial(request):
     context = {
         'user_bookings_page': user_bookings_page,
         'active_tab': active_tab,
+        'now': now,
     }
     return render(request, 'account/partials/_booking_list.html', context)
 

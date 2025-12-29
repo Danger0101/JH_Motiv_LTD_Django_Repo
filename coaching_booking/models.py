@@ -41,6 +41,7 @@ class ClientOfferingEnrollment(models.Model):
     is_active = models.BooleanField(default=True, verbose_name="Is Active")
     deactivated_on = models.DateTimeField(null=True, blank=True, verbose_name="Deactivated On")
     enrolled_on = models.DateTimeField(auto_now_add=True, verbose_name="Enrolled On")
+    completed_on = models.DateTimeField(null=True, blank=True, verbose_name="Completed On")
 
     class Meta:
         verbose_name = "Client Offering Enrollment"
@@ -61,13 +62,21 @@ class ClientOfferingEnrollment(models.Model):
                 self.coach = self.offering.coaches.first()
 
         # Logic for managing is_active
-        if self.remaining_sessions <= 0 and self.is_active:
-            self.is_active = False
-            if self.deactivated_on is None:
-                self.deactivated_on = timezone.now()
-        elif self.remaining_sessions > 0 and not self.is_active:
-            self.is_active = True
-            self.deactivated_on = None
+        if self.remaining_sessions <= 0:
+            if self.completed_on is None:
+                self.completed_on = timezone.now()
+            
+            if self.is_active:
+                self.is_active = False
+                if self.deactivated_on is None:
+                    self.deactivated_on = timezone.now()
+            # TRIGGER: Here you would call a task to send the 'Please Review' email
+            # send_review_request_email.delay(self.client.id, self.id)
+        elif self.remaining_sessions > 0:
+            if not self.is_active:
+                self.is_active = True
+                self.deactivated_on = None
+            self.completed_on = None
 
         super().save(*args, **kwargs)
 
@@ -117,6 +126,18 @@ class SessionBooking(models.Model):
     amount_paid = models.IntegerField(default=0) # In cents
     is_paid = models.BooleanField(default=False)
 
+    ATTENDANCE_CHOICES = (
+        ('PENDING', 'Not Yet Marked'),
+        ('ATTENDED', 'Attended'),
+        ('NOSHOW', 'No-Show'),
+        ('PARTIAL', 'Partial Participation'),
+    )
+    attendance = models.CharField(max_length=10, choices=ATTENDANCE_CHOICES, default='PENDING')
+    coach_private_notes = models.TextField(
+        blank=True, 
+        help_text="Private notes about client engagement (not shown to client)."
+    )
+
     class Meta:
         verbose_name = "Session Booking"
         verbose_name_plural = "Session Bookings"
@@ -165,6 +186,23 @@ class SessionBooking(models.Model):
     @property
     def is_active_booking(self):
         return self.status in ['BOOKED', 'PENDING_PAYMENT', 'RESCHEDULED']
+
+    def mark_attended(self):
+        self.attendance = 'ATTENDED'
+        self.status = 'COMPLETED'
+        self.save()
+
+    def mark_no_show(self):
+        self.attendance = 'NOSHOW'
+        self.status = 'COMPLETED' # It's finished, even if they didn't show
+        self.save()
+
+    def mark_partial(self, note=None):
+        self.attendance = 'PARTIAL'
+        self.status = 'COMPLETED'
+        if note:
+            self.coach_private_notes = note
+        self.save()
 
     def save(self, *args, **kwargs):
         # Set Client defaults
@@ -373,3 +411,84 @@ class CoachBusySlot(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=['coach', 'start_time', 'end_time'])]
+
+class CoachReview(models.Model):
+    STATUS_CHOICES = (
+        ('PUBLISHED', 'Published'),
+        ('PENDING_STAFF', 'Awaiting Staff Review'),
+        ('REJECTED', 'Rejected'),
+    )
+
+    # Link to the enrollment (the "program") and the coach
+    enrollment = models.OneToOneField(
+        ClientOfferingEnrollment, 
+        on_delete=models.CASCADE, 
+        related_name='review'
+    )
+    coach = models.ForeignKey(
+        CoachProfile, 
+        on_delete=models.CASCADE, 
+        related_name='reviews'
+    )
+    client = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE
+    )
+
+    # 5 Dice (Star) Factors
+    knowledge_rating = models.PositiveSmallIntegerField(default=5) # How much did they know?
+    delivery_rating = models.PositiveSmallIntegerField(default=5)  # How was the coaching style?
+    value_rating = models.PositiveSmallIntegerField(default=5)     # Was it worth the price?
+    results_rating = models.PositiveSmallIntegerField(default=5)   # Did the client achieve goals?
+    
+    comment = models.TextField(blank=True, help_text="Public feedback about the experience.")
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PUBLISHED')
+    staff_notes = models.TextField(blank=True, help_text="Internal notes for review disputes.")
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Coach Review"
+        verbose_name_plural = "Coach Reviews"
+        ordering = ['-created_at']
+
+    def save(self, *args, **kwargs):
+        # PROTECTIVE LOGIC: Trigger staff review if weighted average is low (e.g., < 2.5)
+        # This prevents "false bad reviews" from appearing instantly.
+        if self.weighted_average < 2.5:
+            self.status = 'PENDING_STAFF'
+        else:
+            self.status = 'PUBLISHED'
+        
+        # NEW: Attendance Check
+        if self.enrollment:
+            sessions = self.enrollment.bookings.all()
+            total_sessions = sessions.count()
+            no_show_count = sessions.filter(attendance='NOSHOW').count()
+            
+            if total_sessions > 0 and (no_show_count / total_sessions) > 0.5:
+                self.status = 'PENDING_STAFF'
+                if not self.staff_notes: self.staff_notes = ""
+                self.staff_notes += f"\nAUTO-FLAG: Client missed {no_show_count} of {total_sessions} sessions."
+
+        super().save(*args, **kwargs)
+
+    @property
+    def weighted_average(self):
+        """
+        Calculates a robust average. 
+        Example: Results and Value are weighted higher (30% each) 
+        than Knowledge/Delivery (20% each).
+        """
+        score = (
+            (self.knowledge_rating * 0.20) +
+            (self.delivery_rating * 0.20) +
+            (self.value_rating * 0.30) +
+            (self.results_rating * 0.30)
+        )
+        return round(score, 1)
+
+    def __str__(self):
+        return f"Review for {self.coach.user.get_full_name()} by {self.client.username}"

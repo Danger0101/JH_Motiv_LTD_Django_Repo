@@ -378,6 +378,26 @@ def staff_create_guest(request):
     return render(request, 'account/partials/staff/staff_create_guest.html', {'offerings': offerings})
 
 @login_required
+@require_POST
+def mark_attendance(request, booking_id):
+    session = get_object_or_404(SessionBooking, id=booking_id)
+    
+    # Security: Only the coach assigned to the session can mark attendance
+    if not hasattr(request.user, 'coach_profile') or request.user.coach_profile != session.coach:
+        return HttpResponseForbidden("You are not the provider for this session.")
+
+    status = request.POST.get('attendance_status') # 'ATTENDED' or 'NOSHOW'
+    if status == 'ATTENDED':
+        session.mark_attended()
+    elif status == 'NOSHOW':
+        session.mark_no_show()
+    elif status == 'PARTIAL':
+        note = request.headers.get('HX-Prompt')
+        session.mark_partial(note=note)
+    
+    return HttpResponse(status=204) # Silent update via HTMX
+
+@login_required
 def staff_send_password_reset(request):
     if not request.user.is_staff: return HttpResponseForbidden("Unauthorized")
     email = request.POST.get('email')

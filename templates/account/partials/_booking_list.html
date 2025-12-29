@@ -60,6 +60,41 @@
                         {{ booking.get_status_display }}
                     </span>
                 {% endif %}
+
+                {% if request.user == booking.coach.user %}
+                    <div class="mt-2">
+                        {% if booking.start_datetime < now and booking.attendance == 'PENDING' %}
+                            <div class="flex space-x-1">
+                                <button hx-post="{% url 'coaching_booking:mark_attendance' booking.id %}" 
+                                        hx-vals='{"attendance_status": "ATTENDED"}'
+                                        hx-swap="outerHTML"
+                                        class="bg-green-500 hover:bg-green-600 text-white text-xs px-2 py-1 rounded"
+                                        title="Mark as Attended">
+                                    ✅
+                                </button>
+                                <button hx-post="{% url 'coaching_booking:mark_attendance' booking.id %}" 
+                                        hx-vals='{"attendance_status": "PARTIAL"}'
+                                        hx-prompt="Reason for partial participation:"
+                                        hx-swap="outerHTML"
+                                        class="bg-yellow-500 hover:bg-yellow-600 text-white text-xs px-2 py-1 rounded"
+                                        title="Mark as Partial">
+                                    ⚠️
+                                </button>
+                                <button hx-post="{% url 'coaching_booking:mark_attendance' booking.id %}" 
+                                        hx-vals='{"attendance_status": "NOSHOW"}'
+                                        hx-swap="outerHTML"
+                                        class="bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1 rounded"
+                                        title="Mark as No-Show">
+                                    ❌
+                                </button>
+                            </div>
+                        {% elif booking.attendance != 'PENDING' %}
+                             <span class="text-xs font-semibold px-2 py-1 rounded bg-gray-100 text-gray-600 border border-gray-200">
+                                {{ booking.get_attendance_display }}
+                            </span>
+                        {% endif %}
+                    </div>
+                {% endif %}
             </div>
         </div>
         

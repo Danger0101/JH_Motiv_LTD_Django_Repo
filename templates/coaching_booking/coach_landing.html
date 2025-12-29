@@ -239,6 +239,17 @@
                     {% endif %}
                     
                     <h3 class="mt-4 text-xl font-bold text-gray-800">{{ coach.user.get_full_name }}</h3>
+                    
+                    <div class="flex flex-col items-center mt-2 mb-2">
+                        <div class="flex items-center">
+                            <span class="text-yellow-500 font-bold text-lg">{{ coach.average_dice_rating }} / 5 🎲</span>
+                            <span class="ml-2 text-xs text-gray-500">({{ coach.review_count }} Reviews)</span>
+                        </div>
+                        <p class="text-xs italic text-gray-600">
+                            Value Level: {% if coach.average_dice_rating >= 4.5 %}Legendary{% elif coach.average_dice_rating >= 3.5 %}High Value{% else %}Standard{% endif %}
+                        </p>
+                    </div>
+
                     <p class="mt-2 text-gray-600 text-sm italic flex-grow">{{ coach.bio|truncatewords:20 }}</p>
                     
                     <div class="mt-6 space-y-3">

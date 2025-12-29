@@ -127,6 +127,24 @@ class CoachProfile(models.Model):
         help_text="Timestamp of the last successful Google Calendar sync."
     )
 
+    @property
+    def average_dice_rating(self):
+        """Calculates the mean weighted score across all reviews."""
+        if not hasattr(self, 'reviews'):
+            return 0
+        # Only calculate based on PUBLISHED reviews
+        reviews = self.reviews.filter(status='PUBLISHED')
+        if not reviews.exists():
+            return 0
+        total = sum(r.weighted_average for r in reviews)
+        return round(total / reviews.count(), 1)
+
+    @property
+    def review_count(self):
+        if not hasattr(self, 'reviews'):
+            return 0
+        return self.reviews.filter(status='PUBLISHED').count()
+
     def __str__(self):
         return f"Profile for {self.user.get_full_name()}"
 
