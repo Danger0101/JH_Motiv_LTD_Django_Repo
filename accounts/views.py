@@ -565,7 +565,7 @@ def update_marketing_preference(request):
 # HTMX Profile Views
 @login_required
 def profile_offerings_partial(request):
-    user_offerings = ClientOfferingEnrollment.objects.filter(client=request.user).order_by('-enrolled_on')
+    user_offerings = ClientOfferingEnrollment.objects.filter(client=request.user).select_related('offering', 'coach__user').prefetch_related('review').order_by('-enrolled_on')
     
     # Fetch OneSessionFreeOffers (Taster Sessions) so they can be displayed
     free_offers = OneSessionFreeOffer.objects.filter(client=request.user).order_by('-date_offered')
@@ -702,6 +702,22 @@ def coach_clients_partial(request):
         'coach_clients_page': coach_clients_page,
     }
     return render(request, 'account/partials/coach/coach_clients_list.html', context)
+
+@login_required
+def coach_reviews_partial(request):
+    """
+    HTMX partial to display reviews for the logged-in coach.
+    """
+    if not hasattr(request.user, 'coach_profile'):
+        return HttpResponse("Unauthorized", status=401)
+
+    coach_profile = request.user.coach_profile
+    # Fetch published reviews
+    reviews = CoachReview.objects.filter(coach=coach_profile, status='PUBLISHED').select_related('client').order_by('-created_at')
+
+    return render(request, 'account/partials/coach_reviews_list.html', {
+        'reviews': reviews,
+    })
 
 @login_required
 def dashboard_partial(request):

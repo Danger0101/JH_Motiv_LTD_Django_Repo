@@ -1,4 +1,5 @@
 from django.db import models
+from django.db import transaction
 from django.db.models import Q, UniqueConstraint, F
 from django.utils import timezone
 from datetime import timedelta
@@ -65,6 +66,9 @@ class ClientOfferingEnrollment(models.Model):
         if self.remaining_sessions <= 0:
             if self.completed_on is None:
                 self.completed_on = timezone.now()
+                # Trigger task to send review email
+                from .tasks import send_review_request_email
+                transaction.on_commit(lambda: send_review_request_email.delay(self.pk))
             
             if self.is_active:
                 self.is_active = False
@@ -93,6 +97,10 @@ class ClientOfferingEnrollment(models.Model):
         if self.expiration_date:
             return timezone.now() > self.expiration_date
         return False
+
+    @property
+    def has_review(self):
+        return hasattr(self, 'review')
 
 
 class SessionBooking(models.Model):

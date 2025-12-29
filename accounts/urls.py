@@ -14,6 +14,7 @@ urlpatterns = [
     path('profile/recent-activity/', views.recent_activity_partial, name='recent_activity_partial'),
     path('profile/get-coaches-for-offering/', views.get_coaches_for_offering, name='get_coaches_for_offering'),
     path('profile/coach-clients-partial/', views.coach_clients_partial, name='coach_clients_partial'),
+    path('profile/coach-reviews-partial/', views.coach_reviews_partial, name='coach_reviews_partial'),
     path('profile/invoice/<int:order_id>/', views.generate_invoice_pdf, name='generate_invoice_pdf'),
     path('profile/booking/<int:booking_id>/ics/', views.download_booking_ics, name='download_booking_ics'),
     # Staff/Admin URLs for the profile dashboard
