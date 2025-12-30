@@ -76,8 +76,6 @@ class ClientOfferingEnrollment(models.Model):
                 self.is_active = False
                 if self.deactivated_on is None:
                     self.deactivated_on = timezone.now()
-            # TRIGGER: Here you would call a task to send the 'Please Review' email
-            # send_review_request_email.delay(self.client.id, self.id)
         elif is_expired:
             if self.is_active:
                 self.is_active = False
