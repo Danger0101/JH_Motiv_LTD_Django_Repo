@@ -242,12 +242,18 @@
                     
                     <div class="flex flex-col items-center mt-2 mb-2">
                         <div class="flex items-center">
-                            <span class="text-yellow-500 font-bold text-lg">{{ coach.average_dice_rating }} / 5 🎲</span>
+                            <span class="text-yellow-500 font-bold text-lg">{{ coach.average_dice_rating|floatformat:1 }} / 5 🎲</span>
                             <span class="ml-2 text-xs text-gray-500">({{ coach.review_count }} Reviews)</span>
                         </div>
-                        <p class="text-xs italic text-gray-600">
-                            Value Level: {% if coach.average_dice_rating >= 4.5 %}Legendary{% elif coach.average_dice_rating >= 3.5 %}High Value{% else %}Standard{% endif %}
-                        </p>
+                        <div class="mt-1">
+                            {% if coach.average_dice_rating >= 4.5 %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">Value Level: Legendary</span>
+                            {% elif coach.average_dice_rating >= 3.5 %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Value Level: High Value</span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Value Level: Standard</span>
+                            {% endif %}
+                        </div>
                     </div>
 
                     <p class="mt-2 text-gray-600 text-sm italic flex-grow">{{ coach.bio|truncatewords:20 }}</p>

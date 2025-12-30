@@ -42,12 +42,12 @@
                                         @mouseover="hover = i"
                                         @mouseleave="hover = 0"
                                         class="focus:outline-none transition-transform duration-100 hover:scale-110 p-1"
-                                        :title="'Rate ' + i + ' stars'"
+                                        :title="'Rate ' + i + ' dice'"
                                     >
                                         <svg class="w-8 h-8 transition-colors duration-150" 
                                              :class="(hover > 0 ? i <= hover : i <= rating) ? 'text-yellow-400 fill-current' : 'text-gray-300 fill-current'"
                                              viewBox="0 0 24 24">
-                                            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM12 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7 7c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7 15c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 7c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM17 15c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
                                         </svg>
                                     </button>
                                 </template>
