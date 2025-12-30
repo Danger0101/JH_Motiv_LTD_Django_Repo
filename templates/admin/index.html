@@ -1,0 +1,7 @@
+{% extends "admin/index.html" %}
+{% load dashboard_tags %}
+
+{% block content %}
+    {% render_pending_reviews %}
+    {{ block.super }}
+{% endblock %}

@@ -22,6 +22,7 @@ urlpatterns = [
     path('staff/customer-lookup/', views.staff_customer_lookup, name='staff_customer_lookup'),
     path('staff/update-order/<int:order_id>/', views.staff_update_order, name='staff_update_order'),
     path('staff/get-order-row/<int:order_id>/', views.staff_get_order_row, name='staff_get_order_row'),
+    path('staff/deactivated-enrollments/', views.staff_deactivated_enrollments, name='staff_deactivated_enrollments'),
     # allauth urls (explicitly defined for namespacing)
     path('login/', views.CustomLoginView.as_view(), name='login'),
     path('logout/', views.CustomLogoutView.as_view(), name='logout'),

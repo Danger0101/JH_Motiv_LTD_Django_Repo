@@ -1,138 +1,94 @@
-from django.contrib import admin
-from django.db.models import F
-from django.utils.html import format_html
-from django.urls import reverse
-from django.utils import timezone
+import csv
 from datetime import timedelta
-from .models import ClientOfferingEnrollment, SessionBooking, OneSessionFreeOffer, SessionCoverageRequest
-from accounts.models import User
-
-
-class SessionBookingInline(admin.TabularInline):
-    model = SessionBooking
-    extra = 0  # Don't show extra forms for new bookings by default
-    fields = ('start_datetime', 'status', 'coach_link', 'gcal_event_id')
-    readonly_fields = ('start_datetime', 'status', 'coach_link', 'gcal_event_id')
-    can_delete = False
-    show_change_link = True # Allows jumping to the full booking edit page
-    verbose_name = "Scheduled Session"
-    verbose_name_plural = "Scheduled Sessions"
-
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    @admin.display(description='Coach')
-    def coach_link(self, obj):
-        return obj.coach.user.get_full_name()
-
-# --- MODEL ADMINS ---
+from django.contrib import admin
+from django.contrib import messages
+from django.http import HttpResponse
+from .models import (
+    ClientOfferingEnrollment, SessionBooking, SessionCoverageRequest, 
+    OneSessionFreeOffer, CoachBusySlot, CoachReview
+)
 
 @admin.register(ClientOfferingEnrollment)
-class EnrollmentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'client_link', 'offering_link', 'coach_link', 'remaining_sessions', 'is_active', 'expiration_date')
-    list_filter = ('is_active', 'coach', 'offering')
-    search_fields = ('client__email', 'client__username', 'coach__user__email')
-    readonly_fields = ('enrolled_on', 'purchase_date', 'deactivated_on')
-    inlines = [SessionBookingInline]
-    
-    # Critical Optimization
-    list_select_related = ('client', 'offering', 'coach', 'coach__user') 
-    autocomplete_fields = ('client', 'coach', 'offering')
+class ClientOfferingEnrollmentAdmin(admin.ModelAdmin):
+    list_display = ('client', 'offering', 'coach', 'remaining_sessions', 'is_active', 'enrolled_on', 'completed_on')
+    list_filter = ('is_active', 'offering', 'coach')
+    search_fields = ('client__email', 'client__first_name', 'client__last_name')
+    readonly_fields = ('enrolled_on', 'purchase_date', 'completed_on')
+    actions = ['extend_expiration_30_days']
 
-    actions = ['add_bonus_session', 'deactivate_enrollments']
-
-    @admin.action(description='Add 1 bonus session to selected')
-    def add_bonus_session(self, request, queryset):
-        """
-        Admin action to add one bonus session to the selected enrollments.
-        This increments both total_sessions and remaining_sessions.
-        """
-        # Use F() expressions for a race-condition-safe update at the database level.
-        updated = queryset.update(
-            total_sessions=F('total_sessions') + 1,
-            remaining_sessions=F('remaining_sessions') + 1
-        )
-        self.message_user(request, f"Added bonus session to {updated} enrollments.")
-
-    @admin.action(description='Deactivate selected enrollments')
-    def deactivate_enrollments(self, request, queryset):
-        queryset.update(is_active=False)
-        
-    @admin.display(description='Client', ordering='client__last_name')
-    def client_link(self, obj):
-        url = reverse("admin:accounts_user_change", args=[obj.client.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.client.get_full_name())
-
-    @admin.display(description='Offering', ordering='offering__name')
-    def offering_link(self, obj):
-        return obj.offering.name
-
-    @admin.display(description='Coach', ordering='coach__user__last_name')
-    def coach_link(self, obj):
-        if not obj.coach:
-            return "-"
-        url = reverse("admin:accounts_coachprofile_change", args=[obj.coach.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.coach.user.get_full_name())
+    @admin.action(description='Extend expiration by 30 days')
+    def extend_expiration_30_days(self, request, queryset):
+        updated = 0
+        for enrollment in queryset:
+            if enrollment.expiration_date:
+                enrollment.expiration_date += timedelta(days=30)
+                enrollment.save()
+                updated += 1
+        self.message_user(request, f"Extended expiration for {updated} enrollments.", messages.SUCCESS)
 
 @admin.register(SessionBooking)
 class SessionBookingAdmin(admin.ModelAdmin):
-    list_display = ('id', 'start_datetime', 'get_customer', 'type_label', 'status', 'gcal_event_id')
-    list_filter = ('status', 'coach', 'start_datetime', 'workshop')
-    search_fields = ['client__email', 'coach__user__email', 'gcal_event_id', 'guest_email', 'guest_name']
+    list_display = ('client', 'coach', 'start_datetime', 'status', 'attendance', 'offering', 'workshop')
+    list_filter = ('status', 'attendance', 'start_datetime', 'coach')
+    search_fields = ('client__email', 'coach__user__email')
     date_hierarchy = 'start_datetime'
+    actions = ['export_as_csv']
+
+    @admin.action(description='Export Selected Bookings to CSV')
+    def export_as_csv(self, request, queryset):
+        meta = self.model._meta
+        field_names = ['id', 'client', 'coach', 'offering', 'start_datetime', 'end_datetime', 'status', 'attendance', 'amount_paid']
+        
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename={meta.verbose_name_plural}.csv'
+        writer = csv.writer(response)
+
+        writer.writerow(field_names)
+        for obj in queryset:
+            row = []
+            for field in field_names:
+                val = getattr(obj, field)
+                if field == 'client' and val:
+                    val = val.email
+                elif field == 'coach' and val:
+                    val = val.user.get_full_name()
+                elif field == 'offering' and val:
+                    val = val.name
+                elif field in ['start_datetime', 'end_datetime'] and val:
+                    val = val.strftime('%Y-%m-%d %H:%M')
+                row.append(str(val) if val is not None else '')
+            writer.writerow(row)
+
+        return response
+
+@admin.register(CoachReview)
+class CoachReviewAdmin(admin.ModelAdmin):
+    list_display = ('coach', 'client', 'weighted_average', 'status', 'created_at')
+    list_filter = ('status', 'created_at', 'coach')
+    search_fields = ('coach__user__email', 'client__email', 'comment')
+    readonly_fields = ('created_at', 'updated_at', 'weighted_average')
     
-    # Critical Optimization
-    list_select_related = ('client', 'coach', 'coach__user', 'enrollment', 'workshop')
-    autocomplete_fields = ('client', 'coach', 'enrollment', 'workshop')
+    actions = ['approve_reviews', 'reject_reviews']
 
-    @admin.display(description='Customer')
-    def get_customer(self, obj):
-        if obj.client:
-            return obj.client.get_full_name()
-        return f"{obj.guest_name} ({obj.guest_email}) [Guest]"
+    @admin.action(description='Mark selected reviews as Published')
+    def approve_reviews(self, request, queryset):
+        queryset.update(status='PUBLISHED')
 
-    @admin.display(description='Booking Type')
-    def type_label(self, obj):
-        if obj.workshop:
-            return f"Workshop: {obj.workshop.title}"
-        return "1-on-1 Session"
-
-# coaching_booking/admin.py
+    @admin.action(description='Mark selected reviews as Rejected')
+    def reject_reviews(self, request, queryset):
+        queryset.update(status='REJECTED')
 
 @admin.register(OneSessionFreeOffer)
 class OneSessionFreeOfferAdmin(admin.ModelAdmin):
-    # Update list_display to use 'status' instead of 'is_approved' and 'is_redeemed'
-    list_display = ('client', 'coach', 'status', 'redemption_deadline', 'session_link')
-    
-    # Update list_filter to use 'status' instead of the old boolean fields
-    list_filter = ('status', 'date_offered')
-    
-    search_fields = ('client__email', 'coach__user__email')
-    readonly_fields = ('date_offered', 'redemption_deadline', 'session')
-    
-    list_select_related = ('client', 'coach', 'coach__user', 'session')
-    
-    actions = ['approve_offers']
-    
-    @admin.action(description='Approve selected offers')
-    def approve_offers(self, request, queryset):
-        # Update the status field to 'APPROVED' instead of setting a boolean
-        updated = queryset.filter(status='PENDING').update(status='APPROVED')
-        self.message_user(request, f"{updated} offers approved.")
-        
-    @admin.display(description='Booked Session')
-    def session_link(self, obj):
-        if obj.session:
-            url = reverse("admin:coaching_booking_sessionbooking_change", args=[obj.session.pk])
-            return format_html('<a href="{}">View Session</a>', url)
-        return "Not Booked"
+    list_display = ('client', 'coach', 'status', 'date_offered', 'redemption_deadline')
+    list_filter = ('status', 'coach')
 
 @admin.register(SessionCoverageRequest)
 class SessionCoverageRequestAdmin(admin.ModelAdmin):
-    list_display = ('id', 'session_date', 'requesting_coach', 'target_coach', 'status', 'created_at')
-    list_filter = ('status', 'created_at')
-    search_fields = ('requesting_coach__user__email', 'session__client__email')
-    
-    def session_date(self, obj):
-        return obj.session.start_datetime
-    session_date.admin_order_field = 'session__start_datetime'
+    list_display = ('requesting_coach', 'target_coach', 'session', 'status', 'created_at')
+    list_filter = ('status',)
+
+@admin.register(CoachBusySlot)
+class CoachBusySlotAdmin(admin.ModelAdmin):
+    list_display = ('coach', 'start_time', 'end_time', 'source')
+    list_filter = ('coach', 'source')

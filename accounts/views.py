@@ -976,6 +976,25 @@ def staff_customer_lookup(request):
 
     return HttpResponse("") # Return nothing if no query
 
+@staff_member_required
+def staff_deactivated_enrollments(request):
+    """
+    HTMX view to list deactivated enrollments for the staff dashboard.
+    """
+    enrollments = ClientOfferingEnrollment.objects.filter(
+        is_active=False
+    ).select_related(
+        'client', 'offering', 'coach__user'
+    ).order_by('-deactivated_on', '-completed_on')
+
+    paginator = Paginator(enrollments, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'account/partials/staff/deactivated_enrollments.html', {
+        'page_obj': page_obj
+    })
+
 @login_required
 def download_booking_ics(request, booking_id):
     """

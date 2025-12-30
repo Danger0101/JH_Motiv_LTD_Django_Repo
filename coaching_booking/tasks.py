@@ -3,6 +3,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.urls import reverse
 from .models import ClientOfferingEnrollment
+from django.core.management import call_command
 
 @shared_task
 def send_review_request_email(enrollment_id):
@@ -31,3 +32,7 @@ The JH Motiv Team
         send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [client.email])
     except ClientOfferingEnrollment.DoesNotExist:
         pass
+
+@shared_task
+def run_deactivate_expired_enrollments():
+    call_command('deactivate_expired_enrollments')

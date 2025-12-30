@@ -63,6 +63,8 @@ class ClientOfferingEnrollment(models.Model):
                 self.coach = self.offering.coaches.first()
 
         # Logic for managing is_active
+        is_expired = self.expiration_date and self.expiration_date < timezone.now()
+
         if self.remaining_sessions <= 0:
             if self.completed_on is None:
                 self.completed_on = timezone.now()
@@ -76,6 +78,11 @@ class ClientOfferingEnrollment(models.Model):
                     self.deactivated_on = timezone.now()
             # TRIGGER: Here you would call a task to send the 'Please Review' email
             # send_review_request_email.delay(self.client.id, self.id)
+        elif is_expired:
+            if self.is_active:
+                self.is_active = False
+                if self.deactivated_on is None:
+                    self.deactivated_on = timezone.now()
         elif self.remaining_sessions > 0:
             if not self.is_active:
                 self.is_active = True
