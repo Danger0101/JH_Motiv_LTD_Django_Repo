@@ -105,6 +105,10 @@ def add_to_cart(request, variant_id):
     
     if stock_available == 0:
         stock_available = getattr(variant, 'stock', 0) or 0
+        
+    # Fallback to Product stock for single-variant items
+    if stock_available == 0 and variant.product.variants.count() == 1:
+        stock_available = getattr(variant.product, 'stock', 0) or 0
     
     current_in_cart = 0
     try:
@@ -148,8 +152,21 @@ def update_cart_item(request, item_id):
         msg = "Item removed from cart."
     else:
         # Stock Check
-        if not cart_item.variant.product.is_preorder and cart_item.variant.stock_pool:
-            available = cart_item.variant.stock_pool.available_stock
+        if not cart_item.variant.product.is_preorder:
+            available = 0
+            if hasattr(cart_item.variant, 'stock_pool'):
+                try:
+                    if cart_item.variant.stock_pool:
+                        available = cart_item.variant.stock_pool.available_stock
+                except Exception:
+                    pass
+            
+            if available == 0:
+                available = getattr(cart_item.variant, 'stock', 0) or 0
+
+            if available == 0 and cart_item.variant.product.variants.count() == 1:
+                available = getattr(cart_item.variant.product, 'stock', 0) or 0
+
             if quantity > available:
                  return _htmx_toast(request, f"Sorry, only {available} available.", "error")
         
