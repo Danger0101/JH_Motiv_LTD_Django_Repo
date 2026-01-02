@@ -23,6 +23,15 @@
         object-fit: contain !important;
         background-color: #f9fafb; /* bg-gray-50 */
     }
+    /* Fix for loading indicator blocking clicks */
+    #product-loading-indicator {
+        pointer-events: none;
+        opacity: 0;
+    }
+    #product-loading-indicator.htmx-request {
+        pointer-events: auto;
+        opacity: 1;
+    }
 </style>
 {% endblock %}
 
