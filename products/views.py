@@ -8,6 +8,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.views.generic import ListView, DetailView
+from django.db.models import Q, Min
 from .models import Product, Variant
 from payments.models import Order
 from core.email_utils import send_transactional_email
@@ -21,10 +22,30 @@ class ProductListView(ListView):
     context_object_name = 'products'
     
     def get_queryset(self):
-        queryset = Product.objects.filter(is_active=True).order_by('-created_at')
+        queryset = Product.objects.filter(is_active=True)
         search_query = self.request.GET.get('q', '')
         if search_query:
-            queryset = queryset.filter(name__icontains=search_query)
+            queryset = queryset.filter(
+                Q(name__icontains=search_query) | 
+                Q(description__icontains=search_query)
+            )
+            
+        # Sorting Logic
+        sort_by = self.request.GET.get('sort', 'newest')
+        
+        if sort_by == 'price_asc':
+            queryset = queryset.annotate(min_price=Min('variants__price')).order_by('min_price')
+        elif sort_by == 'price_desc':
+            queryset = queryset.annotate(min_price=Min('variants__price')).order_by('-min_price')
+        elif sort_by == 'name_asc':
+            queryset = queryset.order_by('name')
+        elif sort_by == 'name_desc':
+            queryset = queryset.order_by('-name')
+        elif sort_by == 'oldest':
+            queryset = queryset.order_by('created_at')
+        else: # Default to newest
+            queryset = queryset.order_by('-created_at')
+            
         return queryset
 
     def get_paginate_by(self, queryset):
@@ -35,6 +56,7 @@ class ProductListView(ListView):
         context = super().get_context_data(**kwargs)
         context['search_query'] = self.request.GET.get('q', '')
         context['per_page'] = str(self.get_paginate_by(self.object_list))
+        context['current_sort'] = self.request.GET.get('sort', 'newest')
         return context
 
     def render_to_response(self, context, **response_kwargs):
