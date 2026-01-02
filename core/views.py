@@ -109,6 +109,10 @@ def add_to_cart(request, product_id):
     product = get_object_or_404(Product, id=product_id, is_active=True)
     
     variant_id = request.POST.get('variant_id')
+    
+    if not variant_id or variant_id == '0':
+        messages.error(request, "Please select a size/color.")
+        return redirect(request.META.get('HTTP_REFERER', 'core:home'))
 
     from django.apps import apps
     CartItem = apps.get_model('cart', 'CartItem')
