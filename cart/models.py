@@ -37,5 +37,13 @@ class CartItem(models.Model):
         # FIX: Added this method to resolve the AttributeError
         return self.quantity * self.variant.price
 
+    @property
+    def size(self):
+        return self.variant.size
+
+    @property
+    def color(self):
+        return self.variant.color
+
     def __str__(self):
         return f"{self.quantity} of {self.variant.product.name} ({self.variant.name})"

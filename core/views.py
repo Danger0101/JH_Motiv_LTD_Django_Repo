@@ -52,6 +52,7 @@ def home(request):
             'featured_products': products,
             'team_members': team_members,
             'summary': summary,
+            'cart': cart,
         }
         return render(request, 'home.html', context)
     except Exception as e:
@@ -128,6 +129,12 @@ def add_to_cart(request, product_id):
     if request.headers.get('HX-Request'):
         response = HttpResponse(status=204)
         response['HX-Trigger'] = 'loot-acquired'
+        # Trigger 'cartUpdated' to refresh navbar icon, and 'loot-acquired' for the modal
+        triggers = {
+            'loot-acquired': None,
+            'cartUpdated': None
+        }
+        response['HX-Trigger'] = json.dumps(triggers)
         return response
         
     messages.success(request, f"Added {product} to cart!")
