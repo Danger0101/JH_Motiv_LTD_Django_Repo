@@ -88,6 +88,10 @@ def product_detail(request, slug):
             
         in_stock = (stock_count if stock_count is not None else 0) > 0
         
+        # Override for preorders: allow purchase even if stock is 0
+        if product.is_preorder:
+            in_stock = True
+        
         if in_stock:
             any_stock = True
             if first_in_stock_variant is None:

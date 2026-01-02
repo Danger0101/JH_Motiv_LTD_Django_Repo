@@ -106,7 +106,7 @@ def add_to_cart(request, variant_id):
     except CartItem.DoesNotExist:
         pass
 
-    if (current_in_cart + quantity) > stock_available:
+    if not variant.product.is_preorder and (current_in_cart + quantity) > stock_available:
         return _htmx_toast(request, f"Sorry, only {stock_available} available.", "error")
 
     # Add/Update Item
@@ -141,7 +141,7 @@ def update_cart_item(request, item_id):
         msg = "Item removed from cart."
     else:
         # Stock Check
-        if cart_item.variant.stock_pool:
+        if not cart_item.variant.product.is_preorder and cart_item.variant.stock_pool:
             available = cart_item.variant.stock_pool.available_stock
             if quantity > available:
                  return _htmx_toast(request, f"Sorry, only {available} available.", "error")
