@@ -168,14 +168,15 @@
 
                         <div class="relative">
                             <button type="submit" 
-                                    :disabled="!isInStock || selectedVariantId === '0'" 
-                                    :class="{ 'bg-blue-600 hover:bg-blue-700': isInStock && selectedVariantId !== '0', 'bg-gray-400 cursor-not-allowed': !isInStock || selectedVariantId === '0' }"
+                                    :disabled="isSoldOut || !isInStock || selectedVariantId === '0'" 
+                                    :class="{ 'bg-blue-600 hover:bg-blue-700': !isSoldOut && isInStock && selectedVariantId !== '0', 'bg-gray-400 cursor-not-allowed': isSoldOut || !isInStock || selectedVariantId === '0' }"
                                     class="w-full text-white font-bold py-3 px-6 rounded-md transition duration-300 ease-in-out transform hover:-translate-y-0.5 flex items-center justify-center" 
                                     aria-label="Add selected product to cart"
                                     title="Add to Shopping Cart">
                                 <span id="add-to-cart-spinner" class="htmx-indicator animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></span>
-                                <span x-show="isInStock && selectedVariantId !== '0'" x-text="isPreorder ? 'Preorder Now' : 'Add to Stash'">Add to Stash</span>
-                                <span x-show="!isInStock || selectedVariantId === '0'">Loot Depleted / Invalid Selection</span>
+                                <span x-show="!isSoldOut && isInStock && selectedVariantId !== '0'" x-text="isPreorder ? 'Preorder Now' : 'Add to Stash'">Add to Stash</span>
+                                <span x-show="isSoldOut">SOLD OUT</span>
+                                <span x-show="!isSoldOut && (!isInStock || selectedVariantId === '0')">Loot Depleted / Invalid Selection</span>
                             </button>
                         </div>
                     </form>
@@ -211,6 +212,7 @@
             selectedVariantId: '{{ product.variants.first.id|default:'0' }}',
             currentPrice: '{{ product.variants.first.price|floatformat:2|default:'0.00' }}',
             isInStock: true,
+            isSoldOut: {{ is_sold_out|yesno:"true,false" }},
             isPreorder: {{ product.is_preorder|yesno:'true,false' }},
             variantMap: JSON.parse('{{ variant_lookup_json|escapejs }}'),
 
