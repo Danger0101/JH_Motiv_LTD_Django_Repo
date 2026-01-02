@@ -355,6 +355,9 @@
   .inset-y-0 {
     inset-block: calc(var(--spacing) * 0);
   }
+  .-top-2 {
+    top: calc(var(--spacing) * -2);
+  }
   .top-0 {
     top: calc(var(--spacing) * 0);
   }
@@ -369,6 +372,9 @@
   }
   .top-6 {
     top: calc(var(--spacing) * 6);
+  }
+  .-right-3 {
+    right: calc(var(--spacing) * -3);
   }
   .right-0 {
     right: calc(var(--spacing) * 0);
@@ -459,9 +465,6 @@
     @media (width >= 96rem) {
       max-width: 96rem;
     }
-  }
-  .-m-2 {
-    margin: calc(var(--spacing) * -2);
   }
   .m-0 {
     margin: calc(var(--spacing) * 0);
@@ -2458,20 +2461,6 @@
     &:is(:where(.group):hover *) {
       @media (hover: hover) {
         color: var(--color-gray-200);
-      }
-    }
-  }
-  .group-hover\:text-gray-500 {
-    &:is(:where(.group):hover *) {
-      @media (hover: hover) {
-        color: var(--color-gray-500);
-      }
-    }
-  }
-  .group-hover\:text-gray-800 {
-    &:is(:where(.group):hover *) {
-      @media (hover: hover) {
-        color: var(--color-gray-800);
       }
     }
   }
