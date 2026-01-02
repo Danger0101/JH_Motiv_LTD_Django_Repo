@@ -97,9 +97,6 @@ def product_detail(request, slug):
         if stock_count == 0 and variants.count() == 1:
              stock_count = getattr(product, 'stock', 0) or 0
 
-        # DEBUG: Print stock to console to verify
-        print(f"DEBUG: Variant {variant.id} ({color_val}/{size_val}) - Stock: {stock_count}")
-            
         in_stock = (stock_count if stock_count is not None else 0) > 0
         
         # Override for preorders: allow purchase even if stock is 0
@@ -150,7 +147,7 @@ def product_detail(request, slug):
         'show_size_selector': len(sorted_sizes) > 0 and not (len(sorted_sizes) == 1 and sorted_sizes[0] == "One Size"),
         'initial_color': initial_color,
         'initial_size': initial_size,
-        'is_sold_out': variants.exists() and not any_stock,
+        'is_sold_out': variants.exists() and not any_stock and not product.is_preorder,
     }
     return render(request, 'products/product_detail.html', context)
 
