@@ -71,8 +71,12 @@ def product_detail(request, slug):
     any_stock = False
 
     for variant in variants:
+        # Normalize attributes for lookup key and lists
+        color_val = variant.color if variant.color else "Default"
+        size_val = variant.size if variant.size else "One Size"
+        
         # Create lookup key: "Color_Size"
-        key = f"{variant.color}_{variant.size}"
+        key = f"{color_val}_{size_val}"
         
         # Determine stock status safely (default to 0 if field missing)
         stock_count = getattr(variant, 'stock', 0)
@@ -89,8 +93,8 @@ def product_detail(request, slug):
         
         # Collect unique attributes. Default hex to black if missing.
         hex_code = getattr(variant, 'hex_code', '#000000') 
-        unique_colors.add((variant.color, hex_code))
-        unique_sizes.add(variant.size)
+        unique_colors.add((color_val, hex_code))
+        unique_sizes.add(size_val)
 
     context = {
         'product': product,

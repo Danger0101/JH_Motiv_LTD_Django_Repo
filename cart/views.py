@@ -24,8 +24,12 @@ def cart_summary_fragment(request):
     """Refreshes the Mini Cart Icon in the Navbar."""
     cart = get_or_create_cart(request)
     summary = get_cart_summary_data(cart)
+    
+    # Check if this is an HTMX request to trigger animation
+    should_shake = request.headers.get('HX-Request')
+    
     # Renders JUST the icon file you uploaded
-    return render(request, 'cart/partials/cart_summary.html', {'cart': cart, 'summary': summary})
+    return render(request, 'cart/partials/cart_summary.html', {'cart': cart, 'summary': summary, 'should_shake': should_shake})
 
 @require_GET
 def cart_item_list(request):

@@ -3,8 +3,18 @@
      hx-trigger="cartUpdated from:body" 
      hx-swap="outerHTML"
      class="relative inline-block">
+    <style nonce="{{ csp_nonce }}">
+        @keyframes cartShake {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-12deg); }
+            75% { transform: rotate(12deg); }
+        }
+        .animate-cart-shake {
+            animation: cartShake 0.5s ease-in-out;
+        }
+    </style>
     <a href="{% url 'cart:cart_detail' %}" class="text-gray-600 hover:text-gray-900 transition-colors duration-200 relative">
-        <i class="fas fa-shopping-cart fa-lg"></i>
+        <i class="fas fa-shopping-cart fa-lg {% if should_shake %}animate-cart-shake{% endif %}"></i>
         {% if summary.item_count > 0 %}
         <span class="absolute -top-2 -right-3 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-bounce shadow-sm">
             {{ summary.item_count }}
