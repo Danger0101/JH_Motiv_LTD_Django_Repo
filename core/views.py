@@ -81,21 +81,22 @@ def product_detail(request, slug):
         
         # Determine stock status safely (default to 0 if field missing)
         stock_count = 0
-        # 1. Try StockPool
-        if hasattr(variant, 'stock_pool'):
-            try:
-                if variant.stock_pool:
-                    stock_count = variant.stock_pool.available_stock
-            except Exception:
-                pass
-        
-        # 2. Fallback to direct 'stock' field if StockPool is 0 or missing
-        if stock_count == 0:
-            stock_count = getattr(variant, 'stock', 0) or 0
+        if not product.is_preorder:
+            # 1. Try StockPool
+            if hasattr(variant, 'stock_pool'):
+                try:
+                    if variant.stock_pool:
+                        stock_count = variant.stock_pool.available_stock
+                except Exception:
+                    pass
             
-        # 3. Fallback to Product stock if Variant stock is 0 (Common for single-variant items)
-        if stock_count == 0 and len(variants) == 1:
-             stock_count = getattr(product, 'stock', 0) or 0
+            # 2. Fallback to direct 'stock' field if StockPool is 0 or missing
+            if stock_count == 0:
+                stock_count = getattr(variant, 'stock', 0) or 0
+                
+            # 3. Fallback to Product stock if Variant stock is 0 (Common for single-variant items)
+            if stock_count == 0 and len(variants) == 1:
+                 stock_count = getattr(product, 'stock', 0) or 0
 
         in_stock = (stock_count if stock_count is not None else 0) > 0
         

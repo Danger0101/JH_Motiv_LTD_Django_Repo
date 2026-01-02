@@ -96,19 +96,20 @@ def add_to_cart(request, variant_id):
 
     # Stock Check
     stock_available = 0
-    if hasattr(variant, 'stock_pool'):
-        try:
-            if variant.stock_pool:
-                stock_available = variant.stock_pool.available_stock
-        except Exception:
-            pass
-    
-    if stock_available == 0:
-        stock_available = getattr(variant, 'stock', 0) or 0
+    if not variant.product.is_preorder:
+        if hasattr(variant, 'stock_pool'):
+            try:
+                if variant.stock_pool:
+                    stock_available = variant.stock_pool.available_stock
+            except Exception:
+                pass
         
-    # Fallback to Product stock for single-variant items
-    if stock_available == 0 and variant.product.variants.count() == 1:
-        stock_available = getattr(variant.product, 'stock', 0) or 0
+        if stock_available == 0:
+            stock_available = getattr(variant, 'stock', 0) or 0
+            
+        # Fallback to Product stock for single-variant items
+        if stock_available == 0 and variant.product.variants.count() == 1:
+            stock_available = getattr(variant.product, 'stock', 0) or 0
     
     current_in_cart = 0
     try:
