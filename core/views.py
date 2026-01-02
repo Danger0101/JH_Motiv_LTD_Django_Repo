@@ -93,6 +93,13 @@ def product_detail(request, slug):
         if stock_count == 0:
             stock_count = getattr(variant, 'stock', 0) or 0
             
+        # 3. Fallback to Product stock if Variant stock is 0 (Common for single-variant items)
+        if stock_count == 0 and variants.count() == 1:
+             stock_count = getattr(product, 'stock', 0) or 0
+
+        # DEBUG: Print stock to console to verify
+        print(f"DEBUG: Variant {variant.id} ({color_val}/{size_val}) - Stock: {stock_count}")
+            
         in_stock = (stock_count if stock_count is not None else 0) > 0
         
         # Override for preorders: allow purchase even if stock is 0
