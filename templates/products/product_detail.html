@@ -109,7 +109,7 @@
                           hx-post="{% url 'core:add_to_cart' product.id %}"
                           hx-trigger="confirmed-add-to-cart"
                           hx-indicator="#add-to-cart-spinner"
-                          @htmx:after-request="handleAfterRequest($event)"
+                          @htmx:after-request="handleAfterRequest"
                           x-on:submit.prevent="addToCart"
                           >
                         {% csrf_token %}
@@ -122,21 +122,20 @@
                             <div class="flex flex-wrap gap-3">
                                 {% for color_name, hex_code in unique_colors %}
                                 <button type="button" 
+                                        x-data="colorButton"
                                         data-color="{{ color_name|escapejs }}"
                                         data-hex="{{ hex_code }}"
-                                        x-on:click="setColorByEvent"
+                                        x-on:click="select"
                                         class="w-10 h-10 rounded-full border-2 transition-all duration-150 relative group"
-                                        :class="getColorClasses"
-                                        :style="getColorStyle"
+                                        :class="classes"
+                                        :style="style"
                                         aria-label="Select color {{ color_name }}"
                                         title="{{ color_name }}">
                                     
                                     <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-20 shadow-lg">
                                         {{ color_name }}
                                     </span>
-                                    <template x-if="selectedColor === '{{ color_name|escapejs }}'">
-                                         <svg class="w-4 h-4 text-white absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 drop-shadow-lg" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 13.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
-                                    </template>
+                                    <svg x-show="isSelected" class="w-4 h-4 text-white absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 drop-shadow-lg" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 13.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
                                 </button>
                                 {% endfor %}
                             </div>
@@ -151,10 +150,11 @@
                             <div class="flex flex-wrap gap-2">
                                 {% for size_name in unique_sizes %}
                                 <button type="button" 
+                                        x-data="sizeButton"
                                         data-size="{{ size_name|escapejs }}"
-                                        x-on:click="setSizeByEvent"
+                                        x-on:click="select"
                                         class="px-5 py-2 border-2 rounded-xl cursor-pointer text-sm font-medium transition duration-150 ease-in-out shadow-sm"
-                                        :class="getSizeClasses"
+                                        :class="classes"
                                         aria-label="Select size {{ size_name }}">
                                     {{ size_name }}
                                 </button>
@@ -246,38 +246,6 @@
                 }
             },
 
-            setColorByEvent(e) {
-                this.selectedColor = e.currentTarget.getAttribute('data-color');
-                this.findVariant();
-            },
-
-            setSizeByEvent(e) {
-                this.selectedSize = e.currentTarget.getAttribute('data-size');
-                this.findVariant();
-            },
-
-            // CSP-Compliant Helpers
-            getColorClasses() {
-                const color = this.$el.getAttribute('data-color');
-                return this.selectedColor === color 
-                    ? 'ring-4 ring-offset-2 ring-blue-500 border-transparent' 
-                    : 'border-gray-300 hover:border-blue-400';
-            },
-            getColorStyle() {
-                const hex = this.$el.getAttribute('data-hex');
-                const color = this.$el.getAttribute('data-color');
-                let style = { backgroundColor: hex };
-                if (color === 'White') {
-                    style.border = '1px solid #D1D5DB';
-                }
-                return style;
-            },
-            getSizeClasses() {
-                const size = this.$el.getAttribute('data-size');
-                return this.selectedSize === size
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-700 border-gray-300 hover:border-blue-300';
-            },
             get isAddToCartDisabled() {
                 return this.isSoldOut || !this.isInStock || this.selectedVariantId === '0';
             },
@@ -313,6 +281,55 @@
                 } else {
                     console.error('Invalid variant ID');
                 }
+            }
+        }));
+
+        // Color Button Component
+        Alpine.data('colorButton', () => ({
+            color: '',
+            hex: '',
+            init() {
+                this.color = this.$el.getAttribute('data-color');
+                this.hex = this.$el.getAttribute('data-hex');
+            },
+            get isSelected() {
+                return this.selectedColor === this.color;
+            },
+            get classes() {
+                return this.isSelected 
+                    ? 'ring-4 ring-offset-2 ring-blue-500 border-transparent' 
+                    : 'border-gray-300 hover:border-blue-400';
+            },
+            get style() {
+                let style = { backgroundColor: this.hex };
+                if (this.color === 'White') {
+                    style.border = '1px solid #D1D5DB';
+                }
+                return style;
+            },
+            select() {
+                this.selectedColor = this.color;
+                this.findVariant();
+            }
+        }));
+
+        // Size Button Component
+        Alpine.data('sizeButton', () => ({
+            size: '',
+            init() {
+                this.size = this.$el.getAttribute('data-size');
+            },
+            get isSelected() {
+                return this.selectedSize === this.size;
+            },
+            get classes() {
+                return this.isSelected
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:border-blue-300';
+            },
+            select() {
+                this.selectedSize = this.size;
+                this.findVariant();
             }
         }));
     });
