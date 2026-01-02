@@ -69,6 +69,7 @@ def product_detail(request, slug):
     unique_colors = set()
     unique_sizes = set()
     any_stock = False
+    first_in_stock_variant = None
 
     for variant in variants:
         # Normalize attributes for lookup key and lists
@@ -79,11 +80,18 @@ def product_detail(request, slug):
         key = f"{color_val}_{size_val}"
         
         # Determine stock status safely (default to 0 if field missing)
-        stock_count = getattr(variant, 'stock', 0)
+        stock_count = 0
+        if hasattr(variant, 'stock_pool') and variant.stock_pool:
+            stock_count = variant.stock_pool.available_stock
+        else:
+            stock_count = getattr(variant, 'stock', 0)
+            
         in_stock = (stock_count if stock_count is not None else 0) > 0
         
         if in_stock:
             any_stock = True
+            if first_in_stock_variant is None:
+                first_in_stock_variant = variant
             
         variant_lookup[key] = {
             'id': variant.id,
@@ -105,6 +113,14 @@ def product_detail(request, slug):
     size_rank = {s: i for i, s in enumerate(size_order)}
     sorted_sizes = sorted(list(unique_sizes), key=lambda x: size_rank.get(x, 999))
 
+    # Determine initial selection (prefer in-stock)
+    initial_variant = first_in_stock_variant if first_in_stock_variant else variants.first()
+    initial_color = "Default"
+    initial_size = "One Size"
+    if initial_variant:
+        initial_color = initial_variant.color if initial_variant.color else "Default"
+        initial_size = initial_variant.size if initial_variant.size else "One Size"
+
     context = {
         'product': product,
         'variant_lookup_json': json.dumps(variant_lookup),
@@ -112,6 +128,8 @@ def product_detail(request, slug):
         'unique_sizes': sorted_sizes,
         'show_color_selector': len(sorted_colors) > 0 and not (len(sorted_colors) == 1 and sorted_colors[0][0] == "Default"),
         'show_size_selector': len(sorted_sizes) > 0 and not (len(sorted_sizes) == 1 and sorted_sizes[0] == "One Size"),
+        'initial_color': initial_color,
+        'initial_size': initial_size,
         'is_sold_out': variants.exists() and not any_stock,
     }
     return render(request, 'products/product_detail.html', context)
