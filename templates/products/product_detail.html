@@ -55,17 +55,32 @@
 
         <div>
             <h1 class="text-4xl font-extrabold text-gray-800 mb-2">{{ product.name }}</h1>
+            
+            {# --- DICE RATING --- #}
+            {% if product.dice_rating > 0 %}
+            <div class="flex items-center mb-4 text-yellow-500" title="Difficulty Rating: {{ product.dice_rating }}/5">
+                {% for i in filled_dice %}
+                    <span class="text-2xl mr-1">🎲</span> 
+                {% endfor %}
+                {% for i in empty_dice %}
+                    <span class="text-2xl mr-1 opacity-30">🎲</span>
+                {% endfor %}
+                <span class="text-gray-600 text-sm ml-2 font-medium">({{ product.dice_rating }}/5 Difficulty)</span>
+            </div>
+            {% endif %}
+
             <p class="text-gray-600 mb-6">{{ product.description }}</p>
 
             {% if product.variants.all %}
                 {% with first_variant=product.variants.first %}
                 
                 <div x-data="{ 
-                    selectedColor: '{{ first_variant.color|default:"" }}',     
-                    selectedSize: '{{ first_variant.size|default:"" }}',       
+                    selectedColor: '{{ first_variant.color|default:"Default" }}',     
+                    selectedSize: '{{ first_variant.size|default:"One Size" }}',       
                     selectedVariantId: '{{ first_variant.id|default:'0' }}', 
                     currentPrice: '{{ first_variant.price|floatformat:2|default:'0.00' }}',
                     isInStock: true,
+                    isPreorder: {{ product.is_preorder|yesno:'true,false' }},
                     
                     // FIX: Using |escapejs to ensure the JSON string is safe for the HTML attribute
                     variantMap: JSON.parse('{{ variant_lookup_json|escapejs }}'),
@@ -95,6 +110,14 @@
                         </span>
                     </div>
 
+                    {# --- PREORDER ALERT --- #}
+                    {% if product.is_preorder %}
+                        <div class="bg-blue-50 border-l-4 border-blue-500 text-blue-700 p-4 mb-6 rounded-r shadow-sm" role="alert">
+                            <p class="font-bold flex items-center"><span class="text-xl mr-2">⏳</span> Preorder Item</p>
+                            <p class="mt-1">Expected Release: <span class="font-semibold">{{ product.preorder_release_date|default:"Coming Soon" }}</span></p>
+                        </div>
+                    {% endif %}
+
                     <form x-ref="addToCartForm"
                           method="post"
                           class="space-y-8"
@@ -106,6 +129,7 @@
                           >
                         {% csrf_token %}
                         
+                        {% if show_color_selector %}
                         <div class="space-y-3">
                             <h3 class="text-lg font-semibold text-gray-800">Skin <span class="text-sm text-gray-500 font-normal">(Color)</span>: 
                                 <span class="font-bold" x-text="selectedColor"></span>
@@ -126,7 +150,9 @@
                                 {% endfor %}
                             </div>
                         </div>
+                        {% endif %}
 
+                        {% if show_size_selector %}
                         <div class="space-y-3">
                             <h3 class="text-lg font-semibold text-gray-800">Size: 
                                 <span class="font-bold" x-text="selectedSize"></span>
@@ -143,6 +169,7 @@
                                 {% endfor %}
                             </div>
                         </div>
+                        {% endif %}
                         
                         <input type="hidden" name="variant_id" :value="selectedVariantId">
                         <input type="hidden" id="base-url-input" value="{% url 'cart:add_to_cart' 0 %}">
@@ -160,7 +187,7 @@
                                     aria-label="Add selected product to cart"
                                     title="Add to Shopping Cart">
                                 <span id="add-to-cart-spinner" class="htmx-indicator animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></span>
-                                <span x-show="isInStock && selectedVariantId !== '0'">Add to Stash</span>
+                                <span x-show="isInStock && selectedVariantId !== '0'" x-text="isPreorder ? 'Preorder Now' : 'Add to Stash'">Add to Stash</span>
                                 <span x-show="!isInStock || selectedVariantId === '0'">Loot Depleted / Invalid Selection</span>
                             </button>
                         </div>

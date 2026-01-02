@@ -52,6 +52,7 @@ class Product(models.Model):
         ('mug', 'Mug / Drinkware'),
         ('poster', 'Poster / Canvas'),
         ('sticker', 'Sticker'),
+        ('book', 'Book / Literature'),
     ]
 
     name = models.CharField(max_length=255)
@@ -70,6 +71,22 @@ class Product(models.Model):
         help_text="Used to calculate manual shipping rates."
     )
     is_active = models.BooleanField(default=True, help_text="Uncheck to hide this product from the shop.")
+
+    # --- NEW FIELDS ---
+    dice_rating = models.PositiveIntegerField(
+        default=0, 
+        help_text="Enter a rating (e.g., 1-5) to be displayed as dice icons."
+    )
+    is_preorder = models.BooleanField(
+        default=False, 
+        help_text="Check this box if the product is currently in preorder status."
+    )
+    preorder_release_date = models.DateField(
+        null=True, 
+        blank=True, 
+        help_text="The expected date this product will be released or shipped."
+    )
+
     printful_product_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID from Printful Sync Product")
     featured_image = models.ImageField(upload_to='product_images/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -89,6 +106,9 @@ class Product(models.Model):
         Calculates the overall stock status based on the minimum stock
         available in all linked StockPools.
         """
+        if self.is_preorder:
+            return {'status': 'Preorder', 'color': 'blue', 'count': None}
+
         # Get the 'available_stock' for all unique StockPools linked to this product's variants
         pool_stocks = self.variants.filter(stock_pool__isnull=False) \
                                    .values_list('stock_pool__available_stock', flat=True) \
@@ -159,16 +179,29 @@ class Variant(models.Model):
         """
         Checks if the variant is available.
         - Digital products are always available.
+        - Preorder products are always available.
         - Physical products depend on the linked StockPool.
         """
+        # Digital products are always available
         if self.product.product_type == 'digital':
             return True
+        
+        # NEW: Preorder products are always available (bypass stock check)
+        if self.product.is_preorder:
+            return True
+
+        # Standard physical products check the StockPool
         return self.stock_pool.is_in_stock(quantity) if self.stock_pool else False
 
     def __str__(self):
         # Default name if not explicitly set
         if self.name:
             return f"{self.product.name} - {self.name}"
+        
+        # Handle cases where color/size might be empty (e.g. Books, Mugs)
+        if not self.color and not self.size:
+            return self.product.name
+            
         return f"{self.product.name} - {self.color} / {self.size}"
 
     # Ensure uniqueness across product options (e.g., only one Large/Red variant per product)

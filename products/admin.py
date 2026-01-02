@@ -9,9 +9,9 @@ class VariantInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(ModelAdmin):
-    list_display = ('name', 'product_type', 'fulfillment_method', 'shipping_category', 'is_active', 'created_at')
-    list_filter = ('product_type', 'fulfillment_method', 'shipping_category', 'is_active')
-    list_editable = ('is_active', 'fulfillment_method', 'shipping_category')
+    list_display = ('name', 'product_type', 'fulfillment_method', 'shipping_category', 'is_preorder', 'dice_rating', 'is_active', 'created_at')
+    list_filter = ('product_type', 'fulfillment_method', 'shipping_category', 'is_active', 'is_preorder')
+    list_editable = ('is_active', 'fulfillment_method', 'shipping_category', 'is_preorder', 'dice_rating')
     search_fields = ('name', 'description', 'printful_product_id')
     inlines = [VariantInline]
 

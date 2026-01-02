@@ -116,6 +116,10 @@ class ProductDetailView(DetailView):
         context['unique_sizes'] = []
         context['variant_lookup_json'] = json.dumps({})
         
+        # Dice Rating Helpers
+        context['filled_dice'] = range(product.dice_rating)
+        context['empty_dice'] = range(5 - product.dice_rating)
+        
         if not product.variants.exists():
             return context
 
@@ -123,7 +127,13 @@ class ProductDetailView(DetailView):
         unique_sizes = set()
         variant_map = {}
         
+        has_real_colors = False
+        has_real_sizes = False
+        
         for variant in product.variants.all():
+            if variant.color: has_real_colors = True
+            if variant.size: has_real_sizes = True
+
             color = variant.color or "Default"
             size = variant.size or "One Size"
             is_in_stock = variant.is_available() if hasattr(variant, 'is_available') else True
@@ -146,6 +156,8 @@ class ProductDetailView(DetailView):
         context['unique_colors'] = sorted(list(unique_colors), key=lambda x: x[0])
         context['unique_sizes'] = sorted(list(unique_sizes))
         context['variant_lookup_json'] = json.dumps(variant_map)
+        context['show_color_selector'] = has_real_colors
+        context['show_size_selector'] = has_real_sizes
 
         return context
 
