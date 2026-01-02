@@ -61,7 +61,7 @@ def home(request):
 def product_detail(request, slug):
     """Renders the product detail page."""
     product = get_object_or_404(Product, slug=slug, is_active=True)
-    return render(request, 'core/product_detail.html', {'product': product})
+    return render(request, 'products/product_detail.html', {'product': product})
 
 @require_POST
 def add_to_cart(request, product_id):
@@ -80,6 +80,11 @@ def add_to_cart(request, product_id):
     if not created:
         cart_item.quantity += 1
         cart_item.save()
+
+    if request.headers.get('HX-Request'):
+        response = HttpResponse(status=204)
+        response['HX-Trigger'] = 'loot-acquired'
+        return response
         
     messages.success(request, f"Added {product} to cart!")
     return redirect(request.META.get('HTTP_REFERER', 'core:home'))

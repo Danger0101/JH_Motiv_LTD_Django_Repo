@@ -101,7 +101,7 @@
                     <form x-ref="addToCartForm"
                           method="post"
                           class="space-y-8"
-                          hx-post="{% url 'cart:add_to_cart' 0 %}"
+                          hx-post="{% url 'core:add_to_cart' product.id %}"
                           hx-trigger="confirmed-add-to-cart"
                           hx-indicator="#add-to-cart-spinner"
                           @htmx:after-request="if ($event.detail.successful) { $dispatch('loot-acquired'); }"
@@ -152,7 +152,9 @@
                         {% endif %}
                         
                         <input type="hidden" name="variant_id" :value="selectedVariantId">
-                        <input type="hidden" id="base-url-input" value="{% url 'cart:add_to_cart' 0 %}">
+                        <input type="hidden" name="size" :value="selectedSize">
+                        <input type="hidden" name="color" :value="selectedColor">
+                        <input type="hidden" id="base-url-input" value="{% url 'core:add_to_cart' product.id %}">
                         
                         <div x-show="isInStock" x-transition>
                             <label for="quantity-input" class="block text-sm font-medium text-gray-700">Quantity:</label>
@@ -242,7 +244,6 @@
                 const form = this.$refs.addToCartForm;
                 const variantId = this.selectedVariantId;
                 if (variantId && variantId !== '0') {
-                    form.setAttribute('hx-post', '{% url 'cart:add_to_cart' 0 %}'.replace('0', variantId));
                     htmx.process(form);
                     form.dispatchEvent(new Event('confirmed-add-to-cart', {bubbles: true}));
                 } else {
