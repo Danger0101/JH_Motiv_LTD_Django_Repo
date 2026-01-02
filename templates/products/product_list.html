@@ -18,6 +18,11 @@
     .animate-fade-in-up {
         animation: fadeInUp 0.8s ease-out forwards;
     }
+    /* Force product card images to contain instead of cover/stretch */
+    #main-product-grid img {
+        object-fit: contain !important;
+        background-color: #f9fafb; /* bg-gray-50 */
+    }
 </style>
 {% endblock %}
 
