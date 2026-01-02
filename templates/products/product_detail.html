@@ -109,7 +109,7 @@
                           hx-post="{% url 'core:add_to_cart' product.id %}"
                           hx-trigger="confirmed-add-to-cart"
                           hx-indicator="#add-to-cart-spinner"
-                          @htmx:after-request="if ($event.detail.successful) { $dispatch('loot-acquired'); }"
+                          @htmx:after-request="handleAfterRequest($event)"
                           x-on:submit.prevent="addToCart"
                           >
                         {% csrf_token %}
@@ -124,11 +124,11 @@
                                 <button type="button" 
                                         x-on:click="setColor('{{ color_name|escapejs }}')"
                                         class="w-10 h-10 rounded-full border-2 transition-all duration-150 relative"
-                                        :class="{ 'ring-4 ring-offset-2 ring-blue-500': selectedColor === '{{ color_name|escapejs }}', 'border-gray-300 hover:border-blue-400': selectedColor !== '{{ color_name|escapejs }}' }"
-                                        :style="{ backgroundColor: '{{ hex_code }}'{% if color_name == 'White' %}, border: '1px solid #D1D5DB'{% endif %} }"
+                                        :class="getColorClasses('{{ color_name|escapejs }}')"
+                                        :style="getColorStyle('{{ hex_code }}', '{{ color_name|escapejs }}')"
                                         aria-label="Select color {{ color_name }}">
                                     
-                                    <template x-if="selectedColor === '{{ color_name|escapejs }}'">
+                                    <template x-if="isColorSelected('{{ color_name|escapejs }}')">
                                          <svg class="w-4 h-4 text-white absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 drop-shadow-lg" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 13.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
                                     </template>
                                 </button>
@@ -147,7 +147,7 @@
                                 <button type="button" 
                                         x-on:click="setSize('{{ size_name|escapejs }}')"
                                         class="px-5 py-2 border-2 rounded-xl cursor-pointer text-sm font-medium transition duration-150 ease-in-out shadow-sm"
-                                        :class="{ 'bg-blue-600 text-white border-blue-600': selectedSize === '{{ size_name|escapejs }}', 'bg-white text-gray-700 border-gray-300 hover:border-blue-300': selectedSize !== '{{ size_name|escapejs }}' }"
+                                        :class="getSizeClasses('{{ size_name|escapejs }}')"
                                         aria-label="Select size {{ size_name }}">
                                     {{ size_name }}
                                 </button>
@@ -168,15 +168,15 @@
 
                         <div class="relative">
                             <button type="submit" 
-                                    :disabled="isSoldOut || !isInStock || selectedVariantId === '0'" 
-                                    :class="{ 'bg-blue-600 hover:bg-blue-700': !isSoldOut && isInStock && selectedVariantId !== '0', 'bg-gray-400 cursor-not-allowed': isSoldOut || !isInStock || selectedVariantId === '0' }"
+                                    :disabled="isAddToCartDisabled" 
+                                    :class="addToCartClasses"
                                     class="w-full text-white font-bold py-3 px-6 rounded-md transition duration-300 ease-in-out transform hover:-translate-y-0.5 flex items-center justify-center" 
                                     aria-label="Add selected product to cart"
                                     title="Add to Shopping Cart">
                                 <span id="add-to-cart-spinner" class="htmx-indicator animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></span>
-                                <span x-show="!isSoldOut && isInStock && selectedVariantId !== '0'" x-text="isPreorder ? 'Preorder Now' : 'Add to Stash'">Add to Stash</span>
-                                <span x-show="isSoldOut">SOLD OUT</span>
-                                <span x-show="!isSoldOut && (!isInStock || selectedVariantId === '0')">Loot Depleted / Invalid Selection</span>
+                                <span x-show="showAddText" x-text="addTextLabel">Add to Stash</span>
+                                <span x-show="showSoldOutText">SOLD OUT</span>
+                                <span x-show="showDepletedText">Loot Depleted / Invalid Selection</span>
                             </button>
                         </div>
                     </form>
@@ -245,6 +245,53 @@
             setSize(size) {
                 this.selectedSize = size;
                 this.findVariant();
+            },
+
+            // CSP-Compliant Helpers
+            getColorClasses(color) {
+                return this.selectedColor === color 
+                    ? 'ring-4 ring-offset-2 ring-blue-500' 
+                    : 'border-gray-300 hover:border-blue-400';
+            },
+            getColorStyle(hex, color) {
+                let style = { backgroundColor: hex };
+                if (color === 'White') {
+                    style.border = '1px solid #D1D5DB';
+                }
+                return style;
+            },
+            isColorSelected(color) {
+                return this.selectedColor === color;
+            },
+            getSizeClasses(size) {
+                return this.selectedSize === size
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:border-blue-300';
+            },
+            get isAddToCartDisabled() {
+                return this.isSoldOut || !this.isInStock || this.selectedVariantId === '0';
+            },
+            get addToCartClasses() {
+                return !this.isAddToCartDisabled
+                    ? 'bg-blue-600 hover:bg-blue-700'
+                    : 'bg-gray-400 cursor-not-allowed';
+            },
+            get showAddText() {
+                return !this.isSoldOut && this.isInStock && this.selectedVariantId !== '0';
+            },
+            get showSoldOutText() {
+                return this.isSoldOut;
+            },
+            get showDepletedText() {
+                return !this.isSoldOut && (!this.isInStock || this.selectedVariantId === '0');
+            },
+            get addTextLabel() {
+                return this.isPreorder ? 'Preorder Now' : 'Add to Stash';
+            },
+            handleAfterRequest(event) {
+                if (event.detail.successful) {
+                    this.$dispatch('loot-acquired');
+                }
             },
 
             addToCart() {
