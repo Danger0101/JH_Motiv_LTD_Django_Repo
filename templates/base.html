@@ -72,7 +72,7 @@
     {% include 'partials/footer.html' %} {% unicorn_scripts %}
     {% block extra_scripts %}
       <script src="{% static 'js/carousel.js' %}" nonce="{{ csp_nonce }}"></script> 
-      <script src="{% static 'js/alpine_components.js' %}" nonce="{{ csp_nonce }}"></script>
+      <script src="{% static 'js/alpine_components.js' %}" defer nonce="{{ csp_nonce }}"></script>
       <script type="module" src="{% static 'js/cheats/engine.js' %}" nonce="{{ csp_nonce }}"></script>
     {% endblock %}
 
