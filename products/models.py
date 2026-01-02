@@ -86,6 +86,10 @@ class Product(models.Model):
         blank=True, 
         help_text="The expected date this product will be released or shipped."
     )
+    shipping_included = models.BooleanField(
+        default=False,
+        help_text="If checked, this product ships free (not counted in shipping calc)."
+    )
 
     printful_product_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID from Printful Sync Product")
     featured_image = models.ImageField(upload_to='product_images/', blank=True, null=True)

@@ -11,6 +11,8 @@ ROYAL_MAIL_RATES_GB = [
     (10.00, Decimal('9.99')), 
 ]
 
+FREE_SHIPPING_THRESHOLD = Decimal('50.00')
+
 # --- 2. PRINTFUL RATES (Manual Hybrid Model) ---
 PRINTFUL_RATES_GB = {
     't-shirt':  (Decimal('3.59'), Decimal('1.20')),
@@ -35,52 +37,83 @@ PRINTFUL_RATES_GB = {
     'default':  (Decimal('4.99'), Decimal('1.50')),
 }
 
-def get_shipping_rates(address_data, cart):
+def calculate_batch_cost(items):
+    """Calculates shipping cost for a specific list of items."""
     local_items = []
     printful_items = []
     
-    for item in cart.items.all():
+    for item in items:
         product = item.variant.product
         method = getattr(product, 'fulfillment_method', 'local')
         
-        if method == 'digital' or product.product_type in ['digital', 'service']:
-            continue
-        elif method == 'printful':
+        if method == 'printful':
             printful_items.append(item)
         else:
             local_items.append(item)
 
-    has_physical = (len(local_items) + len(printful_items)) > 0
-    if not has_physical:
-        return [], Decimal('0.00')
-
-    total_shipping = Decimal('0.00')
-
-    # 1. Calculate Local Shipping (Weight Based)
+    cost = Decimal('0.00')
+    
     if local_items:
         total_weight = sum(item.variant.weight * item.quantity for item in local_items)
-        total_shipping += calculate_royal_mail_cost(total_weight)
-
-    # 2. Calculate Printful Shipping (Flat Rate + Item)
+        cost += calculate_royal_mail_cost(total_weight)
+        
     if printful_items:
-        total_shipping += calculate_printful_manual_cost(printful_items)
+        cost += calculate_printful_manual_cost(printful_items)
+        
+    return cost
 
-    # 3. Fallback / Safety Net
-    if total_shipping == 0 and has_physical:
-        logger.warning("Shipping calculated to 0 for physical items. Applying fallback.")
+def get_shipping_rates(address_data, cart):
+    # 1. Identify all physical items (to determine if shipping applies at all)
+    all_physical_items = [
+        item for item in cart.items.all()
+        if item.variant.product.product_type not in ['digital', 'service'] 
+        and item.variant.product.fulfillment_method != 'digital'
+    ]
+
+    if not all_physical_items:
+        return [], Decimal('0.00')
+
+    # 2. Filter for items that actually cost money to ship
+    chargeable_items = [i for i in all_physical_items if not i.variant.product.shipping_included]
+
+    # 3. Split into shipments (Immediate vs Preorder)
+    immediate_items = [i for i in chargeable_items if not i.variant.product.is_preorder]
+    preorder_items = [i for i in chargeable_items if i.variant.product.is_preorder]
+    
+    # 4. Calculate cost for each batch separately (Split Shipment Logic)
+    # This naturally charges "extra" because base fees apply to both batches.
+    total_shipping = calculate_batch_cost(immediate_items) + calculate_batch_cost(preorder_items)
+
+    # 5. Fallback / Safety Net
+    # Only apply fallback if we have chargeable items but cost is 0 (e.g. missing weights)
+    # Do NOT apply if cost is 0 because everything is "shipping_included"
+    if total_shipping == 0 and chargeable_items:
+        logger.warning("Shipping calculated to 0 for chargeable physical items. Applying fallback.")
         total_shipping = Decimal('4.99')
 
     # --- COUPON OVERRIDE: FREE SHIPPING ---
     # If the applied coupon allows free shipping, we force the base rate to 0.00
     if cart.coupon and cart.coupon.free_shipping:
         total_shipping = Decimal('0.00')
+    
+    # --- FREE SHIPPING THRESHOLD ---
+    elif cart.get_total_price() >= FREE_SHIPPING_THRESHOLD:
+        total_shipping = Decimal('0.00')
+
+    # Determine Label
+    shipping_label = 'Standard Shipping'
+    if total_shipping == 0 and (
+        (cart.coupon and cart.coupon.free_shipping) or 
+        (all_physical_items and not chargeable_items)
+    ):
+        shipping_label = 'Free Shipping'
 
     rates = []
     # Option 1: Standard (Lowest)
     # This will be £0.00 if the coupon is active
     rates.append({
         'id': 'standard',
-        'label': 'Standard Shipping',
+        'label': shipping_label,
         'detail': 'Royal Mail / Courier (3-5 Days)',
         'amount': total_shipping
     })

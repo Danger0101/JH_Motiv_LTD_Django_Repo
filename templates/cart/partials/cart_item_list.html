@@ -11,6 +11,13 @@
         <h3 class="text-lg font-semibold text-gray-800 truncate">{{ item.variant.product.name }}</h3>
         <p class="text-sm text-gray-500">{{ item.variant.name }}</p>
 
+        {# --- FREE SHIPPING INDICATOR --- #}
+        {% if item.variant.product.shipping_included %}
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mt-1">
+                Free Shipping
+            </span>
+        {% endif %}
+
         {# --- PREORDER INDICATOR --- #}
         {% if item.variant.product.is_preorder %}
             <div class="mt-2 flex items-start p-2 bg-blue-50 rounded-md border border-blue-100 max-w-sm">

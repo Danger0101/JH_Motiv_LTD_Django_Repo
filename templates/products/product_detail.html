@@ -104,10 +104,15 @@
                     }
                 }" x-init="selectInitialVariant()">
                     
-                    <div class="mb-6">
+                    <div class="mb-6 flex items-center gap-4">
                         <span class="text-4xl font-extrabold text-gray-900" x-text="'£' + currentPrice">
                             £{{ first_variant.price|floatformat:2 }}
                         </span>
+                        {% if product.shipping_included %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 shadow-sm">
+                                Free Shipping
+                            </span>
+                        {% endif %}
                     </div>
 
                     {# --- PREORDER ALERT --- #}

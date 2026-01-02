@@ -65,6 +65,10 @@ def checkout_cart_view(request):
         # SAFE USER ID HANDLING
         user_id = request.user.id if request.user.is_authenticated else None
 
+        # Check for mixed cart (Preorder + In-Stock)
+        has_preorder = cart.items.filter(variant__product__is_preorder=True).exists()
+        has_instock = cart.items.filter(variant__product__is_preorder=False).exists()
+
         # 2. Create PaymentIntent
         intent = stripe.PaymentIntent.create(
             amount=initial_amount,
@@ -72,7 +76,9 @@ def checkout_cart_view(request):
             metadata={
                 'cart_id': cart.id,
                 'user_id': user_id,
-                'product_type': 'ecommerce_cart'
+                'product_type': 'ecommerce_cart',
+                'has_preorder': str(has_preorder),
+                'has_instock': str(has_instock)
             },
             automatic_payment_methods={'enabled': True},
         )
@@ -122,7 +128,8 @@ def checkout_calculate_fees(request):
                 'label': rate['label'],
                 'detail': rate['detail'],
                 'amount': f"{rate['amount']:.2f}",
-                'new_total': f"{rate_total:.2f}" 
+                'new_total': f"{rate_total:.2f}",
+                'auto_select': rate['amount'] == 0
             })
             
         return JsonResponse(response_data)
@@ -193,6 +200,10 @@ def create_checkout_session(request):
     if coupon and coupon.free_shipping:
         shipping_amount = Decimal('0.00')
 
+    # Check for mixed cart
+    has_preorder = cart.items.filter(variant__product__is_preorder=True).exists()
+    has_instock = cart.items.filter(variant__product__is_preorder=False).exists()
+
     try: # This try now wraps the entire order creation and Stripe session
         with transaction.atomic():
             # 1. Create a pending Order
@@ -240,12 +251,18 @@ def create_checkout_session(request):
 
             # Add Shipping Line Item if applicable
             if shipping_amount > 0:
+                shipping_desc = 'Standard Shipping'
+                if has_preorder and has_instock:
+                    shipping_desc = 'Split Shipment (Immediate & Preorder)'
+                elif has_preorder:
+                    shipping_desc = 'Preorder Shipping'
+
                 line_items.append({
                     'price_data': {
                         'currency': 'gbp',
                         'product_data': {
                             'name': 'Shipping & Handling',
-                            'description': 'Standard Shipping',
+                            'description': shipping_desc,
                         },
                         'unit_amount': int(shipping_amount * 100),
                     },
@@ -266,6 +283,8 @@ def create_checkout_session(request):
                     'shipping_address_json': json.dumps(address_data) if address_data else '',
                     'cart_id': cart.id, # Pass cart_id for later cleanup
                     'coupon_code': coupon.code if coupon else '', # Pass coupon code for webhook logic
+                    'has_preorder': str(has_preorder),
+                    'has_instock': str(has_instock),
                 }
             }
 
