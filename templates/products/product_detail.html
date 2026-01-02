@@ -120,7 +120,7 @@
                                 <span class="font-bold" x-text="selectedColor"></span>
                             </h3>
                             <div class="flex flex-wrap gap-3">
-                                {% for color_name, hex_code in unique_colors|dictsort:0 %}
+                                {% for color_name, hex_code in unique_colors %}
                                 <button type="button" 
                                         x-on:click="setColor('{{ color_name|escapejs }}')"
                                         class="w-10 h-10 rounded-full border-2 transition-all duration-150 relative"
