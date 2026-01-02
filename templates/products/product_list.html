@@ -32,6 +32,9 @@
         pointer-events: auto;
         opacity: 1;
     }
+    .text-shadow-outline {
+        text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    }
 </style>
 {% endblock %}
 
@@ -55,8 +58,8 @@
         <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40"></div>
     </div>
     <div class="relative max-w-7xl mx-auto h-full flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 pb-12">
-        <h1 class="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl text-center" style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">Upgrade Your Inventory</h1>
-        <p class="mt-6 text-xl text-white max-w-3xl text-center font-bold" style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">High-stat gear for the daily grind. Boost your confidence +20.</p>
+        <h1 class="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl text-center text-shadow-outline">Upgrade Your Inventory</h1>
+        <p class="mt-6 text-xl text-white max-w-3xl text-center font-bold text-shadow-outline">High-stat gear for the daily grind. Boost your confidence +20.</p>
         
         <div class="mt-8 w-full max-w-4xl p-6 bg-white/10 backdrop-blur-lg rounded-2xl animate-fade-in-up">
             <form 
