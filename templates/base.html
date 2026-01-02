@@ -39,6 +39,18 @@
 
     {% block extra_head %}
     <link rel="stylesheet" href="{% static 'css/carousel.css' %}">
+    <style>
+      /* Move toast container down to avoid blocking the navbar */
+      #toast-container {
+        top: 6rem !important; /* Approx 96px */
+      }
+      /* Loot Drop Theme for Toasts */
+      #toast-container > div, [role="alert"] {
+        background-color: #111827 !important; /* gray-900 */
+        border: 2px solid #f59e0b !important; /* amber-500 */
+        color: #f3f4f6 !important;
+      }
+    </style>
     {% endblock %}
   </head>
   <body
