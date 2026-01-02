@@ -104,6 +104,18 @@
                 },
                 isVisible(toast) {
                     return toast.show;
+                },
+                getToastClass(toast) {
+                    if (toast.type === 'success') return 'bg-green-600';
+                    if (toast.type === 'error') return 'bg-red-600';
+                    if (toast.type === 'info') return 'bg-blue-600';
+                    if (toast.type === 'warning') return 'bg-yellow-600';
+                    return 'bg-blue-600';
+                },
+                getToastIcon(toast) {
+                    if (toast.type === 'success') return '🏆';
+                    if (toast.type === 'warning') return '⚡';
+                    return '👾';
                 }
             }));
 
@@ -124,6 +136,23 @@
                     document.cookie = 'user_consent=; path=/; max-age=0';
                     localStorage.removeItem('user_consent');
                     window.location.reload();
+                }
+            }));
+
+            // Cookie Consent Banner Component
+            Alpine.data('cookieConsent', () => ({
+                consent: localStorage.getItem('user_consent'),
+                init() {
+                    this.$watch('consent', value => localStorage.setItem('user_consent', value));
+                },
+                get showBanner() {
+                    return this.consent === null;
+                },
+                accept() {
+                    this.consent = 'accepted';
+                },
+                reject() {
+                    this.consent = 'rejected';
                 }
             }));
         });

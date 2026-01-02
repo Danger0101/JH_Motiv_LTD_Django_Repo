@@ -25,30 +25,27 @@
             {# 1. STATIC TABS #}
             {% for key, tab in about_data.tabs.items %}
             <button 
-                x-data="tabButton"
-                data-tab="{{ key }}"
-                @click="select"
-                :class="classes"
+                @click="setTab('{{ key }}')"
+                :class="getTabClasses('{{ key }}')"
                 class="py-3 px-6 rounded-lg font-mono text-sm md:text-base font-bold transition-all duration-200 uppercase tracking-widest border border-gray-700"
                 role="tab"
                 aria-controls="{{ key }}-panel"
-                :aria-selected="isSelected"
+                :aria-selected="isActive('{{ key }}')"
             >
-                <span x-show="isSelected" class="mr-2">></span>{{ tab.title }}
+                <span x-show="isActive('{{ key }}')" class="mr-2">></span>{{ tab.title }}
             </button>
             {% endfor %}
 
             {# 2. LEADERBOARD TAB #}
             <button 
-                x-data="leaderboardButton"
-                @click="select"
-                :class="classes"
+                @click="setTab('dreamers')"
+                :class="getLeaderboardClasses()"
                 class="py-3 px-6 rounded-lg font-mono text-sm md:text-base font-bold transition-all duration-200 uppercase tracking-widest border border-gray-700"
                 role="tab"
                 aria-controls="dreamers-panel"
-                :aria-selected="isSelected"
+                :aria-selected="isActive('dreamers')"
             >
-                <span x-show="isSelected" class="mr-2">></span>Leaderboard 🏆
+                <span x-show="isActive('dreamers')" class="mr-2">></span>Leaderboard 🏆
             </button>
         </div>
 
@@ -56,7 +53,7 @@
 
             {# 1. CONTENT PANELS #}
             {% for key, tab in about_data.tabs.items %}
-            <div x-data="tabPanel" data-panel="{{ key }}" x-show="isVisible" role="tabpanel" id="{{ key }}-panel" aria-labelledby="{{ key }}-tab" class="prose max-w-none lg:prose-lg mx-auto">
+            <div x-show="isActive('{{ key }}')" role="tabpanel" id="{{ key }}-panel" aria-labelledby="{{ key }}-tab" class="prose max-w-none lg:prose-lg mx-auto">
                 <h2 class="text-3xl md:text-4xl font-black mb-8 text-gray-900 border-b-4 border-blue-500 inline-block pb-2">
                     {{ tab.heading }}
                 </h2>
@@ -121,7 +118,7 @@
             {% endfor %}
 
             {# 2. LEADERBOARD PANEL #}
-            <div x-data="tabPanel" data-panel="dreamers" x-show="isVisible" role="tabpanel" id="dreamers-panel" aria-labelledby="dreamers-tab" x-cloak>
+            <div x-show="isActive('dreamers')" role="tabpanel" id="dreamers-panel" aria-labelledby="dreamers-tab" x-cloak>
                 <div class="prose max-w-none lg:prose-lg mx-auto">
                     <h2 class="text-3xl md:text-4xl font-black mb-6 text-gray-900 border-b-4 border-pink-500 inline-block pb-2">
                         {{ about_data.dreamers.title }}
@@ -181,36 +178,25 @@
 <script nonce="{{ csp_nonce }}" defer>
     document.addEventListener('alpine:init', () => {
         Alpine.data('aboutTabs', () => ({
-            activeTab: 'about_us'
-        }));
-
-        Alpine.data('tabButton', () => ({
-            tab: '',
-            init() { this.tab = this.$el.dataset.tab; },
-            get isSelected() { return this.activeTab === this.tab; },
-            get classes() {
-                return this.isSelected
-                    ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)]'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white';
+            activeTab: 'about_us',
+            setTab(tab) {
+                this.activeTab = tab;
             },
-            select() { this.activeTab = this.tab; }
-        }));
-
-        Alpine.data('leaderboardButton', () => ({
-            tab: 'dreamers',
-            get isSelected() { return this.activeTab === this.tab; },
-            get classes() {
-                return this.isSelected
-                    ? 'bg-pink-600 text-white shadow-[0_0_15px_rgba(219,39,119,0.5)]'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white';
+            isActive(tab) {
+                return this.activeTab === tab;
             },
-            select() { this.activeTab = this.tab; }
-        }));
-
-        Alpine.data('tabPanel', () => ({
-            panel: '',
-            init() { this.panel = this.$el.dataset.panel; },
-            get isVisible() { return this.activeTab === this.panel; }
+            getTabClasses(tab) {
+                if (this.isActive(tab)) {
+                    return 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)]';
+                }
+                return 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white';
+            },
+            getLeaderboardClasses() {
+                if (this.isActive('dreamers')) {
+                    return 'bg-pink-600 text-white shadow-[0_0_15px_rgba(219,39,119,0.5)]';
+                }
+                return 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white';
+            }
         }));
     });
 </script>
