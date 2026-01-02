@@ -92,17 +92,26 @@ def product_detail(request, slug):
         }
         
         # Collect unique attributes. Default hex to black if missing.
-        hex_code = getattr(variant, 'hex_code', '#000000') 
+        raw_hex = getattr(variant, 'hex_code', None)
+        hex_code = raw_hex if raw_hex else '#000000'
         unique_colors.add((color_val, hex_code))
         unique_sizes.add(size_val)
+
+    # Sort Colors Alphabetically
+    sorted_colors = sorted(list(unique_colors), key=lambda x: x[0])
+
+    # Sort Sizes (Custom Order)
+    size_order = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', 'One Size']
+    size_rank = {s: i for i, s in enumerate(size_order)}
+    sorted_sizes = sorted(list(unique_sizes), key=lambda x: size_rank.get(x, 999))
 
     context = {
         'product': product,
         'variant_lookup_json': json.dumps(variant_lookup),
-        'unique_colors': list(unique_colors),
-        'unique_sizes': sorted(list(unique_sizes)),
-        'show_color_selector': len(unique_colors) > 0 and not (len(unique_colors) == 1 and list(unique_colors)[0][0] == "Default"),
-        'show_size_selector': len(unique_sizes) > 0 and not (len(unique_sizes) == 1 and list(unique_sizes)[0] == "One Size"),
+        'unique_colors': sorted_colors,
+        'unique_sizes': sorted_sizes,
+        'show_color_selector': len(sorted_colors) > 0 and not (len(sorted_colors) == 1 and sorted_colors[0][0] == "Default"),
+        'show_size_selector': len(sorted_sizes) > 0 and not (len(sorted_sizes) == 1 and sorted_sizes[0] == "One Size"),
         'is_sold_out': variants.exists() and not any_stock,
     }
     return render(request, 'products/product_detail.html', context)
