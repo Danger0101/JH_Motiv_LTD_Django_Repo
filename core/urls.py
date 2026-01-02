@@ -5,6 +5,8 @@ app_name = 'core'
 
 urlpatterns = [
     path('', views.home, name='home'),
+    path('product/<slug:slug>/', views.product_detail, name='product_detail'),
+    path('cart/add/<int:product_id>/', views.add_to_cart, name='add_to_cart'),
     path('set-cookie-consent/', views.set_cookie_consent, name='set_cookie_consent'),
     path('about/', views.about_page, name='about'),
     path('faqs/', views.faqs_page, name='faqs'),

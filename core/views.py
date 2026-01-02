@@ -58,6 +58,28 @@ def home(request):
         logger.error(f"Error rendering home page: {e}", exc_info=True)
         raise
 
+def product_detail(request, slug):
+    """Renders the product detail page."""
+    product = get_object_or_404(Product, slug=slug, is_active=True)
+    return render(request, 'core/product_detail.html', {'product': product})
+
+@require_POST
+def add_to_cart(request, product_id):
+    """Adds a product to the cart."""
+    cart = get_or_create_cart(request)
+    product = get_object_or_404(Product, id=product_id, is_active=True)
+    
+    from django.apps import apps
+    CartItem = apps.get_model('cart', 'CartItem')
+    
+    cart_item, created = CartItem.objects.get_or_create(cart=cart, product=product)
+    if not created:
+        cart_item.quantity += 1
+        cart_item.save()
+        
+    messages.success(request, f"Added {product} to cart!")
+    return redirect(request.META.get('HTTP_REFERER', 'core:home'))
+
 def about_page(request): 
     """Renders the About page, fetching dynamic Dreamer and Team data."""
 
