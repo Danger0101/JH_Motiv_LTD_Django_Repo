@@ -75,8 +75,8 @@
                 {% with first_variant=product.variants.first %}
                 
                 <div x-data="{ 
-                    selectedColor: '{{ first_variant.color|default:"Default" }}',     
-                    selectedSize: '{{ first_variant.size|default:"One Size" }}',       
+                    selectedColor: '{{ first_variant.color|default:"Default"|escapejs }}',     
+                    selectedSize: '{{ first_variant.size|default:"One Size"|escapejs }}',       
                     selectedVariantId: '{{ first_variant.id|default:'0' }}', 
                     currentPrice: '{{ first_variant.price|floatformat:2|default:'0.00' }}',
                     isInStock: true,
@@ -142,13 +142,13 @@
                             <div class="flex flex-wrap gap-3">
                                 {% for color_name, hex_code in unique_colors|dictsort:0 %}
                                 <button type="button" 
-                                        x-on:click="selectedColor = '{{ color_name }}'; findVariant();"
+                                        x-on:click="selectedColor = '{{ color_name|escapejs }}'; findVariant();"
                                         class="w-10 h-10 rounded-full border-2 transition-all duration-150 relative"
-                                        :class="{ 'ring-4 ring-offset-2 ring-blue-500': selectedColor === '{{ color_name }}', 'border-gray-300 hover:border-blue-400': selectedColor !== '{{ color_name }}' }"
+                                        :class="{ 'ring-4 ring-offset-2 ring-blue-500': selectedColor === '{{ color_name|escapejs }}', 'border-gray-300 hover:border-blue-400': selectedColor !== '{{ color_name|escapejs }}' }"
                                         style="background-color: {{ hex_code }}; {% if color_name == 'White' %}border: 1px solid #D1D5DB;{% endif %}"
                                         aria-label="Select color {{ color_name }}">
                                     
-                                    <template x-if="selectedColor === '{{ color_name }}'">
+                                    <template x-if="selectedColor === '{{ color_name|escapejs }}'">
                                          <svg class="w-4 h-4 text-white absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 drop-shadow-lg" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 13.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
                                     </template>
                                 </button>
@@ -165,9 +165,9 @@
                             <div class="flex flex-wrap gap-2">
                                 {% for size_name in unique_sizes %}
                                 <button type="button" 
-                                        x-on:click="selectedSize = '{{ size_name }}'; findVariant();"
+                                        x-on:click="selectedSize = '{{ size_name|escapejs }}'; findVariant();"
                                         class="px-5 py-2 border-2 rounded-xl cursor-pointer text-sm font-medium transition duration-150 ease-in-out shadow-sm"
-                                        :class="{ 'bg-blue-600 text-white border-blue-600': selectedSize === '{{ size_name }}', 'bg-white text-gray-700 border-gray-300 hover:border-blue-300': selectedSize !== '{{ size_name }}' }"
+                                        :class="{ 'bg-blue-600 text-white border-blue-600': selectedSize === '{{ size_name|escapejs }}', 'bg-white text-gray-700 border-gray-300 hover:border-blue-300': selectedSize !== '{{ size_name|escapejs }}' }"
                                         aria-label="Select size {{ size_name }}">
                                     {{ size_name }}
                                 </button>
