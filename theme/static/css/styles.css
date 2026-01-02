@@ -891,6 +891,9 @@
     --tw-scale-z: 110%;
     scale: var(--tw-scale-x) var(--tw-scale-y);
   }
+  .rotate-12 {
+    rotate: 12deg;
+  }
   .rotate-180 {
     rotate: 180deg;
   }
