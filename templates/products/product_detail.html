@@ -122,17 +122,19 @@
                             <div class="flex flex-wrap gap-3">
                                 {% for color_name, hex_code in unique_colors %}
                                 <button type="button" 
-                                        x-on:click="setColor('{{ color_name|escapejs }}')"
+                                        data-color="{{ color_name|escapejs }}"
+                                        data-hex="{{ hex_code }}"
+                                        x-on:click="setColorByEvent"
                                         class="w-10 h-10 rounded-full border-2 transition-all duration-150 relative group"
-                                        :class="getColorClasses('{{ color_name|escapejs }}')"
-                                        :style="getColorStyle('{{ hex_code }}', '{{ color_name|escapejs }}')"
+                                        :class="getColorClasses"
+                                        :style="getColorStyle"
                                         aria-label="Select color {{ color_name }}"
                                         title="{{ color_name }}">
                                     
                                     <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-20 shadow-lg">
                                         {{ color_name }}
                                     </span>
-                                    <template x-if="isColorSelected('{{ color_name|escapejs }}')">
+                                    <template x-if="selectedColor === '{{ color_name|escapejs }}'">
                                          <svg class="w-4 h-4 text-white absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 drop-shadow-lg" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 13.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
                                     </template>
                                 </button>
@@ -149,9 +151,10 @@
                             <div class="flex flex-wrap gap-2">
                                 {% for size_name in unique_sizes %}
                                 <button type="button" 
-                                        x-on:click="setSize('{{ size_name|escapejs }}')"
+                                        data-size="{{ size_name|escapejs }}"
+                                        x-on:click="setSizeByEvent"
                                         class="px-5 py-2 border-2 rounded-xl cursor-pointer text-sm font-medium transition duration-150 ease-in-out shadow-sm"
-                                        :class="getSizeClasses('{{ size_name|escapejs }}')"
+                                        :class="getSizeClasses"
                                         aria-label="Select size {{ size_name }}">
                                     {{ size_name }}
                                 </button>
@@ -243,33 +246,34 @@
                 }
             },
 
-            setColor(color) {
-                this.selectedColor = color;
+            setColorByEvent(e) {
+                this.selectedColor = e.currentTarget.getAttribute('data-color');
                 this.findVariant();
             },
 
-            setSize(size) {
-                this.selectedSize = size;
+            setSizeByEvent(e) {
+                this.selectedSize = e.currentTarget.getAttribute('data-size');
                 this.findVariant();
             },
 
             // CSP-Compliant Helpers
-            getColorClasses(color) {
+            getColorClasses() {
+                const color = this.$el.getAttribute('data-color');
                 return this.selectedColor === color 
                     ? 'ring-4 ring-offset-2 ring-blue-500 border-transparent' 
                     : 'border-gray-300 hover:border-blue-400';
             },
-            getColorStyle(hex, color) {
+            getColorStyle() {
+                const hex = this.$el.getAttribute('data-hex');
+                const color = this.$el.getAttribute('data-color');
                 let style = { backgroundColor: hex };
                 if (color === 'White') {
                     style.border = '1px solid #D1D5DB';
                 }
                 return style;
             },
-            isColorSelected(color) {
-                return this.selectedColor === color;
-            },
-            getSizeClasses(size) {
+            getSizeClasses() {
+                const size = this.$el.getAttribute('data-size');
                 return this.selectedSize === size
                     ? 'bg-blue-600 text-white border-blue-600'
                     : 'bg-white text-gray-700 border-gray-300 hover:border-blue-300';
