@@ -1,6 +1,6 @@
 <header class="bg-white shadow-md sticky top-0 z-40">
   <nav
-    x-data="{ isOpen: false }"
+    x-data="navMenu"
     class="container mx-auto px-6 py-4"
     aria-label="Main Site Navigation"
   >
@@ -51,9 +51,9 @@
         </div>
 
         <!-- Account Dropdown -->
-        <div x-data="{ dropdownOpen: false }" class="relative hidden md:block">
+        <div x-data="accountDropdown" class="relative hidden md:block">
           <button
-            @click="dropdownOpen = !dropdownOpen"
+            @click="toggle"
             class="relative z-10 block text-gray-600 hover:text-blue-500"
           >
             <svg
@@ -71,8 +71,8 @@
             </svg>
           </button>
           <div
-            x-show="dropdownOpen"
-            @click.away="dropdownOpen = false"
+            x-show="isVisible"
+            @click.away="close"
             x-cloak
             class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl z-20"
           >
@@ -109,14 +109,14 @@
         <!-- Mobile Menu Button -->
         <div class="md:hidden">
           <button
-            @click="isOpen = !isOpen"
+            @click="toggleMenu"
             type="button"
             class="text-gray-600 hover:text-gray-800 focus:outline-none focus:text-gray-800"
             aria-label="toggle menu"
           >
             <svg viewBox="0 0 24 24" class="h-6 w-6 fill-current">
               <path
-                x-show="!isOpen"
+                x-show="isClosed"
                 fill-rule="evenodd"
                 d="M4 5h16a1 1 0 0 1 0 2H4a1 1 0 1 1 0-2zm0 6h16a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2zm0 6h16a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2z"
               ></path>

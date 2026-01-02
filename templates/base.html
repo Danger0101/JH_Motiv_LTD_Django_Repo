@@ -80,8 +80,16 @@
             // Navigation Component
             Alpine.data('navMenu', () => ({
                 isOpen: false,
-                toggle() { this.isOpen = !this.isOpen },
-                close() { this.isOpen = false }
+                toggleMenu() { this.isOpen = !this.isOpen },
+                get isClosed() { return !this.isOpen }
+            }));
+
+            // Account Dropdown Component
+            Alpine.data('accountDropdown', () => ({
+                dropdownOpen: false,
+                toggle() { this.dropdownOpen = !this.dropdownOpen },
+                close() { this.dropdownOpen = false },
+                get isVisible() { return this.dropdownOpen }
             }));
 
             // Toast Manager Component
@@ -93,6 +101,9 @@
                     setTimeout(() => {
                         this.toasts = this.toasts.filter(t => t.id !== id);
                     }, 5000);
+                },
+                isVisible(toast) {
+                    return toast.show;
                 }
             }));
         });
