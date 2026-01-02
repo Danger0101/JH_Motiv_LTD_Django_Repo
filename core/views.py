@@ -43,16 +43,20 @@ logger = logging.getLogger(__name__)
 
 def home(request):
     """Renders the home page."""
-    products = Product.objects.filter(is_active=True).order_by('-created_at')[:4] # Fetch 4 most recent active products
-    team_members = TeamMember.objects.filter(is_active=True)
-    cart = get_or_create_cart(request)
-    summary = get_cart_summary_data(cart)
-    context = {
-        'featured_products': products,
-        'team_members': team_members,
-        'summary': summary,
-    }
-    return render(request, 'home.html', context)
+    try:
+        products = Product.objects.filter(is_active=True).order_by('-created_at')[:4] # Fetch 4 most recent active products
+        team_members = TeamMember.objects.filter(is_active=True)
+        cart = get_or_create_cart(request)
+        summary = get_cart_summary_data(cart)
+        context = {
+            'featured_products': products,
+            'team_members': team_members,
+            'summary': summary,
+        }
+        return render(request, 'home.html', context)
+    except Exception as e:
+        logger.error(f"Error rendering home page: {e}", exc_info=True)
+        raise
 
 def about_page(request): 
     """Renders the About page, fetching dynamic Dreamer and Team data."""
