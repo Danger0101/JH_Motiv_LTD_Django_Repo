@@ -106,6 +106,26 @@
                     return toast.show;
                 }
             }));
+
+            // Server Message Component (Django Messages)
+            Alpine.data('serverMessage', () => ({
+                show: true,
+                init() {
+                    setTimeout(() => this.show = false, 5000);
+                },
+                get isVisible() {
+                    return this.show;
+                }
+            }));
+
+            // Cookie Manager Component
+            Alpine.data('cookieManager', () => ({
+                reset() {
+                    document.cookie = 'user_consent=; path=/; max-age=0';
+                    localStorage.removeItem('user_consent');
+                    window.location.reload();
+                }
+            }));
         });
       </script>
     {% endblock %}
