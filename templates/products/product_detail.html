@@ -192,7 +192,8 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script nonce="{{ csp_nonce }}">
+{{ block.super }}
+<script nonce="{{ csp_nonce }}" defer>
     document.addEventListener('alpine:init', () => {
         // Loot Box Component
         Alpine.data('lootBox', () => ({
@@ -217,6 +218,7 @@
             variantMap: JSON.parse('{{ variant_lookup_json|escapejs }}'),
 
             init() {
+                console.log('Variant Map Loaded:', this.variantMap);
                 this.findVariant();
             },
 
