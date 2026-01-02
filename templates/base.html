@@ -28,12 +28,13 @@
       nonce="{{ csp_nonce }}"
     ></script>
     <script src="https://unpkg.com/htmx.org/dist/ext/class-tools.js" nonce="{{ csp_nonce }}"></script>
-    <script
+    <!-- <script
       defer
       src="https://unpkg.com/@alpinejs/csp@3.13.7/dist/cdn.min.js"
       crossorigin="anonymous"
       nonce="{{ csp_nonce }}"
-    ></script>
+    ></script> -->
+    <script defer src="https://unpkg.com/alpinejs@3.13.7/dist/cdn.min.js" nonce="{{ csp_nonce }}"></script>
 
     <style nonce="{{ csp_nonce }}">[x-cloak] { display: none !important; }</style>
     
