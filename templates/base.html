@@ -105,16 +105,20 @@
                 isVisible(toast) {
                     return toast.show;
                 },
-                getToastClass(toast) {
-                    if (toast.type === 'success') return 'bg-green-600';
-                    if (toast.type === 'error') return 'bg-red-600';
-                    if (toast.type === 'info') return 'bg-blue-600';
-                    if (toast.type === 'warning') return 'bg-yellow-600';
+            }));
+
+            // Toast Item Component (Child)
+            Alpine.data('toastItem', () => ({
+                get isVisible() { return this.toast.show; },
+                get classes() {
+                    if (this.toast.type === 'success') return 'bg-green-600';
+                    if (this.toast.type === 'error') return 'bg-red-600';
+                    if (this.toast.type === 'warning') return 'bg-yellow-600';
                     return 'bg-blue-600';
                 },
-                getToastIcon(toast) {
-                    if (toast.type === 'success') return '🏆';
-                    if (toast.type === 'warning') return '⚡';
+                get icon() {
+                    if (this.toast.type === 'success') return '🏆';
+                    if (this.toast.type === 'warning') return '⚡';
                     return '👾';
                 }
             }));

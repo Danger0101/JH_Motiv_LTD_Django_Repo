@@ -14,35 +14,32 @@
     <div x-data="tosTabs" class="mt-12">
         <div class="flex justify-center border-b border-gray-200 mb-8" role="tablist" aria-label="Terms of Service Versions">
             <button 
-                @click="setPolicy('retail')"
-                :class="getTabClasses('retail')"
+                x-data="policyButton" data-policy="retail" @click="select" :class="classes"
                 class="w-1/3 py-4 px-1 text-center border-b-2 font-medium text-base focus:outline-none"
                 id="retail-tos-tab"
                 role="tab"
                 aria-controls="retail-tos-panel"
-                :aria-selected="isPolicyActive('retail')"
+                :aria-selected="isSelected"
             >
                 Retail & General Use
             </button>
             <button 
-                @click="setPolicy('coaching')"
-                :class="getTabClasses('coaching')"
+                x-data="policyButton" data-policy="coaching" @click="select" :class="classes"
                 class="w-1/3 py-4 px-1 text-center border-b-2 font-medium text-base focus:outline-none"
                 id="coaching-tos-tab"
                 role="tab"
                 aria-controls="coaching-tos-panel"
-                :aria-selected="isPolicyActive('coaching')"
+                :aria-selected="isSelected"
             >
                 Coaching Offering Terms
             </button>
             <button 
-                @click="setPolicy('dreamer')"
-                :class="getTabClasses('dreamer')"
+                x-data="policyButton" data-policy="dreamer" @click="select" :class="classes"
                 class="w-1/3 py-4 px-1 text-center border-b-2 font-medium text-base focus:outline-none"
                 id="dreamer-tos-tab"
                 role="tab"
                 aria-controls="dreamer-tos-panel"
-                :aria-selected="isPolicyActive('dreamer')"
+                :aria-selected="isSelected"
             >
                 Dreamer Affiliate Terms
             </button>
@@ -50,7 +47,7 @@
 
         <div class="bg-white shadow-lg rounded-lg p-6 lg:p-10">
 
-            <div x-show="isPolicyActive('retail')" role="tabpanel" id="retail-tos-panel" aria-labelledby="retail-tos-tab">
+            <div x-data="policyPanel" data-policy="retail" x-show="isVisible" role="tabpanel" id="retail-tos-panel" aria-labelledby="retail-tos-tab">
                 <h2 class="text-2xl font-bold mb-4">{{ tos_data.retail.title }}</h2>
                 <p class="text-sm text-gray-600 mb-8">Effective Date: {{ tos_data.retail.effective_date }}</p>
                 
@@ -64,7 +61,7 @@
                 {% endfor %}
             </div>
 
-            <div x-show="isPolicyActive('coaching')" role="tabpanel" id="coaching-tos-panel" aria-labelledby="coaching-tos-tab" x-cloak>
+            <div x-data="policyPanel" data-policy="coaching" x-show="isVisible" role="tabpanel" id="coaching-tos-panel" aria-labelledby="coaching-tos-tab" x-cloak>
                 <h2 class="text-2xl font-bold mb-4">{{ tos_data.coaching.title }}</h2>
                 <p class="text-sm text-gray-600 mb-8">Effective Date: {{ tos_data.coaching.effective_date }}</p>
 
@@ -78,7 +75,7 @@
                 {% endfor %}
             </div>
 
-            <div x-show="isPolicyActive('dreamer')" role="tabpanel" id="dreamer-tos-panel" aria-labelledby="dreamer-tos-tab" x-cloak>
+            <div x-data="policyPanel" data-policy="dreamer" x-show="isVisible" role="tabpanel" id="dreamer-tos-panel" aria-labelledby="dreamer-tos-tab" x-cloak>
                 <h2 class="text-2xl font-bold mb-4">Dreamer Affiliate Program Terms</h2>
                 <p class="text-sm text-gray-600 mb-8">Effective Date: October 26, 2023</p>
 
@@ -134,19 +131,23 @@
                 if (params.has('tab')) {
                     this.activePolicy = params.get('tab');
                 }
-            },
-            isPolicyActive(policy) {
-                return this.activePolicy === policy;
-            },
-            setPolicy(policy) {
-                this.activePolicy = policy;
-            },
-            getTabClasses(policy) {
-                if (this.activePolicy === policy) {
-                    return 'border-blue-500 text-blue-600';
-                }
-                return 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
             }
+        }));
+
+        Alpine.data('policyButton', () => ({
+            policy: '',
+            init() { this.policy = this.$el.dataset.policy; },
+            get isSelected() { return this.activePolicy === this.policy; },
+            get classes() {
+                return this.isSelected ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
+            },
+            select() { this.activePolicy = this.policy; }
+        }));
+
+        Alpine.data('policyPanel', () => ({
+            policy: '',
+            init() { this.policy = this.$el.dataset.policy; },
+            get isVisible() { return this.activePolicy === this.policy; }
         }));
     });
 </script>

@@ -33,7 +33,7 @@
         <main class="w-full lg:w-3/4 bg-white rounded-2xl shadow-sm border border-gray-200 min-h-[500px]">
             
             {# 3. DASHBOARD TAB #}
-            <div x-show="isActive('dashboard')" x-cloak class="p-6 lg:p-8"
+            <div x-data="profilePanel" data-tab="dashboard" x-show="isVisible" x-cloak class="p-6 lg:p-8"
                  id="dashboard-tab-content"
                  hx-get="{% url 'accounts:dashboard_partial' %}"
                  hx-trigger="refreshOfferings from:body, refreshBookings from:body"
@@ -42,7 +42,7 @@
             </div>
 
             {# 4. BOOKINGS TAB #}
-            <div x-show="isActive('bookings')" x-cloak class="p-6"
+            <div x-data="profilePanel" data-tab="bookings" x-show="isVisible" x-cloak class="p-6"
                  hx-get="{% url 'accounts:profile_bookings' %}"
                  hx-trigger="refreshBookings from:body"
                  hx-swap="innerHTML">
@@ -50,12 +50,12 @@
             </div>
 
             {# 5. ORDERS TAB #}
-            <div x-show="isActive('order_history')" x-cloak class="p-6">
+            <div x-data="profilePanel" data-tab="order_history" x-show="isVisible" x-cloak class="p-6">
                 {% include 'account/partials/orders/_main.html' %}
             </div>
 
             {# 6. EARNINGS TAB (HTMX Loader) #}
-            <div x-show="isActive('earnings')" x-cloak class="p-6">
+            <div x-data="profilePanel" data-tab="earnings" x-show="isVisible" x-cloak class="p-6">
                  <div id="earnings-tab-content" 
                       hx-get="{% url 'payments:my_earnings' %}" 
                       hx-trigger="intersect once" 
@@ -68,7 +68,7 @@
 
             {# 7. COACH PORTAL TAB #}
             {% if is_coach %}
-            <div x-show="isActive('coach_portal')" x-cloak class="p-6 space-y-8">
+            <div x-data="profilePanel" data-tab="coach_portal" x-show="isVisible" x-cloak class="p-6 space-y-8">
                 {% include 'account/partials/coach/_main.html' %}
                 {% include 'account/partials/coach/_copy_schedule_modal.html' %}
             </div>
@@ -76,7 +76,7 @@
 
             {# 8. STAFF DASHBOARD TAB #}
             {% if is_staff %}
-            <div x-show="isActive('staff')" x-cloak class="p-6 space-y-8 animate-fade-in-up">
+            <div x-data="profilePanel" data-tab="staff" x-show="isVisible" x-cloak class="p-6 space-y-8 animate-fade-in-up">
                 {% include 'account/partials/staff/_main.html' %}
             </div>
             {% endif %}
@@ -95,10 +95,13 @@
             mobileMenuOpen: false,
             toggleMobileMenu() {
                 this.mobileMenuOpen = !this.mobileMenuOpen;
-            },
-            isActive(tab) {
-                return this.activeTab === tab;
             }
+        }));
+
+        Alpine.data('profilePanel', () => ({
+            tab: '',
+            init() { this.tab = this.$el.dataset.tab; },
+            get isVisible() { return this.activeTab === this.tab; }
         }));
     });
 </script>

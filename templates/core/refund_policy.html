@@ -18,24 +18,22 @@
       aria-label="Refund Policy Versions"
     >
       <button
-        @click="setPolicy('retail')"
-        :class="getTabClasses('retail')"
+        x-data="policyButton" data-policy="retail" @click="select" :class="classes"
         class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-base focus:outline-none"
         id="retail-refund-tab"
         role="tab"
         aria-controls="retail-refund-panel"
-        :aria-selected="isPolicyActive('retail')"
+        :aria-selected="isSelected"
       >
         Retail & Products
       </button>
       <button
-        @click="setPolicy('coaching')"
-        :class="getTabClasses('coaching')"
+        x-data="policyButton" data-policy="coaching" @click="select" :class="classes"
         class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-base focus:outline-none"
         id="coaching-refund-tab"
         role="tab"
         aria-controls="coaching-refund-panel"
-        :aria-selected="isPolicyActive('coaching')"
+        :aria-selected="isSelected"
       >
         Coaching Offerings
       </button>
@@ -43,7 +41,7 @@
 
     <div class="bg-white shadow-lg rounded-lg p-6 lg:p-10">
       <div
-        x-show="isPolicyActive('retail')"
+        x-data="policyPanel" data-policy="retail" x-show="isVisible"
         role="tabpanel"
         id="retail-refund-panel"
         aria-labelledby="retail-refund-tab"
@@ -64,7 +62,7 @@
       </div>
 
       <div
-        x-show="isPolicyActive('coaching')"
+        x-data="policyPanel" data-policy="coaching" x-show="isVisible"
         role="tabpanel"
         id="coaching-refund-panel"
         aria-labelledby="coaching-refund-tab"
@@ -96,19 +94,23 @@
 <script nonce="{{ csp_nonce }}" defer>
     document.addEventListener('alpine:init', () => {
         Alpine.data('policyTabs', () => ({
-            activePolicy: 'retail',
-            isPolicyActive(policy) {
-                return this.activePolicy === policy;
+            activePolicy: 'retail'
+        }));
+
+        Alpine.data('policyButton', () => ({
+            policy: '',
+            init() { this.policy = this.$el.dataset.policy; },
+            get isSelected() { return this.activePolicy === this.policy; },
+            get classes() {
+                return this.isSelected ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
             },
-            setPolicy(policy) {
-                this.activePolicy = policy;
-            },
-            getTabClasses(policy) {
-                if (this.activePolicy === policy) {
-                    return 'border-blue-500 text-blue-600';
-                }
-                return 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
-            }
+            select() { this.activePolicy = this.policy; }
+        }));
+
+        Alpine.data('policyPanel', () => ({
+            policy: '',
+            init() { this.policy = this.$el.dataset.policy; },
+            get isVisible() { return this.activePolicy === this.policy; }
         }));
     });
 </script>
