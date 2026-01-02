@@ -81,11 +81,11 @@
         <div class="container mx-auto px-4">
             <h2 id="coaching-offerings" class="text-3xl font-bold text-center text-gray-800 scroll-mt-20">Our Coaching Offerings</h2>
             <p class="mt-4 text-lg text-center text-gray-600">Find the perfect package to start your journey.</p>
-            <div x-data="carousel()" x-init="init()" class="relative w-full max-w-6xl mx-auto mt-12">
+            <div x-data="carousel" class="relative w-full max-w-6xl mx-auto mt-12">
                 <div class="overflow-hidden">
-                    <div x-ref="track" class="flex transition-transform duration-500 ease-in-out" :style="'transform: translateX(-' + (currentIndex * (100 / slidesVisible)) + '%)'">
+                    <div x-ref="track" class="flex transition-transform duration-500 ease-in-out" :style="trackTransform">
                         {% for offering in offerings %}
-                        <div class="w-full flex-shrink-0" :style="'flex-basis: ' + (100 / slidesVisible) + '%'">
+                        <div class="w-full flex-shrink-0" :style="slideBasis">
                             <div class="p-4">
                                 <div class="bg-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition duration-300 flex flex-col h-full">
                                     <h3 class="text-xl font-bold text-gray-800 mb-2">{{ offering.name }}</h3>
@@ -289,7 +289,7 @@
 
 {% block extra_scripts %}
 {{ block.super }}
-<script>
+<script nonce="{{ csp_nonce }}" defer>
 document.addEventListener('DOMContentLoaded', function() {
     // Select all links with href starting with '#'
     const smoothScrollLinks = document.querySelectorAll('a[href^="#"]');
@@ -309,11 +309,12 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Carousel Logic
-function carousel() {
-    return {
+document.addEventListener('alpine:init', () => {
+    Alpine.data('carousel', () => ({
         currentIndex: 0,
         totalSlides: {{ offerings|length }},
         slidesVisible: 3,
+
         init() {
             this.updateSlidesVisible();
             window.addEventListener('resize', () => this.updateSlidesVisible());
@@ -321,6 +322,7 @@ function carousel() {
                 this.currentIndex = 0;
             }
         },
+
         updateSlidesVisible() {
             if (window.innerWidth < 768) {
                 this.slidesVisible = 1;
@@ -330,6 +332,17 @@ function carousel() {
                 this.slidesVisible = 3;
             }
         },
+
+        get trackTransform() {
+            const percentage = this.currentIndex * (100 / this.slidesVisible);
+            return `transform: translateX(-${percentage}%)`;
+        },
+
+        get slideBasis() {
+            const basis = 100 / this.slidesVisible;
+            return `flex-basis: ${basis}%`;
+        },
+
         next() {
             if (this.totalSlides > this.slidesVisible) {
                 if (this.currentIndex < this.totalSlides - this.slidesVisible) {
@@ -339,6 +352,7 @@ function carousel() {
                 }
             }
         },
+
         prev() {
             if (this.totalSlides > this.slidesVisible) {
                 if (this.currentIndex > 0) {
@@ -348,7 +362,7 @@ function carousel() {
                 }
             }
         }
-    }
-}
+    }));
+});
 </script>
 {% endblock %}
