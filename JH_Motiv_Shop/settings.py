@@ -87,6 +87,7 @@ MIDDLEWARE = [
     # Add whitenoise middleware right after SecurityMiddleware
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'csp.middleware.CSPMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -497,3 +498,60 @@ UNFOLD = {
     },
     "DASHBOARD_CALLBACK": "core.admin.dashboard_callback",
 }
+# --- CSP CONFIGURATION ---
+
+# Start with Report Only to avoid breaking the site immediately
+CSP_REPORT_ONLY = True 
+
+# Default: Deny everything unless explicitly allowed
+CSP_DEFAULT_SRC = ("'self'",)
+
+# Automatically generate a nonce and include it in the headers for script-src and style-src
+CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src']
+
+# Scripts: Allow self, plus your tools
+# Note: 'unsafe-eval' is often required for standard Alpine.js
+CSP_SCRIPT_SRC = (
+    "'self'",
+    "https://js.stripe.com",        # Stripe
+    "https://connect.facebook.net", # Common social
+    "https://www.googletagmanager.com", # Google Analytics
+    "https://www.google-analytics.com",
+    "'unsafe-eval'",                # Required for Alpine.js (unless using the CSP build)
+)
+
+# Styles: Tailwind often requires inline styles
+CSP_STYLE_SRC = (
+    "'self'", 
+    "https://fonts.googleapis.com", 
+)
+
+# Images: Allow Cloudinary and Google
+CSP_IMG_SRC = (
+    "'self'",
+    "data:",
+    "https://res.cloudinary.com",   # Cloudinary Images
+    "https://*.googleusercontent.com", # Google Avatars
+    "https://www.google-analytics.com",
+)
+
+# Fonts
+CSP_FONT_SRC = (
+    "'self'", 
+    "https://fonts.gstatic.com", 
+    "data:"
+)
+
+# Connect: Where can the browser send data? (HTMX, Stripe, Analytics)
+CSP_CONNECT_SRC = (
+    "'self'",
+    "https://api.stripe.com",
+    "https://www.google-analytics.com",
+)
+
+# Frames: Required for Stripe Elements or Google OAuth popups
+CSP_FRAME_SRC = (
+    "'self'",
+    "https://js.stripe.com",
+    "https://accounts.google.com",
+)

@@ -7,9 +7,6 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>{% block title %}JH Motiv LTD{% endblock %}</title>
 
-    <!-- Security: Content Security Policy & Upgrade Insecure Requests -->
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests; default-src 'self' https:; script-src 'self' 'nonce-{{ csp_nonce }}' 'unsafe-eval' https://unpkg.com https://cdnjs.cloudflare.com https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-{{ csp_nonce }}' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.stripe.com https://www.google-analytics.com;">
-
     <!-- Social Media Meta Tags (Open Graph) -->
     <meta property="og:title" content="{% block og_title %}JH Motiv LTD{% endblock %}" />
     <meta property="og:image" content="{% block og_image %}{% static 'images/default-share.jpg' %}{% endblock %}" />
