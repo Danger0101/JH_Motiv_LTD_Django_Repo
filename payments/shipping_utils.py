@@ -11,6 +11,18 @@ ROYAL_MAIL_RATES_GB = [
     (10.00, Decimal('9.99')), 
 ]
 
+# --- 1b. ROYAL MAIL RATES (Rest of World) ---
+ROYAL_MAIL_RATES_ROW = [
+    (0.100, Decimal('4.50')), 
+    (0.750, Decimal('10.50')), 
+    (2.000, Decimal('19.00')), 
+    (10.00, Decimal('40.00')), 
+]
+
+EU_COUNTRIES = {
+    'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE'
+}
+
 FREE_SHIPPING_THRESHOLD = Decimal('50.00')
 
 # --- 2. PRINTFUL RATES (Manual Hybrid Model) ---
@@ -37,7 +49,31 @@ PRINTFUL_RATES_GB = {
     'default':  (Decimal('4.99'), Decimal('1.50')),
 }
 
-def calculate_batch_cost(items):
+# --- 2b. PRINTFUL RATES (Rest of World) ---
+PRINTFUL_RATES_ROW = {
+    't-shirt':  (Decimal('6.99'), Decimal('1.50')),
+    'shirt':    (Decimal('6.99'), Decimal('1.50')), 
+    'tank':     (Decimal('6.99'), Decimal('1.50')),
+    'crop':     (Decimal('6.99'), Decimal('1.50')),
+    'hoodie':   (Decimal('10.99'), Decimal('2.50')),
+    'sweat':    (Decimal('10.99'), Decimal('2.50')),
+    'jacket':   (Decimal('10.99'), Decimal('2.50')),
+    'pant':     (Decimal('10.99'), Decimal('2.50')),
+    'jogger':   (Decimal('10.99'), Decimal('2.50')),
+    'legging':  (Decimal('6.99'), Decimal('1.50')),
+    'bag':      (Decimal('8.99'), Decimal('2.00')),
+    'tote':     (Decimal('6.99'), Decimal('1.50')),
+    'hat':      (Decimal('6.99'), Decimal('1.50')),
+    'beanie':   (Decimal('6.99'), Decimal('1.50')),
+    'mug':      (Decimal('7.99'), Decimal('2.50')),
+    'bottle':   (Decimal('8.99'), Decimal('2.50')),
+    'sticker':  (Decimal('2.99'), Decimal('0.20')),
+    'poster':   (Decimal('7.99'), Decimal('1.00')),
+    'canvas':   (Decimal('15.99'), Decimal('5.00')),
+    'default':  (Decimal('8.99'), Decimal('2.00')),
+}
+
+def calculate_batch_cost(items, country_code='GB'):
     """Calculates shipping cost for a specific list of items."""
     local_items = []
     printful_items = []
@@ -55,10 +91,10 @@ def calculate_batch_cost(items):
     
     if local_items:
         total_weight = sum(item.variant.weight * item.quantity for item in local_items)
-        cost += calculate_royal_mail_cost(total_weight)
+        cost += calculate_royal_mail_cost(total_weight, country_code)
         
     if printful_items:
-        cost += calculate_printful_manual_cost(printful_items)
+        cost += calculate_printful_manual_cost(printful_items, country_code)
         
     return cost
 
@@ -74,7 +110,17 @@ def get_shipping_rates(address_data, cart):
         return [], Decimal('0.00')
 
     # 2. Filter for items that actually cost money to ship
-    chargeable_items = [i for i in all_physical_items if not i.variant.product.shipping_included]
+    dest_country = address_data.get('country', 'GB')
+    chargeable_items = []
+    for item in all_physical_items:
+        if not item.variant.product.shipping_included:
+            chargeable_items.append(item)
+        else:
+            # Shipping included only applies to GB and EU
+            if dest_country == 'GB' or dest_country in EU_COUNTRIES:
+                continue
+            else:
+                chargeable_items.append(item)
 
     # 3. Split into shipments (Immediate vs Preorder)
     immediate_items = [i for i in chargeable_items if not i.variant.product.is_preorder]
@@ -82,7 +128,7 @@ def get_shipping_rates(address_data, cart):
     
     # 4. Calculate cost for each batch separately (Split Shipment Logic)
     # This naturally charges "extra" because base fees apply to both batches.
-    total_shipping = calculate_batch_cost(immediate_items) + calculate_batch_cost(preorder_items)
+    total_shipping = calculate_batch_cost(immediate_items, dest_country) + calculate_batch_cost(preorder_items, dest_country)
 
     # 5. Fallback / Safety Net
     # Only apply fallback if we have chargeable items but cost is 0 (e.g. missing weights)
@@ -134,25 +180,37 @@ def get_shipping_rates(address_data, cart):
     return rates, tax_amount
 
 
-def calculate_royal_mail_cost(weight):
+def calculate_royal_mail_cost(weight, country_code='GB'):
     if weight <= 0: weight = Decimal('0.100')
-    for max_weight, price in ROYAL_MAIL_RATES_GB:
+    
+    rates = ROYAL_MAIL_RATES_GB
+    fallback = Decimal('15.00')
+    
+    if country_code != 'GB':
+        rates = ROYAL_MAIL_RATES_ROW
+        fallback = Decimal('45.00')
+
+    for max_weight, price in rates:
         if weight <= Decimal(str(max_weight)):
             return price
-    return Decimal('15.00') 
+    return fallback
 
 
-def calculate_printful_manual_cost(items):
+def calculate_printful_manual_cost(items, country_code='GB'):
+    rates_source = PRINTFUL_RATES_GB
+    if country_code != 'GB':
+        rates_source = PRINTFUL_RATES_ROW
+
     all_units = []
     for item in items:
         name = item.variant.product.name.lower()
         category = 'default'
-        for key in PRINTFUL_RATES_GB:
+        for key in rates_source:
             if key in name:
                 category = key
                 break
         
-        base_price, add_price = PRINTFUL_RATES_GB[category]
+        base_price, add_price = rates_source.get(category, rates_source['default'])
         for _ in range(item.quantity):
             all_units.append({'base': base_price, 'add': add_price})
 
