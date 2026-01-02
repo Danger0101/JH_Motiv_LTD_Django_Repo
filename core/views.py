@@ -67,6 +67,7 @@ def product_detail(request, slug):
     variant_lookup = {}
     unique_colors = set()
     unique_sizes = set()
+    any_stock = False
 
     for variant in variants:
         # Create lookup key: "Color_Size"
@@ -75,6 +76,9 @@ def product_detail(request, slug):
         # Determine stock status safely (default to 0 if field missing)
         stock_count = getattr(variant, 'stock', 0)
         in_stock = (stock_count if stock_count is not None else 0) > 0
+        
+        if in_stock:
+            any_stock = True
             
         variant_lookup[key] = {
             'id': variant.id,
@@ -94,6 +98,7 @@ def product_detail(request, slug):
         'unique_sizes': sorted(list(unique_sizes)),
         'show_color_selector': len(unique_colors) > 0 and not (len(unique_colors) == 1 and list(unique_colors)[0][0] == "Default"),
         'show_size_selector': len(unique_sizes) > 0 and not (len(unique_sizes) == 1 and list(unique_sizes)[0] == "One Size"),
+        'is_sold_out': variants.exists() and not any_stock,
     }
     return render(request, 'products/product_detail.html', context)
 

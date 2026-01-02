@@ -50,10 +50,15 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
         
-        <div role="region" aria-label="Product Image">
+        <div role="region" aria-label="Product Image" class="relative">
             <img src="{% if product.featured_image %}{{ product.featured_image.url }}{% else %}https://via.placeholder.com/500{% endif %}" 
                  alt="{{ product.name }}" 
                  class="w-full rounded-lg shadow-xl aspect-square object-contain bg-gray-50">
+            {% if is_sold_out %}
+                <span class="absolute top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-full font-bold shadow-lg transform rotate-12 z-10">
+                    SOLD OUT
+                </span>
+            {% endif %}
         </div>
 
         <div>
