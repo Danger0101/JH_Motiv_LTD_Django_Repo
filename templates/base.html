@@ -74,6 +74,29 @@
       <script src="{% static 'js/carousel.js' %}" nonce="{{ csp_nonce }}"></script> 
       <script src="{% static 'js/alpine_components.js' %}" defer nonce="{{ csp_nonce }}"></script>
       <script type="module" src="{% static 'js/cheats/engine.js' %}" nonce="{{ csp_nonce }}"></script>
+      
+      <script nonce="{{ csp_nonce }}" defer>
+        document.addEventListener('alpine:init', () => {
+            // Navigation Component
+            Alpine.data('navMenu', () => ({
+                isOpen: false,
+                toggle() { this.isOpen = !this.isOpen },
+                close() { this.isOpen = false }
+            }));
+
+            // Toast Manager Component
+            Alpine.data('toastManager', () => ({
+                toasts: [],
+                add(e) {
+                    const id = Date.now();
+                    this.toasts.push({ id: id, ...e.detail, show: true });
+                    setTimeout(() => {
+                        this.toasts = this.toasts.filter(t => t.id !== id);
+                    }, 5000);
+                }
+            }));
+        });
+      </script>
     {% endblock %}
 
     {% include 'partials/toast_messages.html' %}
