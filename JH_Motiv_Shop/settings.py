@@ -517,7 +517,6 @@ CSP_SCRIPT_SRC = (
     "https://connect.facebook.net", # Common social
     "https://www.googletagmanager.com", # Google Analytics
     "https://www.google-analytics.com",
-    "'unsafe-eval'",                # Required for Alpine.js (unless using the CSP build)
 )
 
 # Styles: Tailwind often requires inline styles
