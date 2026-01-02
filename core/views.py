@@ -100,7 +100,9 @@ def product_detail(request, slug):
         variant_lookup[key] = {
             'id': variant.id,
             'price': float(variant.price),
-            'in_stock': in_stock
+            'in_stock': in_stock,
+            'color': color_val,
+            'size': size_val
         }
         
         # Collect unique attributes. Default hex to black if missing.
