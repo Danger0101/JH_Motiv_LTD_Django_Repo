@@ -128,7 +128,6 @@ def add_to_cart(request, product_id):
 
     if request.headers.get('HX-Request'):
         response = HttpResponse(status=204)
-        response['HX-Trigger'] = 'loot-acquired'
         # Trigger 'cartUpdated' to refresh navbar icon, and 'loot-acquired' for the modal
         triggers = {
             'loot-acquired': None,
