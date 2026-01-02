@@ -227,17 +227,23 @@
 
             init() {
                 console.log('Variant Map Loaded:', this.variantMap);
+                
+                // FIX: Handle single-variant products (like books) that have no size/color options
+                const keys = Object.keys(this.variantMap);
+                if (keys.length === 1) {
+                    const data = this.variantMap[keys[0]];
+                    this.selectedColor = data.color;
+                    this.selectedSize = data.size;
+                }
+                
                 this.findVariant();
 
                 // Fallback: If initial selection failed (e.g. single variant mismatch), pick the first one
-                if (this.selectedVariantId === '0') {
-                    const keys = Object.keys(this.variantMap);
-                    if (keys.length > 0) {
-                        const data = this.variantMap[keys[0]];
-                        this.selectedColor = data.color;
-                        this.selectedSize = data.size;
-                        this.findVariant();
-                    }
+                if (this.selectedVariantId === '0' && keys.length > 0) {
+                    const data = this.variantMap[keys[0]];
+                    this.selectedColor = data.color;
+                    this.selectedSize = data.size;
+                    this.findVariant();
                 }
             },
 
