@@ -4,7 +4,16 @@
 {% block title %}Coach Landing - {{ block.super }}{% endblock %}
 
 {% block extra_head %}
+    {{ block.super }}
     <meta name="description" content="Find the perfect coach to help you achieve your personal and professional goals. Explore our coaching services and book a session.">
+    <style nonce="{{ csp_nonce }}">
+        .text-shadow-outline {
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 4px 4px 0 #000;
+        }
+        .text-shadow-sm {
+            text-shadow: 2px 2px 0 #000;
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
@@ -27,8 +36,8 @@
             <div class="absolute inset-0 bg-gray-900/60"></div>
         </div>
         <div class="relative max-w-7xl mx-auto h-full flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 pb-12">
-            <h1 class="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl text-center" style="text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 4px 4px 0 #000;">Find Your Path to Success</h1>
-            <p class="mt-6 text-xl text-white max-w-3xl text-center font-bold" style="text-shadow: 2px 2px 0 #000;">Unlock your potential with our expert coaches.</p>
+            <h1 class="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl text-center text-shadow-outline">Find Your Path to Success</h1>
+            <p class="mt-6 text-xl text-white max-w-3xl text-center font-bold text-shadow-sm">Unlock your potential with our expert coaches.</p>
             <div class="mt-10 text-center">
                 <a href="#expert-coaches" class="inline-flex items-center px-6 py-3 border-2 border-black text-base font-bold rounded-md shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-gray-900 bg-white hover:bg-gray-50 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all" title="Find a Coach">
                     Select Player

@@ -3,13 +3,21 @@
 
 {% block title %}The Source Code - JH Motiv{% endblock %}
 
+{% block extra_head %}
+{{ block.super }}
+<style nonce="{{ csp_nonce }}">
+    .text-shadow-brand {
+        text-shadow: 2px 2px 0px #e5e7eb;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="max-w-6xl mx-auto py-12 px-4 sm:px-6 lg:px-8 font-sans">
     
     {# --- HEADER: The Terminal Header --- #}
     <div class="text-center mb-12">
-        <h1 class="text-4xl md:text-6xl font-black text-gray-900 tracking-tighter uppercase font-mono" 
-            style="text-shadow: 2px 2px 0px #e5e7eb;">
+        <h1 class="text-4xl md:text-6xl font-black text-gray-900 tracking-tighter uppercase font-mono text-shadow-brand">
             SYSTEM_LORE<span class="text-blue-600 animate-pulse">_</span>
         </h1>
         <p class="mt-4 text-xl text-gray-500 font-mono">
