@@ -61,7 +61,41 @@ def home(request):
 def product_detail(request, slug):
     """Renders the product detail page."""
     product = get_object_or_404(Product, slug=slug, is_active=True)
-    return render(request, 'products/product_detail.html', {'product': product})
+    
+    # --- PREPARE VARIANT DATA FOR ALPINEJS ---
+    variants = product.variants.all()
+    variant_lookup = {}
+    unique_colors = set()
+    unique_sizes = set()
+
+    for variant in variants:
+        # Create lookup key: "Color_Size"
+        key = f"{variant.color}_{variant.size}"
+        
+        # Determine stock status safely (default to 0 if field missing)
+        stock_count = getattr(variant, 'stock', 0)
+        in_stock = (stock_count if stock_count is not None else 0) > 0
+            
+        variant_lookup[key] = {
+            'id': variant.id,
+            'price': float(variant.price),
+            'in_stock': in_stock
+        }
+        
+        # Collect unique attributes. Default hex to black if missing.
+        hex_code = getattr(variant, 'hex_code', '#000000') 
+        unique_colors.add((variant.color, hex_code))
+        unique_sizes.add(variant.size)
+
+    context = {
+        'product': product,
+        'variant_lookup_json': json.dumps(variant_lookup),
+        'unique_colors': list(unique_colors),
+        'unique_sizes': sorted(list(unique_sizes)),
+        'show_color_selector': len(unique_colors) > 0 and not (len(unique_colors) == 1 and list(unique_colors)[0][0] == "Default"),
+        'show_size_selector': len(unique_sizes) > 0 and not (len(unique_sizes) == 1 and list(unique_sizes)[0] == "One Size"),
+    }
+    return render(request, 'products/product_detail.html', context)
 
 @require_POST
 def add_to_cart(request, product_id):
