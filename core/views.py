@@ -94,7 +94,7 @@ def product_detail(request, slug):
             stock_count = getattr(variant, 'stock', 0) or 0
             
         # 3. Fallback to Product stock if Variant stock is 0 (Common for single-variant items)
-        if stock_count == 0 and variants.count() == 1:
+        if stock_count == 0 and len(variants) == 1:
              stock_count = getattr(product, 'stock', 0) or 0
 
         in_stock = (stock_count if stock_count is not None else 0) > 0
