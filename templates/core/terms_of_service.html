@@ -11,38 +11,38 @@
         <p class="mt-4 text-lg text-gray-500">Governing your use of JHMotiv.Shop</p>
     </div>
 
-    <div x-data="{ activePolicy: new URLSearchParams(window.location.search).get('tab') || 'retail' }" class="mt-12">
+    <div x-data="tosTabs" class="mt-12">
         <div class="flex justify-center border-b border-gray-200 mb-8" role="tablist" aria-label="Terms of Service Versions">
             <button 
-                @click="activePolicy = 'retail'"
-                :class="{ 'border-blue-500 text-blue-600': activePolicy === 'retail', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activePolicy !== 'retail' }"
+                @click="setPolicy('retail')"
+                :class="getTabClasses('retail')"
                 class="w-1/3 py-4 px-1 text-center border-b-2 font-medium text-base focus:outline-none"
                 id="retail-tos-tab"
                 role="tab"
                 aria-controls="retail-tos-panel"
-                :aria-selected="activePolicy === 'retail'"
+                :aria-selected="isPolicyActive('retail')"
             >
                 Retail & General Use
             </button>
             <button 
-                @click="activePolicy = 'coaching'"
-                :class="{ 'border-blue-500 text-blue-600': activePolicy === 'coaching', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activePolicy !== 'coaching' }"
+                @click="setPolicy('coaching')"
+                :class="getTabClasses('coaching')"
                 class="w-1/3 py-4 px-1 text-center border-b-2 font-medium text-base focus:outline-none"
                 id="coaching-tos-tab"
                 role="tab"
                 aria-controls="coaching-tos-panel"
-                :aria-selected="activePolicy === 'coaching'"
+                :aria-selected="isPolicyActive('coaching')"
             >
                 Coaching Offering Terms
             </button>
             <button 
-                @click="activePolicy = 'dreamer'"
-                :class="{ 'border-blue-500 text-blue-600': activePolicy === 'dreamer', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activePolicy !== 'dreamer' }"
+                @click="setPolicy('dreamer')"
+                :class="getTabClasses('dreamer')"
                 class="w-1/3 py-4 px-1 text-center border-b-2 font-medium text-base focus:outline-none"
                 id="dreamer-tos-tab"
                 role="tab"
                 aria-controls="dreamer-tos-panel"
-                :aria-selected="activePolicy === 'dreamer'"
+                :aria-selected="isPolicyActive('dreamer')"
             >
                 Dreamer Affiliate Terms
             </button>
@@ -50,7 +50,7 @@
 
         <div class="bg-white shadow-lg rounded-lg p-6 lg:p-10">
 
-            <div x-show="activePolicy === 'retail'" role="tabpanel" id="retail-tos-panel" aria-labelledby="retail-tos-tab">
+            <div x-show="isPolicyActive('retail')" role="tabpanel" id="retail-tos-panel" aria-labelledby="retail-tos-tab">
                 <h2 class="text-2xl font-bold mb-4">{{ tos_data.retail.title }}</h2>
                 <p class="text-sm text-gray-600 mb-8">Effective Date: {{ tos_data.retail.effective_date }}</p>
                 
@@ -64,7 +64,7 @@
                 {% endfor %}
             </div>
 
-            <div x-show="activePolicy === 'coaching'" role="tabpanel" id="coaching-tos-panel" aria-labelledby="coaching-tos-tab" x-cloak>
+            <div x-show="isPolicyActive('coaching')" role="tabpanel" id="coaching-tos-panel" aria-labelledby="coaching-tos-tab" x-cloak>
                 <h2 class="text-2xl font-bold mb-4">{{ tos_data.coaching.title }}</h2>
                 <p class="text-sm text-gray-600 mb-8">Effective Date: {{ tos_data.coaching.effective_date }}</p>
 
@@ -78,7 +78,7 @@
                 {% endfor %}
             </div>
 
-            <div x-show="activePolicy === 'dreamer'" role="tabpanel" id="dreamer-tos-panel" aria-labelledby="dreamer-tos-tab" x-cloak>
+            <div x-show="isPolicyActive('dreamer')" role="tabpanel" id="dreamer-tos-panel" aria-labelledby="dreamer-tos-tab" x-cloak>
                 <h2 class="text-2xl font-bold mb-4">Dreamer Affiliate Program Terms</h2>
                 <p class="text-sm text-gray-600 mb-8">Effective Date: October 26, 2023</p>
 
@@ -121,4 +121,33 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ block.super }}
+<script nonce="{{ csp_nonce }}" defer>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('tosTabs', () => ({
+            activePolicy: 'retail',
+            init() {
+                const params = new URLSearchParams(window.location.search);
+                if (params.has('tab')) {
+                    this.activePolicy = params.get('tab');
+                }
+            },
+            isPolicyActive(policy) {
+                return this.activePolicy === policy;
+            },
+            setPolicy(policy) {
+                this.activePolicy = policy;
+            },
+            getTabClasses(policy) {
+                if (this.activePolicy === policy) {
+                    return 'border-blue-500 text-blue-600';
+                }
+                return 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
+            }
+        }));
+    });
+</script>
 {% endblock %}
