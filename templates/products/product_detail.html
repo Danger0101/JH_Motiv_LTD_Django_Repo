@@ -4,7 +4,7 @@
 {% block title %}{{ product.name }} - Shop{% endblock %}
 
 {% block extra_head %}
-<style>
+<style nonce="{{ csp_nonce }}">
     @keyframes lootShake {
         0% { transform: translate(0, 0) rotate(0deg); }
         25% { transform: translate(-5px, 5px) rotate(-5deg); }

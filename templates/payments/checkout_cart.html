@@ -99,8 +99,8 @@
     </div>
 </div>
 
-<script src="https://js.stripe.com/v3/"></script>
-<script>
+<script src="https://js.stripe.com/v3/" nonce="{{ csp_nonce }}"></script>
+<script nonce="{{ csp_nonce }}">
     const stripe = Stripe("{{ STRIPE_PUBLISHABLE_KEY }}");
     
     // Function to get Stripe Appearance based on active cheat
@@ -148,6 +148,13 @@
     addressElement.mount("#address-element");
     paymentElement.mount("#payment-element");
 
+    // Event delegation for shipping options (CSP compliant - no inline handlers)
+    document.getElementById('shipping-options').addEventListener('change', function(e) {
+        if (e.target && e.target.name === 'shipping_rate') {
+            updateTotal(e.target.value, e.target.dataset.total);
+        }
+    });
+
     let currentTax = 0;
 
     // Listen for valid address to trigger backend calculation
@@ -178,8 +185,7 @@
                             <div class="flex items-center">
                                 <input type="radio" name="shipping_rate" value="${rate.amount}" 
                                        data-total="${rate.new_total}" ${isChecked}
-                                       class="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
-                                       onchange="updateTotal(this.value, this.dataset.total)">
+                                       class="h-4 w-4 text-indigo-600 focus:ring-indigo-500">
                                 <div class="ml-3">
                                     <span class="block text-sm font-medium text-gray-900">${rate.label}</span>
                                     <span class="block text-xs text-gray-500">${rate.detail}</span>

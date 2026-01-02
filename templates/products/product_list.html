@@ -4,7 +4,7 @@
 {% block title %}Shop - JH Motiv LTD{% endblock %}
 
 {% block extra_head %}
-<style>
+<style nonce="{{ csp_nonce }}">
     @keyframes fadeInUp {
         from {
             opacity: 0;

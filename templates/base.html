@@ -8,7 +8,7 @@
     <title>{% block title %}JH Motiv LTD{% endblock %}</title>
 
     <!-- Security: Content Security Policy & Upgrade Insecure Requests -->
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests; default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdnjs.cloudflare.com https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.stripe.com https://www.google-analytics.com;">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests; default-src 'self' https:; script-src 'self' 'nonce-{{ csp_nonce }}' 'unsafe-eval' https://unpkg.com https://cdnjs.cloudflare.com https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'nonce-{{ csp_nonce }}' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.stripe.com https://www.google-analytics.com;">
 
     <!-- Social Media Meta Tags (Open Graph) -->
     <meta property="og:title" content="{% block og_title %}JH Motiv LTD{% endblock %}" />
@@ -28,21 +28,23 @@
       src="https://unpkg.com/htmx.org@1.9.10"
       integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC"
       crossorigin="anonymous"
+      nonce="{{ csp_nonce }}"
     ></script>
-    <script src="https://unpkg.com/htmx.org/dist/ext/class-tools.js"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/class-tools.js" nonce="{{ csp_nonce }}"></script>
     <script
       defer
       src="https://unpkg.com/alpinejs@3.13.7/dist/cdn.min.js"
       crossorigin="anonymous"
+      nonce="{{ csp_nonce }}"
     ></script>
 
-    <style>[x-cloak] { display: none !important; }</style>
+    <style nonce="{{ csp_nonce }}">[x-cloak] { display: none !important; }</style>
     
     {% include 'partials/google_analytics.html' %}
 
     {% block extra_head %}
     <link rel="stylesheet" href="{% static 'css/carousel.css' %}">
-    <style>
+    <style nonce="{{ csp_nonce }}">
       /* Move toast container down to avoid blocking the navbar */
       #toast-container {
         top: 6rem !important; /* Approx 96px */
@@ -72,9 +74,9 @@
     <!-- Footer -->
     {% include 'partials/footer.html' %} {% unicorn_scripts %}
     {% block extra_scripts %}
-      <script src="{% static 'js/carousel.js' %}"></script> 
-      <script src="{% static 'js/alpine_components.js' %}"></script>
-      <script type="module" src="{% static 'js/cheats/engine.js' %}"></script>
+      <script src="{% static 'js/carousel.js' %}" nonce="{{ csp_nonce }}"></script> 
+      <script src="{% static 'js/alpine_components.js' %}" nonce="{{ csp_nonce }}"></script>
+      <script type="module" src="{% static 'js/cheats/engine.js' %}" nonce="{{ csp_nonce }}"></script>
     {% endblock %}
 
     {% include 'partials/toast_messages.html' %}
