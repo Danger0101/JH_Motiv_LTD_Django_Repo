@@ -108,14 +108,15 @@ def add_to_cart(request, product_id):
     cart = get_or_create_cart(request)
     product = get_object_or_404(Product, id=product_id, is_active=True)
     
-    # Get variations from the form
-    size = request.POST.get('size')
-    color = request.POST.get('color')
+    variant_id = request.POST.get('variant_id')
 
     from django.apps import apps
     CartItem = apps.get_model('cart', 'CartItem')
     
-    cart_item, created = CartItem.objects.get_or_create(cart=cart, product=product, size=size, color=color)
+    VariantModel = product.variants.model
+    variant = get_object_or_404(VariantModel, id=variant_id)
+    
+    cart_item, created = CartItem.objects.get_or_create(cart=cart, variant=variant)
     if not created:
         cart_item.quantity += 1
         cart_item.save()
