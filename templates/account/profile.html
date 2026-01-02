@@ -17,7 +17,6 @@
                 <p class="hidden sm:block text-gray-500 text-sm">Manage your account and sessions</p>
             </div>
         </div>
-        <div id="toast-container" class="fixed top-5 right-5 z-[100] flex flex-col gap-2"></div>
         <div class="flex space-x-2">
             {% if is_coach %}
                 <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-semibold uppercase">Coach</span>
@@ -101,30 +100,6 @@
                 return this.activeTab === tab;
             }
         }));
-    });
-
-    document.body.addEventListener('showToast', function (evt) {
-        const message = evt.detail.message;
-        const type = evt.detail.type || 'success';
-        const toastContainer = document.getElementById('toast-container');
-        
-        let bgClass = 'bg-green-600';
-        if (type === 'warning') bgClass = 'bg-yellow-600';
-        if (type === 'error') bgClass = 'bg-red-600';
-        if (type === 'info') bgClass = 'bg-blue-600';
-
-        const toast = document.createElement('div');
-        toast.className = `px-4 py-3 rounded shadow-lg flex items-center gap-2 text-white ${bgClass} transition-all duration-300 transform translate-x-full opacity-0`;
-        toast.innerHTML = `
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            <span>${message}</span>
-        `;
-        toastContainer.appendChild(toast);
-
-        setTimeout(() => { toast.classList.remove('translate-x-full', 'opacity-0'); }, 10);
-
-        setTimeout(() => { toast.classList.add('opacity-0'); }, 4000);
-        setTimeout(() => { toast.remove(); }, 4500);
     });
 </script>
 {% endblock %}

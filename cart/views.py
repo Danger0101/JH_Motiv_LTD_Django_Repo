@@ -161,7 +161,7 @@ def _htmx_response_with_trigger(message, type):
     response = HttpResponse(status=204)
     response['HX-Trigger'] = json.dumps({
         'cartUpdated': None,  # Tells Navbar and Cart Page to refresh
-        'showToast': {'message': message, 'type': type} # Shows the popup
+        'show-toast': {'message': message, 'type': type} # Shows the popup
     })
     return response
 
