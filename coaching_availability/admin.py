@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django import forms
 from django.shortcuts import render, redirect
+from django.urls import reverse
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.utils.html import format_html
@@ -41,11 +42,14 @@ class CoachAvailabilityAdmin(admin.ModelAdmin):
         ]
         return custom_urls + urls
 
+    def add_view(self, request, form_url='', extra_context=None):
+        return redirect('admin:coaching_availability_bulk_add')
+
     def bulk_add_view(self, request):
+        from datetime import time
         
         class BulkAddForm(forms.Form):
             # Generate time choices: All hours 0-23 plus 10:30
-            from datetime import time
             _times = [time(h, 0) for h in range(24)]
             _times.append(time(10, 30)) # Add specific requested half-hour
             _times.sort()
@@ -127,6 +131,7 @@ class CoachAvailabilityAdmin(admin.ModelAdmin):
                     'title': "Confirm Bulk Add",
                     'items_to_create': items_to_create,
                     'confirm_mode': True,
+                    'back_url': reverse('admin:coaching_availability_coachavailability_changelist'),
                 }
                 return render(request, "coaching_booking/bulk_add.html", context)
         else:
@@ -136,6 +141,7 @@ class CoachAvailabilityAdmin(admin.ModelAdmin):
             **self.admin_site.each_context(request),
             'form': form,
             'title': "Bulk Add Availability",
+            'back_url': reverse('admin:coaching_availability_coachavailability_changelist'),
         }
         return render(request, "coaching_booking/bulk_add.html", context)
 
@@ -163,9 +169,9 @@ class DateOverrideAdmin(admin.ModelAdmin):
         return redirect('admin:date_override_bulk_add')
 
     def bulk_add_view(self, request):
+        from datetime import time
         class BulkAddOverrideForm(forms.Form):
             # Generate time choices: All hours 0-23 plus 10:30
-            from datetime import time
             _times = [time(h, 0) for h in range(24)]
             _times.append(time(10, 30)) # Add specific requested half-hour
             _times.sort()
@@ -293,6 +299,7 @@ class DateOverrideAdmin(admin.ModelAdmin):
                     'title': "Confirm Specific Date Overrides",
                     'items_to_create': items_to_create,
                     'confirm_mode': True,
+                    'back_url': reverse('admin:coaching_availability_dateoverride_changelist'),
                 }
                 return render(request, "coaching_booking/bulk_add.html", context)
         else:
@@ -302,6 +309,7 @@ class DateOverrideAdmin(admin.ModelAdmin):
             **self.admin_site.each_context(request),
             'form': form,
             'title': "Bulk Add Date Overrides",
+            'back_url': reverse('admin:coaching_availability_dateoverride_changelist'),
         }
         # Reusing the same template structure as availability bulk add
         return render(request, "coaching_booking/bulk_add.html", context)
