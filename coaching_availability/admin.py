@@ -46,7 +46,7 @@ class CoachAvailabilityAdmin(admin.ModelAdmin):
         return redirect('admin:coaching_availability_bulk_add')
 
     def bulk_add_view(self, request):
-        from datetime import time
+        from datetime import time, datetime
         
         class BulkAddForm(forms.Form):
             # Generate time choices: All hours 0-23 with 30 min intervals
@@ -56,7 +56,7 @@ class CoachAvailabilityAdmin(admin.ModelAdmin):
                 _times.append(time(h, 30))
             
             TIME_CHOICES = [
-                (t.strftime('%H:%M'), t.strftime('%I:%M %p').lstrip('0')) 
+                (t.strftime('%H:%M'), t.strftime('%H:%M')) 
                 for t in _times
             ]
 
@@ -79,24 +79,29 @@ class CoachAvailabilityAdmin(admin.ModelAdmin):
                     "</script>"
                 )
             )
-            start_time = forms.TimeField(
+            start_time = forms.ChoiceField(
+                choices=TIME_CHOICES,
                 label="Start Time",
-                widget=forms.Select(choices=TIME_CHOICES, attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'}),
-                input_formats=['%H:%M', '%H:%M:%S']
+                widget=forms.Select(attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'})
             )
-            end_time = forms.TimeField(
+            end_time = forms.ChoiceField(
+                choices=TIME_CHOICES,
                 label="End Time",
-                widget=forms.Select(choices=TIME_CHOICES, attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'}),
-                input_formats=['%H:%M', '%H:%M:%S']
+                widget=forms.Select(attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'})
             )
 
             def clean(self):
                 cleaned_data = super().clean()
-                start_t = cleaned_data.get('start_time')
-                end_t = cleaned_data.get('end_time')
+                start_t_str = cleaned_data.get('start_time')
+                end_t_str = cleaned_data.get('end_time')
                 
-                if start_t and end_t and start_t >= end_t:
-                    raise forms.ValidationError("End time must be after start time.")
+                if start_t_str and end_t_str:
+                    start_t = datetime.strptime(start_t_str, '%H:%M').time()
+                    end_t = datetime.strptime(end_t_str, '%H:%M').time()
+                    if start_t >= end_t:
+                        raise forms.ValidationError("End time must be after start time.")
+                    cleaned_data['start_time'] = start_t
+                    cleaned_data['end_time'] = end_t
 
                 return cleaned_data
 
@@ -182,7 +187,7 @@ class DateOverrideAdmin(admin.ModelAdmin):
         return redirect('admin:date_override_bulk_add')
 
     def bulk_add_view(self, request):
-        from datetime import time
+        from datetime import time, datetime
         class BulkAddOverrideForm(forms.Form):
             # Generate time choices: All hours 0-23 with 30 min intervals
             _times = []
@@ -191,7 +196,7 @@ class DateOverrideAdmin(admin.ModelAdmin):
                 _times.append(time(h, 30))
             
             TIME_CHOICES = [('', 'Full Day / None')] + [
-                (t.strftime('%H:%M'), t.strftime('%I:%M %p').lstrip('0')) 
+                (t.strftime('%H:%M'), t.strftime('%H:%M')) 
                 for t in _times
             ]
 
@@ -308,19 +313,19 @@ class DateOverrideAdmin(admin.ModelAdmin):
                 label="Is Available?",
                 widget=forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2'})
             )
-            start_time = forms.TimeField(
+            start_time = forms.ChoiceField(
+                choices=TIME_CHOICES,
                 required=False, 
                 label="Start Time", 
                 help_text="Leave blank for full day",
-                widget=forms.Select(choices=TIME_CHOICES, attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'}),
-                input_formats=['%H:%M', '%H:%M:%S']
+                widget=forms.Select(attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'})
             )
-            end_time = forms.TimeField(
+            end_time = forms.ChoiceField(
+                choices=TIME_CHOICES,
                 required=False, 
                 label="End Time", 
                 help_text="Leave blank for full day",
-                widget=forms.Select(choices=TIME_CHOICES, attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'}),
-                input_formats=['%H:%M', '%H:%M:%S']
+                widget=forms.Select(attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'})
             )
 
             def clean_selected_dates(self):
@@ -342,6 +347,19 @@ class DateOverrideAdmin(admin.ModelAdmin):
 
             def clean(self):
                 cleaned_data = super().clean()
+                start_t_str = cleaned_data.get('start_time')
+                end_t_str = cleaned_data.get('end_time')
+
+                if start_t_str:
+                    cleaned_data['start_time'] = datetime.strptime(start_t_str, '%H:%M').time()
+                else:
+                    cleaned_data['start_time'] = None
+
+                if end_t_str:
+                    cleaned_data['end_time'] = datetime.strptime(end_t_str, '%H:%M').time()
+                else:
+                    cleaned_data['end_time'] = None
+
                 start_t = cleaned_data.get('start_time')
                 end_t = cleaned_data.get('end_time')
 
