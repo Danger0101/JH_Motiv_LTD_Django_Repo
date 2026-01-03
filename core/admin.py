@@ -149,6 +149,7 @@ class EmailResendLogAdmin(admin.ModelAdmin):
 def dashboard_callback(request, context):
     from django.db.models import Count, Q
     from coaching_core.models import Workshop
+    from payments.models import Order
     
     now = timezone.now()
     
@@ -163,12 +164,33 @@ def dashboard_callback(request, context):
     
     total_revenue = sum(ws.confirmed_bookings * ws.price for ws in workshops)
     
+    # --- BI: Customer Lifetime Value (Approx) ---
+    # Total Revenue / Unique Paying Customers
+    from django.db.models import Sum
+    retail_revenue = Order.objects.filter(status='paid').aggregate(Sum('total_paid'))['total_paid__sum'] or 0
+    unique_customers = Order.objects.filter(status='paid').values('user').distinct().count()
+    clv = retail_revenue / unique_customers if unique_customers else 0
+
+    # --- BI: Sales Funnel ---
+    pending_orders = Order.objects.filter(status='pending').count()
+    paid_orders = Order.objects.filter(status='paid').count()
+    
     context.update({
         "kpi": [
             {
                 "title": "Workshop Revenue",
                 "metric": f"£{total_revenue:,.2f}",
                 "footer": f"Total for {now.strftime('%B %Y')}",
+            },
+            {
+                "title": "Avg. Customer Value",
+                "metric": f"£{clv:,.2f}",
+                "footer": "Lifetime Value (Retail)",
+            },
+            {
+                "title": "Order Conversion",
+                "metric": f"{paid_count} / {pending_orders + paid_count}",
+                "footer": "Paid vs Total Orders",
             },
         ]
     })
