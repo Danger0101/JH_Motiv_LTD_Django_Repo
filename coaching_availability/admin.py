@@ -159,6 +159,9 @@ class DateOverrideAdmin(admin.ModelAdmin):
         ]
         return custom_urls + urls
 
+    def add_view(self, request, form_url='', extra_context=None):
+        return redirect('admin:date_override_bulk_add')
+
     def bulk_add_view(self, request):
         class BulkAddOverrideForm(forms.Form):
             # Generate time choices: All hours 0-23 plus 10:30
