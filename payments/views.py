@@ -669,6 +669,10 @@ def create_coaching_checkout_session_view(request, offering_id):
     coach = None
     if selected_coach_id:
         coach = get_object_or_404(CoachProfile, id=selected_coach_id)
+        
+        # Ensure the selected coach is actually associated with this offering
+        if not offering.coaches.filter(id=coach.id).exists():
+            return JsonResponse({"error": "Selected coach is not associated with this offering."}, status=400)
     else:
         # Round Robin / Load Balancing if no coach selected
         # Only pick coaches who are active and accepting new clients
