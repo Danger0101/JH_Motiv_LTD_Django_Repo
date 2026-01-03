@@ -70,12 +70,23 @@ class CoachAvailabilityAdmin(admin.ModelAdmin):
                 widget=forms.CheckboxSelectMultiple(attrs={'class': 'w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 focus:ring-2'}),
                 help_text=format_html(
                     "<button type='button' id='select-all-days' class='text-xs text-blue-600 hover:text-blue-800 underline mt-1 font-medium'>Select / Deselect All</button>"
+                    "<style>"
+                    ".errorlist {{ color: #dc2626; font-size: 0.875rem; margin-top: 0.5rem; list-style-type: disc; padding-left: 1.25rem; font-weight: 500; }}"
+                    "input[type='submit'], button[type='submit'] {{ background-color: #2563eb; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s; border: none; font-size: 1rem; }}"
+                    "input[type='submit']:hover, button[type='submit']:hover {{ background-color: #1d4ed8; }}"
+                    "</style>"
                     "<script>"
                     "document.getElementById('select-all-days').addEventListener('click', function() {{"
                     "  const checkboxes = document.querySelectorAll('input[name=\"day_of_week\"]');"
                     "  const allChecked = Array.from(checkboxes).every(cb => cb.checked);"
                     "  checkboxes.forEach(cb => cb.checked = !allChecked);"
                     "}});"
+                    "/* Submit Button Text Update */"
+                    "const submitBtn = document.querySelector('input[type=\"submit\"], button[type=\"submit\"]');"
+                    "if (submitBtn && !document.querySelector('input[name=\"confirmed\"]')) {{"
+                    "  submitBtn.value = 'Generate Slots';"
+                    "  submitBtn.innerText = 'Generate Slots';"
+                    "}}"
                     "</script>"
                 )
             )
@@ -95,6 +106,9 @@ class CoachAvailabilityAdmin(admin.ModelAdmin):
                 start_t_str = cleaned_data.get('start_time')
                 end_t_str = cleaned_data.get('end_time')
                 
+                start_t = None
+                end_t = None
+
                 if start_t_str and end_t_str:
                     start_t = datetime.strptime(start_t_str, '%H:%M').time()
                     end_t = datetime.strptime(end_t_str, '%H:%M').time()
@@ -102,6 +116,26 @@ class CoachAvailabilityAdmin(admin.ModelAdmin):
                         raise forms.ValidationError("End time must be after start time.")
                     cleaned_data['start_time'] = start_t
                     cleaned_data['end_time'] = end_t
+
+                # Overlap Validation
+                coach = cleaned_data.get('coach')
+                days = cleaned_data.get('day_of_week')
+
+                if coach and days and start_t and end_t:
+                    for day_str in days:
+                        day = int(day_str)
+                        overlaps = CoachAvailability.objects.filter(
+                            coach=coach,
+                            day_of_week=day,
+                            start_time__lt=end_t,
+                            end_time__gt=start_t
+                        )
+                        if overlaps.exists():
+                            day_name = dict(CoachAvailability.DAYS_OF_WEEK)[day]
+                            conflict = overlaps.first()
+                            raise forms.ValidationError(
+                                f"Overlap detected on {day_name}. Existing slot: {conflict.start_time.strftime('%H:%M')} - {conflict.end_time.strftime('%H:%M')}."
+                            )
 
                 return cleaned_data
 
