@@ -5,10 +5,10 @@ from .models import Product, Variant, StockPool, StockItem
 
 class VariantInline(admin.TabularInline):
     model = Variant
-    extra = 1
-    # Added 'name' at the beginning so you can label Book editions (e.g., 'Paperback')
-    # and moved color/size further down since they are optional for books.
-    fields = ('name', 'sku', 'price', 'stock_pool', 'weight', 'color', 'size', 'printful_variant_id')
+    extra = 0
+    # Use TabularInline with reduced fields to fix width issues.
+    # Detailed fields like 'printful_variant_id' are accessible via the 'Change' link.
+    fields = ('name', 'sku', 'price', 'stock_pool', 'color', 'size')
     autocomplete_fields = ['stock_pool']
     show_change_link = True
 
