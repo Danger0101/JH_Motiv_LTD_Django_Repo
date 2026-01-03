@@ -12,7 +12,6 @@ class CoachAvailabilityAdmin(admin.ModelAdmin):
     list_filter = ('day_of_week', 'coach')
     ordering = ('coach', 'day_of_week', 'start_time')
     list_select_related = ('coach',)
-    change_list_template = "admin/coaching_availability/coachavailability/change_list.html"
 
     @admin.display(description='Coach', ordering='coach__username')
     def coach_name(self, obj):
