@@ -299,7 +299,6 @@ def handle_coaching_enrollment(session):
         
         # Fallback Validation: Ensure the selected coach is actually associated with this offering.
         if selected_coach and not offering.coaches.filter(id=selected_coach.id).exists():
-            logger.warning(f"Webhook Warning: Attempted to enroll user {user_id} with coach {coach_id} who is not in offering {offering_id}. Reverting to default coach.")
             warning_msg = f"Webhook Warning: Attempted to enroll user {user_id} with coach {coach_id} who is not in offering {offering_id}. Reverting to default coach."
             logger.warning(warning_msg)
             
