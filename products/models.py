@@ -210,7 +210,7 @@ class Variant(models.Model):
 
     # Ensure uniqueness across product options (e.g., only one Large/Red variant per product)
     class Meta:
-        unique_together = ('product', 'color', 'size')
+        unique_together = ('product', 'color', 'size', 'name')
 
 # =========================================================================
 # NEW: StockItem Model (Add this at the end of the file)

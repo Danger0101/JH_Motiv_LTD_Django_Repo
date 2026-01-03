@@ -51,7 +51,7 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
         
-        <div role="region" aria-label="Product Image" class="relative">
+        <div role="region" aria-label="Product Image" class="relative md:sticky md:top-24 self-start">
             <img src="{% if product.featured_image %}{{ product.featured_image.url }}{% else %}https://via.placeholder.com/500{% endif %}" 
                  alt="{{ product.name }}" 
                  class="w-full rounded-lg shadow-xl aspect-square object-contain bg-gray-50">
@@ -78,7 +78,9 @@
             </div>
             {% endif %}
 
-            <p class="text-gray-600 mb-6">{{ product.description }}</p>
+            <div class="text-gray-600 mb-6 max-h-80 overflow-y-auto pr-2">
+                {{ product.description|linebreaks }}
+            </div>
 
             {% if product.variants.all %}
                 {% with first_variant=product.variants.first %}
