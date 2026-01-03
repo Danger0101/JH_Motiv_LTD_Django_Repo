@@ -5,12 +5,37 @@
 <div id="content-main">
     <form method="post">
         {% csrf_token %}
-        <div>
-            {{ form.as_p }}
-        </div>
-        <div class="submit-row">
-            <input type="submit" value="Generate Slots" class="default">
-        </div>
+        
+        {% if confirm_mode %}
+            <div class="module">
+                <h2 class="bg-blue-700 text-white p-2 rounded-t-lg">Confirm Bulk Add</h2>
+                <div class="p-4 border border-gray-200">
+                    <p class="mb-4">The following slots will be created:</p>
+                    <ul class="list-disc ml-6 mb-4">
+                        {% for item in items_to_create %}
+                            <li>{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                    
+                    <input type="hidden" name="confirmed" value="true">
+                    
+                    <div style="display:none;">{{ form }}</div>
+                </div>
+            </div>
+
+            <div class="submit-row">
+                <input type="submit" value="Confirm and Save" class="default">
+                <a href="{{ back_url }}" class="closable" style="margin-left: 10px;">Cancel</a>
+            </div>
+
+        {% else %}
+            <div class="module">
+                {{ form.as_p }}
+            </div>
+            <div class="submit-row">
+                <input type="submit" value="Generate Slots" class="default">
+            </div>
+        {% endif %}
     </form>
 </div>
 {% endblock %}
