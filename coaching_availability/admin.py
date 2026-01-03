@@ -79,33 +79,24 @@ class CoachAvailabilityAdmin(admin.ModelAdmin):
                     "</script>"
                 )
             )
-            start_time = forms.ChoiceField(
-                choices=TIME_CHOICES, 
+            start_time = forms.TimeField(
                 label="Start Time",
-                widget=forms.Select(attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'})
+                widget=forms.Select(choices=TIME_CHOICES, attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'}),
+                input_formats=['%H:%M', '%H:%M:%S']
             )
-            end_time = forms.ChoiceField(
-                choices=TIME_CHOICES, 
+            end_time = forms.TimeField(
                 label="End Time",
-                widget=forms.Select(attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'})
+                widget=forms.Select(choices=TIME_CHOICES, attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'}),
+                input_formats=['%H:%M', '%H:%M:%S']
             )
 
             def clean(self):
                 cleaned_data = super().clean()
-                start_t_str = cleaned_data.get('start_time')
-                end_t_str = cleaned_data.get('end_time')
+                start_t = cleaned_data.get('start_time')
+                end_t = cleaned_data.get('end_time')
                 
-                if start_t_str and end_t_str:
-                    from datetime import datetime
-                    start_t = datetime.strptime(start_t_str, '%H:%M').time()
-                    end_t = datetime.strptime(end_t_str, '%H:%M').time()
-                    
-                    if start_t >= end_t:
-                        raise forms.ValidationError("End time must be after start time.")
-                    
-                    # Pass the actual time objects to the view
-                    cleaned_data['start_time_obj'] = start_t
-                    cleaned_data['end_time_obj'] = end_t
+                if start_t and end_t and start_t >= end_t:
+                    raise forms.ValidationError("End time must be after start time.")
 
                 return cleaned_data
 
@@ -116,9 +107,9 @@ class CoachAvailabilityAdmin(admin.ModelAdmin):
                 coach_user = data['coach']
                 days = data['day_of_week']
                 
-                # Use the time objects processed in clean()
-                start_t = data['start_time_obj']
-                end_t = data['end_time_obj']
+                # Use the time objects directly (TimeField handles conversion)
+                start_t = data['start_time']
+                end_t = data['end_time']
                 
                 # 1. Calculate Preview Items
                 items_to_create = []
@@ -317,19 +308,19 @@ class DateOverrideAdmin(admin.ModelAdmin):
                 label="Is Available?",
                 widget=forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2'})
             )
-            start_time = forms.ChoiceField(
-                choices=TIME_CHOICES, 
+            start_time = forms.TimeField(
                 required=False, 
                 label="Start Time", 
                 help_text="Leave blank for full day",
-                widget=forms.Select(attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'})
+                widget=forms.Select(choices=TIME_CHOICES, attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'}),
+                input_formats=['%H:%M', '%H:%M:%S']
             )
-            end_time = forms.ChoiceField(
-                choices=TIME_CHOICES, 
+            end_time = forms.TimeField(
                 required=False, 
                 label="End Time", 
                 help_text="Leave blank for full day",
-                widget=forms.Select(attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'})
+                widget=forms.Select(choices=TIME_CHOICES, attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'}),
+                input_formats=['%H:%M', '%H:%M:%S']
             )
 
             def clean_selected_dates(self):
@@ -351,25 +342,8 @@ class DateOverrideAdmin(admin.ModelAdmin):
 
             def clean(self):
                 cleaned_data = super().clean()
-                start_t_str = cleaned_data.get('start_time')
-                end_t_str = cleaned_data.get('end_time')
-                
-                start_t = None
-                end_t = None
-
-                if start_t_str:
-                    from datetime import datetime
-                    start_t = datetime.strptime(start_t_str, '%H:%M').time()
-                    cleaned_data['start_time_obj'] = start_t
-                else:
-                    cleaned_data['start_time_obj'] = None
-
-                if end_t_str:
-                    from datetime import datetime
-                    end_t = datetime.strptime(end_t_str, '%H:%M').time()
-                    cleaned_data['end_time_obj'] = end_t
-                else:
-                    cleaned_data['end_time_obj'] = None
+                start_t = cleaned_data.get('start_time')
+                end_t = cleaned_data.get('end_time')
 
                 if start_t and end_t and start_t >= end_t:
                     raise forms.ValidationError("End time must be after start time.")
@@ -382,8 +356,8 @@ class DateOverrideAdmin(admin.ModelAdmin):
                 coach_user = data['coach']
                 target_dates = data['selected_dates'] # This is now our list of date objects
                 is_avail = data['is_available']
-                s_time = data.get('start_time_obj')
-                e_time = data.get('end_time_obj')
+                s_time = data.get('start_time')
+                e_time = data.get('end_time')
 
                 # 1. Calculate Preview Items
                 items_to_create = []
