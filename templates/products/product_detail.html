@@ -115,6 +115,24 @@
                           >
                         {% csrf_token %}
                         
+                        {% if show_name_selector %}
+                        <div class="space-y-3">
+                            <h3 class="text-lg font-semibold text-gray-800">Option: 
+                                <span class="font-bold" x-text="selectedName"></span>
+                            </h3>
+                            <div class="flex flex-wrap gap-2">
+                                {% for name in unique_names %}
+                                <button type="button" 
+                                        x-on:click="selectedName = '{{ name|escapejs }}'; findVariant();"
+                                        class="px-5 py-2 border-2 rounded-xl text-sm font-medium transition"
+                                        :class="selectedName === '{{ name|escapejs }}' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'">
+                                    {{ name }}
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
                         {% if show_color_selector %}
                         <div class="space-y-3">
                             <h3 class="text-lg font-semibold text-gray-800">Skin <span class="text-sm text-gray-500 font-normal">(Color)</span>: 
@@ -167,6 +185,7 @@
                         <input type="hidden" name="variant_id" :value="selectedVariantId">
                         <input type="hidden" name="size" :value="selectedSize">
                         <input type="hidden" name="color" :value="selectedColor">
+                        <input type="hidden" name="name" :value="selectedName">
                         <input type="hidden" id="base-url-input" value="{% url 'core:add_to_cart' product.id %}">
                         
                         <div x-show="isInStock" x-transition>
@@ -218,6 +237,7 @@
         Alpine.data('productVariantSelector', () => ({
             selectedColor: '{{ initial_color|escapejs }}',
             selectedSize: '{{ initial_size|escapejs }}',
+            selectedName: '',
             selectedVariantId: '{{ product.variants.first.id|default:'0' }}',
             currentPrice: '{{ product.variants.first.price|floatformat:2|default:'0.00' }}',
             isInStock: true,
@@ -228,23 +248,24 @@
             init() {
                 console.log('Variant Map Loaded:', this.variantMap);
                 
-                // FIX: Handle single-variant products (like books) that have no size/color options
                 const keys = Object.keys(this.variantMap);
+                
+                // AUTO-FIX: If there's only one variant, select it immediately
                 if (keys.length === 1) {
-                    const data = this.variantMap[keys[0]];
-                    this.selectedColor = data.color;
-                    this.selectedSize = data.size;
+                    const onlyKey = keys[0];
+                    const data = this.variantMap[onlyKey];
+                    
+                    if (data.name) {
+                        this.selectedName = data.name;
+                    } else {
+                        // Split the Color_Size key
+                        const parts = onlyKey.split('_');
+                        this.selectedColor = parts[0];
+                        this.selectedSize = parts[1];
+                    }
                 }
                 
                 this.findVariant();
-
-                // Fallback: If initial selection failed (e.g. single variant mismatch), pick the first one
-                if (this.selectedVariantId === '0' && keys.length > 0) {
-                    const data = this.variantMap[keys[0]];
-                    this.selectedColor = data.color;
-                    this.selectedSize = data.size;
-                    this.findVariant();
-                }
             },
 
             get formattedPrice() {
@@ -252,7 +273,12 @@
             },
 
             findVariant() {
-                const key = this.selectedColor + '_' + this.selectedSize;
+                // Try finding by Name first (for books), then fallback to Color_Size
+                let key = this.selectedName;
+                if (!key || !this.variantMap[key]) {
+                    key = this.selectedColor + '_' + this.selectedSize;
+                }
+
                 const data = this.variantMap[key] || null;
                 if (data) {
                     this.selectedVariantId = data.id;

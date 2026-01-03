@@ -136,6 +136,7 @@ class ProductDetailView(DetailView):
         
         context['unique_colors'] = []
         context['unique_sizes'] = []
+        context['unique_names'] = []
         context['variant_lookup_json'] = json.dumps({})
         
         # Dice Rating Helpers
@@ -148,24 +149,29 @@ class ProductDetailView(DetailView):
         unique_colors = set()
         unique_sizes = set()
         variant_map = {}
+        unique_names = set()
         
         has_real_colors = False
         has_real_sizes = False
+        has_named_variants = False
         
         for variant in product.variants.all():
             if variant.color: has_real_colors = True
             if variant.size: has_real_sizes = True
+            if variant.name: has_named_variants = True
 
             color = variant.color or "Default"
             size = variant.size or "One Size"
+            name = variant.name or ""
             is_in_stock = variant.is_available() if hasattr(variant, 'is_available') else True
 
-            lookup_key = f"{color}_{size}" 
+            lookup_key = name if name else f"{color}_{size}"
             
             variant_map[lookup_key] = {
                 'id': variant.id,
                 'price': float(variant.price),
-                'in_stock': is_in_stock 
+                'in_stock': is_in_stock,
+                'name': name
             }
             
             if color and color != "Default":
@@ -174,12 +180,17 @@ class ProductDetailView(DetailView):
             
             if size and size != "One Size":
                 unique_sizes.add(size)
+            
+            if name:
+                unique_names.add(name)
         
         context['unique_colors'] = sorted(list(unique_colors), key=lambda x: x[0])
         context['unique_sizes'] = sorted(list(unique_sizes))
+        context['unique_names'] = sorted(list(unique_names))
         context['variant_lookup_json'] = json.dumps(variant_map)
         context['show_color_selector'] = has_real_colors
         context['show_size_selector'] = has_real_sizes
+        context['show_name_selector'] = has_named_variants
 
         return context
 

@@ -160,8 +160,16 @@ def add_to_cart(request, product_id):
     
     variant_id = request.POST.get('variant_id')
     
+    # Fallback: Try to find variant by name if ID is missing
     if not variant_id or variant_id == '0':
-        messages.error(request, "Please select a size/color.")
+        name_option = request.POST.get('name')
+        if name_option:
+            variant = product.variants.filter(name=name_option).first()
+            if variant:
+                variant_id = variant.id
+
+    if not variant_id or variant_id == '0':
+        messages.error(request, "Please select a size, color, or option.")
         return redirect(request.META.get('HTTP_REFERER', 'core:home'))
 
     from django.apps import apps
