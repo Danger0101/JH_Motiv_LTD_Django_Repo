@@ -147,51 +147,57 @@ class EmailResendLogAdmin(admin.ModelAdmin):
         return False
 
 def dashboard_callback(request, context):
-    from django.db.models import Count, Q
+    from django.core.cache import cache
+    from django.db.models import Count, Q, Sum
     from coaching_core.models import Workshop
-    from payments.models import Order
+    from payments.models import Order # Ensure this import works
     
+    # Check cache first (5-minute TTL)
+    cached_kpi = cache.get('admin_dashboard_kpi')
+    if cached_kpi:
+        context.update({"kpi": cached_kpi})
+        return context
+
     now = timezone.now()
     
-    # Calculate Workshop Revenue for current month
-    # Logic: Sum of (Workshop Price * Confirmed Bookings) for workshops held this month
+    # --- KPI 1: Workshop Revenue ---
     workshops = Workshop.objects.filter(
         date__year=now.year,
         date__month=now.month
     ).annotate(
         confirmed_bookings=Count('bookings', filter=Q(bookings__status__in=['BOOKED', 'COMPLETED']))
     )
-    
-    total_revenue = sum(ws.confirmed_bookings * ws.price for ws in workshops)
-    
-    # --- BI: Customer Lifetime Value (Approx) ---
-    # Total Revenue / Unique Paying Customers
-    from django.db.models import Sum
-    retail_revenue = Order.objects.filter(status='paid').aggregate(Sum('total_paid'))['total_paid__sum'] or 0
-    unique_customers = Order.objects.filter(status='paid').values('user').distinct().count()
-    clv = retail_revenue / unique_customers if unique_customers else 0
+    total_workshop_revenue = sum(ws.confirmed_bookings * ws.price for ws in workshops)
 
-    # --- BI: Sales Funnel ---
-    pending_orders = Order.objects.filter(status='pending').count()
-    paid_orders = Order.objects.filter(status='paid').count()
+    # --- KPI 2: Order Conversion (The part causing the 500 error) ---
+    # We calculate counts for the current month
+    paid_orders = Order.objects.filter(
+        status='paid', 
+        created_at__month=now.month, 
+        created_at__year=now.year
+    ).count()
     
-    context.update({
-        "kpi": [
+    pending_orders = Order.objects.filter(
+        status='pending', 
+        created_at__month=now.month, 
+        created_at__year=now.year
+    ).count()
+    
+    kpi_data = [
             {
                 "title": "Workshop Revenue",
-                "metric": f"£{total_revenue:,.2f}",
+                "metric": f"£{total_workshop_revenue:,.2f}",
                 "footer": f"Total for {now.strftime('%B %Y')}",
             },
             {
-                "title": "Avg. Customer Value",
-                "metric": f"£{clv:,.2f}",
-                "footer": "Lifetime Value (Retail)",
-            },
-            {
-                "title": "Order Conversion",
-                "metric": f"{paid_count} / {pending_orders + paid_count}",
-                "footer": "Paid vs Total Orders",
+                "title": "Order Fulfillment",
+                "metric": f"{paid_orders} / {paid_orders + pending_orders}",
+                "footer": "Paid vs Total Orders (This Month)",
             },
         ]
-    })
+
+    # Cache the result for 300 seconds (5 minutes)
+    cache.set('admin_dashboard_kpi', kpi_data, 300)
+    
+    context.update({"kpi": kpi_data})
     return context
