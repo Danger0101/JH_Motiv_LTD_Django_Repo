@@ -160,17 +160,46 @@ class DateOverrideAdmin(admin.ModelAdmin):
 
     def bulk_add_view(self, request):
         class BulkAddOverrideForm(forms.Form):
+            # Generate time choices: All hours 0-23 plus 10:30
+            from datetime import time
+            _times = [time(h, 0) for h in range(24)]
+            _times.append(time(10, 30)) # Add specific requested half-hour
+            _times.sort()
+            
+            TIME_CHOICES = [('', 'Full Day / None')] + [
+                (t.strftime('%H:%M'), t.strftime('%I:%M %p').lstrip('0')) 
+                for t in _times
+            ]
+
             coach = forms.ModelChoiceField(queryset=User.objects.filter(coach_profile__isnull=False))
             start_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
             end_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
             is_available = forms.BooleanField(required=False, initial=True, label="Is Available?")
-            start_time = forms.TimeField(required=False, widget=forms.TimeInput(attrs={'type': 'time'}), help_text="Leave blank for full day")
-            end_time = forms.TimeField(required=False, widget=forms.TimeInput(attrs={'type': 'time'}), help_text="Leave blank for full day")
+            start_time = forms.ChoiceField(choices=TIME_CHOICES, required=False, label="Start Time", help_text="Leave blank for full day")
+            end_time = forms.ChoiceField(choices=TIME_CHOICES, required=False, label="End Time", help_text="Leave blank for full day")
 
             def clean(self):
                 cleaned_data = super().clean()
-                start_t = cleaned_data.get('start_time')
-                end_t = cleaned_data.get('end_time')
+                start_t_str = cleaned_data.get('start_time')
+                end_t_str = cleaned_data.get('end_time')
+                
+                start_t = None
+                end_t = None
+
+                if start_t_str:
+                    from datetime import datetime
+                    start_t = datetime.strptime(start_t_str, '%H:%M').time()
+                    cleaned_data['start_time_obj'] = start_t
+                else:
+                    cleaned_data['start_time_obj'] = None
+
+                if end_t_str:
+                    from datetime import datetime
+                    end_t = datetime.strptime(end_t_str, '%H:%M').time()
+                    cleaned_data['end_time_obj'] = end_t
+                else:
+                    cleaned_data['end_time_obj'] = None
+
                 if start_t and end_t and start_t >= end_t:
                     raise forms.ValidationError("End time must be after start time.")
                 return cleaned_data
@@ -183,8 +212,8 @@ class DateOverrideAdmin(admin.ModelAdmin):
                 current_date = data['start_date']
                 end_date = data['end_date']
                 is_avail = data['is_available']
-                s_time = data['start_time']
-                e_time = data['end_time']
+                s_time = data.get('start_time_obj')
+                e_time = data.get('end_time_obj')
 
                 from datetime import timedelta
                 
