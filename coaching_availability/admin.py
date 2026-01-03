@@ -179,6 +179,8 @@ class DateOverrideAdmin(admin.ModelAdmin):
                 widget=forms.TextInput(attrs={'placeholder': 'YYYY-MM-DD, YYYY-MM-DD', 'class': 'vTextField', 'id': 'id_selected_dates'}),
                 help_text=format_html(
                     "Select multiple dates using the picker. "
+                    '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">'
+                    '<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>'
                     "<style>"
                     ".flatpickr-calendar {{ font-family: Roboto, sans-serif; border: none !important; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important; }}"
                     ".flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange, .flatpickr-day.selected.inRange, .flatpickr-day.startRange.inRange, .flatpickr-day.endRange.inRange, .flatpickr-day.selected:focus, .flatpickr-day.startRange:focus, .flatpickr-day.endRange:focus, .flatpickr-day.selected:hover, .flatpickr-day.startRange:hover, .flatpickr-day.endRange:hover, .flatpickr-day.selected.prevMonthDay, .flatpickr-day.startRange.prevMonthDay, .flatpickr-day.endRange.prevMonthDay, .flatpickr-day.selected.nextMonthDay, .flatpickr-day.startRange.nextMonthDay, .flatpickr-day.endRange.nextMonthDay {{ background: #417690 !important; border-color: #417690 !important; }}"
@@ -189,17 +191,15 @@ class DateOverrideAdmin(admin.ModelAdmin):
                     "</style>"
                     "<script>"
                     "document.addEventListener('DOMContentLoaded', function() {{"
-                    "  if (typeof flatpickr !== 'undefined') {{"
-                    "    flatpickr('#id_selected_dates', {{ mode: 'multiple', dateFormat: 'Y-m-d', minDate: 'today' }});"
-                    "  }}"
+                    "  setTimeout(function() {{"
+                    "    if (typeof flatpickr !== 'undefined') {{"
+                    "      flatpickr('#id_selected_dates', {{ mode: 'multiple', dateFormat: 'Y-m-d', minDate: 'today' }});"
+                    "    }}"
+                    "  }}, 500);"
                     "}});"
                     "</script>"
                 )
             )
-            
-            class Media:
-                css = {'all': ('https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css',)}
-                js = ('https://cdn.jsdelivr.net/npm/flatpickr',)
             
             is_available = forms.BooleanField(required=False, initial=True, label="Is Available?")
             start_time = forms.ChoiceField(choices=TIME_CHOICES, required=False, label="Start Time", help_text="Leave blank for full day")
