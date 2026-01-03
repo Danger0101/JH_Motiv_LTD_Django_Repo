@@ -10,8 +10,8 @@ from django.conf import settings
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
-    fields = ('get_product_name', 'get_variant_name', 'quantity', 'price')
-    readonly_fields = ('get_product_name', 'get_variant_name', 'price', 'quantity')
+    fields = ('get_product_name', 'get_variant_name', 'get_item_type', 'quantity', 'price')
+    readonly_fields = ('get_product_name', 'get_variant_name', 'get_item_type', 'price', 'quantity')
     extra = 0
     can_delete = False
 
@@ -26,6 +26,12 @@ class OrderItemInline(admin.TabularInline):
     @admin.display(description='Variant')
     def get_variant_name(self, obj):
         return obj.variant.name
+
+    @admin.display(description='Type')
+    def get_item_type(self, obj):
+        if obj.variant.weight == 0:
+            return format_html('<span style="color: blue;">Digital</span>')
+        return "Physical"
 
 @admin.register(Order)
 class OrderAdmin(ModelAdmin):
