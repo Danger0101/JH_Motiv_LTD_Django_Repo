@@ -18,6 +18,8 @@ except (OSError, ImportError):
 
 from django.core import signing
 from django.core.cache import cache
+from django.db import connection
+from django.db.utils import OperationalError
 
 # Import data files
 from .faq_data import FAQ_DATA
@@ -691,3 +693,20 @@ def staff_newsletter_history(request):
     """
     campaigns = NewsletterCampaign.objects.order_by('-created_at')
     return render(request, 'core/staff_newsletter_history.html', {'campaigns': campaigns})
+
+def health_check(request):
+    """
+    Simple health check endpoint to verify the application is running
+    and can connect to the database.
+    """
+    try:
+        # Check Database Connectivity
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            one = cursor.fetchone()[0]
+            if one != 1:
+                raise OperationalError("Database did not return 1")
+        return JsonResponse({"status": "ok", "database": "connected"}, status=200)
+    except Exception as e:
+        logger.error(f"Health Check Failed: {e}")
+        return JsonResponse({"status": "error", "database": "disconnected", "details": str(e)}, status=503)

@@ -275,6 +275,11 @@
             },
 
             findVariant() {
+                if (!this.variantMap || Object.keys(this.variantMap).length === 0) {
+                    console.warn("No variants found for this product.");
+                    return;
+                }
+
                 // Try finding by Name first (for books), then fallback to Color_Size
                 let key = this.selectedName;
                 if (!key || !this.variantMap[key]) {

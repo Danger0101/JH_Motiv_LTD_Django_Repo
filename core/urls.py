@@ -27,4 +27,5 @@ urlpatterns = [
     path('newsletter/unsubscribe/<str:token>/', views.unsubscribe_newsletter, name='unsubscribe_newsletter'),
     path('staff/newsletter/', views.staff_newsletter_dashboard, name='staff_newsletter_dashboard'),
     path('staff/newsletter/history/', views.staff_newsletter_history, name='staff_newsletter_history'),
+    path('health/', views.health_check, name='health_check'),
 ]
