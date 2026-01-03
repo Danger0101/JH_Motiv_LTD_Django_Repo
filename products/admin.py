@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib import messages
 from unfold.admin import ModelAdmin
 from .models import Product, Variant, StockPool, StockItem
 
@@ -9,6 +10,7 @@ class VariantInline(admin.TabularInline):
     # and moved color/size further down since they are optional for books.
     fields = ('name', 'sku', 'price', 'stock_pool', 'weight', 'color', 'size', 'printful_variant_id')
     autocomplete_fields = ['stock_pool']
+    show_change_link = True
 
 @admin.register(Product)
 class ProductAdmin(ModelAdmin):
@@ -43,6 +45,16 @@ class ProductAdmin(ModelAdmin):
     search_fields = ('name', 'description', 'printful_product_id')
     inlines = [VariantInline]
 
+@admin.action(description="Duplicate selected variants")
+def duplicate_variants(modeladmin, request, queryset):
+    for variant in queryset:
+        variant.pk = None
+        variant.sku = None  # Clear SKU to avoid unique constraint violation
+        if variant.name:
+            variant.name = f"{variant.name} (Copy)"
+        variant.save()
+    messages.success(request, f"Successfully duplicated {queryset.count()} variants.")
+
 @admin.register(Variant)
 class VariantAdmin(ModelAdmin):
     """
@@ -53,6 +65,7 @@ class VariantAdmin(ModelAdmin):
     list_filter = ('product__product_type', 'color', 'size')
     search_fields = ('name', 'sku', 'product__name')
     autocomplete_fields = ['product', 'stock_pool']
+    actions = [duplicate_variants]
 
 @admin.register(StockPool)
 class StockPoolAdmin(ModelAdmin):
