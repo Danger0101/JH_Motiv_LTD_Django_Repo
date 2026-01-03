@@ -67,7 +67,17 @@ class CoachAvailabilityAdmin(admin.ModelAdmin):
             )
             day_of_week = forms.MultipleChoiceField(
                 choices=CoachAvailability.DAYS_OF_WEEK,
-                widget=forms.CheckboxSelectMultiple(attrs={'class': 'w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2'})
+                widget=forms.CheckboxSelectMultiple(attrs={'class': 'w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 focus:ring-2'}),
+                help_text=format_html(
+                    "<button type='button' id='select-all-days' class='text-xs text-blue-600 hover:text-blue-800 underline mt-1 font-medium'>Select / Deselect All</button>"
+                    "<script>"
+                    "document.getElementById('select-all-days').addEventListener('click', function() {{"
+                    "  const checkboxes = document.querySelectorAll('input[name=\"day_of_week\"]');"
+                    "  const allChecked = Array.from(checkboxes).every(cb => cb.checked);"
+                    "  checkboxes.forEach(cb => cb.checked = !allChecked);"
+                    "}});"
+                    "</script>"
+                )
             )
             start_time = forms.ChoiceField(
                 choices=TIME_CHOICES, 
@@ -204,27 +214,49 @@ class DateOverrideAdmin(admin.ModelAdmin):
                 widget=forms.TextInput(attrs={
                     'placeholder': 'YYYY-MM-DD, YYYY-MM-DD', 
                     'class': 'vTextField bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5', 
-                    'id': 'id_selected_dates'
+                    'id': 'id_selected_dates',
+                    'autocomplete': 'off'
                 }),
                 help_text=format_html(
                     "Select multiple dates using the picker. "
                     '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">'
                     '<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>'
                     "<style>"
-                    ".flatpickr-calendar {{ font-family: Roboto, sans-serif; border: none !important; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important; }}"
+                    ".flatpickr-calendar {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; border: none !important; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important; }}"
                     ".flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange, .flatpickr-day.selected.inRange, .flatpickr-day.startRange.inRange, .flatpickr-day.endRange.inRange, .flatpickr-day.selected:focus, .flatpickr-day.startRange:focus, .flatpickr-day.endRange:focus, .flatpickr-day.selected:hover, .flatpickr-day.startRange:hover, .flatpickr-day.endRange:hover, .flatpickr-day.selected.prevMonthDay, .flatpickr-day.startRange.prevMonthDay, .flatpickr-day.endRange.prevMonthDay, .flatpickr-day.selected.nextMonthDay, .flatpickr-day.startRange.nextMonthDay, .flatpickr-day.endRange.nextMonthDay {{ background: #417690 !important; border-color: #417690 !important; }}"
                     ".flatpickr-months .flatpickr-month {{ background: #417690 !important; color: #fff !important; fill: #fff !important; }}"
                     ".flatpickr-current-month .flatpickr-monthDropdown-months {{ background: #417690 !important; }}"
                     ".flatpickr-weekdays {{ background: #417690 !important; }}"
                     "span.flatpickr-weekday {{ color: #fff !important; }}"
+                    /* Error Feedback Styling */
+                    ".errorlist {{ color: #dc2626; font-size: 0.875rem; margin-top: 0.5rem; list-style-type: disc; padding-left: 1.25rem; font-weight: 500; }}"
+                    /* Button Styling */
+                    "input[type='submit'], button[type='submit'] {{ background-color: #2563eb; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s; border: none; font-size: 1rem; }}"
+                    "input[type='submit']:hover, button[type='submit']:hover {{ background-color: #1d4ed8; }}"
                     "</style>"
                     "<script>"
                     "document.addEventListener('DOMContentLoaded', function() {{"
                     "  setTimeout(function() {{"
                     "    if (typeof flatpickr !== 'undefined') {{"
                     "      flatpickr('#id_selected_dates', {{ mode: 'multiple', dateFormat: 'Y-m-d', minDate: 'today' }});"
+                    "      /* Clear Button */"
+                    "      const input = document.getElementById('id_selected_dates');"
+                    "      if (input) {{"
+                    "        const clearBtn = document.createElement('button');"
+                    "        clearBtn.type = 'button';"
+                    "        clearBtn.innerText = 'Clear Dates';"
+                    "        clearBtn.className = 'mt-2 text-sm text-red-600 hover:text-red-800 underline cursor-pointer font-medium';"
+                    "        clearBtn.onclick = function() {{ input._flatpickr.clear(); }};"
+                    "        input.parentNode.appendChild(clearBtn);"
+                    "      }}"
                     "    }}"
                     "  }}, 500);"
+                    "  /* Submit Button Text Update */"
+                    "  const submitBtn = document.querySelector('input[type=\"submit\"], button[type=\"submit\"]');"
+                    "  if (submitBtn && !document.querySelector('input[name=\"confirmed\"]')) {{"
+                    "    submitBtn.value = 'Generate Slots';"
+                    "    submitBtn.innerText = 'Generate Slots';"
+                    "  }}"
                     "}});"
                     "</script>"
                 )
