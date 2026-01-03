@@ -228,9 +228,9 @@ class DateOverrideAdmin(admin.ModelAdmin):
                     ".flatpickr-current-month .flatpickr-monthDropdown-months {{ background: #417690 !important; }}"
                     ".flatpickr-weekdays {{ background: #417690 !important; }}"
                     "span.flatpickr-weekday {{ color: #fff !important; }}"
-                    /* Error Feedback Styling */
+                    # Error Feedback Styling
                     ".errorlist {{ color: #dc2626; font-size: 0.875rem; margin-top: 0.5rem; list-style-type: disc; padding-left: 1.25rem; font-weight: 500; }}"
-                    /* Button Styling */
+                    # Button Styling
                     "input[type='submit'], button[type='submit'] {{ background-color: #2563eb; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s; border: none; font-size: 1rem; }}"
                     "input[type='submit']:hover, button[type='submit']:hover {{ background-color: #1d4ed8; }}"
                     "</style>"
