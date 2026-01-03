@@ -684,8 +684,8 @@ def create_coaching_checkout_session_view(request, offering_id):
         # Assign coach with fewest active enrollments for this specific offering
         coach = available_coaches.annotate(
             active_enrollment_count=models.Count(
-                'client_enrollments', 
-                filter=models.Q(client_enrollments__offering=offering, client_enrollments__is_active=True)
+                'primary_client_enrollments', 
+                filter=models.Q(primary_client_enrollments__offering=offering, primary_client_enrollments__is_active=True)
             )
         ).order_by('active_enrollment_count').first()
 
