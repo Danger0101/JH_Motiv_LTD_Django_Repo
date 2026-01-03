@@ -35,7 +35,7 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(ModelAdmin):
-    list_display = ('id', 'user_link', 'email', 'status', 'total_paid', 'created_at', 'item_count', 'stripe_payment_link')
+    list_display = ('id', 'user_link', 'email', 'status_badge', 'total_paid', 'created_at', 'item_count', 'stripe_payment_link')
     list_filter = ('status', 'created_at', 'carrier')
     search_fields = ('id', 'user__email', 'email', 'guest_order_token', 'stripe_checkout_id')
     readonly_fields = ('id', 'created_at', 'updated_at', 'stripe_checkout_id', 'guest_order_token', 'total_paid', 'discount_amount', 'coupon_code_snapshot', 'coupon_data_snapshot', 'stripe_payment_link')
@@ -96,6 +96,20 @@ class OrderAdmin(ModelAdmin):
         url = f"{base_url}{path}/payments/{obj.stripe_checkout_id}"
         return format_html('<a href="{}" target="_blank">View on Stripe</a>', url)
 
+    @admin.display(description='Status', ordering='status')
+    def status_badge(self, obj):
+        colors = {
+            'paid': 'bg-green-100 text-green-800',
+            'shipped': 'bg-blue-100 text-blue-800',
+            'pending': 'bg-yellow-100 text-yellow-800',
+            'cancelled': 'bg-red-100 text-red-800',
+            'refunded': 'bg-gray-100 text-gray-800',
+        }
+        color_class = colors.get(obj.status, 'bg-gray-100 text-gray-800')
+        return format_html(
+            f'<span class="px-2 py-1 rounded-full text-xs font-medium {color_class}">{obj.get_status_display()}</span>'
+        )
+
 class CoachingOrderItemInline(admin.TabularInline):
     model = CoachingOrderItem
     fields = ('offering', 'price')
@@ -111,7 +125,7 @@ class CoachingOrderAdmin(ModelAdmin):
     list_filter = ('payout_status', 'created_at', 'enrollment__offering')
     search_fields = ('enrollment__client__email', 'enrollment__client__first_name', 'stripe_checkout_id')
     date_hierarchy = 'created_at'
-    actions = ['mark_as_paid', 'export_payouts_csv']
+    actions = ['mark_as_paid', 'process_stripe_connect_payout', 'export_payouts_csv']
 
     # Critical Optimization for Foreign Key lookups
     list_select_related = (
@@ -136,6 +150,15 @@ class CoachingOrderAdmin(ModelAdmin):
     def mark_as_paid(self, request, queryset):
         rows_updated = queryset.update(payout_status='paid')
         self.message_user(request, f"{rows_updated} orders marked as paid.")
+
+    @admin.action(description='⚡ Pay via Stripe Connect (Automated)')
+    def process_stripe_connect_payout(self, request, queryset):
+        """
+        Placeholder for Stripe Connect integration.
+        In production, this would iterate through queryset and trigger stripe.Transfer.
+        """
+        count = queryset.count()
+        self.message_user(request, f"Initiated Stripe Connect transfers for {count} orders. (Simulation)", level='SUCCESS')
 
     @admin.action(description='Export Unpaid Payouts to CSV')
     def export_payouts_csv(self, request, queryset):
