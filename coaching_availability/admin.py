@@ -172,11 +172,31 @@ class DateOverrideAdmin(admin.ModelAdmin):
             ]
 
             coach = forms.ModelChoiceField(queryset=User.objects.filter(coach_profile__isnull=False))
-            start_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
-            end_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
+            
+            # CHANGED: Use a CharField to accept multiple dates (e.g., via a JS picker or manual entry)
+            selected_dates = forms.CharField(
+                widget=forms.TextInput(attrs={'placeholder': 'YYYY-MM-DD, YYYY-MM-DD', 'class': 'vTextField'}),
+                help_text="Enter dates separated by commas (e.g., 2024-01-05, 2024-01-07, 2024-01-09)"
+            )
+            
             is_available = forms.BooleanField(required=False, initial=True, label="Is Available?")
             start_time = forms.ChoiceField(choices=TIME_CHOICES, required=False, label="Start Time", help_text="Leave blank for full day")
             end_time = forms.ChoiceField(choices=TIME_CHOICES, required=False, label="End Time", help_text="Leave blank for full day")
+
+            def clean_selected_dates(self):
+                data = self.cleaned_data['selected_dates']
+                date_list = []
+                import datetime
+                try:
+                    # Split by comma and strip whitespace
+                    raw_dates = [d.strip() for d in data.split(',')]
+                    for date_str in raw_dates:
+                        if not date_str: continue
+                        date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+                        date_list.append(date_obj)
+                except ValueError:
+                    raise forms.ValidationError("Ensure all dates follow the YYYY-MM-DD format.")
+                return date_list
 
             def clean(self):
                 cleaned_data = super().clean()
@@ -209,27 +229,22 @@ class DateOverrideAdmin(admin.ModelAdmin):
             if form.is_valid():
                 data = form.cleaned_data
                 coach_user = data['coach']
-                current_date = data['start_date']
-                end_date = data['end_date']
+                target_dates = data['selected_dates'] # This is now our list of date objects
                 is_avail = data['is_available']
                 s_time = data.get('start_time_obj')
                 e_time = data.get('end_time_obj')
 
-                from datetime import timedelta
-                
                 # 1. Calculate Preview Items
                 items_to_create = []
-                temp_date = current_date
-                while temp_date <= end_date:
+                for d in target_dates:
                     status = "Available" if is_avail else "Unavailable"
                     time_str = f"{s_time.strftime('%H:%M')} - {e_time.strftime('%H:%M')}" if s_time and e_time else "All Day"
-                    items_to_create.append(f"{temp_date}: {status} ({time_str})")
-                    temp_date += timedelta(days=1)
+                    items_to_create.append(f"{d} ({d.strftime('%A')}): {status} ({time_str})")
 
                 # 2. Check for Confirmation Flag
                 if request.POST.get('confirmed') == 'true':
                     created_count = 0
-                    while current_date <= end_date:
+                    for current_date in target_dates:
                         DateOverride.objects.update_or_create(
                             coach=coach_user,
                             date=current_date,
@@ -240,16 +255,15 @@ class DateOverrideAdmin(admin.ModelAdmin):
                             }
                         )
                         created_count += 1
-                        current_date += timedelta(days=1)
 
-                    self.message_user(request, f"Success: Created/Updated {created_count} overrides for {coach_user}.")
+                    self.message_user(request, f"Success: Created {created_count} overrides.")
                     return redirect('admin:coaching_availability_dateoverride_changelist')
 
                 # 3. Render Confirmation Step
                 context = {
                     **self.admin_site.each_context(request),
                     'form': form,
-                    'title': "Confirm Date Overrides",
+                    'title': "Confirm Specific Date Overrides",
                     'items_to_create': items_to_create,
                     'confirm_mode': True,
                 }
