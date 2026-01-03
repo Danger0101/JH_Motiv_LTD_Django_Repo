@@ -49,10 +49,11 @@ class CoachAvailabilityAdmin(admin.ModelAdmin):
         from datetime import time
         
         class BulkAddForm(forms.Form):
-            # Generate time choices: All hours 0-23 plus 10:30
-            _times = [time(h, 0) for h in range(24)]
-            _times.append(time(10, 30)) # Add specific requested half-hour
-            _times.sort()
+            # Generate time choices: All hours 0-23 with 30 min intervals
+            _times = []
+            for h in range(24):
+                _times.append(time(h, 0))
+                _times.append(time(h, 30))
             
             TIME_CHOICES = [
                 (t.strftime('%H:%M'), t.strftime('%I:%M %p').lstrip('0')) 
@@ -60,13 +61,24 @@ class CoachAvailabilityAdmin(admin.ModelAdmin):
             ]
 
             # Only show users who are coaches
-            coach = forms.ModelChoiceField(queryset=User.objects.filter(coach_profile__isnull=False))
+            coach = forms.ModelChoiceField(
+                queryset=User.objects.filter(coach_profile__isnull=False),
+                widget=forms.Select(attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'})
+            )
             day_of_week = forms.MultipleChoiceField(
                 choices=CoachAvailability.DAYS_OF_WEEK,
-                widget=forms.CheckboxSelectMultiple
+                widget=forms.CheckboxSelectMultiple(attrs={'class': 'w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2'})
             )
-            start_time = forms.ChoiceField(choices=TIME_CHOICES, label="Start Time")
-            end_time = forms.ChoiceField(choices=TIME_CHOICES, label="End Time")
+            start_time = forms.ChoiceField(
+                choices=TIME_CHOICES, 
+                label="Start Time",
+                widget=forms.Select(attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'})
+            )
+            end_time = forms.ChoiceField(
+                choices=TIME_CHOICES, 
+                label="End Time",
+                widget=forms.Select(attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'})
+            )
 
             def clean(self):
                 cleaned_data = super().clean()
@@ -171,21 +183,29 @@ class DateOverrideAdmin(admin.ModelAdmin):
     def bulk_add_view(self, request):
         from datetime import time
         class BulkAddOverrideForm(forms.Form):
-            # Generate time choices: All hours 0-23 plus 10:30
-            _times = [time(h, 0) for h in range(24)]
-            _times.append(time(10, 30)) # Add specific requested half-hour
-            _times.sort()
+            # Generate time choices: All hours 0-23 with 30 min intervals
+            _times = []
+            for h in range(24):
+                _times.append(time(h, 0))
+                _times.append(time(h, 30))
             
             TIME_CHOICES = [('', 'Full Day / None')] + [
                 (t.strftime('%H:%M'), t.strftime('%I:%M %p').lstrip('0')) 
                 for t in _times
             ]
 
-            coach = forms.ModelChoiceField(queryset=User.objects.filter(coach_profile__isnull=False))
+            coach = forms.ModelChoiceField(
+                queryset=User.objects.filter(coach_profile__isnull=False),
+                widget=forms.Select(attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'})
+            )
             
             # CHANGED: Use a CharField to accept multiple dates (e.g., via a JS picker or manual entry)
             selected_dates = forms.CharField(
-                widget=forms.TextInput(attrs={'placeholder': 'YYYY-MM-DD, YYYY-MM-DD', 'class': 'vTextField', 'id': 'id_selected_dates'}),
+                widget=forms.TextInput(attrs={
+                    'placeholder': 'YYYY-MM-DD, YYYY-MM-DD', 
+                    'class': 'vTextField bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5', 
+                    'id': 'id_selected_dates'
+                }),
                 help_text=format_html(
                     "Select multiple dates using the picker. "
                     '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">'
@@ -210,9 +230,26 @@ class DateOverrideAdmin(admin.ModelAdmin):
                 )
             )
             
-            is_available = forms.BooleanField(required=False, initial=True, label="Is Available?")
-            start_time = forms.ChoiceField(choices=TIME_CHOICES, required=False, label="Start Time", help_text="Leave blank for full day")
-            end_time = forms.ChoiceField(choices=TIME_CHOICES, required=False, label="End Time", help_text="Leave blank for full day")
+            is_available = forms.BooleanField(
+                required=False, 
+                initial=True, 
+                label="Is Available?",
+                widget=forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2'})
+            )
+            start_time = forms.ChoiceField(
+                choices=TIME_CHOICES, 
+                required=False, 
+                label="Start Time", 
+                help_text="Leave blank for full day",
+                widget=forms.Select(attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'})
+            )
+            end_time = forms.ChoiceField(
+                choices=TIME_CHOICES, 
+                required=False, 
+                label="End Time", 
+                help_text="Leave blank for full day",
+                widget=forms.Select(attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'})
+            )
 
             def clean_selected_dates(self):
                 data = self.cleaned_data['selected_dates']
