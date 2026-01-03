@@ -3,6 +3,7 @@ from django import forms
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from django.utils.html import format_html
 from .models import CoachAvailability, DateOverride, CoachVacation
 
 User = get_user_model()
@@ -175,9 +176,22 @@ class DateOverrideAdmin(admin.ModelAdmin):
             
             # CHANGED: Use a CharField to accept multiple dates (e.g., via a JS picker or manual entry)
             selected_dates = forms.CharField(
-                widget=forms.TextInput(attrs={'placeholder': 'YYYY-MM-DD, YYYY-MM-DD', 'class': 'vTextField'}),
-                help_text="Enter dates separated by commas (e.g., 2024-01-05, 2024-01-07, 2024-01-09)"
+                widget=forms.TextInput(attrs={'placeholder': 'YYYY-MM-DD, YYYY-MM-DD', 'class': 'vTextField', 'id': 'id_selected_dates'}),
+                help_text=format_html(
+                    "Select multiple dates using the picker. "
+                    "<script>"
+                    "document.addEventListener('DOMContentLoaded', function() {{"
+                    "  if (typeof flatpickr !== 'undefined') {{"
+                    "    flatpickr('#id_selected_dates', {{ mode: 'multiple', dateFormat: 'Y-m-d', minDate: 'today' }});"
+                    "  }}"
+                    "}});"
+                    "</script>"
+                )
             )
+            
+            class Media:
+                css = {'all': ('https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css',)}
+                js = ('https://cdn.jsdelivr.net/npm/flatpickr',)
             
             is_available = forms.BooleanField(required=False, initial=True, label="Is Available?")
             start_time = forms.ChoiceField(choices=TIME_CHOICES, required=False, label="Start Time", help_text="Leave blank for full day")
@@ -193,6 +207,8 @@ class DateOverrideAdmin(admin.ModelAdmin):
                     for date_str in raw_dates:
                         if not date_str: continue
                         date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+                        if date_obj < timezone.now().date():
+                            raise forms.ValidationError(f"Date {date_obj} is in the past. Please select future dates.")
                         date_list.append(date_obj)
                 except ValueError:
                     raise forms.ValidationError("Ensure all dates follow the YYYY-MM-DD format.")
