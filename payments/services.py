@@ -7,6 +7,7 @@ from django.conf import settings
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.core.mail import send_mail
 
 from cart.models import Cart
 from coaching_booking.models import ClientOfferingEnrollment, SessionBooking
@@ -296,6 +297,26 @@ def handle_coaching_enrollment(session):
         if coach_id:
             selected_coach = CoachProfile.objects.filter(id=coach_id).first()
         
+        # Fallback Validation: Ensure the selected coach is actually associated with this offering.
+        if selected_coach and not offering.coaches.filter(id=selected_coach.id).exists():
+            logger.warning(f"Webhook Warning: Attempted to enroll user {user_id} with coach {coach_id} who is not in offering {offering_id}. Reverting to default coach.")
+            warning_msg = f"Webhook Warning: Attempted to enroll user {user_id} with coach {coach_id} who is not in offering {offering_id}. Reverting to default coach."
+            logger.warning(warning_msg)
+            
+            # Notify Admin
+            try:
+                send_mail(
+                    subject="⚠️ Invalid Coach Selection Detected",
+                    message=warning_msg,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[settings.DEFAULT_FROM_EMAIL],
+                    fail_silently=True
+                )
+            except Exception:
+                pass
+
+            selected_coach = None # Invalidate selection
+
         # Fallback: If no coach selected, default to the first one available
         if not selected_coach:
             selected_coach = offering.coaches.first()
