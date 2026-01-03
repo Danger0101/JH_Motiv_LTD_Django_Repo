@@ -4,8 +4,11 @@ from .models import Product, Variant, StockPool, StockItem
 
 class VariantInline(admin.TabularInline):
     model = Variant
-    extra = 0
+    extra = 1
+    # Added 'name' at the beginning so you can label Book editions (e.g., 'Paperback')
+    # and moved color/size further down since they are optional for books.
     fields = ('name', 'sku', 'price', 'stock_pool', 'weight', 'color', 'size', 'printful_variant_id')
+    autocomplete_fields = ['stock_pool']
 
 @admin.register(Product)
 class ProductAdmin(ModelAdmin):
@@ -49,6 +52,7 @@ class VariantAdmin(ModelAdmin):
     list_display = ('product', 'name', 'sku', 'price', 'stock_pool', 'color', 'size')
     list_filter = ('product__product_type', 'color', 'size')
     search_fields = ('name', 'sku', 'product__name')
+    autocomplete_fields = ['product', 'stock_pool']
 
 @admin.register(StockPool)
 class StockPoolAdmin(ModelAdmin):
