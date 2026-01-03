@@ -209,6 +209,19 @@ class DateOverrideAdmin(admin.ModelAdmin):
                 widget=forms.Select(attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5'})
             )
             
+            # Quick Select Helper
+            quick_select = forms.ChoiceField(
+                choices=[
+                    ('', '--- Quick Select ---'),
+                    ('next_7', 'Next 7 Days'),
+                    ('weekend', 'Upcoming Weekend (Sat/Sun)'),
+                    ('next_week', 'Next Week (Mon-Fri)'),
+                ],
+                required=False,
+                label="Quick Select",
+                widget=forms.Select(attrs={'class': 'bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 mb-2'})
+            )
+
             # CHANGED: Use a CharField to accept multiple dates (e.g., via a JS picker or manual entry)
             selected_dates = forms.CharField(
                 widget=forms.TextInput(attrs={
@@ -238,7 +251,7 @@ class DateOverrideAdmin(admin.ModelAdmin):
                     "document.addEventListener('DOMContentLoaded', function() {{"
                     "  setTimeout(function() {{"
                     "    if (typeof flatpickr !== 'undefined') {{"
-                    "      flatpickr('#id_selected_dates', {{ mode: 'multiple', dateFormat: 'Y-m-d', minDate: 'today' }});"
+                    "      const fp = flatpickr('#id_selected_dates', {{ mode: 'multiple', dateFormat: 'Y-m-d', minDate: 'today' }});"
                     "      /* Clear Button */"
                     "      const input = document.getElementById('id_selected_dates');"
                     "      if (input) {{"
@@ -248,6 +261,42 @@ class DateOverrideAdmin(admin.ModelAdmin):
                     "        clearBtn.className = 'mt-2 text-sm text-red-600 hover:text-red-800 underline cursor-pointer font-medium';"
                     "        clearBtn.onclick = function() {{ input._flatpickr.clear(); }};"
                     "        input.parentNode.appendChild(clearBtn);"
+                    "      }}"
+                    "      /* Quick Select Logic */"
+                    "      const quickSelect = document.getElementById('id_quick_select');"
+                    "      if (quickSelect) {{"
+                    "        quickSelect.addEventListener('change', function() {{"
+                    "           const val = this.value;"
+                    "           const today = new Date();"
+                    "           let dates = [];"
+                    "           if (val === 'next_7') {{"
+                    "               for(let i=1; i<=7; i++) {{"
+                    "                   const d = new Date(today);"
+                    "                   d.setDate(today.getDate() + i);"
+                    "                   dates.push(d);"
+                    "               }}"
+                    "           }} else if (val === 'weekend') {{"
+                    "               /* Find next Sat (6) */"
+                    "               const d = new Date(today);"
+                    "               d.setDate(today.getDate() + (6 - today.getDay() + 7) % 7);"
+                    "               if (today.getDay() === 6) d.setDate(today.getDate() + 7); /* If today is Sat, get next Sat */"
+                    "               dates.push(new Date(d));"
+                    "               const sun = new Date(d);"
+                    "               sun.setDate(d.getDate() + 1);"
+                    "               dates.push(sun);"
+                    "           }} else if (val === 'next_week') {{"
+                    "               /* Find next Monday (1) */"
+                    "               const d = new Date(today);"
+                    "               d.setDate(today.getDate() + (1 + 7 - today.getDay()) % 7 || 7);"
+                    "               for(let i=0; i<5; i++) {{"
+                    "                   const wd = new Date(d);"
+                    "                   wd.setDate(d.getDate() + i);"
+                    "                   dates.push(wd);"
+                    "               }}"
+                    "           }}"
+                    "           fp.setDate(dates);"
+                    "           this.value = '';"
+                    "        }});"
                     "      }}"
                     "    }}"
                     "  }}, 500);"
