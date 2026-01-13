@@ -1,122 +1,140 @@
 {% load static %}
 
-<div id="hook-scene" class="w-full flex flex-col items-center justify-center min-h-[500px] fade-in relative">
-    
-    <div class="chain-wrapper mb-8 scale-75 md:scale-100">
-        <div class="chain-link"></div>
-        <div class="chain-link"></div>
-        <div class="chain-link weak-link"></div> <div class="chain-link falling"></div>
-    </div>
+<div id="hook-scene" class="w-full flex flex-col items-center justify-center min-h-[600px] fade-in relative p-6">
 
-    <div class="text-center z-10 max-w-4xl">
-        <h1 class="text-5xl md:text-7xl font-bold mb-2 glitch-text text-white" data-text="STOP BEING AN NPC">
-            STOP BEING AN NPC
-        </h1>
+    <div class="z-10 max-w-3xl w-full bg-black border border-green-500/50 shadow-[0_0_30px_rgba(0,255,65,0.15)] p-8 md:p-12 text-center relative overflow-hidden group">
         
-        <p class="text-lg md:text-xl text-green-500 font-mono mb-8 opacity-90">
-            <span class="text-white">> PROTOCOL:</span> Don't just take the Red Pill. 
-            <span class="text-purple-400 font-bold animate-pulse">Take Both.</span> 
-            <br class="hidden md:block">Hack the simulation from the inside.
-        </p>
+        <div class="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-0 bg-[length:100%_4px,6px_100%] pointer-events-none"></div>
 
-        <div class="flex flex-col md:flex-row gap-6 justify-center items-center mt-8">
-            <button onclick="toggleBook(true)" 
-                    class="group relative px-8 py-3 bg-green-900/20 border border-green-500 text-green-400 font-mono uppercase tracking-widest hover:bg-green-500 hover:text-black transition-all">
-                <span class="absolute inset-0 w-full h-full bg-green-500/10 blur opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                [ INITIALIZE_SOURCE_CODE ]
-            </button>
+        <div class="relative z-10 flex flex-col items-center">
+            
+            <div class="mb-6">
+                <span class="inline-block px-3 py-1 border border-red-500 text-red-500 text-xs tracking-[0.2em] font-bold animate-pulse">
+                    WARNING: SYSTEM UNSTABLE
+                </span>
+            </div>
+
+            <h1 class="text-5xl md:text-7xl font-bold mb-6 text-white tracking-tighter" style="text-shadow: 0 0 10px rgba(255,255,255,0.5);">
+                STOP BEING AN NPC
+            </h1>
+            
+            <p class="text-lg md:text-xl text-green-400/90 font-mono mb-10 leading-relaxed max-w-xl">
+                The simulation is designed to keep you asleep. 
+                <br>
+                Initialize the source code to see the truth.
+            </p>
+
+            <div class="flex flex-col md:flex-row gap-6 w-full md:w-auto justify-center">
+                <button onclick="toggleBook(true)" 
+                        class="px-8 py-4 bg-green-600 text-black font-bold text-lg uppercase tracking-widest hover:bg-white hover:scale-105 transition-all shadow-[0_0_20px_rgba(0,255,65,0.4)]">
+                    [ INITIALIZE_SOURCE_CODE ]
+                </button>
+
+                <button hx-get="{% url 'awakening:step_2_offers' %}" 
+                        hx-target="#terminal-stage"
+                        hx-swap="innerHTML transition:true"
+                        class="px-8 py-4 border border-green-800 text-green-600 font-mono uppercase tracking-widest hover:border-green-500 hover:text-green-400 transition-all">
+                    Skip Intro
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="book-modal" class="hidden fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4">
+    
+    <button onclick="toggleBook(false)" class="absolute top-6 right-6 text-green-500 border border-green-500 px-4 py-2 hover:bg-green-900/30 z-50 font-mono">
+        [X] CLOSE_VIEWER
+    </button>
+
+    <div id="book" class="relative shadow-[0_0_100px_rgba(0,255,65,0.2)]">
+        
+        <div class="my-page p-8 bg-[#111] border-r-2 border-gray-800 flex flex-col items-center justify-center text-center shadow-inner">
+            <div class="border-4 border-white p-4 mb-4">
+                <h2 class="text-5xl font-bold text-white uppercase leading-none">The<br>Wake<br>Up</h2>
+            </div>
+            <p class="text-green-500 font-mono mt-4">VOL 1. AWAKENING</p>
+            <p class="text-gray-500 text-xs mt-20 animate-bounce">Click right edge to open ></p>
+        </div>
+
+        <div class="my-page p-8 bg-[#f0f0f0] text-black font-serif border-l border-gray-300 shadow-inner overflow-y-auto">
+            <h3 class="font-bold text-xl mb-4 border-b border-black pb-2">Chapter 1: The Script</h3>
+            <p class="mb-4 text-sm leading-relaxed">
+                Wake up. Put clothes on. Grab a snack. Commute.
+            </p>
+            <p class="mb-4 text-sm leading-relaxed">
+                This is the ritual. A Pavlovian response to the digital alarm clock that governs 99% of the population.
+            </p>
+            <p class="text-sm font-bold">
+                You are running on autopilot.
+            </p>
+            <div class="text-xs text-gray-400 absolute bottom-4 right-4">1</div>
+        </div>
+
+        <div class="my-page p-8 bg-[#1a1a1a] border-l-2 border-gray-800 flex flex-col items-center justify-center text-center relative">
+            
+            <h3 class="text-xl text-white mb-2 font-bold uppercase tracking-widest">Mission Data</h3>
+            <div class="w-16 h-1 bg-green-500 mb-6"></div>
+
+            <p class="text-gray-400 text-xs mb-8 leading-relaxed font-mono">
+                // PROTOCOL: READ_ONLY<br>
+                The manual will open in a secure channel (New Tab).<br>
+                Do not close this terminal.
+            </p>
+
+            <a href="{% static 'awakening/pdf/Book_Stop_Being_an_NPC_Chapter_1.pdf' %}" 
+               target="_blank"
+               rel="noopener noreferrer"
+               class="group relative w-full mb-6 text-decoration-none">
+               
+                <div class="absolute inset-0 bg-green-500 blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                <div class="relative border border-green-500 bg-black p-4 flex items-center justify-center gap-3 hover:bg-green-900/20 transition-colors cursor-pointer">
+                    
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    
+                    <div class="text-left">
+                        <span class="block text-white font-bold text-sm tracking-wider">OPEN MISSION BRIEF</span>
+                        <span class="block text-[10px] text-green-500 font-mono">View in New Tab >></span>
+                    </div>
+                </div>
+            </a>
 
             <button hx-get="{% url 'awakening:step_2_offers' %}" 
                     hx-target="#terminal-stage"
                     hx-swap="innerHTML transition:true"
-                    class="text-xs text-gray-500 hover:text-white underline underline-offset-4">
-                >> SKIP_TUTORIAL (GO TO SELECTION)
+                    onclick="toggleBook(false)"
+                    class="text-gray-500 hover:text-white text-xs underline underline-offset-4 uppercase tracking-widest mt-2">
+                I HAVE READ THE DATA. PROCEED >
             </button>
         </div>
     </div>
-
-</div>
-
-<div id="book-modal" class="hidden fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4">
-    
-    <div class="absolute top-4 right-4 z-50">
-        <button onclick="toggleBook(false)" class="border border-red-500 text-red-500 px-4 py-2 hover:bg-red-900/50">
-            [X] CLOSE_VIEWER
-        </button>
-    </div>
-
-    <div id="book" class="shadow-[0_0_50px_rgba(0,255,65,0.2)]">
-        <div class="my-page bg-[#1a1a1a] border-r border-gray-800 p-8 flex flex-col justify-center items-center text-center">
-            <h2 class="text-4xl font-bold text-white mb-4">STOP BEING AN NPC</h2>
-            <p class="text-green-500">Vol 1. The Awakening</p>
-            <div class="mt-12 text-sm text-gray-500">Swipe or Click to Turn ></div>
-        </div>
-
-        <div class="my-page bg-[#0f0f0f] text-gray-300 p-8 text-sm md:text-base leading-relaxed border-l border-gray-800 font-serif">
-            <h3 class="text-xl text-green-400 mb-4 font-mono">Chapter 1: The Script</h3>
-            <p class="mb-4">Wake up. Put clothes on. Grab a snack. Commute.</p>
-            <p class="mb-4">This is the ritual. A Pavlovian response to the digital alarm clock that governs 99% of the population.</p>
-            <p>You feel it, don't you? The glitch. The feeling that you are a background character in someone else's movie.</p>
-        </div>
-
-        <div class="my-page p-8 bg-[#1a1a1a] border-l-2 border-gray-800 flex flex-col items-center justify-center text-center relative">
-    
-    <h3 class="text-xl text-white mb-2 font-bold uppercase tracking-widest">Mission Data</h3>
-    <div class="w-16 h-1 bg-green-500 mb-6"></div>
-
-    <p class="text-gray-400 text-xs mb-8 leading-relaxed font-mono">
-        // PROTOCOL: READ_ONLY<br>
-        The manual will open in a secure channel (New Tab).<br>
-        Do not close this terminal.
-    </p>
-
-    <a href="{% static 'awakening/pdf/Book_Stop_Being_an_NPC_Chapter_1.pdf' %}" 
-       target="_blank"
-       rel="noopener noreferrer"
-       class="group relative w-full mb-6 text-decoration-none">
-       
-        <div class="absolute inset-0 bg-green-500 blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
-        <div class="relative border border-green-500 bg-black p-4 flex items-center justify-center gap-3 hover:bg-green-900/20 transition-colors cursor-pointer">
-            
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-            
-            <div class="text-left">
-                <span class="block text-white font-bold text-sm tracking-wider">OPEN MISSION BRIEF</span>
-                <span class="block text-[10px] text-green-500 font-mono">View in New Tab >></span>
-            </div>
-        </div>
-    </a>
-
-    <button hx-get="{% url 'awakening:step_2_offers' %}" 
-            hx-target="#terminal-stage"
-            hx-swap="innerHTML transition:true"
-            onclick="toggleBook(false)"
-            class="text-gray-500 hover:text-white text-xs underline underline-offset-4 uppercase tracking-widest mt-2">
-        I HAVE READ THE DATA. PROCEED >
-    </button>
-
-</div>
-    </div>
-
 </div>
 
 <script>
-    // Initialize Book Logic
     function toggleBook(show) {
         const modal = document.getElementById('book-modal');
-        const stage = document.getElementById('hook-scene');
         
-        if(show) {
+        if (show) {
             modal.classList.remove('hidden');
-            // Init PageFlip only when shown to save resources
-            if(!window.bookInitialized) {
-                const pageFlip = new StPageFlip.PageFlip(document.getElementById('book'), {
-                    width: 400, height: 600, showCover: true
-                });
-                pageFlip.loadFromHTML(document.querySelectorAll('.my-page'));
-                window.bookInitialized = true;
+            
+            // Initialize PageFlip with a tiny delay to ensure DOM is ready
+            if (!window.bookInstance) {
+                setTimeout(() => {
+                    const pageFlip = new StPageFlip.PageFlip(document.getElementById('book'), {
+                        width: 350, // Fixed width for better consistency
+                        height: 500, 
+                        size: 'fixed',
+                        minWidth: 350, maxWidth: 350,
+                        minHeight: 500, maxHeight: 500,
+                        maxShadowOpacity: 0.5,
+                        showCover: true
+                    });
+                    
+                    pageFlip.loadFromHTML(document.querySelectorAll('.my-page'));
+                    window.bookInstance = pageFlip;
+                }, 50);
             }
         } else {
             modal.classList.add('hidden');
