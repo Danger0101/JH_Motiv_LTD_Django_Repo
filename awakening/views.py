@@ -13,7 +13,7 @@ def funnel_landing(request):
     Renders the 'Terminal' container.
     The actual content (Step 1) is loaded via HTMX trigger on page load.
     """
-    return render(request, 'awakening/funnel_container.html')
+    return render(request, 'awakening/partials/funnel_container.html')
 
 # --- STEP 1: THE HOOK (Booklet) ---
 def render_hook(request):
