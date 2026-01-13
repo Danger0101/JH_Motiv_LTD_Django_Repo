@@ -67,7 +67,7 @@ def render_checkout(request, variant_id):
         'cart': cart,
         'total': variant.price,
         'variant': variant,
-        'stripe_public_key': settings.STRIPE_PUBLIC_KEY,
+        'stripe_public_key': getattr(settings, 'STRIPE_PUBLIC_KEY', ''),
         # Note: You would normally generate a PaymentIntent client_secret here
         # For now, we will let your existing payments JS handle the intent creation via AJAX
     }
