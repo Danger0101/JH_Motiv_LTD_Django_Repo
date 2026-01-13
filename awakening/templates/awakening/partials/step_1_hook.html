@@ -59,18 +59,45 @@
             <p>You feel it, don't you? The glitch. The feeling that you are a background character in someone else's movie.</p>
         </div>
 
-        <div class="my-page bg-[#1a1a1a] p-8 flex flex-col justify-center items-center text-center border-l border-gray-800">
-            <h3 class="text-2xl text-white mb-6">END OF PREVIEW</h3>
-            <p class="text-gray-400 mb-8">The rest of the data is encrypted.</p>
+        <div class="my-page p-8 bg-[#1a1a1a] border-l-2 border-gray-800 flex flex-col items-center justify-center text-center relative">
+    
+    <h3 class="text-xl text-white mb-2 font-bold uppercase tracking-widest">Mission Data</h3>
+    <div class="w-16 h-1 bg-green-500 mb-6"></div>
+
+    <p class="text-gray-400 text-xs mb-8 leading-relaxed font-mono">
+        // PROTOCOL: READ_ONLY<br>
+        The manual will open in a secure channel (New Tab).<br>
+        Do not close this terminal.
+    </p>
+
+    <a href="{% static 'awakening/downloads/Book_Stop_Being_an_NPC_Chapter_1.pdf' %}" 
+       target="_blank"
+       rel="noopener noreferrer"
+       class="group relative w-full mb-6 text-decoration-none">
+       
+        <div class="absolute inset-0 bg-green-500 blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
+        <div class="relative border border-green-500 bg-black p-4 flex items-center justify-center gap-3 hover:bg-green-900/20 transition-colors cursor-pointer">
             
-            <button hx-get="{% url 'awakening:step_2_offers' %}" 
-                    hx-target="#terminal-stage"
-                    hx-swap="innerHTML transition:true"
-                    onclick="toggleBook(false)"
-                    class="bg-green-600 text-black font-bold px-6 py-3 hover:bg-white transition-colors">
-                UNLOCK FULL VERSION
-            </button>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            
+            <div class="text-left">
+                <span class="block text-white font-bold text-sm tracking-wider">OPEN MISSION BRIEF</span>
+                <span class="block text-[10px] text-green-500 font-mono">View in New Tab >></span>
+            </div>
         </div>
+    </a>
+
+    <button hx-get="{% url 'awakening:step_2_offers' %}" 
+            hx-target="#terminal-stage"
+            hx-swap="innerHTML transition:true"
+            onclick="toggleBook(false)"
+            class="text-gray-500 hover:text-white text-xs underline underline-offset-4 uppercase tracking-widest mt-2">
+        I HAVE READ THE DATA. PROCEED >
+    </button>
+
+</div>
     </div>
 
 </div>
