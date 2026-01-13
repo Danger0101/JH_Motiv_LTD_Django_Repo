@@ -14,7 +14,11 @@ urlpatterns = [
     
     # AJAX Endpoints
     path('create-payment-intent/', views.create_payment_intent, name='create_payment_intent'),
+    path('create-order/', views.create_order, name='create_order'),
 
     # The "System Log" API
     path('api/system-log/', views.simulation_log_api, name='api_log'),
+
+    # Order Success
+    path('order-success/', views.order_success, name='order_success'),
 ]

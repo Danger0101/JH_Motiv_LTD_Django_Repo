@@ -6,8 +6,10 @@ from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
 from products.models import Product, Variant
 from cart.utils import get_or_create_cart
+from payments.models import Order, OrderItem
 
 # --- THE CONTAINER ---
 def funnel_landing(request):
@@ -84,8 +86,6 @@ def create_payment_intent(request):
             variant_id = data.get('variant_id')
             variant = get_object_or_404(Variant, id=variant_id)
             
-            # Set your secret key. Remember to switch to your live secret key in production.
-            # See your keys here: https://dashboard.stripe.com/apikeys
             stripe.api_key = settings.STRIPE_SECRET_KEY
 
             intent = stripe.PaymentIntent.create(
@@ -103,6 +103,56 @@ def create_payment_intent(request):
             
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
+# --- AJAX ENDPOINT: CREATE ORDER ---
+@csrf_exempt # Use exempt for this API endpoint for simplicity, consider CSRF tokens for production
+def create_order(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            variant = get_object_or_404(Variant, id=data.get('variant_id'))
+            
+            # Create the order
+            order = Order.objects.create(
+                user=request.user if request.user.is_authenticated else None,
+                email=data.get('email'),
+                total_paid=variant.price,
+                stripe_checkout_id=data.get('payment_intent_id'), # Using stripe_checkout_id to store PI
+                status=Order.STATUS_PAID,
+                shipping_data={
+                    'name': data.get('name'),
+                    'address': data.get('address'),
+                    'city': data.get('city'),
+                    'postcode': data.get('postcode'),
+                }
+            )
+            
+            # Create the order item
+            OrderItem.objects.create(
+                order=order,
+                variant=variant,
+                price=variant.price,
+                quantity=1
+            )
+            
+            # Clear the cart
+            cart = get_or_create_cart(request)
+            cart.items.all().delete()
+
+            # Return success and a redirect URL
+            return JsonResponse({
+                'success': True,
+                'redirect_url': '/awakening/order-success/' 
+            })
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+            
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+# --- ORDER SUCCESS PAGE ---
+def order_success(request):
+    return render(request, 'awakening/success.html')
+    
 # --- SYSTEM LOG LORE API ---
 def generate_agent_id():
     """Generates a cool looking ID like 'AGT-992' or 'USR-X7'"""

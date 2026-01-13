@@ -54,6 +54,7 @@
         color: #f3f4f6 !important;
       }
     </style>
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places&callback=initAutocomplete" async defer nonce="{{ csp_nonce }}"></script>
     {% endblock %}
   </head>
   <body
@@ -75,6 +76,7 @@
       <script src="{% static 'js/carousel.js' %}" nonce="{{ csp_nonce }}"></script> 
       <script src="{% static 'js/alpine_components.js' %}" defer nonce="{{ csp_nonce }}"></script>
       <script type="module" src="{% static 'js/cheats/engine.js' %}" nonce="{{ csp_nonce }}"></script>
+      <script src="{% static 'js/address_autocomplete.js' %}" defer nonce="{{ csp_nonce }}"></script>
       
       <script nonce="{{ csp_nonce }}" defer>
         document.addEventListener('alpine:init', () => {
