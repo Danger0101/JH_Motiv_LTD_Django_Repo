@@ -32,7 +32,7 @@
 
                 <button hx-get="{% url 'awakening:step_2_offers' %}" 
                         hx-target="#terminal-stage"
-                        hx-swap="innerHTML transition:true"
+                        hx-swap="innerHTML"
                         class="px-8 py-4 border border-green-800 text-green-600 font-mono uppercase tracking-widest hover:border-green-500 hover:text-green-400 transition-all">
                     Skip Intro
                 </button>
@@ -103,10 +103,12 @@
 
                 <button hx-get="{% url 'awakening:step_2_offers' %}" 
                         hx-target="#terminal-stage"
-                        hx-swap="innerHTML transition:true"
+                        hx-swap="innerHTML"
+                        onclick="toggleBook(false)"
                         class="text-gray-500 hover:text-white text-xs underline underline-offset-4 uppercase tracking-widest mt-2">
                     I HAVE READ THE DATA. PROCEED >
-                </button>        </div>
+                </button>
+        </div>
     </div>
 </div>
 
