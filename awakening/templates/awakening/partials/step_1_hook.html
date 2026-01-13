@@ -101,14 +101,12 @@
                 </div>
             </a>
 
-            <button hx-get="{% url 'awakening:step_2_offers' %}" 
-                    hx-target="#terminal-stage"
-                    hx-swap="innerHTML transition:true"
-                    onclick="toggleBook(false)"
-                    class="text-gray-500 hover:text-white text-xs underline underline-offset-4 uppercase tracking-widest mt-2">
-                I HAVE READ THE DATA. PROCEED >
-            </button>
-        </div>
+                <button hx-get="{% url 'awakening:step_2_offers' %}" 
+                        hx-target="#terminal-stage"
+                        hx-swap="innerHTML transition:true"
+                        class="text-gray-500 hover:text-white text-xs underline underline-offset-4 uppercase tracking-widest mt-2">
+                    I HAVE READ THE DATA. PROCEED >
+                </button>        </div>
     </div>
 </div>
 
