@@ -21,7 +21,6 @@ urlpatterns = [
     path('taster/approve/<int:offer_id>/', views.approve_taster, name='approve_taster'),
     path('taster/decline/<int:offer_id>/', views.decline_taster, name='decline_taster'),
     path('taster/book/<int:offer_id>/', views.book_taster_session, name='book_taster_session'),
-    path('webhooks/stripe/', webhooks.stripe_webhook, name='stripe_webhook'),
     path('booking/verify/<int:booking_id>/', views.check_payment_status, name='check_payment_status'),
     path('booking/pay/<int:booking_id>/', views.session_payment_page, name='session_payment_page'),
     path('guest-access/<str:token>/', views.guest_access_view, name='guest_access'),

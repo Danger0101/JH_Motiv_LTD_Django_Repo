@@ -20,6 +20,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.sitemaps.views import sitemap
 from sitemaps import ProductSitemap
+from coaching_booking.webhooks import stripe_webhook
 
 sitemaps = {
     'products': ProductSitemap,
@@ -40,6 +41,7 @@ urlpatterns = [
     path('admin/offers/', include('coaching_core.urls', namespace='coaching')),
     path('coach/time/', include('coaching_availability.urls', namespace='coaching_availability')),
     path('oauth/', include('gcal.urls')),
+    path('webhooks/stripe/', stripe_webhook, name='stripe_webhook'),
 
     # Existing and Standard Apps
     path('auth/', include('accounts.urls', namespace='accounts')),
