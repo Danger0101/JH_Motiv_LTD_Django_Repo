@@ -122,7 +122,7 @@
             // Initialize PageFlip with a tiny delay to ensure DOM is ready
             if (!window.bookInstance) {
                 setTimeout(() => {
-                    const pageFlip = new StPageFlip.PageFlip(document.getElementById('book'), {
+                    const pageFlip = new St.PageFlip(document.getElementById('book'), {
                         width: 350, // Fixed width for better consistency
                         height: 500, 
                         size: 'fixed',
