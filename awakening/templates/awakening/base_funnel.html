@@ -1,0 +1,58 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}System.Root > Awakening_Protocol.exe{% endblock %}</title>
+    
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    
+    <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.js"></script>
+    
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'awakening/css/terminal.css' %}">
+
+    {% include "partials/google_analytics.html" %}
+
+    <style>
+        /* INLINE STYLES FOR TERMINAL MODE */
+        :root {
+            --term-green: #00ff41;
+            --term-dim: #008f11;
+            --term-bg: #0d1117;
+        }
+        body { font-family: 'VT323', monospace; background-color: black; color: var(--term-green); }
+        .font-term { font-family: 'VT323', monospace; }
+        
+        /* Glitch Text Effect */
+        .glitch-text { position: relative; }
+        .glitch-text::before, .glitch-text::after {
+            content: attr(data-text); position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: black;
+        }
+        .glitch-text::before { left: 2px; text-shadow: -1px 0 #ff00c1; clip-path: inset(44% 0 61% 0); animation: glitch 2s infinite linear alternate-reverse; }
+        .glitch-text::after { left: -2px; text-shadow: -1px 0 #00fff9; clip-path: inset(50% 0 30% 0); animation: glitch 2s infinite linear alternate-reverse; }
+        @keyframes glitch {
+            0% { clip-path: inset(30% 0 10% 0); } 20% { clip-path: inset(10% 0 50% 0); }
+            40% { clip-path: inset(60% 0 20% 0); } 60% { clip-path: inset(20% 0 40% 0); }
+            80% { clip-path: inset(50% 0 30% 0); } 100% { clip-path: inset(10% 0 70% 0); }
+        }
+    </style>
+</head>
+<body class="antialiased overflow-x-hidden bg-black text-green-500 h-screen w-screen">
+
+    <main class="h-full w-full relative">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        document.body.addEventListener('htmx:configRequest', (event) => {
+            event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+        });
+    </script>
+</body>
+</html>

@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     'team',
     'gcal',
     'facts',
+    'awakening',
     
     # Coaching Apps
     'coaching_core',
