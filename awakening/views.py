@@ -1,5 +1,7 @@
 import random
 import string
+import stripe
+import json
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
@@ -73,6 +75,33 @@ def render_checkout(request, variant_id):
     }
     
     return render(request, 'awakening/partials/step_3_checkout.html', context)
+
+# --- AJAX ENDPOINT: CREATE PAYMENT INTENT ---
+def create_payment_intent(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            variant_id = data.get('variant_id')
+            variant = get_object_or_404(Variant, id=variant_id)
+            
+            # Set your secret key. Remember to switch to your live secret key in production.
+            # See your keys here: https://dashboard.stripe.com/apikeys
+            stripe.api_key = settings.STRIPE_SECRET_KEY
+
+            intent = stripe.PaymentIntent.create(
+                amount=int(variant.price * 100),  # Amount in pence
+                currency='gbp',
+                automatic_payment_methods={'enabled': True},
+            )
+
+            return JsonResponse({
+                'client_secret': intent.client_secret
+            })
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=403)
+            
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 # --- SYSTEM LOG LORE API ---
 def generate_agent_id():

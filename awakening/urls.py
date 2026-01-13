@@ -12,6 +12,9 @@ urlpatterns = [
     path('step-2-offers/', views.render_offers, name='step_2_offers'),
     path('step-3-checkout/<int:variant_id>/', views.render_checkout, name='step_3_checkout'),
     
+    # AJAX Endpoints
+    path('create-payment-intent/', views.create_payment_intent, name='create_payment_intent'),
+
     # The "System Log" API
     path('api/system-log/', views.simulation_log_api, name='api_log'),
 ]
