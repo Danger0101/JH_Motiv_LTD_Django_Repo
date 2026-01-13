@@ -5,10 +5,7 @@
     <div class="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto text-left">
         
         {% for variant in variants %}
-        <div class="relative group border border-green-900 bg-black/50 p-6 hover:border-green-500 hover:bg-green-900/10 transition-all duration-300 cursor-pointer"
-             hx-get="{% url 'awakening:step_3_checkout' variant.id %}"
-             hx-target="#terminal-stage"
-             hx-swap="innerHTML transition:true">
+        <div class="relative group border border-green-900 bg-black/50 p-6 hover:border-green-500 hover:bg-green-900/10 transition-all duration-300">
             
             {% if forloop.counter == 2 %}
             <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-green-600 text-black text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest">
@@ -40,7 +37,10 @@
                 {% endif %}
             </ul>
 
-            <button class="w-full border border-green-700 text-green-500 py-2 text-sm uppercase hover:bg-green-500 hover:text-black transition-colors group-hover:border-green-500">
+            <button class="w-full border border-green-700 text-green-500 py-2 text-sm uppercase hover:bg-green-500 hover:text-black transition-colors group-hover:border-green-500 cursor-pointer"
+                    hx-get="{% url 'awakening:step_3_checkout' variant.id %}"
+                    hx-target="#terminal-stage"
+                    hx-swap="innerHTML">
                 >> EQUIP ITEM
             </button>
         </div>
