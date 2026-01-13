@@ -35,7 +35,9 @@ def render_offers(request):
     product = Product.objects.filter(name__icontains="Stop Being an NPC").first()
     
     if product:
-        variants = product.variants.filter(is_active=True).order_by('price')
+        # The 'is_active' field is on the Product model, not the Variant model.
+        # This filter was causing a FieldError.
+        variants = product.variants.all().order_by('price')
     else:
         variants = []
 
