@@ -1,11 +1,24 @@
 <div class="grid md:grid-cols-3 gap-6">
     {% for tier in tiers %}
-    <div class="relative border border-green-900 bg-black/50 p-6" 
+    <div class="relative border border-green-900 bg-black/50 p-6 flex flex-col"
          x-data="{ keep: 1, total: {{ tier.quantity }} }">
-        
-        <h3 class="text-xl font-bold text-white">{{ tier.name }}</h3>
-        <div class="text-xs text-green-500 mb-4">{{ tier.quantity }} UNITS</div>
-        <div class="text-3xl font-mono text-green-400 mb-6">£{{ tier.price|floatformat:2 }}</div>
+
+        <div class="flex-grow">
+            <h3 class="text-xl font-bold text-white">{{ tier.name }}</h3>
+            <div class="text-xs text-green-500 mb-2">{{ tier.quantity }} UNITS</div>
+
+            {% if tier.variant.product.featured_image %}
+            <img src="{{ tier.variant.product.featured_image.url }}" alt="{{ tier.variant.product.name }}" class="my-4 w-full h-48 object-cover rounded-md border-2 border-gray-700">
+            {% endif %}
+
+            <div class="text-3xl font-mono text-green-400 mb-4">£{{ tier.total_price|floatformat:2 }}</div>
+
+            <ul class="text-sm text-gray-300 space-y-2 mb-6">
+                {% for perk in tier.perks.all %}
+                <li class="flex items-start"><span class="text-green-400 mr-2">&gt;</span> {{ perk.text }}</li>
+                {% endfor %}
+            </ul>
+        </div>
 
         {% if tier.quantity > 1 %}
         <div class="mb-6 p-4 border border-green-800 bg-green-900/10">
@@ -24,7 +37,7 @@
         </div>
         {% endif %}
 
-        <button class="w-full bg-green-600 text-black py-2 font-bold"
+        <button class="w-full bg-green-600 text-black py-2 font-bold mt-auto"
                 hx-post="{% url 'awakening:step_3_checkout' tier.variant_id %}"
                 hx-target="#step-container"
                 hx-vals='js:{ "quantity": {{ tier.quantity }}, "keep_count": keep }'>
