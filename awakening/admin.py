@@ -14,6 +14,7 @@ class FunnelTierAdmin(admin.ModelAdmin):
     list_display = ('name', 'quantity', 'variant', 'total_price', 'order', 'is_active')
     list_editable = ('order', 'is_active')
     prepopulated_fields = {'slug': ('name',)}
+    autocomplete_fields = ('variant',)
     inlines = [TierPerkInline]
 
 
