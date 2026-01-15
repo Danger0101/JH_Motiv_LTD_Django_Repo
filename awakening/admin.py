@@ -1,9 +1,12 @@
 from django.contrib import admin
 from .models import FunnelTier, TierPerk
 
+
 class TierPerkInline(admin.TabularInline):
     model = TierPerk
+    fields = ('text', 'link_url', 'linked_offering', 'order')
     extra = 1
+
 
 @admin.register(FunnelTier)
 class FunnelTierAdmin(admin.ModelAdmin):

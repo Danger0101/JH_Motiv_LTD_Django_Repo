@@ -42,6 +42,18 @@ class TierPerk(models.Model):
     """
     tier = models.ForeignKey(FunnelTier, on_delete=models.CASCADE, related_name='perks')
     text = models.CharField(max_length=255, help_text="The perk text, e.g. 'Signed & Numbered'")
+    link_url = models.URLField(
+        blank=True,
+        null=True,
+        help_text="Optional: A URL for this perk, e.g., a link to a WhatsApp group."
+    )
+    linked_offering = models.ForeignKey(
+        'coaching_core.Offering',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        help_text="Optional: Link this perk to a specific coaching offering to grant access."
+    )
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
