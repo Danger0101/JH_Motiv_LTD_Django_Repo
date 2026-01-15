@@ -13,7 +13,6 @@ from django.core.mail import send_mail
 from products.models import Product, Variant
 from accounts.models import User
 from cart.utils import get_or_create_cart
-# --- FIXED IMPORTS HERE ---
 from coaching_core.models import Offering
 from coaching_booking.models import ClientOfferingEnrollment
 from .models import FunnelTier, OrderBump
@@ -238,7 +237,6 @@ def create_order(request):
                     price=bump_variant.price,
                     quantity=1
                 )
-            )
 
             # --- DYNAMIC PERK ENROLLMENT (Works for Guests & Users) ---
             enrolled_offerings = []
