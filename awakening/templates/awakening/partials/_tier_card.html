@@ -1,0 +1,55 @@
+{#
+    This is a partial template for a single tier card.
+    It expects the following context variables to be defined by the parent:
+    - tier
+    - border_color
+    - text_color
+    - text_color_light
+    - button_bg
+    - button_text_color
+    - dist_bg
+#}
+<div class="relative border {{ border_color }} bg-black/50 p-6 flex flex-col"
+     x-data="{ keep: 1, total: {{ tier.quantity }} }">
+
+    <div class="flex-grow">
+        <h3 class="text-xl font-bold text-white">{{ tier.name }}</h3>
+        <div class="text-xs {{ text_color_light }} mb-2">{{ tier.quantity }} UNITS</div>
+
+        {% if tier.variant.product.featured_image %}
+        <img src="{{ tier.variant.product.featured_image.url }}" alt="{{ tier.variant.product.name }}" class="my-4 w-full h-48 object-cover rounded-md border-2 border-gray-700">
+        {% endif %}
+
+        <div class="text-3xl font-mono {{ text_color }} mb-4">£{{ tier.total_price|floatformat:2 }}</div>
+
+        <ul class="text-sm text-gray-300 space-y-2 mb-6">
+            {% for perk in tier.perks.all %}
+            <li class="flex items-start"><span class="{{ text_color }} mr-2">&gt;</span> {{ perk.text }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    {% if tier.quantity > 1 %}
+    <div class="mb-6 p-4 border {{ border_color }} {{ dist_bg }}">
+        <label class="block text-[10px] text-gray-400 uppercase mb-2">Distribution Protocol</label>
+        <div class="flex items-center gap-4">
+            <div class="flex-1">
+                <span class="text-[10px] text-gray-500">KEEP</span>
+                <input type="number" x-model.number="keep" min="1" :max="total"
+                       class="w-full bg-transparent border-b {{ border_color }} text-white outline-none p-1">
+            </div>
+            <div class="flex-1 text-right">
+                <span class="text-[10px] text-gray-500">DONATE</span>
+                <div class="text-white pt-1" x-text="total - keep"></div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <button class="w-full {{ button_bg }} {{ button_text_color }} py-2 font-bold mt-auto"
+            hx-post="{% url 'awakening:step_3_checkout' tier.variant_id %}"
+            hx-target="#step-container"
+            hx-vals='js:{ "quantity": {{ tier.quantity }}, "keep_count": keep }'>
+        &gt;&gt; EQUIP ITEM
+    </button>
+</div>
