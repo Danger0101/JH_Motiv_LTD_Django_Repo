@@ -2,14 +2,18 @@ import random
 import string
 import stripe
 import json
+import uuid
 from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
 from django.utils import timezone
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
+from django.template.loader import render_to_string
+from django.core.mail import send_mail
 from products.models import Product, Variant
+from accounts.models import User
 from cart.utils import get_or_create_cart
-from coaching.models import Offering, ClientOfferingEnrollment
+from coaching.models import Offering, ClientOfferingEnrollment # Assuming this is the correct path in your project
 from payments.models import Order, OrderItem
 
 # --- THE CONTAINER ---
@@ -104,7 +108,7 @@ def render_checkout(request, variant_id):
         'total': total_price,
         'variant': variant,
         'quantity': quantity, # Pass quantity to the template
-        'stripe_public_key': getattr(settings, 'STRIPE_PUBLIC_KEY', ''),
+        'stripe_public_key': getattr(settings, 'STRIPE_PUBLISHABLE_KEY', ''),
     }
     
     return render(request, 'awakening/partials/step_3_checkout.html', context)
@@ -118,12 +122,29 @@ def create_payment_intent(request):
             quantity = int(data.get('quantity', 1)) # Get quantity from JS
             variant = get_object_or_404(Variant, id=variant_id)
             
+            # Get the cart for the webhook safety net
+            cart = get_or_create_cart(request)
+
             stripe.api_key = settings.STRIPE_SECRET_KEY
 
             intent = stripe.PaymentIntent.create(
                 amount=int(variant.price * quantity * 100),  # Amount in pence
                 currency='gbp',
                 automatic_payment_methods={'enabled': True},
+                # The metadata is the CRITICAL part for the webhook safety net.
+                # It must contain everything the handle_payment_intent_checkout service needs.
+                metadata={
+                    # For the webhook to identify the cart and create the order
+                    'product_type': 'ecommerce_cart', 
+                    'cart_id': cart.id,
+                    
+                    # To link the order to the correct user
+                    'user_id': request.user.id if request.user.is_authenticated else None,
+
+                    # Funnel-specific tracking
+                    'integration_check': 'accept_a_payment',
+                    'funnel_name': 'awakening_npc_book',
+                }
             )
 
             return JsonResponse({
@@ -142,7 +163,18 @@ def create_order(request):
         try:
             data = json.loads(request.body)
             variant = get_object_or_404(Variant, id=data.get('variant_id'))
+            email = data.get('email')
             quantity = int(data.get('quantity', 1))
+
+            payment_intent_id = data.get('payment_intent_id')
+
+            # --- IDEMPOTENCY CHECK ---
+            # Check if an order has already been created by the webhook safety net.
+            # If so, use that order instead of creating a duplicate.
+            existing_order = Order.objects.filter(stripe_checkout_id=payment_intent_id).first()
+            if existing_order:
+                # The webhook beat the client. Log it and use the existing order.
+                return JsonResponse({'success': True, 'redirect_url': f'/awakening/order-success/{existing_order.id}/'})
 
             # Store donation details in shipping_data
             shipping_data = {
@@ -156,12 +188,35 @@ def create_order(request):
                 }
             }
             
+            # --- User Handling for Guests vs. Logged-in Users ---
+            target_user = None
+            if request.user.is_authenticated:
+                target_user = request.user
+            else:
+                # For guests, find or create a user account to attach perks to.
+                # This is crucial for high-value tiers.
+                target_user, created = User.objects.get_or_create(
+                    email=email,
+                    defaults={
+                        'username': email, 
+                        'full_name': data.get('name', ''),
+                        'is_client': True,
+                    }
+                )
+                if created:
+                    target_user.set_unusable_password()
+                    target_user.save()
+                # If user existed but name was blank, update it with the new data.
+                elif not target_user.full_name and data.get('name'):
+                    target_user.full_name = data.get('name')
+                    target_user.save(update_fields=['full_name'])
+
             # Create the order
             order = Order.objects.create(
-                user=request.user if request.user.is_authenticated else None,
-                email=data.get('email'),
+                user=target_user,
+                email=email,
                 total_paid=variant.price * quantity, # Total based on quantity
-                stripe_checkout_id=data.get('payment_intent_id'), # Using stripe_checkout_id to store PI
+                stripe_checkout_id=payment_intent_id, # Using stripe_checkout_id to store PI
                 status=Order.STATUS_PAID,
                 shipping_data=shipping_data,
             )
@@ -174,16 +229,33 @@ def create_order(request):
                 quantity=quantity
             )
 
-            # Automatically trigger coaching enrollment for high-value tiers
+            # --- High-Value Perk Enrollment (Works for Guests & Users) ---
             if order.total_paid >= 100 * variant.price:
                 ui_offering = Offering.objects.filter(name__icontains="UI Optimization").first()
-                if ui_offering and request.user.is_authenticated:
+                # Ensure the user has a client_profile to link the enrollment
+                if ui_offering and hasattr(target_user, 'client_profile'):
                     ClientOfferingEnrollment.objects.create(
-                        client=request.user.client_profile, # Assuming user has a related client_profile
+                        client=target_user.client_profile,
                         offering=ui_offering,
-                        status='ACTIVE'
+                        status='ACTIVE',
                     )
-            
+                    # If a new guest account was created, send them an access email.
+                    if not request.user.is_authenticated:
+                        # Generate a secure, one-time access token
+                        token = uuid.uuid4().hex
+                        target_user.billing_notes = token # Store token for verification
+                        target_user.save()
+
+                        # Send email with magic link
+                        mail_subject = "Your Access to the Inner Circle is Confirmed"
+                        message = render_to_string('awakening/emails/guest_enrollment_email.html', {
+                            'user': target_user,
+                            'offering_name': ui_offering.name,
+                            'token': token,
+                        })
+                        send_mail(mail_subject, message, settings.DEFAULT_FROM_EMAIL, [target_user.email], html_message=message)
+
+
             # Clear the cart
             cart = get_or_create_cart(request)
             cart.items.all().delete()
@@ -191,7 +263,7 @@ def create_order(request):
             # Return success and a redirect URL
             return JsonResponse({
                 'success': True,
-                'redirect_url': '/awakening/order-success/' 
+                'redirect_url': f'/awakening/order-success/{order.id}/'
             })
 
         except Exception as e:
@@ -199,9 +271,50 @@ def create_order(request):
             
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
+
 # --- ORDER SUCCESS PAGE ---
-def order_success(request):
-    return render(request, 'awakening/success.html')
+def order_success(request, order_number):
+    """
+    Renders different content/videos based on the Tier purchased.
+    """
+    order = get_object_or_404(Order, id=order_number)
+    
+    # Identify the main item quantity to determine Tier
+    main_item = order.items.first()
+    qty = main_item.quantity if main_item else 1
+
+    # Default: Lone Wolf
+    tier_data = {
+        'title': "INITIATE PROTOCOL ACCEPTED",
+        'message': "You have taken the first step. The manual is being dispatched to your coordinates. Do not share this information with unawakened NPCs.",
+        'video_id': "dQw4w9WgXcQ", # REPLACE WITH REAL YOUTUBE ID
+        'color_class': "text-green-500",
+        'border_class': "border-green-900"
+    }
+
+    # Guild Member (Qty 100)
+    if qty >= 100 and qty < 250:
+        tier_data = {
+            'title': "GUILD ACCESS GRANTED",
+            'message': "Welcome to the inner circle. Your bulk distribution package is being prepared. The 'UI Optimization Protocol' has been unlocked in your account.",
+            'video_id': "dQw4w9WgXcQ", # REPLACE WITH REAL GUILD VIDEO ID
+            'color_class': "text-blue-400",
+            'border_class': "border-blue-900"
+        }
+
+    # Raid Leader (Qty 250+)
+    elif qty >= 250:
+        tier_data = {
+            'title': "SERVER ADMIN PRIVILEGES DETECTED",
+            'message': "You have altered the simulation parameters. VIP Status confirmed. We are contacting you directly regarding the 'London Speedrun' logistics.",
+            'video_id': "dQw4w9WgXcQ", # REPLACE WITH REAL VIP VIDEO ID
+            'color_class': "text-purple-500", # Purple/Glitch Effect
+            'border_class': "border-purple-900"
+        }
+
+    context = {'order': order, 'tier': tier_data}
+
+    return render(request, 'awakening/success.html', context)
     
 # --- SYSTEM LOG LORE API ---
 def generate_agent_id():

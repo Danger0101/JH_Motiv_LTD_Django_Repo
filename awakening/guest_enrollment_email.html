@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Access Granted</title>
+</head>
+<body style="font-family: monospace; background-color: #000; color: #e5e5e5; padding: 20px;">
+    <div style="max-width: 600px; margin: auto; border: 1px solid #14532d; padding: 20px;">
+        <h1 style="color: #22c55e;">// PROTOCOL UNLOCKED</h1>
+        <p style="font-size: 16px;">AGENT {{ user.full_name|default:user.username }},</p>
+        <p>Your high-tier purchase has been confirmed. As a result, an account has been provisioned for you within our system.</p>
+        <p>You have been automatically enrolled in the following protocol:</p>
+        <p style="font-size: 18px; font-weight: bold; color: #4ade80;">&gt; {{ offering_name }}</p>
+        <p>To access your account dashboard and view your new perks, use the secure one-time access link below. You will be prompted to set a password for future access.</p>
+        <div style="margin: 30px 0; text-align: center;">
+            <a href="http://{{ request.get_host }}{% url 'coaching_booking:guest_access' token=token %}" style="background-color: #166534; color: #ffffff; padding: 15px 25px; text-decoration: none; font-weight: bold; border-radius: 2px;">
+                [ ACCESS DASHBOARD ]
+            </a>
+        </div>
+        <p>This link is valid for a single use.</p>
+        <hr style="border-color: #14532d; margin-top: 20px;">
+        <p style="font-size: 12px; color: #a3a3a3;">
+            &gt; TRANSACTION_ID: {{ order.id }} <br>
+            &gt; If you did not authorize this transaction, please disregard this transmission.
+        </p>
+    </div>
+</body>
+</html>

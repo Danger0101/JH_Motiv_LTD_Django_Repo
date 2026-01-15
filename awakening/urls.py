@@ -13,12 +13,12 @@ urlpatterns = [
     path('step-3-checkout/<int:variant_id>/', views.render_checkout, name='step_3_checkout'),
     
     # AJAX Endpoints
-    path('create-payment-intent/', views.create_payment_intent, name='create_payment_intent'),
-    path('create-order/', views.create_order, name='create_order'),
+    path('api/create-payment-intent/', views.create_payment_intent, name='create_payment_intent'),
+    path('api/create-order/', views.create_order, name='create_order'),
 
     # The "System Log" API
     path('api/system-log/', views.simulation_log_api, name='api_log'),
 
     # Order Success
-    path('order-success/', views.order_success, name='order_success'),
+    path('order-success/<str:order_number>/', views.order_success, name='order_success'),
 ]

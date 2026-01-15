@@ -2,7 +2,6 @@ document.addEventListener("DOMContentLoaded", function () {
   const paymentForm = document.getElementById("payment-form");
   if (!paymentForm) {
     // This script is only for the checkout page.
-    // If the form is not on the page, do nothing.
     return;
   }
 
@@ -48,20 +47,36 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       clientSecret = data.client_secret;
-      elements = stripe.elements({ clientSecret });
 
-      const cardElement = elements.create("card", {
+      // THEMED STRIPE ELEMENTS
+      const appearance = {
+        theme: "night",
+        variables: {
+          colorPrimary: "#22c55e", // Tailwind green-500
+          colorBackground: "#052e16", // Dark green bg
+          colorText: "#ffffff",
+          colorDanger: "#ef4444",
+          fontFamily: "monospace", // Terminal style
+          spacingUnit: "4px",
+          borderRadius: "2px",
+        },
+      };
+
+      elements = stripe.elements({ clientSecret, appearance });
+
+      const paymentElement = elements.create("card", {
         style: {
           base: {
-            color: "#FFFFFF",
+            iconColor: "#22c55e",
+            color: "#ffffff",
             fontFamily: "monospace",
             "::placeholder": {
-              color: "#6b7280",
+              color: "#4ade80", // Lighter green placeholder
             },
           },
         },
       });
-      cardElement.mount("#card-element");
+      paymentElement.mount("#card-element");
     } catch (error) {
       console.error("Error initializing payment:", error);
       showMessage("Could not connect to payment server.");
@@ -81,6 +96,11 @@ document.addEventListener("DOMContentLoaded", function () {
         billing_details: {
           name: document.getElementById("name").value,
           email: email,
+          address: {
+            line1: document.getElementById("address").value,
+            postal_code: document.getElementById("postcode").value,
+            city: document.getElementById("city").value,
+          },
         },
       },
     });
@@ -121,7 +141,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const orderData = await response.json();
 
       if (orderData.success && orderData.redirect_url) {
-        window.location.href = orderData.redirect_url;
+        window.location.href = orderData.redirect_url; // Redirect to the dynamic success page
       } else {
         showMessage(orderData.error || "An unknown error occurred.");
         setLoading(false);
@@ -137,6 +157,10 @@ document.addEventListener("DOMContentLoaded", function () {
   function showMessage(messageText) {
     const messageContainer = document.querySelector("#card-errors");
     messageContainer.textContent = messageText;
+    messageContainer.style.opacity = 1;
+    setTimeout(() => {
+      messageContainer.style.opacity = 0;
+    }, 5000);
   }
 
   function setLoading(isLoading) {
@@ -144,7 +168,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (isLoading) {
       submitButton.disabled = true;
-      submitButton.textContent = "PROCESSING...";
+      submitButton.innerHTML =
+        '<span class="animate-pulse">PROCESSING ENCRYPTION...</span>';
     } else {
       submitButton.disabled = false;
       submitButton.textContent = originalButtonText;
