@@ -226,6 +226,26 @@ def create_order(request):
                         token = uuid.uuid4().hex
                         target_user.billing_notes = token # Store token for verification
                         target_user.save()
+            # --- DYNAMIC PERK ENROLLMENT (Works for Guests & Users) ---
+            enrolled_offerings = []
+            try:
+                # Find the FunnelTier corresponding to the purchase
+                purchased_tier = FunnelTier.objects.prefetch_related('perks__linked_offering').get(variant=variant, quantity=quantity)
+                
+                if purchased_tier and hasattr(target_user, 'client_profile'):
+                    for perk in purchased_tier.perks.all():
+                        if perk.linked_offering:
+                            # Use get_or_create for idempotency, preventing duplicate enrollments
+                            enrollment, created = ClientOfferingEnrollment.objects.get_or_create(
+                                client=target_user.client_profile,
+                                offering=perk.linked_offering,
+                                defaults={'status': 'ACTIVE'}
+                            )
+                            if created:
+                                enrolled_offerings.append(perk.linked_offering)
+            except FunnelTier.DoesNotExist:
+                # No specific tier matched, so no automatic enrollments.
+                pass
 
                         # Send email with magic link
                         mail_subject = "Your Access to the Inner Circle is Confirmed"
@@ -235,7 +255,19 @@ def create_order(request):
                             'token': token,
                         })
                         send_mail(mail_subject, message, settings.DEFAULT_FROM_EMAIL, [target_user.email], html_message=message)
+            # If a new guest account was created AND they were enrolled in offerings, send access email.
+            if not request.user.is_authenticated and enrolled_offerings:
+                token = uuid.uuid4().hex
+                target_user.billing_notes = token # Store token for verification
+                target_user.save()
 
+                mail_subject = "Your Access to the Inner Circle is Confirmed"
+                message = render_to_string('awakening/emails/guest_enrollment_email.html', {
+                    'user': target_user,
+                    'enrolled_offerings': enrolled_offerings,
+                    'token': token,
+                })
+                send_mail(mail_subject, message, settings.DEFAULT_FROM_EMAIL, [target_user.email], html_message=message)
 
             # Clear the cart
             cart = get_or_create_cart(request)
