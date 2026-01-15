@@ -13,7 +13,7 @@ from django.core.mail import send_mail
 from products.models import Product, Variant
 from accounts.models import User
 from cart.utils import get_or_create_cart
-from coaching_core.models import Offering
+from coaching_core.models import Offering, ClientProfile
 from coaching_booking.models import ClientOfferingEnrollment
 from .models import FunnelTier, OrderBump
 from payments.models import Order, OrderItem
