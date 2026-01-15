@@ -20,27 +20,17 @@ from payments.models import Order, OrderItem
 
 # --- THE CONTAINER ---
 def funnel_landing(request):
-    """
-    Renders the 'Terminal' container.
-    The actual content (Step 1) is loaded via HTMX trigger on page load.
-    """
     return render(request, 'awakening/partials/funnel_container.html')
 
 # --- STEP 1: THE HOOK (Booklet) ---
 def render_hook(request):
-    """
-    Returns ONLY the booklet HTML fragment.
-    Triggered via HTMX when the page loads or user clicks 'Back'.
-    """
-    # Optional: Fetch product if you need dynamic data
-    # product = Product.objects.filter(name__icontains="Stop Being an NPC").first()
     return render(request, 'awakening/partials/step_1_hook.html')
 
 # --- STEP 2: THE OFFERS (Tiers) ---
 def render_offers(request):
     """
     Returns ONLY the pricing cards (Single, Multi, Co-Op).
-    Now fetched dynamically from the FunnelTier model.
+    Filters out any active tiers that are missing a linked Variant to prevent NoReverseMatch errors.
     """
     # 1. Fetch active tiers
     # 2. Use select_related('variant__product') to optimize the image lookup in the template
@@ -54,31 +44,22 @@ def render_offers(request):
 
 # --- STEP 3: THE CHECKOUT (Embedded) ---
 def render_checkout(request, variant_id):
-    """
-    1. Adds item to cart (background).
-    2. Returns the STRIPE FORM fragment.
-    """
     variant = get_object_or_404(Variant, id=variant_id)
-    # Get quantity from the hx-vals POST data
+    # Get values from POST (sent via HTMX hx-include)
     quantity = int(request.POST.get('quantity', 1))
-    keep_count = int(request.POST.get('keep_count', quantity)) # Get keep_count, default to total quantity
+    keep_count = int(request.POST.get('keep_count', quantity)) 
     total_price = variant.price * quantity
     
     # Fetch the two active order bump offers
     order_bumps = OrderBump.objects.filter(is_active=True).select_related('variant')[:2]
 
     cart = get_or_create_cart(request)
-    
-    # STRICT FUNNEL RULE: Empty cart first
-    # This ensures they aren't buying a t-shirt + the book accidentally
     cart.items.all().delete() 
     
-    # Add the selected bundle with the correct quantity
     cart_item, created = cart.items.get_or_create(variant=variant)
     cart_item.quantity = quantity
     cart_item.save()
         
-    # Context for the template
     context = {
         'cart': cart,
         'total': total_price,
@@ -97,12 +78,11 @@ def create_payment_intent(request):
         try:
             data = json.loads(request.body)
             variant_id = data.get('variant_id')
-            quantity = int(data.get('quantity', 1)) # Get quantity from JS
-            bump_variant_id = data.get('bump_variant_id') # Get ID of selected bump offer
+            quantity = int(data.get('quantity', 1))
+            bump_variant_id = data.get('bump_variant_id')
+            keep_count = int(data.get('keep_count', quantity)) # Captured for metadata
 
             variant = get_object_or_404(Variant, id=variant_id)
-            
-            # Get the cart for the webhook safety net
             cart = get_or_create_cart(request)
 
             # Calculate total amount including the optional order bump
@@ -114,29 +94,22 @@ def create_payment_intent(request):
             stripe.api_key = settings.STRIPE_SECRET_KEY
 
             intent = stripe.PaymentIntent.create(
-                amount=int(total_amount * 100),  # Amount in pence
+                amount=int(total_amount * 100),
                 currency='gbp',
                 automatic_payment_methods={'enabled': True},
-                # The metadata is the CRITICAL part for the webhook safety net.
-                # It must contain everything the handle_payment_intent_checkout service needs.
                 metadata={
-                    # For the webhook to identify the cart and create the order
                     'product_type': 'ecommerce_cart', 
                     'cart_id': cart.id,
-                    'bump_variant_id': bump_variant_id, # Pass bump to webhook
-                    
-                    # To link the order to the correct user
+                    'bump_variant_id': bump_variant_id,
                     'user_id': request.user.id if request.user.is_authenticated else None,
 
-                    # Funnel-specific tracking
                     'integration_check': 'accept_a_payment',
                     'funnel_name': 'awakening_npc_book',
+                    'keep_count': keep_count, # Added to metadata for webhook
                 }
             )
 
-            return JsonResponse({
-                'client_secret': intent.client_secret
-            })
+            return JsonResponse({'client_secret': intent.client_secret})
 
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=403)
@@ -144,7 +117,7 @@ def create_payment_intent(request):
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 # --- AJAX ENDPOINT: CREATE ORDER ---
-@csrf_exempt # Use exempt for this API endpoint for simplicity, consider CSRF tokens for production
+@csrf_exempt
 def create_order(request):
     if request.method == 'POST':
         try:
@@ -153,18 +126,12 @@ def create_order(request):
             email = data.get('email')
             quantity = int(data.get('quantity', 1))
             bump_variant_id = data.get('bump_variant_id')
-
             payment_intent_id = data.get('payment_intent_id')
 
-            # --- IDEMPOTENCY CHECK ---
-            # Check if an order has already been created by the webhook safety net.
-            # If so, use that order instead of creating a duplicate.
             existing_order = Order.objects.filter(stripe_checkout_id=payment_intent_id).first()
             if existing_order:
-                # The webhook beat the client. Log it and use the existing order.
                 return JsonResponse({'success': True, 'redirect_url': f'/awakening/order-success/{existing_order.id}/'})
 
-            # Store donation details in shipping_data
             shipping_data = {
                 'name': data.get('name'),
                 'address': data.get('address'),
@@ -176,13 +143,10 @@ def create_order(request):
                 }
             }
             
-            # --- User Handling for Guests vs. Logged-in Users ---
             target_user = None
             if request.user.is_authenticated:
                 target_user = request.user
             else:
-                # For guests, find or create a user account to attach perks to.
-                # This is crucial for high-value tiers.
                 target_user, created = User.objects.get_or_create(
                     email=email,
                     defaults={
@@ -194,28 +158,24 @@ def create_order(request):
                 if created:
                     target_user.set_unusable_password()
                     target_user.save()
-                # If user existed but name was blank, update it with the new data.
                 elif not target_user.full_name and data.get('name'):
                     target_user.full_name = data.get('name')
                     target_user.save(update_fields=['full_name'])
 
-            # Calculate total paid, including the bump
             total_paid = variant.price * quantity
             if bump_variant_id:
                 bump_variant = get_object_or_404(Variant, id=bump_variant_id)
                 total_paid += bump_variant.price
 
-            # Create the order
             order = Order.objects.create(
                 user=target_user,
                 email=email,
                 total_paid=total_paid,
-                stripe_checkout_id=payment_intent_id, # Using stripe_checkout_id to store PI
+                stripe_checkout_id=payment_intent_id,
                 status=Order.STATUS_PAID,
                 shipping_data=shipping_data,
             )
             
-            # Create the order item
             OrderItem.objects.create(
                 order=order,
                 variant=variant,
@@ -223,7 +183,6 @@ def create_order(request):
                 quantity=quantity
             )
 
-            # Create order item for the bump, if it exists
             if bump_variant_id:
                 OrderItem.objects.create(
                     order=order,
@@ -232,34 +191,32 @@ def create_order(request):
                     quantity=1
                 )
 
-            # --- DYNAMIC PERK ENROLLMENT (Works for Guests & Users) ---
+            # --- DYNAMIC PERK ENROLLMENT ---
             enrolled_offerings = []
             try:
-                # Find the FunnelTier corresponding to the purchase
-                purchased_tier = FunnelTier.objects.prefetch_related('perks__linked_offering').get(variant=variant, quantity=quantity)
-
-                # Import here to avoid circular dependency if models are intertwined
+                purchased_tier = FunnelTier.objects.prefetch_related('perks__linked_offering').get(variant=variant, quantity=quantity)                
+                # Use string reference or ensure profile exists to avoid import crash
                 from coaching_client.models import ClientProfile
+                
+                # Ensure profile exists before trying to enroll
+                client_profile, _ = ClientProfile.objects.get_or_create(user=target_user)
 
-                if purchased_tier and hasattr(target_user, 'client_profile'):
+                if purchased_tier:
                     for perk in purchased_tier.perks.all():
                         if perk.linked_offering:
-                            # Use get_or_create for idempotency, preventing duplicate enrollments
                             enrollment, created = ClientOfferingEnrollment.objects.get_or_create(
-                                client=target_user.client_profile,
+                                client=client_profile,
                                 offering=perk.linked_offering,
                                 defaults={'status': 'ACTIVE'}
                             )
                             if created:
                                 enrolled_offerings.append(perk.linked_offering)
             except FunnelTier.DoesNotExist:
-                # No specific tier matched, so no automatic enrollments.
                 pass
 
-            # If a new guest account was created AND they were enrolled in offerings, send access email.
             if not request.user.is_authenticated and enrolled_offerings:
                 token = uuid.uuid4().hex
-                target_user.billing_notes = token # Store token for verification
+                target_user.billing_notes = token 
                 target_user.save()
 
                 mail_subject = "Your Access to the Inner Circle is Confirmed"
@@ -270,11 +227,9 @@ def create_order(request):
                 })
                 send_mail(mail_subject, message, settings.DEFAULT_FROM_EMAIL, [target_user.email], html_message=message)
 
-            # Clear the cart
             cart = get_or_create_cart(request)
             cart.items.all().delete()
 
-            # Return success and a redirect URL
             return JsonResponse({
                 'success': True,
                 'redirect_url': f'/awakening/order-success/{order.id}/'
@@ -286,68 +241,54 @@ def create_order(request):
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 
-# --- ORDER SUCCESS PAGE ---
+# (Remaining views: order_success, generate_agent_id, simulation_log_api remain unchanged)
 def order_success(request, order_number):
-    """
-    Renders different content/videos based on the Tier purchased.
-    """
     order = get_object_or_404(Order, id=order_number)
     main_item = None
     bump_item = None
     linked_perks = []
-
-    # --- Identify Main Item vs. Bump Item ---
-    # We iterate through the order items and check which one corresponds to a defined FunnelTier.
-    # This is more robust than assuming the first item is the main one.
+    
     all_items = order.items.all()
     for item in all_items:
-        # Check if a FunnelTier exists for this item's variant and quantity
         is_main_tier_item = FunnelTier.objects.filter(variant=item.variant, quantity=item.quantity).exists()
         if is_main_tier_item and not main_item:
             main_item = item
         else:
-            # Anything that isn't the main tier item is treated as a bump/add-on
             bump_item = item
 
-    # Fallback if the main item couldn't be identified (e.g., manual order)
     if not main_item and all_items:
         main_item = all_items.first()
 
-    # --- Fetch Perks with Links ---
     if main_item:
         try:
             purchased_tier = FunnelTier.objects.get(variant=main_item.variant, quantity=main_item.quantity)
             linked_perks = purchased_tier.perks.filter(link_url__isnull=False).exclude(link_url__exact='')
         except FunnelTier.DoesNotExist:
-            pass # No tier matched, so no perks to show.
+            pass
 
-    # Default: Lone Wolf
     qty = main_item.quantity if main_item else 0
     tier_data = {
         'title': "INITIATE PROTOCOL ACCEPTED",
         'message': "You have taken the first step. The manual is being dispatched to your coordinates. Do not share this information with unawakened NPCs.",
-        'video_id': "dQw4w9WgXcQ", # REPLACE WITH REAL YOUTUBE ID
+        'video_id': "dQw4w9WgXcQ", 
         'color_class': "text-green-500",
         'border_class': "border-green-900"
     }
 
-    # Guild Member (Qty 100)
     if qty >= 100 and qty < 250:
         tier_data = {
             'title': "GUILD ACCESS GRANTED",
             'message': "Welcome to the inner circle. Your bulk distribution package is being prepared. The 'UI Optimization Protocol' has been unlocked in your account.",
-            'video_id': "dQw4w9WgXcQ", # REPLACE WITH REAL GUILD VIDEO ID
+            'video_id': "dQw4w9WgXcQ", 
             'color_class': "text-blue-400",
             'border_class': "border-blue-900"
         }
-
-    # Raid Leader (Qty 250+)
     elif qty >= 250:
         tier_data = {
             'title': "SERVER ADMIN PRIVILEGES DETECTED",
             'message': "You have altered the simulation parameters. VIP Status confirmed. We are contacting you directly regarding the 'London Speedrun' logistics.",
-            'video_id': "dQw4w9WgXcQ", # REPLACE WITH REAL VIP VIDEO ID
-            'color_class': "text-purple-500", # Purple/Glitch Effect
+            'video_id': "dQw4w9WgXcQ", 
+            'color_class': "text-purple-500", 
             'border_class': "border-purple-900"
         }
 
@@ -355,15 +296,13 @@ def order_success(request, order_number):
         'order': order,
         'tier': tier_data,
         'main_item': main_item,
-        'bump_item': bump_item, # Pass the identified bump item to the template
-        'linked_perks': linked_perks, # Pass the perks with URLs
+        'bump_item': bump_item,
+        'linked_perks': linked_perks,
     }
 
     return render(request, 'awakening/success.html', context)
     
-# --- SYSTEM LOG LORE API ---
 def generate_agent_id():
-    """Generates a cool looking ID like 'AGT-992' or 'USR-X7'"""
     prefix = random.choice(['AGT', 'USR', 'PLR', 'NOD', 'SYS'])
     nums = "".join(random.choices(string.digits, k=3))
     return f"{prefix}-{nums}"
@@ -371,9 +310,7 @@ def generate_agent_id():
 def simulation_log_api(request):
     """
     Returns a random 'Server Event' for the frontend terminal.
-    Includes the 'Both Pills' lore mechanic.
     """
-    # 1. The "Awakening" Events (Sales/Conversions)
     success_events = [
         "PLAYER {id} HAS TAKEN THE RED PILL.",
         "NEW AGENT {id} RECRUITED TO THE GUILD.",
@@ -382,8 +319,6 @@ def simulation_log_api(request):
         "{id} UNLOCKED: MAIN CHARACTER ENERGY.",
         "{id} EQUIPPED: 'THE COMBAT LOG'.",
     ]
-
-    # 2. The "Failure" Events (Blue Pill / Staying Asleep)
     failure_events = [
         "NPC {id} CHOSE THE BLUE PILL.",
         "CONNECTION LOST: {id} REMAINED ASLEEP.",
@@ -391,8 +326,6 @@ def simulation_log_api(request):
         "ALERT: {id} FAILED TO WAKE UP.",
         "{id} RETURNED TO AUTO-PILOT MODE.",
     ]
-
-    # 3. System Noise (Flavor Text)
     system_events = [
         "GLITCH DETECTED IN SECTOR 7...",
         "UPDATING GLOBAL PLAYER STATS...",
@@ -400,8 +333,6 @@ def simulation_log_api(request):
         "SERVER LOAD: 99% CAPACITY.",
         "ESTABLISHING SECURE UPLINK...",
     ]
-
-    # 4. The "Both Pills" Events (Rare/High Status - Purple)
     infiltration_events = [
         "AGENT {id} SWALLOWED BOTH PILLS.",
         "SYSTEM ALERT: {id} IS RUNNING DUAL-BOOT PROTOCOL.",
@@ -409,25 +340,24 @@ def simulation_log_api(request):
         "PLAYER {id} EQUIPPED: 'THE STEALTH GRIND'.", 
     ]
 
-    # Weighted Randomness
     event_type = random.choices(
         ['success', 'failure', 'system', 'infiltration'], 
-        weights=[35, 15, 40, 10], # 10% chance for Purple Lore
+        weights=[35, 15, 40, 10], 
         k=1
     )[0]
 
     if event_type == 'success':
         msg = random.choice(success_events).format(id=generate_agent_id())
-        color = "text-green-400" # Matrix Green
+        color = "text-green-400"
     elif event_type == 'failure':
         msg = random.choice(failure_events).format(id=generate_agent_id())
-        color = "text-red-500" # Alert Red
+        color = "text-red-500"
     elif event_type == 'infiltration':
         msg = random.choice(infiltration_events).format(id=generate_agent_id())
-        color = "text-purple-400" # Purple (Red + Blue)
+        color = "text-purple-400"
     else:
         msg = random.choice(system_events)
-        color = "text-gray-500" # Dim System Text
+        color = "text-gray-500"
 
     return JsonResponse({
         'timestamp': timezone.now().strftime('%H:%M:%S'),

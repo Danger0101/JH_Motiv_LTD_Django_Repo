@@ -9,8 +9,11 @@
     - button_text_color
     - dist_bg
 #}
-<div class="relative border {{ border_color }} bg-black/50 p-6 flex flex-col"
+<div class="tier-card relative border {{ border_color }} bg-black/50 p-6 flex flex-col"
      x-data="{ keep: 1, total: {{ tier.quantity }} }">
+
+    {# HIDDEN INPUTS FOR HTMX #}
+    <input type="hidden" name="quantity" value="{{ tier.quantity }}">
 
     <div class="flex-grow">
         <h3 class="text-xl font-bold text-white">{{ tier.name }}</h3>
@@ -35,7 +38,8 @@
         <div class="flex items-center gap-4">
             <div class="flex-1">
                 <span class="text-[10px] text-gray-500">KEEP</span>
-                <input type="number" x-model.number="keep" min="1" :max="total"
+                {# Added name attribute for HTMX #}
+                <input type="number" name="keep_count" x-model.number="keep" min="1" :max="total"
                        class="w-full bg-transparent border-b {{ border_color }} text-white outline-none p-1">
             </div>
             <div class="flex-1 text-right">
@@ -44,12 +48,16 @@
             </div>
         </div>
     </div>
+    {% else %}
+        {# For single items, keep count is always 1 #}
+        <input type="hidden" name="keep_count" value="1">
     {% endif %}
 
-    <button class="w-full {{ button_bg }} {{ button_text_color }} py-2 font-bold mt-auto"
+    {# Updated Button: Includes inputs from the parent card container #}
+    <button class="w-full {{ button_bg }} {{ button_text_color }} py-2 font-bold mt-auto hover:opacity-90 transition-opacity"
             hx-post="{% url 'awakening:step_3_checkout' tier.variant_id %}"
-            hx-target="#step-container"
-            hx-vals='js:{ "quantity": {{ tier.quantity }}, "keep_count": keep }'>
+            hx-target="#terminal-stage" 
+            hx-include="closest .tier-card">
         &gt;&gt; EQUIP ITEM
     </button>
 </div>

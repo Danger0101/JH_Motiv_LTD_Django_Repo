@@ -131,13 +131,13 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         setLoading(true);
 
-        const { error } = await stripe.confirmPayment({
+        // 1. Confirm Payment
+        const { error, paymentIntent } = await stripe.confirmPayment({
             elements,
             confirmParams: {
-                // We don't need a return_url here because we handle the redirect manually
-                // after creating the order in our backend.
+                // No return_url needed as we handle redirect manually below
             },
-            redirect: "if_required" // IMPORTANT: Prevents automatic redirect
+            redirect: "if_required"
         });
 
         if (error) {
@@ -147,11 +147,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 showMessage("An unexpected error occurred.");
             }
             setLoading(false);
-        } else {
-            // Payment succeeded, now create the order on our backend
-            // This logic should be in your main payment success handler
-            // For this funnel, we assume it's handled by the parent page listening for Stripe success.
-            // If not, you would call your `create_order` endpoint here.
+        } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+            // 2. Create Order on Backend
+            const selectedBump = getSelectedBump();
+            
+            const orderData = {
+                payment_intent_id: paymentIntent.id,
+                variant_id: variantId,
+                quantity: quantity,
+                keep_count: keepCount,
+                bump_variant_id: selectedBump.id,
+                email: document.getElementById('email-input') ? document.getElementById('email-input').value : "guest@example.com",
+            };
+
+            try {
+                const response = await fetch("{% url 'awakening:create_order' %}", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(orderData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    window.location.href = result.redirect_url;
+                } else {
+                    showMessage("Order creation failed: " + (result.error || "Unknown error"));
+                    setLoading(false);
+                }
+            } catch (err) {
+                showMessage("Network error: " + err.message);
+                setLoading(false);
+            }
         }
     });
 
