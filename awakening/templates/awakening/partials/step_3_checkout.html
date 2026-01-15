@@ -69,8 +69,10 @@
             // Check for bump
             const bumpCheckbox = document.getElementById('bump-offer');
             if (bumpCheckbox && bumpCheckbox.checked) {
-                // Assuming logic to get ID if needed, hardcoded for now or passed via data attr
+                // Assuming logic to get ID if needed, using safe default if missing
+                {% if order_bumps %}
                 bumpVariantId = "{{ order_bumps.0.variant.id }}";
+                {% endif %}
             }
 
             const response = await fetch("{% url 'awakening:create_payment_intent' %}", {
@@ -117,10 +119,6 @@
                 setLoading(false);
             } else if (paymentIntent && paymentIntent.status === "succeeded") {
                 // Payment succeeded, create order
-                const emailInput = document.querySelector('#link-authentication-element input'); 
-                // Note: Getting email from Link element via DOM is hacky/blocked. 
-                // Better to rely on what user typed or logged in state.
-                // For this demo, assuming we handle it or user is logged in.
                 
                 const response = await fetch("{% url 'awakening:create_order' %}", {
                     method: "POST",
@@ -131,8 +129,10 @@
                         quantity: quantity,
                         keep_count: keepCount,
                         bump_variant_id: bumpVariantId,
-                        email: "guest@example.com", // Replace with real capture or logged in user email
-                        name: "Guest Agent" 
+                        // If using Link, email is stored in Stripe, but passing explicit email is safer if you have an input
+                        // For this snippet we assume user is logged in or we extract from context if needed
+                        email: "guest@example.com", // Placeholder: In prod, get this from the Link element or user session
+                        name: "Guest Agent"
                     })
                 });
 
@@ -140,7 +140,7 @@
                 if (result.success) {
                     window.location.href = result.redirect_url;
                 } else {
-                    showMessage("Order creation failed. Contact support.");
+                    showMessage("Order creation failed. Please contact support.");
                 }
             }
         }
