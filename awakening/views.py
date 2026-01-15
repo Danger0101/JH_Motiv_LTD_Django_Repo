@@ -9,6 +9,7 @@ from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from products.models import Product, Variant
 from cart.utils import get_or_create_cart
+from coaching.models import Offering, ClientOfferingEnrollment
 from payments.models import Order, OrderItem
 
 # --- THE CONTAINER ---
@@ -34,18 +35,46 @@ def render_offers(request):
     """
     Returns ONLY the pricing cards (Single, Multi, Co-Op).
     """
-    # Fetch your 3 variants for the book
-    # Ensure you have created these in Admin!
     product = Product.objects.filter(name__icontains="Stop Being an NPC").first()
-    
-    if product:
-        # The 'is_active' field is on the Product model, not the Variant model.
-        # This filter was causing a FieldError.
-        variants = product.variants.all().order_by('price')
-    else:
-        variants = []
+    base_variant = product.variants.first() if product else None
 
-    return render(request, 'awakening/partials/step_2_offers.html', {'variants': variants})
+    if not base_variant:
+        return render(request, 'awakening/partials/step_2_offers.html', {'tiers': []})
+
+    base_price = base_variant.price
+
+    # Define the custom funnel loadouts
+    tiers = [
+        {
+            'id': 'lone_wolf',
+            'name': 'LONE WOLF',
+            'quantity': 1,
+            'price': base_price,
+            'variant_id': base_variant.id,
+            'perks': ['Signed copy (First 100)', 'Physical Manual'],
+            'class': 'LONE_WOLF'
+        },
+        {
+            'id': 'guild_member',
+            'name': 'GUILD MEMBER',
+            'quantity': 100,
+            'price': base_price * 100,
+            'variant_id': base_variant.id,
+            'perks': ['Free "UI Optimization Protocol"', 'Signed & Numbered', 'Guild Access'],
+            'class': 'GUILD_MEMBER'
+        },
+        {
+            'id': 'raid_leader',
+            'name': 'RAID LEADER',
+            'quantity': 250,
+            'price': base_price * 250,
+            'variant_id': base_variant.id,
+            'perks': ['"Server Admin" / "London Speedrun" Upgrade', 'Previous Perks', 'VIP Status'],
+            'class': 'RAID_LEADER'
+        }
+    ]
+
+    return render(request, 'awakening/partials/step_2_offers.html', {'tiers': tiers})
 
 # --- STEP 3: THE CHECKOUT (Embedded) ---
 def render_checkout(request, variant_id):
@@ -54,26 +83,28 @@ def render_checkout(request, variant_id):
     2. Returns the STRIPE FORM fragment.
     """
     variant = get_object_or_404(Variant, id=variant_id)
+    # Get quantity from the hx-vals POST data
+    quantity = int(request.POST.get('quantity', 1))
+    total_price = variant.price * quantity
+
     cart = get_or_create_cart(request)
     
     # STRICT FUNNEL RULE: Empty cart first
     # This ensures they aren't buying a t-shirt + the book accidentally
     cart.items.all().delete() 
     
-    # Add the selected bundle
+    # Add the selected bundle with the correct quantity
     cart_item, created = cart.items.get_or_create(variant=variant)
-    if not created:
-        cart_item.quantity = 1
-        cart_item.save()
+    cart_item.quantity = quantity
+    cart_item.save()
         
     # Context for the template
     context = {
         'cart': cart,
-        'total': variant.price,
+        'total': total_price,
         'variant': variant,
+        'quantity': quantity, # Pass quantity to the template
         'stripe_public_key': getattr(settings, 'STRIPE_PUBLIC_KEY', ''),
-        # Note: You would normally generate a PaymentIntent client_secret here
-        # For now, we will let your existing payments JS handle the intent creation via AJAX
     }
     
     return render(request, 'awakening/partials/step_3_checkout.html', context)
@@ -84,12 +115,13 @@ def create_payment_intent(request):
         try:
             data = json.loads(request.body)
             variant_id = data.get('variant_id')
+            quantity = int(data.get('quantity', 1)) # Get quantity from JS
             variant = get_object_or_404(Variant, id=variant_id)
             
             stripe.api_key = settings.STRIPE_SECRET_KEY
 
             intent = stripe.PaymentIntent.create(
-                amount=int(variant.price * 100),  # Amount in pence
+                amount=int(variant.price * quantity * 100),  # Amount in pence
                 currency='gbp',
                 automatic_payment_methods={'enabled': True},
             )
@@ -110,20 +142,28 @@ def create_order(request):
         try:
             data = json.loads(request.body)
             variant = get_object_or_404(Variant, id=data.get('variant_id'))
+            quantity = int(data.get('quantity', 1))
+
+            # Store donation details in shipping_data
+            shipping_data = {
+                'name': data.get('name'),
+                'address': data.get('address'),
+                'city': data.get('city'),
+                'postcode': data.get('postcode'),
+                'distribution': {
+                    'keep': data.get('keep_count', 1),
+                    'donate': quantity - int(data.get('keep_count', 1))
+                }
+            }
             
             # Create the order
             order = Order.objects.create(
                 user=request.user if request.user.is_authenticated else None,
                 email=data.get('email'),
-                total_paid=variant.price,
+                total_paid=variant.price * quantity, # Total based on quantity
                 stripe_checkout_id=data.get('payment_intent_id'), # Using stripe_checkout_id to store PI
                 status=Order.STATUS_PAID,
-                shipping_data={
-                    'name': data.get('name'),
-                    'address': data.get('address'),
-                    'city': data.get('city'),
-                    'postcode': data.get('postcode'),
-                }
+                shipping_data=shipping_data,
             )
             
             # Create the order item
@@ -131,8 +171,18 @@ def create_order(request):
                 order=order,
                 variant=variant,
                 price=variant.price,
-                quantity=1
+                quantity=quantity
             )
+
+            # Automatically trigger coaching enrollment for high-value tiers
+            if order.total_paid >= 100 * variant.price:
+                ui_offering = Offering.objects.filter(name__icontains="UI Optimization").first()
+                if ui_offering and request.user.is_authenticated:
+                    ClientOfferingEnrollment.objects.create(
+                        client=request.user.client_profile, # Assuming user has a related client_profile
+                        offering=ui_offering,
+                        status='ACTIVE'
+                    )
             
             # Clear the cart
             cart = get_or_create_cart(request)

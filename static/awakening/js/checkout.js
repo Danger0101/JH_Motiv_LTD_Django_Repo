@@ -1,171 +1,153 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const paymentForm = document.querySelector('#payment-form');
-    if (!paymentForm) {
-        return;
-    }
+document.addEventListener("DOMContentLoaded", function () {
+  const paymentForm = document.getElementById("payment-form");
+  if (!paymentForm) {
+    // This script is only for the checkout page.
+    // If the form is not on the page, do nothing.
+    return;
+  }
 
-    const stripePublicKey = paymentForm.dataset.stripeKey;
+  const stripePublicKey = paymentForm.dataset.stripeKey;
+  if (!stripePublicKey) {
+    console.error("Stripe public key not found.");
+    return;
+  }
+
+  const stripe = Stripe(stripePublicKey);
+  const submitButton = document.getElementById("submit-button");
+  const originalButtonText = submitButton.textContent;
+
+  // --- 1. Initialize Stripe Elements ---
+  let elements;
+  let clientSecret;
+
+  // Fetch Payment Intent and initialize elements
+  initialize();
+
+  // --- 2. Set up form submission ---
+  paymentForm.addEventListener("submit", handleSubmit);
+
+  // --- Functions ---
+
+  // Fetches a payment intent and captures the client secret
+  async function initialize() {
     const variantId = paymentForm.dataset.variantId;
+    const quantity = paymentForm.dataset.quantity;
 
-    if (!stripePublicKey || !variantId) {
-        console.error('Stripe public key or variant ID not found.');
-        const cardElementDiv = document.querySelector('#card-element');
-        if (cardElementDiv) {
-            cardElementDiv.textContent = 'Error: Payment configuration is missing. Cannot load payment form.';
-            cardElementDiv.classList.add('text-red-500');
-        }
+    try {
+      const response = await fetch("/awakening/api/create-payment-intent/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variant_id: variantId, quantity: quantity }),
+      });
+
+      const data = await response.json();
+      if (data.error) {
+        showMessage(data.error);
+        setLoading(true); // Disable form if PI creation fails
         return;
-    }
+      }
 
-    const stripe = Stripe(stripePublicKey);
-    let elements;
+      clientSecret = data.client_secret;
+      elements = stripe.elements({ clientSecret });
 
-    initialize();
-
-    paymentForm.addEventListener('submit', handleFormSubmit);
-
-    // Fetches a payment intent and captures the client secret
-    async function initialize() {
-        const response = await fetch('/create-payment-intent/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ variant_id: variantId }),
-        });
-        const { client_secret: clientSecret } = await response.json();
-
-        elements = stripe.elements({ clientSecret });
-
-        const cardElement = elements.create('card', {
-            style: {
-                base: {
-                    color: '#fff',
-                    fontFamily: '"VT323", monospace',
-                    fontSize: '16px',
-                    '::placeholder': { color: '#a0aec0' }
-                },
-                invalid: {
-                    color: '#ef4444',
-                    iconColor: '#ef4444'
-                }
-            }
-        });
-        cardElement.mount('#card-element');
-        cardElement.on('change', ({ error }) => {
-            const displayError = document.getElementById('card-errors');
-            if (error) {
-                displayError.textContent = error.message;
-            } else {
-                displayError.textContent = '';
-            }
-        });
-    }
-
-    async function handleFormSubmit(event) {
-        event.preventDefault();
-        setLoading(true);
-
-        const email = document.querySelector('#email').value;
-        const name = document.querySelector('#name').value;
-        const address = document.querySelector('#address').value;
-        const city = document.querySelector('#city').value;
-        const postcode = document.querySelector('#postcode').value;
-
-        const { error, paymentIntent } = await stripe.confirmPayment({
-            elements,
-            confirmParams: {
-                // Return URL is not strictly needed for this SPA-like flow,
-                // but good practice to have a fallback
-                return_url: window.location.href, 
-                payment_method_data: {
-                    billing_details: {
-                        name: name,
-                        email: email,
-                        address: {
-                            line1: address,
-                            city: city,
-                            postal_code: postcode,
-                            country: 'GB', // Assuming GB for now
-                        }
-                    }
-                }
+      const cardElement = elements.create("card", {
+        style: {
+          base: {
+            color: "#FFFFFF",
+            fontFamily: "monospace",
+            "::placeholder": {
+              color: "#6b7280",
             },
-            redirect: 'if_required' // Prevents redirect unless absolutely necessary
-        });
-
-        if (error) {
-            handleError(error);
-            return;
-        }
-
-        if (paymentIntent.status === 'succeeded') {
-            // Payment succeeded, now create the order on the backend
-            const orderData = {
-                payment_intent_id: paymentIntent.id,
-                email: email,
-                name: name,
-                address: address,
-                city: city,
-                postcode: postcode,
-                variant_id: variantId,
-            };
-
-            const response = await fetch('/awakening/create-order/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-                body: JSON.stringify(orderData)
-            });
-            
-            const serverResponse = await response.json();
-            handleServerResponse(serverResponse);
-
-        } else {
-            document.getElementById('card-errors').textContent = "Payment not successful. Status: " + paymentIntent.status;
-            setLoading(false);
-        }
+          },
+        },
+      });
+      cardElement.mount("#card-element");
+    } catch (error) {
+      console.error("Error initializing payment:", error);
+      showMessage("Could not connect to payment server.");
     }
-    
-    function handleServerResponse(response) {
-        if (response.error) {
-            document.getElementById('card-errors').textContent = response.error;
-        } else if (response.success) {
-            // Redirect to a success page or show a success message
-            window.location.href = response.redirect_url;
-        }
+  }
+
+  // Handles the form submission
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setLoading(true);
+
+    const email = document.getElementById("email").value;
+
+    const { error } = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: {
+        card: elements.getElement("card"),
+        billing_details: {
+          name: document.getElementById("name").value,
+          email: email,
+        },
+      },
+    });
+
+    if (error) {
+      // This will be a card decline, authentication error, etc.
+      showMessage(error.message);
+      setLoading(false);
+    } else {
+      // Payment succeeded. Now, create the order in our database.
+      await createOrder(email);
+    }
+  }
+
+  // Creates the final order in the backend
+  async function createOrder(email) {
+    const formData = new FormData(paymentForm);
+    const formProps = Object.fromEntries(formData);
+
+    const payload = {
+      variant_id: paymentForm.dataset.variantId,
+      quantity: paymentForm.dataset.quantity,
+      keep_count: sessionStorage.getItem("keep_count") || 1, // Retrieve from session storage
+      email: email,
+      name: formProps.name,
+      address: formProps.address,
+      city: formProps.city,
+      postcode: formProps.postcode,
+      payment_intent_id: clientSecret.split("_secret")[0], // Extract PI from client_secret
+    };
+
+    try {
+      const response = await fetch("/awakening/api/create-order/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const orderData = await response.json();
+
+      if (orderData.success && orderData.redirect_url) {
+        window.location.href = orderData.redirect_url;
+      } else {
+        showMessage(orderData.error || "An unknown error occurred.");
         setLoading(false);
+      }
+    } catch (error) {
+      console.error("Error creating order:", error);
+      showMessage("Server error while finalizing order.");
+      setLoading(false);
     }
+  }
 
-    function handleError(error) {
-        let message = 'An unexpected error occurred.';
-        if (error.type === 'card_error' || error.type === 'validation_error') {
-            message = error.message;
-        }
-        document.getElementById('card-errors').textContent = message;
-        setLoading(false);
-    }
+  // --- UI Helper Functions ---
+  function showMessage(messageText) {
+    const messageContainer = document.querySelector("#card-errors");
+    messageContainer.textContent = messageText;
+  }
 
-    function setLoading(isLoading) {
-        const submitButton = document.getElementById('submit-button');
-        if (isLoading) {
-            submitButton.disabled = true;
-            submitButton.textContent = 'PROCESSING...';
-        } else {
-            submitButton.disabled = false;
-            submitButton.textContent = 'Submit Payment';
-        }
-    }
+  function setLoading(isLoading) {
+    if (!submitButton) return;
 
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
+    if (isLoading) {
+      submitButton.disabled = true;
+      submitButton.textContent = "PROCESSING...";
+    } else {
+      submitButton.disabled = false;
+      submitButton.textContent = originalButtonText;
     }
+  }
 });
