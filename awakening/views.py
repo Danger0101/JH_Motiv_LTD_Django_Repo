@@ -16,7 +16,7 @@ from cart.utils import get_or_create_cart
 # --- FIXED IMPORTS HERE ---
 from coaching_core.models import Offering
 from coaching_booking.models import ClientOfferingEnrollment
-from .models import FunnelTier
+from .models import FunnelTier, OrderBump
 from payments.models import Order, OrderItem
 
 # --- THE CONTAINER ---
@@ -71,6 +71,9 @@ def render_checkout(request, variant_id):
     # Get quantity from the hx-vals POST data
     quantity = int(request.POST.get('quantity', 1))
     total_price = variant.price * quantity
+    
+    # Fetch the two active order bump offers
+    order_bumps = OrderBump.objects.filter(is_active=True).select_related('variant')[:2]
 
     cart = get_or_create_cart(request)
     
@@ -89,6 +92,7 @@ def render_checkout(request, variant_id):
         'total': total_price,
         'variant': variant,
         'quantity': quantity, # Pass quantity to the template
+        'order_bumps': order_bumps, # Pass the bump offers to the template
         'stripe_public_key': getattr(settings, 'STRIPE_PUBLISHABLE_KEY', ''),
     }
     
@@ -101,15 +105,23 @@ def create_payment_intent(request):
             data = json.loads(request.body)
             variant_id = data.get('variant_id')
             quantity = int(data.get('quantity', 1)) # Get quantity from JS
+            bump_variant_id = data.get('bump_variant_id') # Get ID of selected bump offer
+
             variant = get_object_or_404(Variant, id=variant_id)
             
             # Get the cart for the webhook safety net
             cart = get_or_create_cart(request)
 
+            # Calculate total amount including the optional order bump
+            total_amount = variant.price * quantity
+            if bump_variant_id:
+                bump_variant = get_object_or_404(Variant, id=bump_variant_id)
+                total_amount += bump_variant.price
+
             stripe.api_key = settings.STRIPE_SECRET_KEY
 
             intent = stripe.PaymentIntent.create(
-                amount=int(variant.price * quantity * 100),  # Amount in pence
+                amount=int(total_amount * 100),  # Amount in pence
                 currency='gbp',
                 automatic_payment_methods={'enabled': True},
                 # The metadata is the CRITICAL part for the webhook safety net.
@@ -118,6 +130,7 @@ def create_payment_intent(request):
                     # For the webhook to identify the cart and create the order
                     'product_type': 'ecommerce_cart', 
                     'cart_id': cart.id,
+                    'bump_variant_id': bump_variant_id, # Pass bump to webhook
                     
                     # To link the order to the correct user
                     'user_id': request.user.id if request.user.is_authenticated else None,
@@ -146,6 +159,7 @@ def create_order(request):
             variant = get_object_or_404(Variant, id=data.get('variant_id'))
             email = data.get('email')
             quantity = int(data.get('quantity', 1))
+            bump_variant_id = data.get('bump_variant_id')
 
             payment_intent_id = data.get('payment_intent_id')
 
@@ -192,11 +206,17 @@ def create_order(request):
                     target_user.full_name = data.get('name')
                     target_user.save(update_fields=['full_name'])
 
+            # Calculate total paid, including the bump
+            total_paid = variant.price * quantity
+            if bump_variant_id:
+                bump_variant = get_object_or_404(Variant, id=bump_variant_id)
+                total_paid += bump_variant.price
+
             # Create the order
             order = Order.objects.create(
                 user=target_user,
                 email=email,
-                total_paid=variant.price * quantity, # Total based on quantity
+                total_paid=total_paid,
                 stripe_checkout_id=payment_intent_id, # Using stripe_checkout_id to store PI
                 status=Order.STATUS_PAID,
                 shipping_data=shipping_data,
@@ -208,6 +228,16 @@ def create_order(request):
                 variant=variant,
                 price=variant.price,
                 quantity=quantity
+            )
+
+            # Create order item for the bump, if it exists
+            if bump_variant_id:
+                OrderItem.objects.create(
+                    order=order,
+                    variant=bump_variant,
+                    price=bump_variant.price,
+                    quantity=1
+                )
             )
 
             # --- DYNAMIC PERK ENROLLMENT (Works for Guests & Users) ---

@@ -61,3 +61,28 @@ class TierPerk(models.Model):
 
     def __str__(self):
         return self.text
+
+
+class OrderBump(models.Model):
+    """
+    Represents a final upsell/cross-sell offer presented at checkout.
+    e.g., "Add the Audiobook" vs "Add the Digital Toolkit".
+    """
+    name = models.CharField(max_length=100, help_text="Internal name for this offer, e.g., 'Audiobook Bump'")
+    headline = models.CharField(max_length=255, help_text="The catchy headline above the choice, e.g., 'Final Offer: Upgrade Your Order!'")
+    
+    # The product variant this bump offer adds to the cart
+    variant = models.ForeignKey(
+        'products.Variant',
+        on_delete=models.CASCADE,
+        help_text="The product variant that will be added to the order."
+    )
+    
+    is_default_choice = models.BooleanField(
+        default=False,
+        help_text="Check this for the offer you want to be pre-selected by default."
+    )
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.name} (Adds: {self.variant.name})"

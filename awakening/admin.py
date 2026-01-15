@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import FunnelTier, TierPerk
+from .models import FunnelTier, TierPerk, OrderBump
 
 
 class TierPerkInline(admin.TabularInline):
@@ -15,3 +15,10 @@ class FunnelTierAdmin(admin.ModelAdmin):
     list_editable = ('order', 'is_active')
     prepopulated_fields = {'slug': ('name',)}
     inlines = [TierPerkInline]
+
+
+@admin.register(OrderBump)
+class OrderBumpAdmin(admin.ModelAdmin):
+    list_display = ('name', 'headline', 'variant', 'is_default_choice', 'is_active')
+    list_editable = ('is_default_choice', 'is_active')
+    autocomplete_fields = ('variant',)
