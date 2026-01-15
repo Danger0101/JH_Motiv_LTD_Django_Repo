@@ -11,8 +11,8 @@ class TierPerkInline(admin.TabularInline):
 
 @admin.register(FunnelTier)
 class FunnelTierAdmin(admin.ModelAdmin):
-    list_display = ('name', 'quantity', 'variant', 'total_price', 'order', 'is_active')
-    list_editable = ('order', 'is_active')
+    list_display = ('name', 'quantity', 'variant', 'total_price', 'order', 'is_active', 'css_class')
+    list_editable = ('order', 'is_active', 'css_class')
     prepopulated_fields = {'slug': ('name',)}
     autocomplete_fields = ('variant',)
     inlines = [TierPerkInline]
