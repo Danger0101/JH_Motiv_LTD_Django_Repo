@@ -13,7 +13,7 @@ from django.core.mail import send_mail
 from products.models import Product, Variant
 from accounts.models import User
 from cart.utils import get_or_create_cart
-from coaching_core.models import Offering, ClientProfile
+from coaching_core.models import Offering
 from coaching_booking.models import ClientOfferingEnrollment
 from .models import FunnelTier, OrderBump
 from payments.models import Order, OrderItem
@@ -243,7 +243,10 @@ def create_order(request):
             try:
                 # Find the FunnelTier corresponding to the purchase
                 purchased_tier = FunnelTier.objects.prefetch_related('perks__linked_offering').get(variant=variant, quantity=quantity)
-                
+
+                # Import here to avoid circular dependency if models are intertwined
+                from coaching_client.models import ClientProfile
+
                 if purchased_tier and hasattr(target_user, 'client_profile'):
                     for perk in purchased_tier.perks.all():
                         if perk.linked_offering:
