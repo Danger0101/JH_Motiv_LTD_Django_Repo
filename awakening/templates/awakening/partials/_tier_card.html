@@ -12,12 +12,12 @@
 <div class="tier-card relative border {{ border_color }} bg-black/50 p-6 flex flex-col"
      x-data="{ keep: 1, total: {{ tier.quantity }} }">
 
-    {# HIDDEN INPUTS FOR HTMX #}
+    {# This input is always needed for the POST request #}
     <input type="hidden" name="quantity" value="{{ tier.quantity }}">
-    {# Default keep_count to 1 for single items #}
+
+    {# Only render the hidden keep_count input for single-item tiers #}
     {% if tier.quantity == 1 %}
         <input type="hidden" name="keep_count" value="1">
-    {% endif %}
 
     <div class="flex-grow">
         <h3 class="text-xl font-bold text-white">{{ tier.name }}</h3>
@@ -34,15 +34,12 @@
             <li class="flex items-start"><span class="{{ text_color }} mr-2">&gt;</span> {{ perk.text }}</li>
             {% endfor %}
         </ul>
-    </div>
-
-    {% if tier.quantity > 1 %}
+    </div>    
     <div class="mb-6 p-4 border {{ border_color }} {{ dist_bg }}">
         <label class="block text-[10px] text-gray-400 uppercase mb-2">Distribution Protocol</label>
         <div class="flex items-center gap-4">
             <div class="flex-1">
                 <span class="text-[10px] text-gray-500">KEEP</span>
-                {# Added name attribute for HTMX #}
                 <input type="number" name="keep_count" x-model.number="keep" min="1" :max="total"
                        class="w-full bg-transparent border-b {{ border_color }} text-white outline-none p-1">
             </div>
@@ -52,9 +49,9 @@
             </div>
         </div>
     </div>
+    {% else %}
+        {# This space is intentionally left blank to maintain layout consistency, or you can add a placeholder #}
     {% endif %}
-
-    {# Updated Button: Includes inputs from the parent card container #}
     <button class="w-full {{ button_bg }} {{ button_text_color }} py-2 font-bold mt-auto hover:opacity-90 transition-opacity"
             hx-post="{% url 'awakening:step_3_checkout' tier.variant.id %}"
             hx-target="#terminal-stage" 
