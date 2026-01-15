@@ -61,6 +61,7 @@ def render_checkout(request, variant_id):
     variant = get_object_or_404(Variant, id=variant_id)
     # Get quantity from the hx-vals POST data
     quantity = int(request.POST.get('quantity', 1))
+    keep_count = int(request.POST.get('keep_count', quantity)) # Get keep_count, default to total quantity
     total_price = variant.price * quantity
     
     # Fetch the two active order bump offers
@@ -83,6 +84,7 @@ def render_checkout(request, variant_id):
         'total': total_price,
         'variant': variant,
         'quantity': quantity, # Pass quantity to the template
+        'keep_count': keep_count, # Pass keep_count to the template
         'order_bumps': order_bumps, # Pass the bump offers to the template
         'stripe_public_key': getattr(settings, 'STRIPE_PUBLISHABLE_KEY', ''),
     }
