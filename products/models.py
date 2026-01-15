@@ -198,15 +198,11 @@ class Variant(models.Model):
         return self.stock_pool.is_in_stock(quantity) if self.stock_pool else False
 
     def __str__(self):
-        # Default name if not explicitly set
-        if self.name:
-            return f"{self.product.name} - {self.name}"
-        
-        # Handle cases where color/size might be empty (e.g. Books, Mugs)
-        if not self.color and not self.size:
-            return self.product.name
-            
-        return f"{self.product.name} - {self.color} / {self.size}"
+        # Robustly build the string representation for the admin.
+        product_name = getattr(self.product, 'name', 'Orphaned Variant')
+        variant_name = self.name or f"{self.color or ''} / {self.size or ''}".strip(' /')
+        # If variant_name is still empty (e.g., for a book), it won't add an ugly " - "
+        return f"{product_name} - {variant_name}" if variant_name else product_name
 
     # Ensure uniqueness across product options (e.g., only one Large/Red variant per product)
     class Meta:
