@@ -1,21 +1,20 @@
 <div class="grid md:grid-cols-3 gap-6">
     {% for tier in tiers %}
-        {# === REFACTORED STYLING LOGIC === #}
-        {# 1. Set default (Party Leader) styles #}
-        {% with border_color='border-green-900' text_color='text-green-400' text_color_light='text-green-500' button_bg='bg-green-600' button_text_color='text-black' dist_bg='bg-green-900/10' %}
-            {# 2. Conditionally override styles for other tiers #}
-            {% if tier.slug == 'guild_member' %}
-                {% with border_color='border-blue-700' text_color='text-blue-400' text_color_light='text-blue-500' button_bg='bg-blue-600' button_text_color='text-white' dist_bg='bg-blue-900/10' %}
-                    {% include "awakening/partials/_tier_card.html" %}
-                {% endwith %}
-            {% elif tier.slug == 'raid_leader' %}
-                {% with border_color='border-purple-700' text_color='text-yellow-400' text_color_light='text-purple-400' button_bg='bg-yellow-600' button_text_color='text-black' dist_bg='bg-purple-900/10' %}
-                    {% include "awakening/partials/_tier_card.html" %}
-                {% endwith %}
-            {% else %} {# Fallback to default styles #}
+        {# === CORRECTED STYLING LOGIC === #}
+        {# 1. Define style variables based on tier slug #}
+        {% if tier.slug == 'guild_member' %}
+            {% with border_color='border-blue-700' text_color='text-blue-400' text_color_light='text-blue-500' button_bg='bg-blue-600' button_text_color='text-white' dist_bg='bg-blue-900/10' %}
                 {% include "awakening/partials/_tier_card.html" %}
-            {% endif %}
-        {% endwith %}
+            {% endwith %}
+        {% elif tier.slug == 'raid_leader' %}
+            {% with border_color='border-purple-700' text_color='text-yellow-400' text_color_light='text-purple-400' button_bg='bg-yellow-600' button_text_color='text-black' dist_bg='bg-purple-900/10' %}
+                {% include "awakening/partials/_tier_card.html" %}
+            {% endwith %}
+        {% else %} {# Default 'Party Leader' style #}
+            {% with border_color='border-green-900' text_color='text-green-400' text_color_light='text-green-500' button_bg='bg-green-600' button_text_color='text-black' dist_bg='bg-green-900/10' %}
+                {% include "awakening/partials/_tier_card.html" %}
+            {% endwith %}
+        {% endif %}
     {% endfor %}
 </div>
 ```
