@@ -1,5 +1,6 @@
 from django.db import models
 from products.models import Variant
+from django.utils.translation import gettext_lazy as _
 
 class FunnelTier(models.Model):
     """
@@ -13,11 +14,18 @@ class FunnelTier(models.Model):
     variant = models.ForeignKey(Variant, on_delete=models.CASCADE, related_name='funnel_tiers')
     quantity = models.PositiveIntegerField(default=1, help_text="How many units of the variant are included?")
     
+    class TierStyle(models.TextChoices):
+        PARTY_LEADER = 'party-leader', _('Party Leader (Green)')
+        GUILD_MEMBER = 'guild-member', _('Guild Member (Blue)')
+        RAID_LEADER = 'raid-leader', _('Raid Leader (Purple/Gold)')
+
     # Visuals
     css_class = models.CharField(
-        max_length=50, 
-        help_text="CSS class for styling hooks, e.g. 'LONE_WOLF', 'RAID_LEADER'",
-        default="LONE_WOLF"
+        _("CSS Style Class"),
+        max_length=50,
+        choices=TierStyle.choices,
+        default=TierStyle.PARTY_LEADER,
+        help_text=_("Select the visual style for this tier on the offers page.")
     )
     order = models.PositiveIntegerField(default=0, help_text="Order in which tiers appear (lowest first)")
     is_active = models.BooleanField(default=True)
