@@ -210,22 +210,6 @@ def create_order(request):
                 quantity=quantity
             )
 
-            # --- High-Value Perk Enrollment (Works for Guests & Users) ---
-            if order.total_paid >= 100 * variant.price:
-                ui_offering = Offering.objects.filter(name__icontains="UI Optimization").first()
-                # Ensure the user has a client_profile to link the enrollment
-                if ui_offering and hasattr(target_user, 'client_profile'):
-                    ClientOfferingEnrollment.objects.create(
-                        client=target_user.client_profile,
-                        offering=ui_offering,
-                        status='ACTIVE',
-                    )
-                    # If a new guest account was created, send them an access email.
-                    if not request.user.is_authenticated:
-                        # Generate a secure, one-time access token
-                        token = uuid.uuid4().hex
-                        target_user.billing_notes = token # Store token for verification
-                        target_user.save()
             # --- DYNAMIC PERK ENROLLMENT (Works for Guests & Users) ---
             enrolled_offerings = []
             try:
@@ -247,14 +231,6 @@ def create_order(request):
                 # No specific tier matched, so no automatic enrollments.
                 pass
 
-                        # Send email with magic link
-                        mail_subject = "Your Access to the Inner Circle is Confirmed"
-                        message = render_to_string('awakening/emails/guest_enrollment_email.html', {
-                            'user': target_user,
-                            'offering_name': ui_offering.name,
-                            'token': token,
-                        })
-                        send_mail(mail_subject, message, settings.DEFAULT_FROM_EMAIL, [target_user.email], html_message=message)
             # If a new guest account was created AND they were enrolled in offerings, send access email.
             if not request.user.is_authenticated and enrolled_offerings:
                 token = uuid.uuid4().hex
