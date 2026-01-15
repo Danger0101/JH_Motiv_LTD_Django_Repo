@@ -1,19 +1,22 @@
 <div class="grid md:grid-cols-3 gap-6">
     {% for tier in tiers %}
-        {# === NEW DATA-DRIVEN STYLING LOGIC === #}
-        {# 1. Define style variables based on the tier's css_class field #}
-        {% if tier.css_class == 'guild-member' %}
-            {% with border_color='border-blue-700' text_color='text-blue-400' text_color_light='text-blue-500' button_bg='bg-blue-600' button_text_color='text-white' dist_bg='bg-blue-900/10' %}
-                {% include "awakening/partials/_tier_card.html" %}
-            {% endwith %}
-        {% elif tier.css_class == 'raid-leader' %}
-            {% with border_color='border-purple-700' text_color='text-yellow-400' text_color_light='text-purple-400' button_bg='bg-yellow-600' button_text_color='text-black' dist_bg='bg-purple-900/10' %}
-                {% include "awakening/partials/_tier_card.html" %}
-            {% endwith %}
-        {% else %} {# Default 'party-leader' style #}
-            {% with border_color='border-green-900' text_color='text-green-400' text_color_light='text-green-500' button_bg='bg-green-600' button_text_color='text-black' dist_bg='bg-green-900/10' %}
-                {% include "awakening/partials/_tier_card.html" %}
-            {% endwith %}
+        {# Defensive Check: Only render the tier if it has a variant linked. This prevents NoReverseMatch errors. #}
+        {% if tier.variant %}
+            {# === NEW DATA-DRIVEN STYLING LOGIC === #}
+            {# 1. Define style variables based on the tier's css_class field #}
+            {% if tier.css_class == 'guild-member' %}
+                {% with border_color='border-blue-700' text_color='text-blue-400' text_color_light='text-blue-500' button_bg='bg-blue-600' button_text_color='text-white' dist_bg='bg-blue-900/10' %}
+                    {% include "awakening/partials/_tier_card.html" %}
+                {% endwith %}
+            {% elif tier.css_class == 'raid-leader' %}
+                {% with border_color='border-purple-700' text_color='text-yellow-400' text_color_light='text-purple-400' button_bg='bg-yellow-600' button_text_color='text-black' dist_bg='bg-purple-900/10' %}
+                    {% include "awakening/partials/_tier_card.html" %}
+                {% endwith %}
+            {% else %} {# Default 'party-leader' style #}
+                {% with border_color='border-green-900' text_color='text-green-400' text_color_light='text-green-500' button_bg='bg-green-600' button_text_color='text-black' dist_bg='bg-green-900/10' %}
+                    {% include "awakening/partials/_tier_card.html" %}
+                {% endwith %}
+            {% endif %}
         {% endif %}
     {% endfor %}
 </div>
