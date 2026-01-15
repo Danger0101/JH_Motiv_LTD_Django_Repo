@@ -13,6 +13,7 @@ from cart.models import Cart
 from coaching_booking.models import ClientOfferingEnrollment, SessionBooking
 from coaching_core.models import Offering
 from accounts.models import CoachProfile
+from awakening.models import FunnelTier # Import FunnelTier to check for perks
 from products.models import StockPool
 from products.printful_service import PrintfulService
 from core.email_utils import send_transactional_email
@@ -251,12 +252,43 @@ def _fulfill_ecommerce_order(order, request=None, original_cart_id=None):
         dashboard_url = site_url + (
             reverse('accounts:account_profile') if order.user else reverse('payments:order_detail_guest', args=[order.guest_order_token])
         )
+
+        # Generate a secure invoice download URL
+        invoice_download_url = ''
+        if order.user:
+            invoice_download_url = site_url + reverse('payments:download_invoice', args=[order.id])
+        elif order.guest_order_token:
+            invoice_download_url = site_url + reverse('payments:download_invoice_guest', args=[order.guest_order_token])
+
         # Fix: Pass IDs instead of objects to avoid JSON serialization errors in Celery
         email_context = {
             'order_id': order.id, 
             'user_id': order.user.id if order.user else None, 
             'user_email': order.email,
-            'dashboard_url': dashboard_url
+            'dashboard_url': dashboard_url,
+            'invoice_download_url': invoice_download_url,
+        }
+
+        # --- ADD PERK LINKS FOR AWAKENING FUNNEL ---
+        # Check if this order came from the Awakening funnel and add perk links if they exist.
+        linked_perks = []
+        try:
+            # This logic mirrors the order_success view to find the main item.
+            main_item = None
+            for item in order.items.all():
+                if FunnelTier.objects.filter(variant=item.variant, quantity=item.quantity).exists():
+                    main_item = item
+                    break
+            
+            if main_item:
+                purchased_tier = FunnelTier.objects.get(variant=main_item.variant, quantity=main_item.quantity)
+                linked_perks = purchased_tier.perks.filter(link_url__isnull=False).exclude(link_url__exact='')
+        except (FunnelTier.DoesNotExist, AttributeError):
+            pass # No tier matched or main_item not found.
+        
+        email_context['linked_perks'] = {
+            'items': linked_perks,
+            'has_links': bool(linked_perks)
         }
 
         send_transactional_email(
