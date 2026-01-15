@@ -295,12 +295,37 @@ def order_success(request, order_number):
     Renders different content/videos based on the Tier purchased.
     """
     order = get_object_or_404(Order, id=order_number)
-    
-    # Identify the main item quantity to determine Tier
-    main_item = order.items.first()
-    qty = main_item.quantity if main_item else 1
+    main_item = None
+    bump_item = None
+    linked_perks = []
+
+    # --- Identify Main Item vs. Bump Item ---
+    # We iterate through the order items and check which one corresponds to a defined FunnelTier.
+    # This is more robust than assuming the first item is the main one.
+    all_items = order.items.all()
+    for item in all_items:
+        # Check if a FunnelTier exists for this item's variant and quantity
+        is_main_tier_item = FunnelTier.objects.filter(variant=item.variant, quantity=item.quantity).exists()
+        if is_main_tier_item and not main_item:
+            main_item = item
+        else:
+            # Anything that isn't the main tier item is treated as a bump/add-on
+            bump_item = item
+
+    # Fallback if the main item couldn't be identified (e.g., manual order)
+    if not main_item and all_items:
+        main_item = all_items.first()
+
+    # --- Fetch Perks with Links ---
+    if main_item:
+        try:
+            purchased_tier = FunnelTier.objects.get(variant=main_item.variant, quantity=main_item.quantity)
+            linked_perks = purchased_tier.perks.filter(link_url__isnull=False).exclude(link_url__exact='')
+        except FunnelTier.DoesNotExist:
+            pass # No tier matched, so no perks to show.
 
     # Default: Lone Wolf
+    qty = main_item.quantity if main_item else 0
     tier_data = {
         'title': "INITIATE PROTOCOL ACCEPTED",
         'message': "You have taken the first step. The manual is being dispatched to your coordinates. Do not share this information with unawakened NPCs.",
@@ -329,7 +354,13 @@ def order_success(request, order_number):
             'border_class': "border-purple-900"
         }
 
-    context = {'order': order, 'tier': tier_data}
+    context = {
+        'order': order,
+        'tier': tier_data,
+        'main_item': main_item,
+        'bump_item': bump_item, # Pass the identified bump item to the template
+        'linked_perks': linked_perks, # Pass the perks with URLs
+    }
 
     return render(request, 'awakening/success.html', context)
     
