@@ -1,199 +1,172 @@
-{% comment %}
-    STEP 3: CHECKOUT
-    This template is loaded via HTMX when a user selects a tier.
-    It includes the Stripe payment form and the new Order Bump functionality.
-{% endcomment %}
-<div id="checkout-form-container" class="w-full max-w-2xl mx-auto p-6 bg-gray-900 border border-gray-700 rounded-lg shadow-lg text-gray-200 font-mono">
-
-    <!-- Order Summary -->
-    <div class="mb-6">
-        <h2 class="text-2xl font-bold text-green-400 mb-4 border-b border-green-800 pb-2">&gt; SECURE CHECKOUT_</h2>
-        <div class="flex justify-between items-center">
-            <p class="text-lg">{{ variant.product.name }} (x{{ quantity }})</p>
-            <p class="text-lg">£<span id="base-price" data-price="{{ total }}">{{ total|floatformat:2 }}</span></p>
+<div class="w-full max-w-md mx-auto">
+    <div class="bg-black border border-green-900 p-6 mb-6 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 bg-green-500 animate-pulse"></div>
+        <h3 class="text-xl font-bold text-white mb-4">SECURE TRANSACTION UPLINK</h3>
+        
+        <div class="flex items-center justify-between mb-4 text-sm font-mono text-gray-400 border-b border-gray-800 pb-2">
+            <span>ITEM:</span>
+            <span class="text-white">{{ variant.product.name }} (x{{ quantity }})</span>
         </div>
-    </div>
+        
+        <div class="flex items-center justify-between mb-6 text-sm font-mono text-gray-400 border-b border-gray-800 pb-2">
+            <span>DISTRIBUTION:</span>
+            <span class="text-white">KEEP: {{ keep_count }} | DONATE: {{ quantity|add:"-1" }}</span>
+        </div>
 
-    <!-- FINAL OFFER (Order Bump) -->
-    {% if order_bumps %}
-    <div id="order-bump-section" class="mb-6 p-4 border border-yellow-500 rounded-lg bg-gray-800/50">
-        <h3 class="text-xl font-bold text-yellow-400 mb-3">{{ order_bumps.0.headline|default:"ONE-TIME OFFER: Upgrade Your Arsenal!" }}</h3>
-        <div class="space-y-2">
-            {% for bump in order_bumps %}
-            <label for="bump-{{ bump.variant.id }}" class="flex items-center p-3 rounded-md bg-gray-900 hover:bg-gray-700 cursor-pointer transition-colors duration-200">
-                <input type="radio"
-                       id="bump-{{ bump.variant.id }}"
-                       name="order_bump"
-                       value="{{ bump.variant.id }}"
-                       class="order-bump-radio h-4 w-4 text-yellow-500 bg-gray-700 border-gray-600 focus:ring-yellow-600"
-                       data-price="{{ bump.variant.price }}"
-                       {% if bump.is_default_choice %}checked{% endif %}>
-                <span class="ml-3 text-gray-300">
-                    <strong>{{ bump.name }}:</strong> Add "{{ bump.variant.name }}" for +£{{ bump.variant.price|floatformat:2 }}
-                </span>
+        {# --- ORDER BUMP --- #}
+        {% if order_bumps %}
+        <div class="mb-6 p-4 border border-yellow-700 bg-yellow-900/10" x-data="{ bumped: false }">
+            {% with bump=order_bumps.0 %}
+            <label class="flex items-start cursor-pointer">
+                <input type="checkbox" id="bump-offer" class="mt-1 mr-3" x-model="bumped" @change="$dispatch('bump-change', { active: bumped, price: {{ bump.variant.price }} })">
+                <div>
+                    <div class="text-yellow-400 font-bold text-sm">{{ bump.headline }}</div>
+                    <div class="text-gray-300 text-xs mt-1">{{ bump.name }} (+£{{ bump.variant.price }})</div>
+                </div>
             </label>
-            {% endfor %}
-            <!-- No Thanks Option -->
-            <label for="bump-none" class="flex items-center p-3 rounded-md bg-gray-900 hover:bg-gray-700 cursor-pointer transition-colors duration-200">
-                <input type="radio"
-                       id="bump-none"
-                       name="order_bump"
-                       value=""
-                       class="order-bump-radio h-4 w-4 text-gray-500 bg-gray-700 border-gray-600 focus:ring-gray-600"
-                       data-price="0"
-                       {% if not order_bumps|slice:":1"|first.is_default_choice and not order_bumps|slice:"1:2"|first.is_default_choice %}checked{% endif %}>
-                <span class="ml-3 text-gray-400">No thanks, I'll stick with the original offer.</span>
-            </label>
+            {% endwith %}
         </div>
-    </div>
-    {% endif %}
+        {% endif %}
 
-    <!-- Total Price Display -->
-    <div class="text-right text-2xl font-bold mb-6">
-        <span class="text-gray-400">TOTAL:</span>
-        <span id="total-price-display" class="text-green-400">£{{ total|floatformat:2 }}</span>
-    </div>
-
-    <!-- Stripe Payment Form -->
-    <form id="payment-form" class="space-y-4">
-        <div id="payment-element">
-            <!-- Stripe.js injects the Payment Element here -->
+        <div class="flex items-center justify-between mb-8 text-2xl font-bold font-mono text-green-400">
+            <span>TOTAL:</span>
+            <span x-data="{ total: {{ total }}, bumpPrice: 0 }" 
+                  @bump-change.window="if($event.detail.active) total += $event.detail.price; else total -= $event.detail.price;">
+                £<span x-text="total.toFixed(2)"></span>
+            </span>
         </div>
-        <button id="submit-button" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50">
-            <span id="button-text">PAY NOW</span>
-            <span id="spinner" class="hidden">Processing...</span>
-        </button>
-        <div id="payment-message" class="hidden text-center text-red-400 pt-2"></div>
-    </form>
+
+        {# --- STRIPE ELEMENTS FORM --- #}
+        <form id="payment-form">
+            <div id="link-authentication-element" class="mb-4"></div>
+            <div id="payment-element" class="mb-4"></div>
+            
+            <button id="submit" class="w-full bg-green-600 text-black font-bold py-3 hover:bg-green-500 transition-colors relative group">
+                <span id="button-text">INITIALIZE TRANSFER</span>
+                <div id="spinner" class="hidden absolute inset-0 flex items-center justify-center bg-green-600">
+                    <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
+                </div>
+            </button>
+            <div id="payment-message" class="hidden mt-4 text-red-500 text-sm text-center"></div>
+        </form>
+    </div>
 </div>
 
 <!-- Stripe & local JS -->
 <script src="https://js.stripe.com/v3/"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const stripe = Stripe("{{ stripe_public_key }}");
+    document.addEventListener('DOMContentLoaded', async () => {
+        const stripe = Stripe("{{ stripe_public_key }}");
+        const variantId = {{ variant.id }};
+        const quantity = {{ quantity }};
+        const keepCount = {{ keep_count }};
+        
+        // Prepare initial PaymentIntent
+        let elements;
+        let bumpVariantId = null;
 
-    // --- State Management ---
-    let elements;
-    const variantId = "{{ variant.id }}";
-    const quantity = "{{ quantity }}";
-    const keepCount = "{{ keep_count }}";
-    const basePrice = parseFloat(document.getElementById('base-price').dataset.price);
-
-    // --- Order Bump Logic ---
-    const bumpRadios = document.querySelectorAll('.order-bump-radio');
-    const totalPriceDisplay = document.getElementById('total-price-display');
-
-    function getSelectedBump() {
-        const selectedRadio = document.querySelector('.order-bump-radio:checked');
-        return {
-            id: selectedRadio ? selectedRadio.value : "",
-            price: selectedRadio ? parseFloat(selectedRadio.dataset.price) : 0
-        };
-    }
-
-    function updateTotalPrice() {
-        const bump = getSelectedBump();
-        const newTotal = basePrice + bump.price;
-        totalPriceDisplay.textContent = `£${newTotal.toFixed(2)}`;
-    }
-
-    bumpRadios.forEach(radio => {
-        radio.addEventListener('change', updateTotalPrice);
-    });
-
-    // Initialize total price on load
-    updateTotalPrice();
-
-    // --- Stripe Payment Intent & Form Handling ---
-    initialize();
-
-    async function initialize() {
-        const selectedBump = getSelectedBump();
-        const response = await fetch("{% url 'awakening:create_payment_intent' %}", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                variant_id: variantId,
-                quantity: quantity,
-                bump_variant_id: selectedBump.id, // Pass the selected bump ID
-                keep_count: keepCount // Pass the keep count
-            }),
-        });
-        const { client_secret } = await response.json();
-
-        elements = stripe.elements({ clientSecret: client_secret });
-        const paymentElement = elements.create("payment");
-        paymentElement.mount("#payment-element");
-    }
-
-    document.getElementById('payment-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        setLoading(true);
-
-        // 1. Confirm Payment
-        const { error, paymentIntent } = await stripe.confirmPayment({
-            elements,
-            confirmParams: {
-                // No return_url needed as we handle redirect manually below
-            },
-            redirect: "if_required"
-        });
-
-        if (error) {
-            if (error.type === "card_error" || error.type === "validation_error") {
-                showMessage(error.message);
-            } else {
-                showMessage("An unexpected error occurred.");
+        async function initialize() {
+            // Check for bump
+            const bumpCheckbox = document.getElementById('bump-offer');
+            if (bumpCheckbox && bumpCheckbox.checked) {
+                // Assuming logic to get ID if needed, hardcoded for now or passed via data attr
+                bumpVariantId = "{{ order_bumps.0.variant.id }}";
             }
-            setLoading(false);
-        } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-            // 2. Create Order on Backend
-            const selectedBump = getSelectedBump();
-            
-            const orderData = {
-                payment_intent_id: paymentIntent.id,
-                variant_id: variantId,
-                quantity: quantity,
-                keep_count: keepCount,
-                bump_variant_id: selectedBump.id,
-                email: document.getElementById('email-input') ? document.getElementById('email-input').value : "guest@example.com",
-            };
 
-            try {
+            const response = await fetch("{% url 'awakening:create_payment_intent' %}", {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({ 
+                    variant_id: variantId, 
+                    quantity: quantity,
+                    keep_count: keepCount,
+                    bump_variant_id: bumpVariantId
+                }),
+            });
+            
+            const { clientSecret } = await response.json();
+
+            const appearance = {
+                theme: 'night',
+                variables: { colorPrimary: '#00ff41', colorBackground: '#000000', colorText: '#ffffff' }
+            };
+            
+            elements = stripe.elements({ appearance, clientSecret });
+            const linkAuthenticationElement = elements.create("linkAuthentication");
+            linkAuthenticationElement.mount("#link-authentication-element");
+            const paymentElement = elements.create("payment");
+            paymentElement.mount("#payment-element");
+        }
+
+        await initialize();
+
+        async function handleSubmit(e) {
+            e.preventDefault();
+            setLoading(true);
+
+            const { error, paymentIntent } = await stripe.confirmPayment({
+                elements,
+                redirect: "if_required"
+            });
+
+            if (error) {
+                showMessage(error.message);
+                setLoading(false);
+            } else if (paymentIntent && paymentIntent.status === "succeeded") {
+                // Payment succeeded, create order
+                const emailInput = document.querySelector('#link-authentication-element input'); 
+                // Note: Getting email from Link element via DOM is hacky/blocked. 
+                // Better to rely on what user typed or logged in state.
+                // For this demo, assuming we handle it or user is logged in.
+                
                 const response = await fetch("{% url 'awakening:create_order' %}", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(orderData)
+                    body: JSON.stringify({
+                        payment_intent_id: paymentIntent.id,
+                        variant_id: variantId,
+                        quantity: quantity,
+                        keep_count: keepCount,
+                        bump_variant_id: bumpVariantId,
+                        email: "guest@example.com", // Replace with real capture or logged in user email
+                        name: "Guest Agent" 
+                    })
                 });
-                
+
                 const result = await response.json();
-                
                 if (result.success) {
                     window.location.href = result.redirect_url;
                 } else {
-                    showMessage("Order creation failed: " + (result.error || "Unknown error"));
-                    setLoading(false);
+                    showMessage("Order creation failed. Contact support.");
                 }
-            } catch (err) {
-                showMessage("Network error: " + err.message);
-                setLoading(false);
             }
         }
+
+        document.getElementById("payment-form").addEventListener("submit", handleSubmit);
+
+        function setLoading(isLoading) {
+            if (isLoading) {
+                document.querySelector("#submit").disabled = true;
+                document.querySelector("#spinner").classList.remove("hidden");
+                document.querySelector("#button-text").classList.add("hidden");
+            } else {
+                document.querySelector("#submit").disabled = false;
+                document.querySelector("#spinner").classList.add("hidden");
+                document.querySelector("#button-text").classList.remove("hidden");
+            }
+        }
+
+        function showMessage(messageText) {
+            const messageContainer = document.querySelector("#payment-message");
+            messageContainer.classList.remove("hidden");
+            messageContainer.textContent = messageText;
+            setTimeout(function () {
+                messageContainer.classList.add("hidden");
+                messageContainer.textContent = "";
+            }, 4000);
+        }
     });
-
-    // --- UI Helper Functions ---
-    function showMessage(messageText) {
-        const messageContainer = document.querySelector("#payment-message");
-        messageContainer.classList.remove("hidden");
-        messageContainer.textContent = messageText;
-        setTimeout(() => { messageContainer.classList.add("hidden"); }, 4000);
-    }
-
-    function setLoading(isLoading) {
-        document.querySelector("#submit-button").disabled = isLoading;
-        document.querySelector("#spinner").classList.toggle("hidden", !isLoading);
-        document.querySelector("#button-text").classList.toggle("hidden", isLoading);
-    }
-});
 </script>

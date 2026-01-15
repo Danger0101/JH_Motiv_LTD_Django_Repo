@@ -35,7 +35,7 @@ def render_offers(request):
     # 1. Fetch active tiers
     # 2. Use select_related('variant__product') to optimize the image lookup in the template
     # 3. Use prefetch_related('perks') to optimize the perks list
-    active_tiers = FunnelTier.objects.filter(is_active=True)\
+    active_tiers = FunnelTier.objects.filter(is_active=True, variant__isnull=False)\
         .select_related('variant__product')\
         .prefetch_related('perks')
     
@@ -195,7 +195,7 @@ def create_order(request):
             enrolled_offerings = []
             try:
                 purchased_tier = FunnelTier.objects.prefetch_related('perks__linked_offering').get(variant=variant, quantity=quantity)                
-                # Use string reference or ensure profile exists to avoid import crash
+                # Import safely
                 from coaching_client.models import ClientProfile
                 
                 # Ensure profile exists before trying to enroll
