@@ -13,7 +13,10 @@ from django.core.mail import send_mail
 from products.models import Product, Variant
 from accounts.models import User
 from cart.utils import get_or_create_cart
-from coaching.models import Offering, ClientOfferingEnrollment # Assuming this is the correct path in your project
+# --- FIXED IMPORTS HERE ---
+from coaching_core.models import Offering
+from coaching_booking.models import ClientOfferingEnrollment
+from .models import FunnelTier
 from payments.models import Order, OrderItem
 
 # --- THE CONTAINER ---
@@ -38,47 +41,25 @@ def render_hook(request):
 def render_offers(request):
     """
     Returns ONLY the pricing cards (Single, Multi, Co-Op).
+    Now fetched dynamically from the FunnelTier model.
     """
-    product = Product.objects.filter(name__icontains="Stop Being an NPC").first()
-    base_variant = product.variants.first() if product else None
+    active_tiers = FunnelTier.objects.filter(is_active=True).select_related('variant').prefetch_related('perks')
+    
+    tiers_data = []
+    
+    for tier in active_tiers:
+        # Construct dictionary to match the template's expected structure
+        tiers_data.append({
+            'id': tier.slug,                  # Maps to HTML ID
+            'name': tier.name,
+            'quantity': tier.quantity,
+            'price': tier.total_price,        # Calculated property from model
+            'variant_id': tier.variant.id,
+            'perks': [p.text for p in tier.perks.all()], # Flatten perks to list of strings
+            'class': tier.css_class           # Maps to styling hook
+        })
 
-    if not base_variant:
-        return render(request, 'awakening/partials/step_2_offers.html', {'tiers': []})
-
-    base_price = base_variant.price
-
-    # Define the custom funnel loadouts
-    tiers = [
-        {
-            'id': 'lone_wolf',
-            'name': 'LONE WOLF',
-            'quantity': 1,
-            'price': base_price,
-            'variant_id': base_variant.id,
-            'perks': ['Signed copy (First 100)', 'Physical Manual'],
-            'class': 'LONE_WOLF'
-        },
-        {
-            'id': 'guild_member',
-            'name': 'GUILD MEMBER',
-            'quantity': 100,
-            'price': base_price * 100,
-            'variant_id': base_variant.id,
-            'perks': ['Free "UI Optimization Protocol"', 'Signed & Numbered', 'Guild Access'],
-            'class': 'GUILD_MEMBER'
-        },
-        {
-            'id': 'raid_leader',
-            'name': 'RAID LEADER',
-            'quantity': 250,
-            'price': base_price * 250,
-            'variant_id': base_variant.id,
-            'perks': ['"Server Admin" / "London Speedrun" Upgrade', 'Previous Perks', 'VIP Status'],
-            'class': 'RAID_LEADER'
-        }
-    ]
-
-    return render(request, 'awakening/partials/step_2_offers.html', {'tiers': tiers})
+    return render(request, 'awakening/partials/step_2_offers.html', {'tiers': tiers_data})
 
 # --- STEP 3: THE CHECKOUT (Embedded) ---
 def render_checkout(request, variant_id):
