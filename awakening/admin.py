@@ -5,6 +5,7 @@ from .models import FunnelTier, TierPerk
 class TierPerkInline(admin.TabularInline):
     model = TierPerk
     fields = ('text', 'link_url', 'linked_offering', 'order')
+    autocomplete_fields = ('linked_offering',)
     extra = 1
 
 
