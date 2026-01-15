@@ -32,10 +32,9 @@ def render_offers(request):
     Returns ONLY the pricing cards (Single, Multi, Co-Op).
     Filters out any active tiers that are missing a linked Variant to prevent NoReverseMatch errors.
     """
-    # 1. Fetch active tiers
-    # 2. Use select_related('variant__product') to optimize the image lookup in the template
-    # 3. Use prefetch_related('perks') to optimize the perks list
-    active_tiers = FunnelTier.objects.filter(is_active=True, variant__isnull=False)\
+    # Fetch active tiers, ensuring they have a variant to prevent downstream errors.
+    # Optimize DB queries with select_related and prefetch_related.
+    active_tiers = FunnelTier.objects.filter(is_active=True)\
         .select_related('variant__product')\
         .prefetch_related('perks')
     
@@ -105,7 +104,7 @@ def create_payment_intent(request):
 
                     'integration_check': 'accept_a_payment',
                     'funnel_name': 'awakening_npc_book',
-                    'keep_count': keep_count, # Added to metadata for webhook
+                    'keep_count': keep_count, # Crucial: Stored for webhook fulfillment
                 }
             )
 
@@ -195,10 +194,10 @@ def create_order(request):
             enrolled_offerings = []
             try:
                 purchased_tier = FunnelTier.objects.prefetch_related('perks__linked_offering').get(variant=variant, quantity=quantity)                
-                # Import safely
+                # Import safely to avoid circular dependency
                 from coaching_client.models import ClientProfile
                 
-                # Ensure profile exists before trying to enroll
+                # Ensure ClientProfile exists for the user
                 client_profile, _ = ClientProfile.objects.get_or_create(user=target_user)
 
                 if purchased_tier:
@@ -269,7 +268,7 @@ def order_success(request, order_number):
     qty = main_item.quantity if main_item else 0
     tier_data = {
         'title': "INITIATE PROTOCOL ACCEPTED",
-        'message': "You have taken the first step. The manual is being dispatched to your coordinates. Do not share this information with unawakened NPCs.",
+        'message': "Manual dispatched. Do not share with NPCs.",
         'video_id': "dQw4w9WgXcQ", 
         'color_class': "text-green-500",
         'border_class': "border-green-900"
@@ -278,15 +277,15 @@ def order_success(request, order_number):
     if qty >= 100 and qty < 250:
         tier_data = {
             'title': "GUILD ACCESS GRANTED",
-            'message': "Welcome to the inner circle. Your bulk distribution package is being prepared. The 'UI Optimization Protocol' has been unlocked in your account.",
+            'message': "Welcome to the inner circle. Distribution package prepared.",
             'video_id': "dQw4w9WgXcQ", 
             'color_class': "text-blue-400",
             'border_class': "border-blue-900"
         }
     elif qty >= 250:
         tier_data = {
-            'title': "SERVER ADMIN PRIVILEGES DETECTED",
-            'message': "You have altered the simulation parameters. VIP Status confirmed. We are contacting you directly regarding the 'London Speedrun' logistics.",
+            'title': "SERVER ADMIN PRIVILEGES",
+            'message': "Simulation parameters altered. VIP Status confirmed.",
             'video_id': "dQw4w9WgXcQ", 
             'color_class': "text-purple-500", 
             'border_class': "border-purple-900"
