@@ -77,6 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let elements;
     const variantId = "{{ variant.id }}";
     const quantity = "{{ quantity }}";
+    const keepCount = "{{ keep_count }}";
     const basePrice = parseFloat(document.getElementById('base-price').dataset.price);
 
     // --- Order Bump Logic ---
@@ -115,7 +116,8 @@ document.addEventListener('DOMContentLoaded', function() {
             body: JSON.stringify({
                 variant_id: variantId,
                 quantity: quantity,
-                bump_variant_id: selectedBump.id // Pass the selected bump ID
+                bump_variant_id: selectedBump.id, // Pass the selected bump ID
+                keep_count: keepCount // Pass the keep count
             }),
         });
         const { client_secret } = await response.json();
