@@ -42,23 +42,15 @@ def render_offers(request):
     Returns ONLY the pricing cards (Single, Multi, Co-Op).
     Now fetched dynamically from the FunnelTier model.
     """
-    active_tiers = FunnelTier.objects.filter(is_active=True).select_related('variant').prefetch_related('perks')
+    # 1. Fetch active tiers
+    # 2. Use select_related('variant__product') to optimize the image lookup in the template
+    # 3. Use prefetch_related('perks') to optimize the perks list
+    active_tiers = FunnelTier.objects.filter(is_active=True)\
+        .select_related('variant__product')\
+        .prefetch_related('perks')
     
-    tiers_data = []
-    
-    for tier in active_tiers:
-        # Construct dictionary to match the template's expected structure
-        tiers_data.append({
-            'id': tier.slug,                  # Maps to HTML ID
-            'name': tier.name,
-            'quantity': tier.quantity,
-            'price': tier.total_price,        # Calculated property from model
-            'variant_id': tier.variant.id,
-            'perks': [p.text for p in tier.perks.all()], # Flatten perks to list of strings
-            'class': tier.css_class           # Maps to styling hook
-        })
-
-    return render(request, 'awakening/partials/step_2_offers.html', {'tiers': tiers_data})
+    # Pass the QuerySet directly. The template expects model instances.
+    return render(request, 'awakening/partials/step_2_offers.html', {'tiers': active_tiers})
 
 # --- STEP 3: THE CHECKOUT (Embedded) ---
 def render_checkout(request, variant_id):
