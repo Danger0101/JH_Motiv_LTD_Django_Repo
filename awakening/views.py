@@ -194,7 +194,9 @@ def create_order(request):
             enrolled_offerings = []
             try:
                 purchased_tier = FunnelTier.objects.prefetch_related('perks__linked_offering').get(variant=variant, quantity=quantity)                
-                # Import safely to avoid circular dependency
+                from coaching_client.models import ClientProfile
+                client_profile, _ = ClientProfile.objects.get_or_create(user=target_user)
+
                 from coaching_client.models import ClientProfile
                 
                 # Ensure ClientProfile exists for the user
