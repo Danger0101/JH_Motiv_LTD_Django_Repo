@@ -18,7 +18,7 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = os.getenv('SECRET_KEY')
-DEBUG = True
+DEBUG = False
 
 HEROKU_APP_NAME = os.environ.get('HEROKU_APP_NAME')
 ALLOWED_HOSTS = ['jhmotiv-shop-ltd-official-040e4cbd5800.herokuapp.com', 'jhmotiv.shop']
