@@ -59,9 +59,9 @@ def send_booking_confirmation_email(self, booking_id):
         # 1. Determine Context (Workshop vs 1-on-1)
         subject = "Booking Confirmed: "
         if booking.workshop:
-            subject += booking.workshop.title
+            subject += booking.workshop.name
             template_name = "emails/booking_workshop_confirmed.html"
-            event_details = f"{booking.workshop.title} with {booking.workshop.coach.user.get_full_name()}"
+            event_details = f"{booking.workshop.name} with {booking.workshop.coach.user.get_full_name()}"
         else:
             subject += f"1-on-1 with {booking.coach.user.get_full_name()}"
             # Re-using existing template or creating a generic one if needed. 
