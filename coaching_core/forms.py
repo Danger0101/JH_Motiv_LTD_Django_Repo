@@ -28,3 +28,20 @@ class WorkshopBookingForm(forms.Form):
     full_name = forms.CharField(label="Full Name", max_length=100)
     email = forms.EmailField(label="Email Address")
 
+
+class WorkshopRecurrenceForm(forms.Form):
+    frequency = forms.ChoiceField(
+        choices=[
+            ('7', 'Weekly'),
+            ('14', 'Bi-Weekly'),
+            ('30', 'Monthly'),
+            ('1', 'Daily'),
+        ],
+        label="How often should this workshop repeat?"
+    )
+    occurrences = forms.IntegerField(
+        label="How many times should it repeat?",
+        min_value=1,
+        max_value=52, # Max of 1 year for weekly
+        initial=4
+    )
