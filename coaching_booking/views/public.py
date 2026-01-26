@@ -136,7 +136,7 @@ def book_workshop(request, slug):
         
         if not email or not full_name:
             messages.error(request, "Name and Email are required.")
-            return redirect('coaching:workshop_detail', slug=slug)
+            return redirect('coaching_booking:public_workshop_detail', slug=slug)
 
         user = None
         if request.user.is_authenticated:
@@ -175,4 +175,4 @@ def book_workshop(request, slug):
             return redirect('accounts:account_profile')
         else:
             return redirect('payments:checkout_workshop', workshop_id=workshop.id)
-    return redirect('coaching:workshop_detail', slug=slug)
+    return redirect('coaching_booking:public_workshop_detail', slug=slug)
