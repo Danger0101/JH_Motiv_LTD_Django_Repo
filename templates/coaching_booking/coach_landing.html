@@ -143,7 +143,7 @@
                         <li><i class="fas fa-tag text-green-500 mr-2"></i> Price: £{{ workshop.price|floatformat:2 }}</li>
                         <li><i class="fas fa-users text-green-500 mr-2"></i> Spots Left: {{ workshop.remaining_spaces }}</li>
                     </ul>
-                    <a href="{% url 'coaching:workshop_detail' slug=workshop.slug %}" class="mt-auto inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 text-center" title="View Details & Book">View Details & Book</a>
+                    <a href="{% url 'coaching_booking:public_workshop_detail' slug=workshop.slug %}" class="mt-auto inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 text-center" title="View Details & Book">View Details & Book</a>
                 </div>
                 {% empty %}
                 <p class="text-center text-gray-600 col-span-3">No upcoming workshops scheduled at the moment. Please check back soon!</p>
