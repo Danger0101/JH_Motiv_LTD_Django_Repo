@@ -127,6 +127,31 @@
         </div>
     </div>
 
+    {# --- UPCOMING WORKSHOPS --- #}
+    <div class="py-16 bg-gray-50">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center text-gray-800">Upcoming Workshops</h2>
+            <p class="mt-4 text-lg text-center text-gray-600">Join our group sessions to learn and grow together.</p>
+            <div class="mt-12 grid md:grid-cols-3 gap-8">
+                {% for workshop in upcoming_workshops %}
+                <div class="bg-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition duration-300 flex flex-col h-full">
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">{{ workshop.name }}</h3>
+                    <p class="text-gray-600 text-sm mb-4 flex-grow">{{ workshop.description|truncatechars:100 }}</p>
+                    <ul class="text-sm text-gray-500 mb-4 space-y-1">
+                        <li><i class="fas fa-calendar-alt text-green-500 mr-2"></i> {{ workshop.date|date:"F d, Y" }} at {{ workshop.start_time|time:"H:i" }}</li>
+                        <li><i class="fas fa-chalkboard-teacher text-green-500 mr-2"></i> Coach: {{ workshop.coach.user.get_full_name }}</li>
+                        <li><i class="fas fa-tag text-green-500 mr-2"></i> Price: £{{ workshop.price|floatformat:2 }}</li>
+                        <li><i class="fas fa-users text-green-500 mr-2"></i> Spots Left: {{ workshop.remaining_spaces }}</li>
+                    </ul>
+                    <a href="{% url 'coaching_core:workshop_detail' slug=workshop.slug %}" class="mt-auto inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 text-center" title="View Details & Book">View Details & Book</a>
+                </div>
+                {% empty %}
+                <p class="text-center text-gray-600 col-span-3">No upcoming workshops scheduled at the moment. Please check back soon!</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
     {# --- KNOWLEDGE BASE (Retained from Original) --- #}
     <div class="py-16 bg-white">
         <div class="container mx-auto px-4">

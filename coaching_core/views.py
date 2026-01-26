@@ -34,6 +34,14 @@ class WorkshopDetailView(DetailView):
         workshop = self.object
         user = self.request.user
         
+        # Initialize form
+        initial_data = {}
+        if user.is_authenticated:
+            initial_data['full_name'] = user.get_full_name()
+            initial_data['email'] = user.email
+        form = WorkshopBookingForm(initial=initial_data)
+        context['form'] = form
+
         # 1. Check if User has Booked
         user_has_booked = False
         if user.is_authenticated:
