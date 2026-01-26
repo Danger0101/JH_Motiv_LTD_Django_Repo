@@ -78,6 +78,13 @@
                         {% endif %}
 
                         <div>
+                            <label class="inline-flex items-center">
+                                <input type="checkbox" name="marketing_consent" class="form-checkbox h-5 w-5 text-green-600" checked>
+                                <span class="ml-2 text-gray-700">I'm happy to receive marketing emails and occasional outreach to build our community.</span>
+                            </label>
+                        </div>
+
+                        <div>
                             <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                                 {% if user.is_authenticated %}
                                     Confirm Booking
