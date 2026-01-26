@@ -125,6 +125,55 @@ class GoogleCalendarService:
             logger.error(f"Failed to push booking {booking.id} to GCal: {e}")
             return None
 
+    def push_workshop(self, workshop):
+        """
+        Creates a new event for a workshop in the Coach's calendar.
+        """
+        if not self.service:
+            logger.warning(f"No Google Calendar service available for coach {self.coach}")
+            return None, None
+
+        summary = f"Workshop: {workshop.name}"
+        description = f"Workshop Name: {workshop.name}\n{workshop.description}"
+
+        # Combine date and time to create datetime objects
+        start_datetime = timezone.make_aware(datetime.combine(workshop.date, workshop.start_time))
+        end_datetime = timezone.make_aware(datetime.combine(workshop.date, workshop.end_time))
+
+        event_body = {
+            'summary': summary,
+            'description': description,
+            'start': {'dateTime': start_datetime.isoformat()},
+            'end': {'dateTime': end_datetime.isoformat()},
+            'attendees': [{'email': attendee.email} for attendee in workshop.attendees.all()],
+            'conferenceData': {
+                'createRequest': {
+                    'requestId': f"workshop_{workshop.id}",
+                    'conferenceSolutionKey': {'type': 'hangoutsMeet'},
+                }
+            },
+            'reminders': {'useDefault': True},
+        }
+
+        try:
+            event = self.service.events().insert(
+                calendarId=self.calendar_id,
+                body=event_body,
+                conferenceDataVersion=1,
+                sendUpdates='all'
+            ).execute()
+            
+            meet_link = event.get('conferenceData', {}).get('entryPoints', [{}])[0].get('uri', 'No Link')
+            event_id = event.get('id')
+
+            logger.info(f"Workshop GCal Event created: {event_id} | Meet: {meet_link}")
+            
+            return event_id, meet_link
+
+        except Exception as e:
+            logger.error(f"Failed to push workshop {workshop.id} to GCal: {e}")
+            return None, None
+
     def delete_booking(self, gcal_event_id):
         if not self.service or not gcal_event_id:
             return False
