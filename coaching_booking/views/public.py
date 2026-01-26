@@ -11,7 +11,7 @@ from django.db.models import Q
 from datetime import datetime, timedelta
 import pytz
 
-from accounts.models import CoachProfile, User
+from accounts.models import CoachProfile, User, MarketingPreference
 from coaching_core.models import Offering, Workshop
 from coaching_core.forms import WorkshopBookingForm
 from coaching_client.models import ContentPage
@@ -161,6 +161,17 @@ def book_workshop(request, slug):
                 access_url = request.build_absolute_uri(reverse('coaching_booking:guest_access', args=[guest_token]))
                 context = {'site_name': getattr(settings, 'SITE_NAME', 'JH Motiv'), 'access_url': access_url, 'username': email, 'password': random_password, 'workshop_name': workshop.name, 'is_new_account': True}
                 send_transactional_email(recipient_email=email, subject=f"Welcome to {context['site_name']}", template_name='emails/guest_welcome.html', context=context)
+
+        # Handle marketing consent
+        marketing_consent = request.POST.get('marketing_consent') == 'on'
+        pref, created = MarketingPreference.objects.get_or_create(user=user)
+        if marketing_consent and not pref.is_subscribed:
+            pref.is_subscribed = True
+            pref.subscribed_at = timezone.now()
+            pref.save()
+        elif not marketing_consent and pref.is_subscribed:
+            pref.is_subscribed = False
+            pref.save()
 
         if SessionBooking.objects.filter(client=user, workshop=workshop).exists():
             messages.info(request, "You are already booked for this workshop!")
