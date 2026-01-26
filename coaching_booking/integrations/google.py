@@ -81,8 +81,8 @@ class GoogleCalendarService:
         description = f"Booking ID: {booking.id}\nClient: {client_name}"
         
         if booking.workshop:
-            summary = f"Workshop: {booking.workshop.title}"
-            description += f"\nWorkshop: {booking.workshop.title}"
+            summary = f"Workshop: {booking.workshop.name}"
+            description += f"\nWorkshop: {booking.workshop.name}"
         elif booking.enrollment:
             # FIX: Access offering via enrollment
             description += f"\nOffering: {booking.enrollment.offering.name}"
@@ -165,8 +165,8 @@ class GoogleCalendarService:
         description = f"Booking ID: {booking.id}\nClient: {client_name}"
         
         if booking.workshop:
-            summary = f"Workshop: {booking.workshop.title}"
-            description += f"\nWorkshop: {booking.workshop.title}"
+            summary = f"Workshop: {booking.workshop.name}"
+            description += f"\nWorkshop: {booking.workshop.name}"
         elif booking.enrollment:
             description += f"\nOffering: {booking.enrollment.offering.name}"
 
