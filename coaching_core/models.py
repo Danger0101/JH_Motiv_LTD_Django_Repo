@@ -24,6 +24,7 @@ class Offering(models.Model):
         help_text="The coaches who can provide this offering."
     )
     slug = models.SlugField(
+        max_length=255,
         unique=True, 
         editable=False, 
         help_text="Unique slug for URL purposes, auto-generated from name."
@@ -141,6 +142,7 @@ class Workshop(models.Model):
         help_text="The Workshop's Name/Title."
     )
     slug = models.SlugField(
+        max_length=255,
         unique=True,
         editable=False,
         help_text="Unique slug for URL purposes, auto-generated from name."
