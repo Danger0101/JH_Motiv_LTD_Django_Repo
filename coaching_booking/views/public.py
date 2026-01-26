@@ -8,16 +8,71 @@ from django.contrib import messages
 from django.contrib.auth import login
 from django.utils.crypto import get_random_string
 from django.db.models import Q
-from datetime import datetime
+from datetime import datetime, timedelta
+import pytz
 
 from accounts.models import CoachProfile, User
 from coaching_core.models import Offering, Workshop
+from coaching_core.forms import WorkshopBookingForm
 from coaching_client.models import ContentPage
 from cart.utils import get_or_create_cart, get_cart_summary_data
 from facts.models import Fact
 from ..models import SessionBooking
 from ..services import BookingService
 from core.email_utils import send_transactional_email
+
+class PublicWorkshopDetailView(DetailView):
+    model = Workshop
+    template_name = 'coaching_booking/public_workshop_detail.html'
+    context_object_name = 'workshop'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        workshop = self.object
+        user = self.request.user
+        
+        # Initialize form
+        initial_data = {}
+        if user.is_authenticated:
+            initial_data['full_name'] = user.get_full_name()
+            initial_data['email'] = user.email
+        form = WorkshopBookingForm(initial=initial_data)
+        context['form'] = form
+
+        # 1. Check if User has Booked
+        user_has_booked = False
+        if user.is_authenticated:
+            user_has_booked = SessionBooking.objects.filter(
+                workshop=workshop,
+                client=user,
+                status__in=['BOOKED', 'PENDING_PAYMENT']
+            ).exists()
+        context['user_has_booked'] = user_has_booked
+
+        # 2. Check Join Window (15 mins before start until end)
+        now = timezone.now()
+        start_dt = datetime.combine(workshop.date, workshop.start_time)
+        end_dt = datetime.combine(workshop.date, workshop.end_time)
+        if timezone.is_naive(start_dt): start_dt = timezone.make_aware(start_dt)
+        if timezone.is_naive(end_dt): end_dt = timezone.make_aware(end_dt)
+        
+        show_join_button = False
+        if user_has_booked and workshop.meeting_link:
+            if now >= (start_dt - timedelta(minutes=15)) and now < end_dt:
+                show_join_button = True
+        context['show_join_button'] = show_join_button
+
+        # 3. Google Calendar Add Link
+        # Format: YYYYMMDDTHHMMSSZ
+        fmt = '%Y%m%dT%H%M%SZ'
+        gcal_start = start_dt.astimezone(pytz.utc).strftime(fmt)
+        gcal_end = end_dt.astimezone(pytz.utc).strftime(fmt)
+        
+        gcal_link = f"https://calendar.google.com/calendar/render?action=TEMPLATE&text={workshop.name}&dates={gcal_start}/{gcal_end}&details={workshop.description}&location={workshop.meeting_link or ''}"
+        context['google_calendar_link'] = gcal_link
+
+        return context
+
 
 class CoachLandingView(TemplateView):
     template_name = "coaching_booking/coach_landing.html"
