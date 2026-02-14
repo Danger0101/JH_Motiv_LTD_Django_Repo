@@ -25,10 +25,21 @@ class CustomSignupForm(SignupForm):
 
     def clean_email(self):
         email = self.cleaned_data.get('email')
+        
+        # 1. Check for missing dots or invalid top-level domains (like .ass)
+        if email:
+            parts = email.split('@')
+            if len(parts) == 2:
+                domain = parts[1]
+                if '.' not in domain or len(domain.split('.')[-1]) < 2:
+                    raise forms.ValidationError("Please enter a valid email address.")
+        
+        # 2. Existing check for duplicate accounts
         if email and get_user_model().objects.filter(email__iexact=email).exists():
             reset_url = reverse('accounts:password_reset')
             msg = mark_safe(f'An account with this email already exists. <a href="{reset_url}" class="text-indigo-600 hover:text-indigo-500 underline">Forgot your password?</a>')
             raise forms.ValidationError(msg)
+            
         return super().clean_email()
 
     def save(self, request):

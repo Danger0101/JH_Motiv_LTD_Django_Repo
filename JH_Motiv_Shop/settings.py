@@ -416,10 +416,10 @@ CELERY_BEAT_SCHEDULE = {
         'options': {'queue': 'low_priority'},
     },
 
-    # 3. Delete Unverified Users (Run daily at midnight)
-    'delete-unverified-users-daily': {
-        'task': 'core.tasks.delete_unverified_users',
-        'schedule': crontab(hour=0, minute=0),
+    # 3. Purge Bot Accounts (Run daily at 3 AM UTC)
+    'purge-bot-accounts-daily': {
+        'task': 'accounts.tasks.purge_unverified_users',
+        'schedule': crontab(hour=3, minute=0),
         'args': (),
         'options': {'queue': 'low_priority'},
     },
@@ -530,6 +530,7 @@ CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src']
 # Note: 'unsafe-eval' is often required for standard Alpine.js
 CSP_SCRIPT_SRC = (
     "'self'",
+    "'unsafe-eval'",
     "https://js.stripe.com",        # Stripe
     "https://connect.facebook.net", # Common social
     "https://www.googletagmanager.com", # Google Analytics
@@ -540,6 +541,7 @@ CSP_SCRIPT_SRC = (
 # Styles: Tailwind often requires inline styles
 CSP_STYLE_SRC = (
     "'self'", 
+    "'unsafe-inline'",
     "https://fonts.googleapis.com", 
 )
 
