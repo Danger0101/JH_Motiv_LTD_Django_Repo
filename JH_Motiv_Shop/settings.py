@@ -81,7 +81,14 @@ INSTALLED_APPS = [
     'coaching_booking',
     'coaching_availability',
     'coaching_client',
+
+    # Turnstile
+    'turnstile',
 ]
+
+TURNSTILE_SITE_KEY = os.environ.get('TURNSTILE_SITE_KEY') # Replace with your actual site key
+TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY') # Replace with your actual secret key# --- Turnstile Configuration ---
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -159,11 +166,12 @@ ACCOUNT_RATE_LIMITS = {
 ACCOUNT_FORMS = {
     'signup': 'accounts.forms.CustomSignupForm',
 }
+ACCOUNT_SIGNUP_FORM_HONEYPOT_FIELD = 'phone_number'  # Bots will try to fill this
 
 # Login, Signup, and Email settings
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
 ACCOUNT_LOGIN_METHOD = 'username_email'
-ACCOUNT_EMAIL_VERIFICATION = 'optional'
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 
 # Required for the browser auto-reload during development
 INTERNAL_IPS = [
@@ -407,6 +415,14 @@ CELERY_BEAT_SCHEDULE = {
         'args': (24,), # Find carts abandoned for 24+ hours
         'options': {'queue': 'low_priority'},
     },
+
+    # 3. Delete Unverified Users (Run daily at midnight)
+    'delete-unverified-users-daily': {
+        'task': 'core.tasks.delete_unverified_users',
+        'schedule': crontab(hour=0, minute=0),
+        'args': (),
+        'options': {'queue': 'low_priority'},
+    },
 }
 
 # --- ADMIN DASHBOARD THEME (Django Unfold) ---
@@ -518,6 +534,7 @@ CSP_SCRIPT_SRC = (
     "https://connect.facebook.net", # Common social
     "https://www.googletagmanager.com", # Google Analytics
     "https://www.google-analytics.com",
+    "https://challenges.cloudflare.com", # Cloudflare Turnstile
 )
 
 # Styles: Tailwind often requires inline styles

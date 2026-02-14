@@ -34,6 +34,10 @@
         <form id="signup_form" method="post" action="{% url 'accounts:signup' %}">
             {% csrf_token %} 
 
+            <div style="display: none;" aria-hidden="true">
+                <input type="text" name="phone_number" tabindex="-1" autocomplete="off">
+            </div>
+
             {% if form.non_field_errors %}
             <div class="p-3 mb-4 text-sm text-red-700 bg-red-100 rounded" role="alert">
                 {% for error in form.non_field_errors %}
@@ -105,6 +109,10 @@
             {% if redirect_field_value %}
             <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
             {% endif %}
+
+            <div class="mb-4">
+                {{ form.captcha }}
+            </div>
 
             <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mt-6">
                 {% translate "Sign Up" %}
