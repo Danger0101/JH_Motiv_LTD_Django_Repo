@@ -285,36 +285,35 @@ def send_campaign_blast_task(subject, content, base_url, campaign_id):
         
     except NewsletterCampaign.DoesNotExist:
         return "Campaign not found"
-        except Exception as e:
-            logger.error(f"Campaign blast failed: {e}", exc_info=True)
-            return f"Error: {e}"
+    except Exception as e:
+        logger.error(f"Campaign blast failed: {e}", exc_info=True)
+        return f"Error: {e}"
+
+@shared_task
+def delete_unverified_users():
+    """
+    Deletes users who signed up but never verified their email address after 24 hours.
+    This keeps the database clean from bot/spam signups.
+    """
+    from allauth.account.models import EmailAddress
+    from accounts.models import User
+
+    # Calculate the cutoff time (24 hours ago)
+    cutoff_time = timezone.now() - timezone.timedelta(hours=24)
+
+    # Find users who are inactive, joined before the cutoff, AND have an unverified email
+    unverified_users = User.objects.filter(
+        is_active=False,
+        date_joined__lt=cutoff_time,
+        emailaddress__verified=False
+    ).distinct()
+
+    count = unverified_users.count()
+    if count > 0:
+        logger.info(f"Deleting {count} unverified, inactive users older than 24 hours.")
+        unverified_users.delete()
+        logger.info("Deletion complete.")
+    else:
+        logger.info("No unverified users to delete.")
     
-    @shared_task
-    def delete_unverified_users():
-        """
-        Deletes users who signed up but never verified their email address after 24 hours.
-        This keeps the database clean from bot/spam signups.
-        """
-        from allauth.account.models import EmailAddress
-        from accounts.models import User
-    
-        # Calculate the cutoff time (24 hours ago)
-        cutoff_time = timezone.now() - timezone.timedelta(hours=24)
-    
-        # Find users who are inactive, joined before the cutoff, AND have an unverified email
-        unverified_users = User.objects.filter(
-            is_active=False,
-            date_joined__lt=cutoff_time,
-            emailaddress__verified=False
-        ).distinct()
-    
-        count = unverified_users.count()
-        if count > 0:
-            logger.info(f"Deleting {count} unverified, inactive users older than 24 hours.")
-            unverified_users.delete()
-            logger.info("Deletion complete.")
-        else:
-            logger.info("No unverified users to delete.")
-        
-        return f"Deleted {count} unverified users."
-    
+    return f"Deleted {count} unverified users."
