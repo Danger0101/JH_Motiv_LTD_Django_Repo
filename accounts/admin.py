@@ -4,6 +4,7 @@ from .models import User, CoachProfile, Address, MarketingPreference
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
+    actions = ['delete_selected']
     fieldsets = UserAdmin.fieldsets + (
         ('Roles', {'fields': ('is_guest', 'is_coach', 'is_client', 'is_dreamer')}),
         ('Business Info', {'fields': ('business_name', 'billing_notes', 'stripe_customer_id')}),
